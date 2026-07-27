@@ -1,0 +1,132 @@
+/* ============================================
+   Standalone / Home-Screen-Web-App (iPadOS 17 Kiosk)
+   Additiv & konfliktarm: Safe-Area-Regeln greifen NUR im installierten
+   Standalone-Modus, damit der normale Safari-Tab byte-gleich unverändert
+   bleibt. Farben aus tokens.css (Single Source of Truth).
+   ============================================ */
+
+/* ── Safe-Area-Variablen ──
+   Zentrale Insets als Custom Properties (harmlose Deklarationen, ohne
+   Sichtwirkung bis sie unten im Standalone-Scope als Padding angewandt werden).
+   --safe-top mit 24px-Untergrenze (max): iPadOS 17 meldet die Statusleisten-
+   Höhe zwar i. d. R. korrekt, aber der Floor garantiert, dass NIE ein Bedien-
+   element unter Uhrzeit/WLAN/Akku rutscht — auch falls der Inset mal 0 meldet. */
+:root {
+  --safe-top: max(env(safe-area-inset-top, 24px), 24px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* iPadOS verwendet für Bereiche außerhalb des dynamischen Viewports den
+   Dokument-Hintergrund. Ohne diese Unterlage scheint dort Browser-Weiß durch. */
+html,
+body {
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--color-surface-0);
+}
+:root[data-ambient-deep-night='true'],
+:root[data-ambient-deep-night='true'] body {
+  background: var(--color-ambient-deep-night-background);
+}
+
+/* ── Safe-Area-Insets an der App-Shell ──
+   Im Standalone-Modus (apple-mobile-web-app-status-bar-style: black-translucent)
+   zieht der Content unter Statusleiste/Home-Indicator. Wir schieben die
+   App-Shell (`.app` = unser „app-shell", 3-Zeilen-Grid 48/1fr/72) um die Insets
+   nach innen, ohne das getunte Grid selbst anzutasten. Dadurch liegt die
+   interaktive App-Statusbar-Zeile IMMER unterhalb der iPadOS-Statusleiste.
+   bottom-Inset trägt bereits die .tab-bar (app.css) — hier NICHT doppeln. */
+@media (display-mode: standalone) {
+  .app {
+    box-sizing: border-box;
+    padding-top: var(--safe-top);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+  }
+  .ambient {
+    bottom: auto;
+    min-height: 100lvh;
+  }
+}
+
+/* iOS-Safari kennt `standalone` als Alt-Signal, das die display-mode-Query auf
+   älterem iPadOS-17-Safari nicht immer bedient. main.ts setzt daher zusätzlich
+   `data-standalone` auf <html>, damit die Insets sicher greifen. */
+:root[data-standalone='true'] .app {
+  box-sizing: border-box;
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+:root[data-standalone='true'] .ambient {
+  bottom: auto;
+  min-height: 100lvh;
+}
+
+/* ── Status-Scrim: dunkler Ruhe-Streifen unter der iPadOS-Statusleiste ──
+   Die weiße Systemleiste (Uhrzeit/WLAN/Akku) bleibt bei black-translucent
+   immer HELL. Damit sie auch im Tag-Theme (surface-0 = hell) lesbar bleibt und
+   nicht wie eine Fremdleiste wirkt, unterlegen wir exakt die obere Safe-Area
+   mit einem konstant dunklen Streifen. In der Nacht deckungsgleich mit der App
+   (nahtlos), am Tag der bewusst ruhige dunkle Kopfbereich. pointer-events:none
+   → fängt nie einen Touch ab. Nur im Standalone-Modus sichtbar. */
+.status-scrim {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-top);
+  background: #0b0e12; /* konstanter Dark-Wert (theme-unabhängig, für Weißkontrast) */
+  z-index: 90; /* über Media/Ambient (40/50) für Lesbarkeit, unter HUD(99)/Modal(200) */
+  pointer-events: none;
+}
+@media (display-mode: standalone) {
+  .status-scrim { display: block; }
+}
+:root[data-standalone='true'] .status-scrim { display: block; }
+
+/* ── Dezenter Installations-Hinweis (nur normaler Safari-Tab) ── */
+.pwa-hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  max-width: min(92vw, 560px);
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  line-height: 1.3;
+  animation: pwa-hint-in var(--duration-enter, 240ms) var(--ease-out, ease) both;
+}
+.pwa-hint-text strong { color: var(--color-text-primary); font-weight: 600; }
+.pwa-hint-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+@keyframes pwa-hint-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pwa-hint { animation: none; }
+}

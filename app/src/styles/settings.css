@@ -1,0 +1,644 @@
+/* ============================================
+   Einstellungs-Screen (System-Tab) — iPad-Settings-Muster im HMI-Designsystem:
+   Sidebar (Suche + Sektionen mit Icon-Kacheln) links, Detailbereich rechts.
+   Additiv zu app.css; greift nur unter .settings bzw. [data-screen="system"].
+   ============================================ */
+
+/* Der System-Screen scrollt nicht als Ganzes — Sidebar und Detailbereich
+   scrollen unabhängig (wie Home: Kontextwahl links, Fläche rechts). */
+.screen[data-screen='system'] { overflow: hidden; }
+
+.settings {
+  display: flex;
+  height: 100%;
+  max-width: 1696px;
+  margin: 0 auto;
+}
+
+/* ── Sidebar ── */
+.settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: clamp(280px, 26vw, 380px);
+  padding: var(--space-6) var(--space-4) var(--space-6) var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--color-border);
+}
+
+.settings-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+/* Suchfeld (Chrome-Settings-Muster) — Fokus-Ring wie .icon-search */
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-preferred);
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  color: var(--color-text-secondary);
+}
+.settings-search:focus-within {
+  border-color: var(--color-accent-warm);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-warm) 25%, transparent);
+}
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.settings-search input::placeholder { color: var(--color-text-tertiary); }
+.settings-search input::-webkit-search-cancel-button { display: none; }
+.settings-search-clear {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+}
+
+/* Sektionsliste */
+.settings-nav,
+.settings-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.settings-nav-btn,
+.settings-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-preferred);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+}
+.settings-nav-btn:hover,
+.settings-result:hover { background: var(--color-surface-1); }
+/* Selektion über Fläche, nicht Akzent (docs/01 Pattern 4) */
+.settings-nav-btn.is-active { background: var(--color-surface-2); }
+.settings-nav-label { flex: 1; min-width: 0; }
+.settings-nav-chev { color: var(--color-text-tertiary); }
+.settings-nav-btn.is-active .settings-nav-chev { color: var(--color-text-secondary); }
+
+/* Gruppen-Überschrift in der Sidebar (macOS-Systemeinstellungen-Muster):
+   reine Gliederung, nicht klickbar. Der erste Abstand entfällt, damit die
+   erste Gruppe direkt unter der Suche sitzt. */
+.settings-nav-group {
+  margin: var(--space-4) 0 var(--space-1);
+  padding: 0 var(--space-3);
+  color: var(--color-text-tertiary);
+}
+.settings-nav-group:first-child { margin-top: var(--space-1); }
+
+.settings-badge {
+  min-width: 24px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-cool);
+  color: var(--color-surface-0);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+/* Suchtreffer: Einstellung + Sektions-Brotkrume */
+.settings-result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.settings-result-label { font-size: var(--text-base); }
+.settings-result-section {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.settings-no-results {
+  padding: var(--space-4) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* ── Icon-Kacheln (iPad-Settings-Anleihe, gedämpft fürs dunkle HMI) ── */
+.settings-icon-tile {
+  --tile-color: var(--color-text-secondary);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--tile-color) 16%, transparent);
+  color: var(--tile-color);
+}
+.settings-icon-tile.is-lg { width: 48px; height: 48px; border-radius: var(--radius-lg); }
+.settings-icon-tile.tint-success { --tile-color: var(--color-success); }
+.settings-icon-tile.tint-cool { --tile-color: var(--color-accent-cool); }
+.settings-icon-tile.tint-warm { --tile-color: var(--color-accent-warm); }
+.settings-icon-tile.tint-neutral { --tile-color: var(--color-text-secondary); }
+
+/* ── Detailbereich ── */
+.settings-pane {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (min-width: 1696px) {
+  .settings-pane { padding: var(--space-6) var(--space-8); }
+}
+
+.settings-pane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.settings-pane-head h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.settings-pane-head p {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.settings-pane-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+/* Hinweis auf ausstehendes Neuladen (Backend-Wechsel, Resets) */
+.settings-reload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-accent-warm) 45%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent-warm) 8%, var(--color-surface-1));
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+.settings-reload-text { flex: 1; }
+.settings-reload .icon { color: var(--color-accent-warm); }
+
+/* ── Gruppen & Zeilen (inset grouped list) ── */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-1);
+  overflow: hidden;
+}
+.settings-group-label {
+  display: block;
+  margin: 0 0 var(--space-3) var(--space-1);
+}
+
+.settings-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-5);
+}
+.settings-row + .settings-row { border-top: 1px solid var(--color-border); }
+.settings-row.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.settings-row-label {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+.settings-row-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.settings-row-value {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+.settings-arrow { color: var(--color-text-tertiary); }
+
+.settings-row-badge {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.settings-row-badge.is-degraded { color: var(--color-warning); }
+.settings-row-badge.is-offline { color: var(--color-error); }
+
+.settings-note {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-5) var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Sprung-Highlight aus der Suche: nur Opacity animieren (docs/01) */
+[data-setting-id].is-highlighted::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-accent-warm) 14%, transparent);
+  pointer-events: none;
+  animation: settings-flash 1.6s var(--ease-out) both;
+}
+.settings-group[data-setting-id] { position: relative; }
+@keyframes settings-flash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Controls ── */
+
+/* Segment (Erscheinungsbild) — Muster .mode-segment, aber mit Text-Label */
+.settings-seg {
+  display: flex;
+  gap: var(--space-2);
+}
+.settings-seg-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+.settings-seg-btn.is-active {
+  background: var(--color-surface-inverse);
+  border-color: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+
+/* Switch (Demo-Modus) — Toggle-Snap nur über transform (docs/01) */
+.settings-switch {
+  flex: none;
+  position: relative;
+  width: 56px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out);
+}
+.settings-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-secondary);
+  transition: transform var(--duration-fast) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out);
+}
+.settings-switch[aria-checked='true'] {
+  background: var(--color-accent-warm);
+  border-color: var(--color-accent-warm);
+}
+.settings-switch[aria-checked='true'] .settings-switch-knob {
+  transform: translateX(24px);
+  background: var(--color-surface-0);
+}
+
+/* Texteingabe (Ollama) — Fokus wie das Suchfeld */
+.settings-input {
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.settings-input::placeholder { color: var(--color-text-tertiary); }
+.settings-input:focus {
+  outline: 0;
+  border-color: var(--color-accent-warm);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-warm) 25%, transparent);
+}
+.settings-time-input { width: 8rem; flex: none; }
+
+.settings-row .secondary-btn { flex: none; }
+.settings-row .secondary-btn:disabled { opacity: 0.4; cursor: default; }
+.settings-row-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Formular-Zeile (iCloud-Einrichtung, Jellyfin-Login): zwei Felder + Aktion */
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) auto;
+  gap: var(--space-3);
+}
+@media (max-width: 1100px) {
+  .settings-form-grid { grid-template-columns: 1fr; }
+}
+.settings-form-msg {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.settings-form-msg.is-ok { color: var(--color-success); }
+.settings-form-msg.is-error { color: var(--color-error); }
+
+/* Kalender-Farbpunkt (Ursprung des Kalenders, analog .agenda-dot) */
+.settings-cal-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+/* ── Einkaufsliste: Laden- und Kategorie-Reihenfolge ── */
+.shopping-store-row { justify-content: space-between; }
+.shopping-expand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-min);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+}
+.shopping-order-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.shopping-order-actions .secondary-btn {
+  min-width: var(--touch-min);
+  padding-inline: var(--space-2);
+}
+.shopping-category-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-5) var(--space-4) calc(var(--space-5) + var(--touch-min));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+.shopping-category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-preferred);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+.shopping-category-row:last-child { border-bottom: 0; }
+.shopping-add-row .settings-input { flex: 1; }
+@media (max-width: 1100px) {
+  .shopping-store-row { align-items: flex-start; flex-direction: column; }
+  .shopping-category-list { padding-left: var(--space-5); }
+}
+
+/* ── AI Customizing: Feature-Chat mit dem Hermes-Agenten ── */
+.ai-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.ai-chat-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ai-info-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  padding: var(--space-0);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.ai-info-btn[aria-expanded='true'] {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+.ai-info-popup {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + var(--space-2));
+  right: var(--space-0);
+  left: var(--space-0);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.ai-chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 50dvh;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+}
+.ai-msg { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.ai-msg.is-user { align-items: flex-end; }
+.ai-msg-bubble {
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-msg.is-user .ai-msg-bubble {
+  background: color-mix(in srgb, var(--color-accent-cool) 14%, var(--color-surface-1));
+}
+.ai-msg-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.ai-chip.is-ok { color: var(--color-success); border-color: color-mix(in srgb, var(--color-success) 40%, transparent); }
+.ai-chip.is-error { color: var(--color-error); border-color: color-mix(in srgb, var(--color-error) 40%, transparent); }
+.ai-activity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.ai-activity-cog {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex: none;
+  color: var(--color-accent-cool);
+}
+.ai-activity-cog-spinner {
+  transform-origin: center;
+  animation: ai-cog-spin calc(var(--duration-enter) * 4) var(--ease-in-out) infinite;
+}
+@keyframes ai-cog-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-activity-cog-spinner { animation: none; }
+}
+.ai-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+.ai-card.is-ok { border-color: color-mix(in srgb, var(--color-success) 45%, transparent); color: var(--color-success); }
+.ai-card.is-error { border-color: color-mix(in srgb, var(--color-error) 45%, transparent); color: var(--color-error); }
+.ai-card-text { flex: 1; color: var(--color-text-primary); }
+.ai-chat-form { display: flex; gap: var(--space-3); align-items: flex-end; }
+.ai-chat-input {
+  flex: 1;
+  resize: none;
+  min-height: 64px;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.ai-chat-form .primary-btn:disabled { opacity: 0.4; cursor: default; }
+.settings-row.is-active-session { background: color-mix(in srgb, var(--color-accent-cool) 8%, transparent); }
+
+/* Neues-Feature-Auswahldialog */
+.ai-choice-dialog { width: min(560px, 100%); }
+.ai-choice-text { margin: var(--space-4) 0; color: var(--color-text-secondary); }
+.ai-choice-actions { display: flex; flex-direction: column; gap: var(--space-3); }
+.ai-choice-actions .primary-btn,
+.ai-choice-actions .secondary-btn { min-height: 56px; }
+
+/* ── Schmalere Viewports (iPad-Sekundärziel): Sidebar kompakter ── */
+@media (max-width: 1100px) {
+  .settings-sidebar { width: 264px; padding-right: var(--space-3); }
+  .settings-seg-btn { padding: 0 var(--space-3); }
+}
+
+/* Phone: System folgt dem nativen Liste→Detail-Muster statt die Tablet-
+   Zweispaltenansicht zusammenzuquetschen. */
+.settings.is-phone {
+  height: 100%;
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4));
+}
+.settings.is-phone .settings-sidebar,
+.settings.is-phone .settings-pane {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) var(--space-5) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  border: 0;
+}
+.settings.is-phone .is-phone-hidden { display: none; }
+.settings.is-phone .settings-title { font-size: var(--text-2xl); }
+.settings-phone-back {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  background: var(--color-surface-1);
+}
+.settings.is-phone .settings-pane-head {
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.settings.is-phone .settings-pane-head .settings-icon-tile.is-lg { display: none; }

@@ -1,0 +1,262 @@
+/* ============================================
+   Smart Home HMI — Design Tokens
+   Eigenständiges HMI-Designsystem
+   Quelle: docs/01-design-system.md (Phase 1)
+   Regel: Änderungen IMMER synchron mit tokens.json
+   ============================================ */
+
+:root {
+  /* ── Surfaces (Dark Mode, Default) ──
+     Kühler Unterton (Blau > Rot), für kühle, kontrastreiche Oberflächen abgestimmt:
+     Screen #12171D, Panel #1E262E, Chips #313B46 */
+  --color-surface-0: #0b0e12;
+  --color-surface-1: #141920;
+  --color-surface-2: #1d242d;
+  --color-surface-3: #28313c;
+  --color-surface-inverse: #e6eef6;
+
+  /* ── Accent Colors ──
+     Warmer Akzent, auf #F5B03C abgestimmt
+     Kühler Akzent, auf #4E9CD0 abgestimmt */
+  --color-accent-warm: #f5b03c;
+  --color-accent-warm-hover: #ffc85e;
+  --color-accent-cool: #4e9cd0;
+  --color-accent-cool-hover: #6bb2de;
+
+  /* ── Licht-„An"-Akzent (Bernstein/Amber) — eigenes Tokenpaar für die
+     Licht-Kacheln, bewusst wärmer als der UI-Akzent (Hauser-OS-Wärme).
+     fill = Icon-Feld-Fläche, icon = Glühbirne, border = Icon-Feld-Rand. ── */
+  --accent-light-on-fill: #633806;
+  --accent-light-on-icon: #fac775;
+  --accent-light-on-border: #ba7517;
+
+  /* Verlauf-Endpunkte der Farbtemperatur-Skala (Licht-Detail): warm ↔ kühl.
+     Physikalische Lichtfarben, theme-unabhängig → einmal im :root definiert
+     (der Light-Block erbt sie, weil er sie nicht überschreibt). */
+  --light-temp-warm: #ff9636;
+  --light-temp-cool: #cfe0ff;
+
+  /* ── Semantic Colors ── */
+  --color-success: #46b876;
+  --color-warning: #f5b03c;
+  --color-error: #e85050;
+  --color-info: #4e9cd0;
+
+  /* ── Text Colors (kühl getönt, wie Ausgangswert #E1F0FE/#C2CFDB) ── */
+  --color-text-primary: #e6eef6;
+  --color-text-secondary: #9aa7b4;
+  --color-text-tertiary: #5a6470; /* nur nicht-essenzielle Labels ≥14px */
+  --color-text-on-accent: #0b0e12;
+  --color-text-on-inverse: #0b0e12;
+
+  /* ── Deep Night (Ambient 22:00–06:00) ── */
+  --color-ambient-deep-night-background: #000000;
+  --color-ambient-deep-night-clock: #8f1820;
+
+  /* ── Borders (Ghost-Buttons, outlined Cards) ── */
+  --color-border: #2c353f;
+
+  /* ── Status-Dots (referenzieren Semantik — eine Quelle) ── */
+  --color-dot-online: var(--color-success);
+  --color-dot-warning: var(--color-warning);
+  --color-dot-offline: var(--color-error);
+  --color-dot-presence: var(--color-success);
+
+  /* ── Typography ──
+     Inter Variable self-hosted (ADR-011) — System-Stack nur als Fallback,
+     Roboto als Primärfont explizit verworfen */
+  --font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-family-display: 'Instrument Serif', 'New York', ui-serif, Georgia, serif; /* nur Ambient/Begrüßung — Instrument Serif self-hosted (ADR-012) */
+  --font-family-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Type Scale — dramatische Spreizung (Mikro-Labels ↔ Hero-Werte).
+     2026-07-05: global ×≈1.125 angehoben (Smoke-Test Pad 3: „einen Tick
+     zu klein" auf 13,2" @ 1696px) — Herleitung/Beschluss: docs/01 */
+  --text-3xs: 11px;  /* Einheiten, Caps-Mikro-Labels */
+  --text-2xs: 12px;  /* Status-Chips, Badges, Timestamps */
+  --text-xs: 14px;   /* Card-Labels */
+  --text-sm: 16px;   /* Body in Cards */
+  --text-base: 18px; /* Primärer Lesetext, Nav-Labels */
+  --text-md: 20px;   /* Card-Titel */
+  --text-lg: 24px;   /* Bereichs-Titel */
+  --text-xl: 32px;   /* Sekundäre Datenwerte */
+  --text-2xl: 40px;  /* Screen-Titel */
+  --text-3xl: 54px;  /* Raumtemperatur, große KPIs */
+  --text-4xl: 72px;  /* Hero-Werte (Detailansicht) */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --leading-hero: 1.05;   /* 48–64px Werte */
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.4;
+  --leading-relaxed: 1.5;
+
+  --tracking-tightest: -0.06em; /* nur 4xl */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.03em;
+  --tracking-snug: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.01em;
+  --tracking-caps: 0.08em; /* nur uppercase Mikro-Labels (3xs/2xs) */
+
+  /* ── Spacing (8px rhythm) ── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ── Border Radii ── */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px; /* Hero-Karten, Nav-Container */
+  --radius-full: 9999px;
+
+  /* ── Elevation ──
+     Dark Mode: Tiefe über Surface-Level + Border, Schatten nur für Overlays */
+  --elevation-overlay-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 24px rgba(0, 0, 0, 0.5);
+
+  /* ── Overlay-Scrim (Room Overlay u. a.): Dim + Blur, Tap schließt.
+     Blur wird NIE animiert — nur die Scrim-Opacity (docs/01) ── */
+  --overlay-scrim: rgba(11, 14, 18, 0.55);
+  --overlay-blur: 20px;
+
+  /* ── Motion: Easing ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Motion: Duration (Startwerte, Validierung Phase 2) ── */
+  --duration-instant: 0ms;
+  --duration-fast: 80ms;    /* Pressed-Scale, Toggle-Snap */
+  --duration-quick: 120ms;  /* Release mit Spring */
+  --duration-normal: 180ms; /* State-Wechsel, Fades */
+  --duration-slow: 240ms;   /* Screen-Transitions (Budget-Obergrenze) */
+  --duration-enter: 300ms;  /* Modal/Overlay-Entrance (Budget-Maximum) */
+  --duration-wobble: 200ms;  /* Toggle-Widerspruch: Zurückspringen mit Wobble (docs/02) */
+  --duration-correct: 300ms; /* Slider-/Wert-Korrektur interpolieren (docs/02) */
+
+  /* ── Touch Targets ── */
+  --touch-min: 44px;
+  --touch-preferred: 48px;
+  /* ValueSlider (das Hauser-Thumb-Pattern): Wert sitzt IM Thumb-Badge; aktiv via scale */
+  --slider-thumb: 40px;
+  --slider-thumb-active: 44px;
+
+  /* ── Icons (Outline, 1.5px Stroke, currentColor) ── */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+
+  /* ── Grid ── */
+  --grid-gap: 16px;
+  --grid-gap-section: 24px;
+  --grid-padding: 32px;
+
+  /* ── Breakpoints (Dokumentationskonstanten — in Media Queries
+       als Literalwerte verwenden, CSS-Variablen sind dort ungültig) ──
+     Abgeleitet vom OnePlus Pad 3 (ADR-010), Viewport dpr 2 —
+     am Gerät verifiziert (Smoke-Test 2026-07-04):
+     tablet-min: 1024px   | pad3-portrait: 1200px
+     desktop-dev: 1440px  | pad3-landscape: 1696px (Design-Primärformat) */
+}
+
+/* ── Light Mode (Day-Theme, aus den Tagesbetrieb ausgelegt) ──
+   Umschaltung via data-theme-Attribut, NICHT prefers-color-scheme:
+   Day/Night wird von der App gesteuert (Phase 2: manueller Switcher,
+   Phase 3: sun.sun-Automatik mit Crossfade — docs/07, Screen 9).
+   Das OS-Theme des Kiosk-Geraets ist bewusst irrelevant. */
+:root[data-theme='light'] {
+    --color-surface-0: #ececec;
+    --color-surface-1: #f5f5f5;
+    --color-surface-2: #fafafa;
+    --color-surface-3: #ffffff;
+    --color-surface-inverse: #212121;
+
+    --color-accent-warm: #f5a81c;
+    --color-accent-warm-hover: #e09305;
+    --color-accent-cool: #1b6fa8;
+    --color-accent-cool-hover: #15597f;
+
+    /* Licht-„An"-Akzent im Day-Theme (heller Bernstein) */
+    --accent-light-on-fill: #faeeda;
+    --accent-light-on-icon: #ba7517;
+    --accent-light-on-border: #ef9f27;
+
+    --color-success: #2e8f55;
+    --color-warning: #b87a14;
+    --color-error: #c43c3c;
+    --color-info: #1b6fa8;
+
+    --color-text-primary: #212121;
+    --color-text-secondary: #494949;
+    --color-text-tertiary: #7e7e7e;
+    --color-text-on-accent: #212121;
+    --color-text-on-inverse: #fafafa;
+
+    --color-border: #d5d5d5;
+
+    /* Light Mode darf echte Schatten (weiße Cards mit Soft-Shadow) */
+    --elevation-overlay-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    --overlay-scrim: rgba(236, 236, 236, 0.55);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-quick: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-enter: 0ms;
+    --duration-wobble: 0ms;
+    --duration-correct: 0ms;
+  }
+}
+
+/* ── Global Resets ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-family);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--color-surface-0);
+}
+
+/* ── Utility: Surface Levels ── */
+.surface-0 { background-color: var(--color-surface-0); }
+.surface-1 { background-color: var(--color-surface-1); }
+.surface-2 { background-color: var(--color-surface-2); }
+.surface-3 { background-color: var(--color-surface-3); }
+
+/* ── Utility: Text Levels ── */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }

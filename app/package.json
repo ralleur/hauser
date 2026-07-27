@@ -1,0 +1,42 @@
+{
+  "name": "smart-home-hmi",
+  "private": true,
+  "version": "0.3.0-alpha.1",
+  "type": "module",
+  "description": "Smart Home HMI — Phase 3 App (Svelte 5 + Vite, ADR-013/014)",
+  "scripts": {
+    "icons:generate": "node scripts/generate-icon-registry.mjs",
+    "icons:assets": "node scripts/generate-icon-registry.mjs --copy-assets",
+    "predev": "npm run icons:assets && npm run paraglide:compile",
+    "dev": "vite",
+    "prebuild": "npm run icons:assets && npm run paraglide:compile",
+    "build": "vite build",
+    "prebuild:demo": "npm run icons:assets && npm run paraglide:compile",
+    "build:demo": "VITE_BACKEND=fake VITE_DEMO=1 vite build --outDir dist-demo",
+    "preview": "node server.mjs",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "performance:report": "node scripts/performance-budget.mjs",
+    "performance:budget": "node scripts/performance-budget.mjs --budget",
+    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --silent",
+    "precheck": "npm run paraglide:compile",
+    "pretest": "npm run paraglide:compile"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.22.0",
+    "@mdi/svg": "^7.4.47",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "es-module-lexer": "2.3.0",
+    "svelte": "^5.56.4",
+    "svelte-check": "^4.7.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "hls.js": "^1.6.16",
+    "home-assistant-js-websocket": "^9.6.0"
+  }
+}

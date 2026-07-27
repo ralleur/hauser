@@ -1,0 +1,81 @@
+<script lang="ts">
+  import Icon from '../Icon.svelte';
+  import RoomSummaryCard from './RoomSummaryCard.svelte';
+  import { centralClimate } from '../../state/climate-central.svelte.ts';
+  import { fmtTemp } from '../../format.ts';
+  import type { PhoneRoomSummary } from '../../state/phone-home.ts';
+  import { shouldConfirmHomeOff, toggleVacationMode, turnOffHomeExceptBedroom, vacationModeActive } from '../../state/commands.ts';
+  import { settingsValues } from '../../state/settings.svelte.ts';
+
+  import { m } from '../../../paraglide/messages.js';
+  let {
+    rooms,
+    currentRoom,
+    online,
+    onopen,
+    titleAnchor = $bindable(),
+  }: {
+    rooms: PhoneRoomSummary[];
+    currentRoom: string | null;
+    online: boolean;
+    onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
+    titleAnchor?: HTMLHeadingElement;
+  } = $props();
+
+  const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
+  const vacationActive = $derived(vacationModeActive());
+
+  function onHomeOff(): void {
+    if (shouldConfirmHomeOff(new Date(), settingsValues.offConfirmBefore)
+      && !window.confirm('Wirklich alle Lichter und den Fernseher außerhalb des Schlafzimmers ausschalten?')) return;
+    turnOffHomeExceptBedroom();
+  }
+</script>
+
+<main class="phone-home-feed" aria-labelledby="phone-target-title">
+  <h1 bind:this={titleAnchor} id="phone-target-title" class="phone-visually-hidden" tabindex="-1">{m.phone_home()}</h1>
+
+  {#if openWindows > 0}
+    <aside class="phone-home-notice is-warning" aria-label={m.phone_security_note()}>
+      <strong>{openWindows} {openWindows === 1 ? 'Fenster ist' : 'Fenster sind'} offen</strong>
+      <span>{online ? m.phone_details_at_rooms() : m.phone_last_known()}</span>
+    </aside>
+  {/if}
+
+  <section class="phone-room-feed" aria-label={m.phone_rooms()}>
+    {#if rooms.length === 0}
+      <p class="phone-empty-state">{m.phone_no_rooms()}</p>
+    {:else}
+      {#each rooms as room (room.id)}
+        <RoomSummaryCard summary={room} active={currentRoom === room.id} {onopen} />
+      {/each}
+    {/if}
+  </section>
+
+  <!-- Mobile Schnellaktionen: Aus / halbe Breite Klima / Urlaub. -->
+  {#if centralClimate.hasClimate}
+    <div class="phone-quick-actions">
+      <button class="phone-quick-action is-off pressable" type="button" disabled={!online}
+              aria-label={m.phone_all_off_label()} onclick={onHomeOff}>
+        <Icon name="i-power" cls="icon icon-md" />
+        <span>{m.phone_off()}</span>
+      </button>
+      <div class="climate-dock phone-climate-dock" aria-label="Zentrale Klimasteuerung, alle Räume">
+        <button class="cd-key cd-key-down pressable" type="button" aria-label="Alle Räume 0,5 Grad kälter"
+                onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
+        <div class="cd-readout">
+          <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
+        </div>
+        <button class="cd-key cd-key-up pressable" type="button" aria-label="Alle Räume 0,5 Grad wärmer"
+                onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
+      </div>
+      <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
+              type="button" disabled={!online} aria-pressed={vacationActive}
+              aria-label={vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'}
+              onclick={toggleVacationMode}>
+        <Icon name="i-umbrella-beach" cls="icon icon-md" />
+        <span>{vacationActive ? 'Aktiv' : 'Urlaub'}</span>
+      </button>
+    </div>
+  {/if}
+</main>

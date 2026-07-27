@@ -1,0 +1,519 @@
+/* ============================================
+   Hauser — Landing Page
+   Eigenständiges Stylesheet ohne Build-Schritt. Die Farb- und Typo-Werte
+   stammen aus design-tokens/tokens.css; sie sind hier bewusst dupliziert
+   statt importiert, damit die Seite unabhängig vom App-Build ausgeliefert
+   werden kann (GitHub Pages serviert dieses Verzeichnis direkt).
+   ============================================ */
+
+@font-face {
+  font-family: 'Inter Variable';
+  src: url('fonts/InterVariable-subset.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('fonts/InstrumentSerif-subset.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --surface-0: #0b0e12;
+  --surface-1: #141920;
+  --surface-2: #1d242d;
+  --surface-3: #28313c;
+
+  --text-primary: #e6eef6;
+  --text-secondary: #9aa7b4;
+  --text-tertiary: #6b7683;
+
+  --accent-warm: #f5b03c;
+  --accent-cool: #4e9cd0;
+  --border: #2c353f;
+
+  --font-body: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --page-max: 1120px;
+  --gutter: clamp(20px, 5vw, 48px);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --surface-0: #f2f3f5;
+    --surface-1: #ffffff;
+    --surface-2: #f7f8fa;
+    --surface-3: #ffffff;
+
+    --text-primary: #14181d;
+    --text-secondary: #4d5763;
+    --text-tertiary: #78828e;
+
+    --accent-warm: #a96f05;
+    --accent-cool: #1f6ea3;
+    --border: #dde1e6;
+
+    color-scheme: light;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+a { color: inherit; }
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+
+.wrap {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+section {
+  padding-block: clamp(72px, 12vw, 160px);
+}
+
+.section-narrow { max-width: 720px; }
+
+/* ── Typografie ────────────────────────────────────────────────────────── */
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.06;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h1 { font-size: clamp(44px, 8.5vw, 88px); }
+h2 { font-size: clamp(32px, 5.5vw, 56px); }
+h3 { font-size: clamp(21px, 2.4vw, 26px); }
+
+p { margin: 0; text-wrap: pretty; }
+
+.lead {
+  font-size: clamp(18px, 2.1vw, 22px);
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 46ch;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-warm);
+  margin: 0 0 20px;
+}
+
+.body-text {
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+.body-text + .body-text { margin-top: 20px; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 40px;
+}
+
+.btn {
+  --btn-bg: transparent;
+  --btn-fg: var(--text-primary);
+  --btn-border: var(--border);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 14px 26px;
+  border: 1px solid var(--btn-border);
+  border-radius: 999px;
+
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: transform 180ms var(--ease-out), background-color 180ms var(--ease-out),
+              border-color 180ms var(--ease-out);
+}
+
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(0.985); }
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent-cool);
+  outline-offset: 3px;
+}
+
+.btn-primary {
+  --btn-bg: var(--accent-warm);
+  --btn-fg: #0b0e12;
+  --btn-border: var(--accent-warm);
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: light) {
+  .btn-primary { --btn-fg: #ffffff; }
+}
+
+.btn-primary:hover { --btn-bg: #ffc85e; --btn-border: #ffc85e; }
+
+@media (prefers-color-scheme: light) {
+  .btn-primary:hover { --btn-bg: #8d5c02; --btn-border: #8d5c02; }
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  padding-block: clamp(96px, 15vh, 168px) clamp(56px, 8vw, 96px);
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -30%;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+
+  inline-size: min(1100px, 130vw);
+  block-size: min(1100px, 130vw);
+
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-warm) 13%, transparent) 0%, transparent 62%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero > * { position: relative; z-index: 1; }
+
+.hero h1 { margin-bottom: 28px; }
+
+.hero .lead {
+  margin-inline: auto;
+  max-width: 54ch;
+}
+
+.hero .actions { justify-content: center; }
+
+.hero-note {
+  margin-top: 22px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+/* ── Geräterahmen ──────────────────────────────────────────────────────── */
+
+.device {
+  position: relative;
+  margin-top: clamp(48px, 7vw, 88px);
+  padding: 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: 0 40px 90px -30px rgb(0 0 0 / 0.65), 0 0 0 1px rgb(255 255 255 / 0.02) inset;
+}
+
+@media (prefers-color-scheme: light) {
+  .device { box-shadow: 0 40px 80px -34px rgb(20 24 29 / 0.35); }
+}
+
+.device img {
+  border-radius: 12px;
+  width: 100%;
+}
+
+.device-caption {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* ── Zweispaltige Sektionen ────────────────────────────────────────────── */
+
+.split {
+  display: grid;
+  gap: clamp(36px, 6vw, 72px);
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 880px) {
+  .split { grid-template-columns: 1fr 1.15fr; }
+  .split.reverse > :first-child { order: 2; }
+}
+
+.split-text .eyebrow { margin-bottom: 16px; }
+.split-text h2 { margin-bottom: 22px; }
+
+/* ── Showcase: Text schmal, Bild groß ──────────────────────────────────
+   Ein Dashboard-Screenshot in einer halben Spalte ist Dekoration — man
+   erkennt nichts. Deshalb steht der Text darüber und das Bild bekommt die
+   volle Breite. */
+
+.showcase-head {
+  max-width: 640px;
+  margin-bottom: clamp(36px, 5vw, 56px);
+}
+
+.showcase-head .eyebrow { margin-bottom: 16px; }
+.showcase-head h2 { margin-bottom: 24px; }
+
+.showcase-wide {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ── Kartenraster ──────────────────────────────────────────────────────── */
+
+.cards {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+  margin-top: 56px;
+}
+
+.card {
+  padding: 30px 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-1);
+}
+
+.card h3 { margin-bottom: 12px; }
+
+.card p {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+/* ── Kennzahlen ────────────────────────────────────────────────────────── */
+
+.stats {
+  display: grid;
+  gap: clamp(28px, 4vw, 48px);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 60px;
+  padding-block: 44px;
+  border-block: 1px solid var(--border);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 52px);
+  line-height: 1;
+  color: var(--accent-warm);
+}
+
+.stat-label {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+/* ── Ehrlichkeits-Sektion ──────────────────────────────────────────────── */
+
+.honest {
+  background: var(--surface-1);
+  border-block: 1px solid var(--border);
+}
+
+.honest-grid {
+  display: grid;
+  gap: clamp(32px, 5vw, 64px);
+  grid-template-columns: 1fr;
+  margin-top: 48px;
+}
+
+@media (min-width: 760px) {
+  .honest-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.honest-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.honest-list li {
+  position: relative;
+  padding-inline-start: 30px;
+  padding-block: 11px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.honest-list li:last-child { border-bottom: 0; }
+
+.honest-list li::before {
+  position: absolute;
+  inset-inline-start: 0;
+  font-size: 15px;
+  line-height: inherit;
+}
+
+.honest-yes li::before { content: '✓'; color: var(--accent-cool); }
+.honest-no li::before { content: '✕'; color: var(--text-tertiary); }
+
+.honest-col h3 { margin-bottom: 8px; }
+
+/* ── Feature-Tabelle ───────────────────────────────────────────────────── */
+
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 48px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  min-width: 520px;
+}
+
+th, td {
+  padding: 15px 20px;
+  text-align: start;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--surface-1);
+}
+
+tbody tr:last-child td { border-bottom: 0; }
+
+td:first-child { color: var(--text-primary); }
+td { color: var(--text-secondary); }
+
+.tag {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.tag-live {
+  background: color-mix(in srgb, var(--accent-warm) 20%, transparent);
+  color: var(--accent-warm);
+}
+
+.tag-built {
+  background: color-mix(in srgb, var(--accent-cool) 20%, transparent);
+  color: var(--accent-cool);
+}
+
+.tag-planned {
+  background: color-mix(in srgb, var(--text-tertiary) 20%, transparent);
+  color: var(--text-secondary);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+
+footer {
+  padding-block: 72px 88px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.footer-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 160ms var(--ease-out);
+}
+
+.footer-links a:hover { color: var(--text-primary); }
+
+footer p + p { margin-top: 12px; }
+
+footer a { color: var(--text-secondary); }
+
+/* ── Scroll-Reveal ─────────────────────────────────────────────────────── */
+
+/* Bewusst an `.has-js` gebunden: Ohne JavaScript — oder wenn das Skript aus
+   irgendeinem Grund nicht läuft — bleibt der Inhalt sichtbar statt unsichtbar.
+   Eine Landing Page, die ohne JS leer ist, ist kaputt, nicht animiert. */
+.has-js .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+}
+
+.has-js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .has-js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

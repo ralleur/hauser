@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+dist/
+dist-demo/
+.env
+.env.*
+*.local
+
+# Generated at build time from @mdi/svg
+app/public/mdi-icons/
+
+# Paraglide: generated at build time (npm run paraglide:compile)
+app/src/paraglide/

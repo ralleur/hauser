@@ -1,0 +1,59 @@
+/* Gemeinsame Klima-Regler für Phone- und Panel-Shell. Diese Styles liegen im
+   initialen App-Pfad, damit der Phone-Regler nicht von Panel-/Hero-CSS abhängt. */
+.climate-dock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+
+.cd-key {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  background: none;
+}
+
+.cd-chevron {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.4;
+}
+
+.cd-key-down { color: var(--color-accent-cool); }
+.cd-key-up { color: var(--color-error); }
+
+.cd-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 4ch;
+  padding: 0 var(--space-1);
+}
+
+.cd-value {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  color: var(--color-text-primary);
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.cd-value.is-mixed { color: var(--color-text-tertiary); }
+
+.cd-sub {
+  font-size: var(--text-3xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  max-inline-size: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

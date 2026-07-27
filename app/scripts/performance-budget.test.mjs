@@ -1,0 +1,550 @@
+import assert from 'node:assert/strict';
+import { readFile, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import { analyzeBuild, exitCodeForReport, extractModuleReferences } from './performance-budget.mjs';
+
+const generousBudgets = {
+  initialJsGzipBytes: 1024 * 1024,
+  initialCssGzipBytes: 1024 * 1024,
+};
+
+async function fixture({
+  html = '<script type="module" src="/assets/main-a1.js"></script><link rel="stylesheet" href="/assets/main-b2.css">',
+  files = {},
+  shellMarkers = 'valid',
+} = {}) {
+  const root = await mkdtemp(path.join(tmpdir(), 'hmi-performance-budget-'));
+  await mkdir(path.join(root, 'assets'), { recursive: true });
+  if (html !== null) await writeFile(path.join(root, 'index.html'), html);
+  const markerSources = {
+    valid: {
+      phone: 'export const marker="hmi-shell:phone";',
+      panel: 'export const marker="hmi-shell:panel";',
+    },
+    phone: {
+      phone: 'export const marker="hmi-shell:phone";',
+      panel: 'export const marker="panel-without-marker";',
+    },
+    panel: {
+      phone: 'export const marker="phone-without-marker";',
+      panel: 'export const marker="hmi-shell:panel";',
+    },
+    none: null,
+  };
+  const markerSource = markerSources[shellMarkers];
+  if (markerSource === undefined) throw new TypeError(`Unknown shell marker fixture mode: ${shellMarkers}`);
+  const defaults = {
+    'assets/main-a1.js': 'console.log("main");',
+    'assets/main-b2.css': 'body{color:black}',
+  };
+  const fixtureFiles = { ...defaults, ...files };
+  if (markerSource) {
+    fixtureFiles['assets/main-a1.js'] = `${fixtureFiles['assets/main-a1.js']}\nimport("./phone-shell.js"); import("./panel-shell.js");`;
+    fixtureFiles['assets/phone-shell.js'] = markerSource.phone;
+    fixtureFiles['assets/panel-shell.js'] = markerSource.panel;
+  }
+  for (const [relativePath, contents] of Object.entries(fixtureFiles)) {
+    const target = path.join(root, relativePath);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, contents);
+  }
+  return root;
+}
+
+test('reports a passing build with measured raw and gzip bytes', async () => {
+  const distDir = await fixture();
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.schemaVersion, 1);
+  assert.equal(report.status, 'PASS');
+  assert.equal(report.initial.javascript.budget.passed, true);
+  assert.equal(report.initial.css.budget.passed, true);
+  assert.deepEqual(report.initial.javascript.files.map((file) => file.path), ['assets/main-a1.js']);
+  assert.deepEqual(report.initial.css.files.map((file) => file.path), ['assets/main-b2.css']);
+  assert.ok(report.initial.javascript.total.rawBytes > 0);
+  assert.ok(report.initial.javascript.total.gzipBytes > 0);
+  assert.equal(report.shells.phone.entry, 'assets/phone-shell.js');
+  assert.equal(report.shells.panel.entry, 'assets/panel-shell.js');
+  assert.notEqual(report.shells.phone.entry, report.shells.panel.entry);
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 0);
+  assert.deepEqual(report.errors, []);
+});
+
+test('fails only the initial-JS budget when its gzip sum reaches the limit', async () => {
+  const distDir = await fixture();
+  const measured = await analyzeBuild({ distDir, budgets: generousBudgets });
+  const jsGzip = measured.initial.javascript.total.gzipBytes;
+  const report = await analyzeBuild({
+    distDir,
+    budgets: { ...generousBudgets, initialJsGzipBytes: jsGzip },
+  });
+
+  assert.equal(report.status, 'FAIL');
+  assert.equal(report.initial.javascript.budget.passed, false, 'the contract is strictly less than the limit');
+  assert.equal(report.initial.css.budget.passed, true);
+});
+
+test('fails only the initial-CSS budget when its gzip sum reaches the limit', async () => {
+  const distDir = await fixture();
+  const measured = await analyzeBuild({ distDir, budgets: generousBudgets });
+  const cssGzip = measured.initial.css.total.gzipBytes;
+  const report = await analyzeBuild({
+    distDir,
+    budgets: { ...generousBudgets, initialCssGzipBytes: cssGzip },
+  });
+
+  assert.equal(report.status, 'FAIL');
+  assert.equal(report.initial.javascript.budget.passed, true);
+  assert.equal(report.initial.css.budget.passed, false, 'the contract is strictly less than the limit');
+});
+
+test('walks static imports recursively and inventories dynamic closures separately', async () => {
+  const distDir = await fixture({
+    files: {
+      'assets/main-a1.js': [
+        "const quotePattern = /'/;",
+        'import "./shared-c3.js";',
+        'import { value } from "./feature-d4.js";',
+        'export { nested } from "./nested-e5.js";',
+        'const load = () => import(`./lazy-f6.js`);',
+        'console.log(value, load);',
+      ].join('\n'),
+      'assets/shared-c3.js': 'import "./nested-e5.js";',
+      'assets/feature-d4.js': 'export const value = 1;',
+      'assets/nested-e5.js': 'export const nested = 2;',
+      'assets/lazy-f6.js': 'import "./lazy-child-g7.js";',
+      'assets/lazy-child-g7.js': 'export const child = true;',
+    },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.deepEqual(report.initial.javascript.files.map((file) => file.path), [
+    'assets/feature-d4.js',
+    'assets/main-a1.js',
+    'assets/nested-e5.js',
+    'assets/shared-c3.js',
+  ]);
+  assert.deepEqual(report.dynamicChunks.map((file) => file.path), [
+    'assets/lazy-child-g7.js',
+    'assets/lazy-f6.js',
+    'assets/panel-shell.js',
+    'assets/phone-shell.js',
+  ]);
+  assert.equal(report.initial.javascript.files.some((file) => file.path.includes('lazy')), false);
+});
+
+test('uses only literal-followed ESM from-clauses when bindings are named from', async () => {
+  const source = [
+    'import { x as from } from "./dep.js";',
+    "import { from as alias } /* from './comment-ghost.js' */ from /* clause */ './dep2.js';",
+    "import from from './dep5.js';",
+    "const from = 'local'; export { from };",
+    "export { from as alias } from './dep3.js';",
+    'export { x as from }\n/* multiline clause */ from\n"./dep4.js";',
+    'const property = { from: "./property-ghost.js" };',
+    'const string = "from \'./string-ghost.js\'";',
+  ].join('\n');
+
+  assert.deepEqual((await extractModuleReferences(source)).staticImports, [
+    './dep.js',
+    './dep2.js',
+    './dep5.js',
+    './dep3.js',
+    './dep4.js',
+  ]);
+});
+
+test('extracts only lexical dynamic import calls from hostile minified source', async () => {
+  const source = [
+    'const string = "import(\\\"./string-ghost.js\\\")";',
+    'const template = `text ${"import(\\\"./template-ghost.js\\\")"}`;',
+    'const pattern = /import\\(["\']\\.\\/regex-ghost\\.js["\']\\)/;',
+    '/* import("./comment-ghost.js") */',
+    'const obj={import(value){return value}};obj.import("./property-ghost.js");',
+    'const load=()=>import("./real-lazy.js");',
+  ].join('');
+
+  assert.deepEqual((await extractModuleReferences(source)).dynamicImports, ['./real-lazy.js']);
+});
+
+test('does not invent imports from regex literals after control flow or a block', async () => {
+  const source = [
+    'if (flag) /import(".\\/ghost-if.js")/.test(value);',
+    'if (flag) {} /import(".\\/ghost-block.js")/.test(value);',
+  ].join('\n');
+
+  assert.deepEqual(await extractModuleReferences(source), {
+    staticImports: [],
+    dynamicImports: [],
+    nonLiteralDynamicImports: [],
+  });
+});
+
+test('finds a real dynamic import inside a template interpolation', async () => {
+  const references = await extractModuleReferences(
+    'export const value = `${import("./lazy.js")}`;',
+  );
+
+  assert.deepEqual(references.dynamicImports, ['./lazy.js']);
+  assert.deepEqual(references.nonLiteralDynamicImports, []);
+});
+
+test('fails closed when a dynamic import specifier is not a literal', async () => {
+  const distDir = await fixture({
+    files: { 'assets/main-a1.js': 'const name = "lazy"; import(`./${name}.js`);' },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['DYNAMIC_IMPORT_NOT_LITERAL']);
+  assert.equal(report.errors[0].path, 'assets/main-a1.js');
+});
+
+test('ignores scripts, modulepreloads and stylesheets inside HTML comments', async () => {
+  const distDir = await fixture({
+    html: [
+      '<!-- <script type="module" src="/assets/script-ghost.js"></script> -->',
+      '<!-- <link rel="modulepreload" href="/assets/preload-ghost.js"> -->',
+      '<!-- <link rel="stylesheet" href="/assets/style-ghost.css"> -->',
+      '<script type="module" src="/assets/main-a1.js"></script>',
+      '<link rel="stylesheet" href="/assets/main-b2.css">',
+    ].join(''),
+  });
+
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+  assert.equal(report.status, 'PASS');
+  assert.deepEqual(report.errors, []);
+  assert.deepEqual(report.initial.javascript.files.map((file) => file.path), ['assets/main-a1.js']);
+  assert.deepEqual(report.initial.css.files.map((file) => file.path), ['assets/main-b2.css']);
+});
+
+test('rejects a referenced asset whose symlink escapes the real dist root', async () => {
+  const distDir = await fixture();
+  const outsideDir = await mkdtemp(path.join(tmpdir(), 'hmi-performance-outside-'));
+  const outsideFile = path.join(outsideDir, 'outside.js');
+  await writeFile(outsideFile, 'console.log("outside");');
+  await symlink(outsideFile, path.join(distDir, 'assets', 'escaped.js'));
+  await writeFile(
+    path.join(distDir, 'index.html'),
+    '<script type="module" src="/assets/escaped.js"></script>',
+  );
+
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['ASSET_OUTSIDE_DIST', 'SHELL_MARKER_INVALID']);
+  assert.equal(JSON.stringify(report).includes(outsideDir), false);
+});
+
+test('rejects unsafe dynamic imports instead of silently dropping them', async (t) => {
+  for (const [name, specifier] of [
+    ['traversal', '../../escape.js'],
+    ['percent-encoded traversal', '%2e%2e/%2e%2e/encoded.js'],
+  ]) {
+    await t.test(name, async () => {
+      const distDir = await fixture({
+        files: { 'assets/main-a1.js': `import(${JSON.stringify(specifier)});` },
+      });
+      const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+      assert.equal(report.status, 'ERROR');
+      assert.deepEqual(report.errors.map((error) => error.code), ['ASSET_REFERENCE_INVALID']);
+      assert.equal(report.errors[0].path, 'assets/main-a1.js');
+    });
+  }
+});
+
+test('accepts local dynamic imports with query and fragment suffixes', async () => {
+  const distDir = await fixture({
+    files: {
+      'assets/main-a1.js': 'import("./lazy.js?worker#chunk");',
+      'assets/lazy.js': 'export const lazy = true;',
+    },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'PASS');
+  assert.deepEqual(report.dynamicChunks.map((file) => file.path), [
+    'assets/lazy.js', 'assets/panel-shell.js', 'assets/phone-shell.js',
+  ]);
+});
+
+test('returns controlled errors when the dist root or index realpath is unsafe', async (t) => {
+  await t.test('broken dist root symlink', async () => {
+    const parent = await mkdtemp(path.join(tmpdir(), 'hmi-performance-root-'));
+    const distDir = path.join(parent, 'dist');
+    await symlink(path.join(parent, 'missing'), distDir);
+    const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+    assert.equal(report.status, 'ERROR');
+    assert.deepEqual(report.errors.map((error) => error.code), ['DIST_ROOT_INVALID']);
+    assert.equal(JSON.stringify(report).includes(parent), false);
+  });
+
+  await t.test('index symlink escape', async () => {
+    const distDir = await fixture();
+    const outsideDir = await mkdtemp(path.join(tmpdir(), 'hmi-performance-index-'));
+    const outsideIndex = path.join(outsideDir, 'index.html');
+    await writeFile(outsideIndex, '<script type="module" src="/assets/main-a1.js"></script>');
+    await rm(path.join(distDir, 'index.html'));
+    await symlink(outsideIndex, path.join(distDir, 'index.html'));
+    const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+    assert.equal(report.status, 'ERROR');
+    assert.deepEqual(report.errors.map((error) => error.code), ['INDEX_HTML_OUTSIDE_DIST']);
+    assert.equal(JSON.stringify(report).includes(outsideDir), false);
+  });
+});
+
+test('returns controlled errors for missing and invalid index.html', async (t) => {
+  await t.test('missing', async () => {
+    const distDir = await fixture({ html: null });
+    const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+    assert.equal(report.status, 'ERROR');
+    assert.deepEqual(report.errors.map((error) => error.code), ['INDEX_HTML_MISSING']);
+  });
+
+  await t.test('invalid', async () => {
+    const distDir = await fixture({ html: '<!doctype html><p>no module entry</p>' });
+    const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+    assert.equal(report.status, 'ERROR');
+    assert.deepEqual(report.errors.map((error) => error.code), ['INDEX_HTML_INVALID']);
+  });
+});
+
+test('reports missing referenced assets as controlled build errors', async () => {
+  const distDir = await fixture({
+    html: '<script type="module" src="/assets/does-not-exist.js"></script>',
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['ASSET_MISSING', 'SHELL_MARKER_INVALID']);
+  assert.equal(report.errors[0].path, 'assets/does-not-exist.js');
+});
+
+test('measures stable shell static closures and deduplicated phone startup', async () => {
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: {
+      'assets/main-a1.js': 'import("./phone-p1.js"); import("./panel-p2.js");',
+      'assets/phone-p1.js': 'import "./shared-s1.js"; import("./phone-lazy.js"); export const marker="hmi-shell:phone";',
+      'assets/panel-p2.js': 'import "./shared-s1.js"; import "./panel-screen.js"; export const marker="hmi-shell:panel";',
+      'assets/shared-s1.js': 'export const shared=true;',
+      'assets/phone-lazy.js': 'export const lazy=true;',
+      'assets/panel-screen.js': 'export const panel=true;',
+    },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'PASS');
+  assert.equal(report.shells.phone.entry, 'assets/phone-p1.js');
+  assert.deepEqual(report.shells.phone.files.map((file) => file.path), [
+    'assets/phone-p1.js', 'assets/shared-s1.js',
+  ]);
+  assert.deepEqual(report.shells.panel.files.map((file) => file.path), [
+    'assets/panel-p2.js', 'assets/panel-screen.js', 'assets/shared-s1.js',
+  ]);
+  assert.deepEqual(report.shells.combinedPhoneStartup.files.map((file) => file.path), [
+    'assets/main-a1.js', 'assets/phone-p1.js', 'assets/shared-s1.js',
+  ]);
+  assert.equal(report.shells.phone.files.some((file) => file.path.includes('lazy')), false);
+});
+
+test('fails closed unless the build contains exactly one phone and one panel shell marker', async (t) => {
+  for (const [name, fixtureOptions] of [
+    ['no shell markers', { shellMarkers: 'none' }],
+    ['only a phone marker', { shellMarkers: 'phone' }],
+    ['only a panel marker', { shellMarkers: 'panel' }],
+    ['duplicate phone markers', {
+      shellMarkers: 'none',
+      files: {
+        'assets/main-a1.js': 'import("./phone-1.js"); import("./phone-2.js"); import("./panel.js");',
+        'assets/phone-1.js': 'export const marker="hmi-shell:phone";',
+        'assets/phone-2.js': 'export const marker="hmi-shell:phone";',
+        'assets/panel.js': 'export const marker="hmi-shell:panel";',
+      },
+    }],
+    ['duplicate panel markers', {
+      shellMarkers: 'none',
+      files: {
+        'assets/main-a1.js': 'import("./phone.js"); import("./panel-1.js"); import("./panel-2.js");',
+        'assets/phone.js': 'export const marker="hmi-shell:phone";',
+        'assets/panel-1.js': 'export const marker="hmi-shell:panel";',
+        'assets/panel-2.js': 'export const marker="hmi-shell:panel";',
+      },
+    }],
+    ['duplicate phone marker occurrences in one entry', {
+      shellMarkers: 'none',
+      files: {
+        'assets/main-a1.js': 'import("./phone.js"); import("./panel.js");',
+        'assets/phone.js': 'export const marker="hmi-shell:phone"; export const duplicate="hmi-shell:phone";',
+        'assets/panel.js': 'export const marker="hmi-shell:panel";',
+      },
+    }],
+    ['duplicate panel marker occurrences in one entry', {
+      shellMarkers: 'none',
+      files: {
+        'assets/main-a1.js': 'import("./phone.js"); import("./panel.js");',
+        'assets/phone.js': 'export const marker="hmi-shell:phone";',
+        'assets/panel.js': 'export const marker="hmi-shell:panel"; export const duplicate="hmi-shell:panel";',
+      },
+    }],
+  ]) {
+    await t.test(name, async () => {
+      const distDir = await fixture(fixtureOptions);
+      const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+      assert.equal(report.status, 'ERROR');
+      assert.deepEqual(report.errors.map((error) => error.code), ['SHELL_MARKER_INVALID']);
+      assert.equal(report.shells.phone, null);
+      assert.equal(report.shells.panel, null);
+      assert.equal(report.shells.combinedPhoneStartup, null);
+      assert.equal(exitCodeForReport(report, { enforceBudget: true }), 2);
+    });
+  }
+});
+
+test('returns only a controlled parse error for malformed JavaScript', async () => {
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: { 'assets/main-a1.js': 'import {' },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors, [{
+    code: 'MODULE_PARSE_FAILED',
+    message: 'A referenced JavaScript asset could not be lexed safely.',
+    path: 'assets/main-a1.js',
+  }]);
+  assert.deepEqual(report.shells, { phone: null, panel: null, combinedPhoneStartup: null });
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 2);
+  assert.equal(JSON.stringify(report).includes(distDir), false);
+});
+
+test('rejects bootstrap marker decoys instead of omitting the real oversized phone shell', async () => {
+  let state = 0x6d2b79f5;
+  const highEntropy = Buffer.alloc(120_000);
+  for (let index = 0; index < highEntropy.length; index += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    highEntropy[index] = state & 0xff;
+  }
+  const oversizedPhone = `export const payload=${JSON.stringify(highEntropy.toString('base64'))};`;
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: {
+      'assets/main-a1.js': [
+        'const phoneDecoy="hmi-shell:phone";',
+        'const panelDecoy="hmi-shell:panel";',
+        'import("./phone-real.js");',
+        'import("./panel-real.js");',
+      ].join('\n'),
+      'assets/phone-real.js': oversizedPhone,
+      'assets/panel-real.js': 'export const panel=true;',
+    },
+  });
+  const report = await analyzeBuild({
+    distDir,
+    budgets: { ...generousBudgets, initialJsGzipBytes: 80 * 1024 },
+  });
+  const realPhone = report.dynamicChunks.find((file) => file.path === 'assets/phone-real.js');
+
+  assert.ok(realPhone.gzipBytes > 121_247, 'the real direct phone shell must reproduce the oversized review fixture');
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['SHELL_MARKER_INVALID']);
+  assert.equal(report.shells.phone, null);
+  assert.equal(report.shells.panel, null);
+  assert.equal(report.shells.combinedPhoneStartup, null);
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 2);
+});
+
+test('charges a semantically valid oversized direct phone shell to the startup budget', async () => {
+  let state = 0x6d2b79f5;
+  const highEntropy = Buffer.alloc(120_000);
+  for (let index = 0; index < highEntropy.length; index += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    highEntropy[index] = state & 0xff;
+  }
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: {
+      'assets/main-a1.js': 'import("./phone-real.js"); import("./panel-real.js");',
+      'assets/phone-real.js': `export const marker="hmi-shell:phone"; export const payload=${JSON.stringify(highEntropy.toString('base64'))};`,
+      'assets/panel-real.js': 'export const marker="hmi-shell:panel";',
+    },
+  });
+  const report = await analyzeBuild({
+    distDir,
+    budgets: { ...generousBudgets, initialJsGzipBytes: 80 * 1024 },
+  });
+
+  assert.equal(report.status, 'FAIL');
+  assert.equal(report.shells.phone.entry, 'assets/phone-real.js');
+  assert.equal(report.shells.combinedPhoneStartup.budget.passed, false);
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 1);
+});
+
+test('rejects co-located shell markers in one direct dynamic target', async () => {
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: {
+      'assets/main-a1.js': 'import("./both-shells.js");',
+      'assets/both-shells.js': 'export const phone="hmi-shell:phone"; export const panel="hmi-shell:panel";',
+    },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['SHELL_MARKER_INVALID']);
+  assert.deepEqual(report.shells, { phone: null, panel: null, combinedPhoneStartup: null });
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 2);
+});
+
+test('rejects shell markers found only in an indirect dynamic descendant', async () => {
+  const distDir = await fixture({
+    shellMarkers: 'none',
+    files: {
+      'assets/main-a1.js': 'import("./loader.js"); import("./panel.js");',
+      'assets/loader.js': 'import("./phone-descendant.js");',
+      'assets/phone-descendant.js': 'export const marker="hmi-shell:phone";',
+      'assets/panel.js': 'export const marker="hmi-shell:panel";',
+    },
+  });
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+
+  assert.equal(report.status, 'ERROR');
+  assert.deepEqual(report.errors.map((error) => error.code), ['SHELL_MARKER_INVALID']);
+  assert.deepEqual(report.shells, { phone: null, panel: null, combinedPhoneStartup: null });
+  assert.equal(exitCodeForReport(report, { enforceBudget: true }), 2);
+});
+
+test('source boundary uses literal shell imports and keeps panel paths out of phone', async () => {
+  const appRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const app = await readFile(path.join(appRoot, 'src', 'App.svelte'), 'utf8');
+  const phone = await readFile(path.join(appRoot, 'src', 'lib', 'shells', 'PhoneAppShell.svelte'), 'utf8');
+  assert.match(app, /import\('\.\/lib\/shells\/PhoneAppShell\.svelte'\)/);
+  assert.match(app, /import\('\.\/lib\/shells\/PanelAppShell\.svelte'\)/);
+  assert.doesNotMatch(app, /^\s*import\s+\w+\s+from\s+['"].*AppShell/m);
+  for (const forbidden of ['StatusBar', 'TabBar', 'StandbyFab', 'PlayerLayer', 'IconPicker', '../screens/', 'hero/']) {
+    assert.equal(phone.includes(forbidden), false, `phone source contains forbidden path ${forbidden}`);
+  }
+});
+
+test('never exposes an absolute local path in its JSON report', async () => {
+  const distDir = await fixture();
+  const report = await analyzeBuild({ distDir, budgets: generousBudgets });
+  const json = JSON.stringify(report);
+
+  assert.equal(json.includes(distDir), false);
+  assert.equal(report.buildRoot, 'dist');
+  for (const file of [
+    ...report.initial.javascript.files,
+    ...report.initial.css.files,
+    ...report.dynamicChunks,
+  ]) {
+    assert.equal(path.isAbsolute(file.path), false);
+  }
+});

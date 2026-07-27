@@ -1,0 +1,457 @@
+#!/usr/bin/env node
+
+import { readFile, realpath } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
+
+import { ImportType, init, parse } from 'es-module-lexer';
+
+export const DEFAULT_BUDGETS = Object.freeze({
+  initialJsGzipBytes: 80 * 1024,
+  initialCssGzipBytes: 20 * 1024,
+});
+
+function emptyReport(budgets) {
+  return {
+    schemaVersion: 1,
+    buildRoot: 'dist',
+    status: 'ERROR',
+    initial: {
+      javascript: {
+        files: [],
+        total: { rawBytes: 0, gzipBytes: 0 },
+        budget: budgetResult(budgets.initialJsGzipBytes, 0),
+      },
+      css: {
+        files: [],
+        total: { rawBytes: 0, gzipBytes: 0 },
+        budget: budgetResult(budgets.initialCssGzipBytes, 0),
+      },
+    },
+    shells: {
+      phone: null,
+      panel: null,
+      combinedPhoneStartup: null,
+    },
+    dynamicChunks: [],
+    errors: [],
+  };
+}
+
+function budgetResult(limitBytes, actualBytes) {
+  return {
+    limitBytes,
+    limitKiB: limitBytes / 1024,
+    actualBytes,
+    passed: actualBytes < limitBytes,
+  };
+}
+
+function validateBudgets(budgets) {
+  for (const key of ['initialJsGzipBytes', 'initialCssGzipBytes']) {
+    if (!Number.isInteger(budgets[key]) || budgets[key] <= 0) {
+      throw new TypeError(`${key} must be a positive integer`);
+    }
+  }
+}
+
+function readAttribute(attributes, name) {
+  const match = attributes.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+  return match ? (match[1] ?? match[2] ?? match[3]) : null;
+}
+
+function indexReferences(html) {
+  const javascript = [];
+  const css = [];
+  const activeHtml = html.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+
+  for (const match of activeHtml.matchAll(/<script\b([^>]*)>/gi)) {
+    const attributes = match[1];
+    const type = readAttribute(attributes, 'type');
+    const src = readAttribute(attributes, 'src');
+    if (type?.toLowerCase() === 'module' && src) javascript.push(src);
+  }
+
+  for (const match of activeHtml.matchAll(/<link\b([^>]*)>/gi)) {
+    const attributes = match[1];
+    const rel = readAttribute(attributes, 'rel')?.toLowerCase().split(/\s+/) ?? [];
+    const href = readAttribute(attributes, 'href');
+    if (!href) continue;
+    if (rel.includes('modulepreload')) javascript.push(href);
+    if (rel.includes('stylesheet')) css.push(href);
+  }
+
+  return { javascript, css };
+}
+
+const STATIC_IMPORT_TYPES = new Set([
+  ImportType.Static,
+  ImportType.StaticSourcePhase,
+  ImportType.StaticDeferPhase,
+]);
+const DYNAMIC_IMPORT_TYPES = new Set([
+  ImportType.Dynamic,
+  ImportType.DynamicSourcePhase,
+  ImportType.DynamicDeferPhase,
+]);
+
+/** Extract genuine ESM edges with es-module-lexer; non-literal dynamics stay explicit. */
+export async function extractModuleReferences(source) {
+  await init;
+  const [imports] = parse(source);
+  const staticImports = [];
+  const dynamicImports = [];
+  const nonLiteralDynamicImports = [];
+
+  for (const entry of imports) {
+    if (STATIC_IMPORT_TYPES.has(entry.t)) {
+      staticImports.push(entry.n);
+    } else if (DYNAMIC_IMPORT_TYPES.has(entry.t)) {
+      if (typeof entry.n === 'string') dynamicImports.push(entry.n);
+      else nonLiteralDynamicImports.push({ start: entry.ss });
+    }
+  }
+
+  return {
+    staticImports: [...new Set(staticImports)],
+    dynamicImports: [...new Set(dynamicImports)],
+    nonLiteralDynamicImports,
+  };
+}
+
+function localReference(specifier, importer = 'index.html') {
+  const withoutSuffix = specifier.split(/[?#]/, 1)[0];
+  if (!withoutSuffix || /^(?:[a-z]+:|\/\/)/i.test(withoutSuffix)) return null;
+
+  let decoded;
+  try {
+    decoded = decodeURIComponent(withoutSuffix);
+  } catch {
+    return null;
+  }
+
+  const joined = decoded.startsWith('/')
+    ? decoded.slice(1)
+    : path.posix.join(path.posix.dirname(importer), decoded);
+  const normalized = path.posix.normalize(joined);
+  if (!normalized || normalized === '..' || normalized.startsWith('../') || path.posix.isAbsolute(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+function fileMeasurement(relativePath, contents) {
+  return {
+    path: relativePath,
+    rawBytes: contents.byteLength,
+    gzipBytes: gzipSync(contents).byteLength,
+  };
+}
+
+function totals(files) {
+  return files.reduce(
+    (sum, file) => ({
+      rawBytes: sum.rawBytes + file.rawBytes,
+      gzipBytes: sum.gzipBytes + file.gzipBytes,
+    }),
+    { rawBytes: 0, gzipBytes: 0 },
+  );
+}
+
+function countOccurrences(source, marker) {
+  let count = 0;
+  let offset = 0;
+  while ((offset = source.indexOf(marker, offset)) !== -1) {
+    count += 1;
+    offset += marker.length;
+  }
+  return count;
+}
+
+function isInside(realRoot, candidate) {
+  const relative = path.relative(realRoot, candidate);
+  return relative === '' || (
+    relative !== '..'
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative)
+  );
+}
+
+/** Analyze one Vite-style dist directory without exposing its local absolute path. */
+export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
+  validateBudgets(budgets);
+  const report = emptyReport(budgets);
+  const errors = [];
+  const measured = new Map();
+  const assetEdges = new Map();
+
+  const addError = (code, message, relativePath) => {
+    const error = { code, message };
+    if (relativePath) error.path = relativePath;
+    if (!errors.some((entry) => entry.code === code && entry.path === error.path)) errors.push(error);
+  };
+
+  let realDistDir;
+  try {
+    realDistDir = await realpath(distDir);
+  } catch {
+    addError('DIST_ROOT_INVALID', 'The dist root is missing or cannot be resolved safely.');
+    report.errors = errors;
+    return report;
+  }
+
+  const readAsset = async (relativePath) => {
+    if (measured.has(relativePath)) return measured.get(relativePath).contents;
+    let resolvedPath;
+    try {
+      resolvedPath = await realpath(path.join(realDistDir, ...relativePath.split('/')));
+    } catch {
+      addError('ASSET_MISSING', 'A referenced build asset is missing or unreadable.', relativePath);
+      return null;
+    }
+    if (!isInside(realDistDir, resolvedPath)) {
+      addError('ASSET_OUTSIDE_DIST', 'A referenced build asset resolves outside the dist root.', relativePath);
+      return null;
+    }
+    try {
+      const contents = await readFile(resolvedPath);
+      measured.set(relativePath, { contents, measurement: fileMeasurement(relativePath, contents) });
+      return contents;
+    } catch {
+      addError('ASSET_MISSING', 'A referenced build asset is missing or unreadable.', relativePath);
+      return null;
+    }
+  };
+
+  const extractAssetEdges = async (contents, relativePath) => {
+    try {
+      const edges = await extractModuleReferences(contents.toString('utf8'));
+      assetEdges.set(relativePath, edges);
+      if (edges.nonLiteralDynamicImports.length > 0) {
+        addError(
+          'DYNAMIC_IMPORT_NOT_LITERAL',
+          'A dynamic import cannot be resolved from a string literal; the chunk inventory would be incomplete.',
+          relativePath,
+        );
+      }
+      return edges;
+    } catch {
+      assetEdges.set(relativePath, null);
+      addError('MODULE_PARSE_FAILED', 'A referenced JavaScript asset could not be lexed safely.', relativePath);
+      return null;
+    }
+  };
+
+  let html;
+  let indexPath;
+  try {
+    indexPath = await realpath(path.join(realDistDir, 'index.html'));
+  } catch {
+    addError('INDEX_HTML_MISSING', 'dist/index.html is missing or unreadable.');
+    report.errors = errors;
+    return report;
+  }
+  if (!isInside(realDistDir, indexPath)) {
+    addError('INDEX_HTML_OUTSIDE_DIST', 'dist/index.html resolves outside the dist root.');
+    report.errors = errors;
+    return report;
+  }
+  try {
+    html = await readFile(indexPath, 'utf8');
+  } catch {
+    addError('INDEX_HTML_MISSING', 'dist/index.html is missing or unreadable.');
+    report.errors = errors;
+    return report;
+  }
+
+  const references = indexReferences(html);
+  if (references.javascript.length === 0) {
+    addError('INDEX_HTML_INVALID', 'dist/index.html has no external module entry.');
+    report.errors = errors;
+    return report;
+  }
+
+  const initial = new Set();
+  const initialQueue = [];
+  const dynamicSeeds = [];
+  const initialDynamicEdges = new Map();
+  for (const specifier of references.javascript) {
+    const relativePath = localReference(specifier);
+    if (relativePath) initialQueue.push(relativePath);
+    else addError('ASSET_REFERENCE_INVALID', 'index.html contains a non-local or unsafe module reference.');
+  }
+
+  while (initialQueue.length > 0) {
+    const relativePath = initialQueue.shift();
+    if (initial.has(relativePath)) continue;
+    initial.add(relativePath);
+    const contents = await readAsset(relativePath);
+    if (!contents) continue;
+    const edges = await extractAssetEdges(contents, relativePath);
+    if (!edges) continue;
+    for (const specifier of edges.staticImports) {
+      const target = localReference(specifier, relativePath);
+      if (target) initialQueue.push(target);
+      else addError('ASSET_REFERENCE_INVALID', 'A static import is non-local or unsafe.', relativePath);
+    }
+    for (const specifier of edges.dynamicImports) {
+      const target = localReference(specifier, relativePath);
+      if (target) {
+        dynamicSeeds.push(target);
+        const targets = initialDynamicEdges.get(relativePath) ?? new Set();
+        targets.add(target);
+        initialDynamicEdges.set(relativePath, targets);
+      }
+      else addError('ASSET_REFERENCE_INVALID', 'A dynamic import is non-local or unsafe.', relativePath);
+    }
+  }
+
+  const dynamic = new Set();
+  const dynamicQueue = [...dynamicSeeds];
+  while (dynamicQueue.length > 0) {
+    const relativePath = dynamicQueue.shift();
+    if (initial.has(relativePath) || dynamic.has(relativePath)) continue;
+    dynamic.add(relativePath);
+    const contents = await readAsset(relativePath);
+    if (!contents) continue;
+    const edges = await extractAssetEdges(contents, relativePath);
+    if (!edges) continue;
+    for (const specifier of [...edges.staticImports, ...edges.dynamicImports]) {
+      const target = localReference(specifier, relativePath);
+      if (target) dynamicQueue.push(target);
+      else addError('ASSET_REFERENCE_INVALID', 'An import in a dynamic chunk is non-local or unsafe.', relativePath);
+    }
+  }
+
+  const moduleGraph = new Map();
+  const shellMarkerHits = { phone: [], panel: [] };
+  for (const relativePath of new Set([...initial, ...dynamic])) {
+    const contents = measured.get(relativePath)?.contents;
+    if (!contents || !relativePath.endsWith('.js')) continue;
+    const edges = assetEdges.get(relativePath);
+    if (!edges) continue;
+    moduleGraph.set(relativePath, edges.staticImports
+      .map((specifier) => localReference(specifier, relativePath))
+      .filter(Boolean));
+    const source = contents.toString('utf8');
+    shellMarkerHits.phone.push(...Array(countOccurrences(source, 'hmi-shell:phone')).fill(relativePath));
+    shellMarkerHits.panel.push(...Array(countOccurrences(source, 'hmi-shell:panel')).fill(relativePath));
+  }
+
+  const directDynamicTargets = new Set(
+    [...initialDynamicEdges.values()].flatMap((targets) => [...targets]),
+  );
+  const shellEntries = { phone: [], panel: [] };
+  for (const relativePath of directDynamicTargets) {
+    if (initial.has(relativePath)) continue;
+    const contents = measured.get(relativePath)?.contents;
+    if (!contents || !relativePath.endsWith('.js')) continue;
+    const source = contents.toString('utf8');
+    const phoneMarkerCount = countOccurrences(source, 'hmi-shell:phone');
+    const panelMarkerCount = countOccurrences(source, 'hmi-shell:panel');
+    if (phoneMarkerCount === 1 && panelMarkerCount === 0) shellEntries.phone.push(relativePath);
+    if (panelMarkerCount === 1 && phoneMarkerCount === 0) shellEntries.panel.push(relativePath);
+  }
+
+  const staticClosure = (entry) => {
+    const closure = new Set();
+    const queue = [entry];
+    while (queue.length > 0) {
+      const relativePath = queue.shift();
+      if (closure.has(relativePath)) continue;
+      closure.add(relativePath);
+      for (const target of moduleGraph.get(relativePath) ?? []) queue.push(target);
+    }
+    return closure;
+  };
+
+  const cssPaths = [];
+  for (const specifier of references.css) {
+    const relativePath = localReference(specifier);
+    if (relativePath) cssPaths.push(relativePath);
+    else addError('ASSET_REFERENCE_INVALID', 'index.html contains a non-local or unsafe stylesheet reference.');
+  }
+  await Promise.all(cssPaths.map((relativePath) => readAsset(relativePath)));
+
+  const measurementsFor = (paths) => [...new Set(paths)]
+    .map((relativePath) => measured.get(relativePath)?.measurement)
+    .filter(Boolean)
+    .sort((left, right) => left.path.localeCompare(right.path));
+
+  report.initial.javascript.files = measurementsFor(initial);
+  report.initial.css.files = measurementsFor(cssPaths);
+  report.dynamicChunks = measurementsFor(dynamic);
+
+  const moduleParseFailed = errors.some((error) => error.code === 'MODULE_PARSE_FAILED');
+  const shellEntriesValid = !moduleParseFailed
+    && shellEntries.phone.length === 1
+    && shellEntries.panel.length === 1
+    && shellEntries.phone[0] !== shellEntries.panel[0]
+    && shellMarkerHits.phone.length === 1
+    && shellMarkerHits.phone[0] === shellEntries.phone[0]
+    && shellMarkerHits.panel.length === 1
+    && shellMarkerHits.panel[0] === shellEntries.panel[0];
+  if (!moduleParseFailed && !shellEntriesValid) {
+    addError(
+      'SHELL_MARKER_INVALID',
+      'The build must contain exactly one distinct phone and panel shell entry, each marked only in its own non-initial direct literal-dynamic target from the initial graph.',
+    );
+  }
+  if (shellEntriesValid) {
+    const describeShell = (entry) => {
+      const files = measurementsFor(staticClosure(entry));
+      return { entry, files, total: totals(files) };
+    };
+    report.shells.phone = describeShell(shellEntries.phone[0]);
+    report.shells.panel = describeShell(shellEntries.panel[0]);
+    const combinedFiles = measurementsFor(new Set([
+      ...initial,
+      ...staticClosure(shellEntries.phone[0]),
+    ]));
+    const combinedTotal = totals(combinedFiles);
+    report.shells.combinedPhoneStartup = {
+      files: combinedFiles,
+      total: combinedTotal,
+      budget: budgetResult(budgets.initialJsGzipBytes, combinedTotal.gzipBytes),
+    };
+  }
+
+  report.initial.javascript.total = totals(report.initial.javascript.files);
+  report.initial.css.total = totals(report.initial.css.files);
+  report.initial.javascript.budget = budgetResult(
+    budgets.initialJsGzipBytes,
+    report.initial.javascript.total.gzipBytes,
+  );
+  report.initial.css.budget = budgetResult(
+    budgets.initialCssGzipBytes,
+    report.initial.css.total.gzipBytes,
+  );
+  report.errors = errors;
+  report.status = errors.length > 0
+    ? 'ERROR'
+    : report.initial.javascript.budget.passed
+      && report.initial.css.budget.passed
+      && (report.shells.combinedPhoneStartup?.budget.passed ?? true)
+      ? 'PASS'
+      : 'FAIL';
+  return report;
+}
+
+export function exitCodeForReport(report, { enforceBudget = false } = {}) {
+  if (report.status === 'ERROR') return 2;
+  if (enforceBudget && report.status === 'FAIL') return 1;
+  return 0;
+}
+
+async function main() {
+  const enforceBudget = process.argv.slice(2).includes('--budget');
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const report = await analyzeBuild({ distDir: path.resolve(scriptDir, '..', 'dist') });
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  process.exitCode = exitCodeForReport(report, { enforceBudget });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await main();
+}

@@ -1,0 +1,1251 @@
+import { execFileSync } from 'node:child_process';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import {
+  chmodSync, copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync,
+} from 'node:fs';
+import http from 'node:http';
+import { homedir } from 'node:os';
+import { dirname, extname, resolve, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const HOST = process.env.HMI_HOST || '0.0.0.0';
+const PORT = Number(process.env.HMI_PORT || 4173);
+const HERMES_HOST = process.env.HMI_HERMES_HOST || '127.0.0.1';
+const HERMES_PORT = Number(process.env.HMI_HERMES_PORT || 8642);
+const AMBIENT_HOST = process.env.HMI_AMBIENT_HOST || '127.0.0.1';
+const AMBIENT_PORT = Number(process.env.HMI_AMBIENT_PORT || 18088);
+
+const PAPERLESS_HOST = process.env.HMI_PAPERLESS_HOST || '127.0.0.1';
+const PAPERLESS_PORT = Number(process.env.HMI_PAPERLESS_PORT || 8000);
+const ACESTEP_HOST = process.env.HMI_ACESTEP_HOST || '127.0.0.1';
+const ACESTEP_PORT = Number(process.env.HMI_ACESTEP_PORT || 18001);
+const AMBIENT_MODEL = 'gpt-5.6-luna';
+const AMBIENT_BODY_MAX = 64 * 1024;
+const KEYCHAIN_SERVICE = process.env.HMI_KEYCHAIN_SERVICE || 'smart-home-hmi.hermes-api';
+const KEYCHAIN_ACCOUNT = process.env.HMI_KEYCHAIN_ACCOUNT || 'hmi-customizing';
+const ABLAGE_KEYCHAIN_SERVICE = process.env.HMI_ABLAGE_KEYCHAIN_SERVICE || 'smart-home-hmi.ablage';
+const ABLAGE_PIN_ACCOUNT = process.env.HMI_ABLAGE_PIN_ACCOUNT || 'pin';
+const ABLAGE_TOKEN_ACCOUNT = process.env.HMI_ABLAGE_TOKEN_ACCOUNT || 'paperless-token';
+const ABLAGE_SESSION_MS = 15 * 60 * 1000;
+const ABLAGE_BODY_MAX = 1024;
+const ABLAGE_UPLOAD_MAX = Math.max(1, Number(process.env.HMI_ABLAGE_UPLOAD_MAX) || 52428800);
+const SONG_BODY_MAX = 4 * 1024;
+const SONG_STYLES = new Set(['Pop', 'Rock', 'Disco', 'Jazz', 'Hip-Hop', 'Metal', 'Indie', 'Britpop', 'Electronic', 'House', 'Funk', 'Soul', 'Country', 'Reggae', 'Classical']);
+const SONG_ERAS = new Set(['Heute', '2000er', '1990er', '1980er', '1970er', '1960er']);
+const SONG_VOICES = new Set(['Weiblich', 'Männlich', 'Duett', 'Instrumental']);
+const SONG_LYRICS_MODEL = 'gpt-5.6-luna';
+const SONG_LIBRARY_DIR = process.env.HMI_SONG_LIBRARY_DIR || resolve(homedir(), '.local', 'share', 'smart-home-hmi', 'songs');
+const SONG_LIBRARY_PATH = resolve(SONG_LIBRARY_DIR, 'library.json');
+const FAMILY_DATA_PATH = process.env.HMI_FAMILY_DATA_PATH || resolve(homedir(), '.local', 'share', 'smart-home-hmi', 'family-data.json');
+const FAMILY_DATA_SEED_PATH = fileURLToPath(new URL('./data/family-data.seed.json', import.meta.url));
+const ACESTEP_AUDIO_ROOT = process.env.HMI_ACESTEP_AUDIO_ROOT || '/path/to/ace-step-1.5/.cache/acestep/tmp/api_audio';
+
+const ALLOWED_ORIGINS = new Set(
+  (process.env.HMI_ALLOWED_ORIGINS || 'https://dashboard.example.com,https://haus.example.com,http://localhost:4173,http://127.0.0.1:4173')
+    .split(',').map((origin) => origin.trim()).filter(Boolean),
+);
+const DIST = resolve(fileURLToPath(new URL('./dist', import.meta.url)));
+const CONFIG_PATH = process.env.HMI_CONFIG_PATH
+  || resolve(homedir(), '.config', 'smart-home-hmi', 'config.json');
+const CONFIG_BODY_MAX = 1024 * 1024;
+const SHARED_CONFIG_KEYS = new Set([
+  'hmi:backend', 'hmi:ha-url', 'hmi:ha-token', 'hmi:jf-url', 'hmi:jf-token',
+  'hmi:jf-user', 'hmi:library', 'hmi:lock-button',
+  'hmi:device-config:v1', 'hmi:scene-config:v1', 'hmi:home-layout:v1',
+  'hmi:light-icon-overrides:v1', 'hmi:calendar-selected', 'hmi:reminders-selected',
+  'hmi:shopping-config:v1',
+]);
+
+const MIME = new Map([
+  ['.html', 'text/html; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'],
+  ['.css', 'text/css; charset=utf-8'], ['.json', 'application/json; charset=utf-8'],
+  ['.svg', 'image/svg+xml'], ['.png', 'image/png'], ['.jpg', 'image/jpeg'],
+  ['.jpeg', 'image/jpeg'], ['.webp', 'image/webp'], ['.ico', 'image/x-icon'],
+  ['.webmanifest', 'application/manifest+json; charset=utf-8'],
+  ['.woff2', 'font/woff2'], ['.mp4', 'video/mp4'], ['.webm', 'video/webm'],
+]);
+
+export function proxyTargetPath(url) {
+  const parsed = new URL(url, 'http://hmi.local');
+  if (parsed.pathname !== '/hermes' && !parsed.pathname.startsWith('/hermes/')) return null;
+  const path = parsed.pathname.slice('/hermes'.length) || '/';
+  const allowed = path === '/health'
+    || path === '/api/sessions'
+    || path.startsWith('/api/sessions/')
+    || path === '/v1/runs'
+    || path.startsWith('/v1/runs/');
+  return allowed ? `${path}${parsed.search}` : null;
+}
+
+
+export function songTargetPath(url) {
+  const parsed = new URL(url, 'http://hmi.local');
+  if (parsed.pathname === '/api/songs/health') return { kind: 'health', path: '/health', method: 'GET' };
+  if (parsed.pathname === '/api/songs/generate') return { kind: 'generate', path: '/release_task', method: 'POST' };
+  if (parsed.pathname === '/api/songs/status') return { kind: 'status', path: '/query_result', method: 'POST' };
+  if (parsed.pathname === '/api/songs/library') {
+    if (parsed.searchParams.size) return null;
+    return { kind: 'library', path: '', method: null };
+  }
+  const libraryMatch = parsed.pathname.match(/^\/api\/songs\/library\/([0-9a-f-]{36})(?:\/(audio))?$/i);
+  if (libraryMatch && !parsed.searchParams.size) {
+    return { kind: libraryMatch[2] ? 'library-audio' : 'library-item', path: '', method: null, id: libraryMatch[1] };
+  }
+  if (parsed.pathname === '/api/songs/audio') {
+    const path = parsed.searchParams.get('path') || '';
+    if (!path || path.length > 2048 || path.includes('\0')) return null;
+    return { kind: 'audio', path: `/v1/audio?path=${encodeURIComponent(path)}`, method: 'GET' };
+  }
+  return null;
+}
+
+export function songRequestAllowed(req, target, allowedOrigins = ALLOWED_ORIGINS) {
+  if (!target) return false;
+  const methodAllowed = target.method
+    ? req.method === target.method
+    : (target.kind === 'library' && ['GET', 'POST'].includes(req.method || ''))
+      || (target.kind === 'library-item' && ['PATCH', 'DELETE'].includes(req.method || ''))
+      || (target.kind === 'library-audio' && ['GET', 'HEAD'].includes(req.method || ''));
+  if (!methodAllowed) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+
+export function proxyRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  return allowedOrigins.has(origin);
+}
+
+export function ambientRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (req.method !== 'POST') return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+export function configRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (!['GET', 'PUT'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+export function familyDataRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+
+
+export function ablageRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (!['GET', 'POST'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+function readKeychainSecret(account, service, required = false) {
+  try {
+    const value = execFileSync('/usr/bin/security', [
+      'find-generic-password', '-a', account, '-s', service, '-w',
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    if (value) return value;
+  } catch { /* Optional secrets leave the Ablage route disabled. */ }
+  if (required) throw new Error(`Schlüsselbund-Eintrag ${service}/${account} fehlt.`);
+  return '';
+}
+
+export function createAblageAccess(pin = '', token = '', now = () => Date.now()) {
+  const sessions = new Map();
+  const attempts = new Map();
+
+  function configured() { return Boolean(pin && token); }
+  function cookieToken(req) {
+    const match = String(req.headers.cookie || '').match(/(?:^|;\s*)hmi_ablage=([a-f0-9]{64})(?:;|$)/);
+    return match?.[1] || '';
+  }
+  function authenticated(req) {
+    const session = cookieToken(req);
+    const expiry = sessions.get(session) || 0;
+    if (!session || expiry <= now()) {
+      if (session) sessions.delete(session);
+      return false;
+    }
+    sessions.set(session, now() + ABLAGE_SESSION_MS);
+    return true;
+  }
+  function unlock(candidate, remoteAddress = '') {
+    const key = remoteAddress || 'unknown';
+    const attempt = attempts.get(key) || { failures: 0, blockedUntil: 0 };
+    if (attempt.blockedUntil > now()) return { ok: false, limited: true };
+    const expected = Buffer.from(pin);
+    const supplied = Buffer.from(String(candidate || ''));
+    const valid = expected.length === supplied.length && timingSafeEqual(expected, supplied);
+    if (!valid) {
+      attempt.failures += 1;
+      if (attempt.failures >= 5) {
+        attempt.failures = 0;
+        attempt.blockedUntil = now() + 60_000;
+      }
+      attempts.set(key, attempt);
+      return { ok: false, limited: attempt.blockedUntil > now() };
+    }
+    attempts.delete(key);
+    const session = randomBytes(32).toString('hex');
+    sessions.set(session, now() + ABLAGE_SESSION_MS);
+    return { ok: true, session };
+  }
+  function lock(req) {
+    const session = cookieToken(req);
+    if (session) sessions.delete(session);
+  }
+  return { authenticated, configured, lock, token, unlock };
+}
+
+export function createCentralConfigStore(path = CONFIG_PATH) {
+  function read() {
+    try {
+      const parsed = JSON.parse(readFileSync(path, 'utf8'));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      return Object.fromEntries(Object.entries(parsed).filter(([key, value]) => (
+        SHARED_CONFIG_KEYS.has(key) && typeof value === 'string'
+      )));
+    } catch {
+      return {};
+    }
+  }
+
+  function update(updates) {
+    const values = read();
+    for (const [key, value] of Object.entries(updates)) {
+      if (!SHARED_CONFIG_KEYS.has(key)) continue;
+      if (value === null) delete values[key];
+      else if (typeof value === 'string' && Buffer.byteLength(value) <= 256 * 1024) values[key] = value;
+    }
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    const temporary = `${path}.${process.pid}.tmp`;
+    writeFileSync(temporary, `${JSON.stringify(values, null, 2)}\n`, { mode: 0o600 });
+    renameSync(temporary, path);
+    chmodSync(path, 0o600);
+    return values;
+  }
+
+  return { read, update };
+}
+
+export function createFamilyDataStore(
+  path = FAMILY_DATA_PATH,
+  seedPath = FAMILY_DATA_SEED_PATH,
+) {
+  function seed() {
+    try {
+      const data = JSON.parse(readFileSync(seedPath, 'utf8'));
+      if (data?.version === 1 && Array.isArray(data.reminders) && Array.isArray(data.shopping)) return data;
+    } catch { /* defaults below */ }
+    return { version: 1, updatedAt: new Date().toISOString(), reminders: [], shopping: [
+      { id: 'aldi', title: 'Aldi', items: [] },
+      { id: 'rewe', title: 'Rewe', items: [] },
+      { id: 'dm', title: 'dm', items: [] },
+    ] };
+  }
+
+  function write(data) {
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    const temporary = `${path}.${process.pid}.tmp`;
+    writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+    renameSync(temporary, path);
+    chmodSync(path, 0o600);
+    return data;
+  }
+
+  function read() {
+    try {
+      const data = JSON.parse(readFileSync(path, 'utf8'));
+      if (data?.version === 1 && Array.isArray(data.reminders) && Array.isArray(data.shopping)) return data;
+    } catch { /* first start: migrate the bundled snapshots */ }
+    return write(seed());
+  }
+
+  function update(mutator) {
+    const data = read();
+    mutator(data);
+    data.updatedAt = new Date().toISOString();
+    return write(data);
+  }
+
+  function reminders() {
+    const data = read();
+    return {
+      updated_at: data.updatedAt,
+      source_name: 'HMI Erinnerungen',
+      source_color: '#ffffff',
+      items: data.reminders,
+    };
+  }
+
+  function reminderDue(rawDue) {
+    if (rawDue === null || rawDue === undefined || rawDue === '') return null;
+    const due = String(rawDue);
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(due) ? new Date(`${due}T00:00:00Z`) : null;
+    if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== due) {
+      throw new Error('Ungültiges Erinnerungsdatum');
+    }
+    return due;
+  }
+
+  function addReminder(who, rawTitle, rawDue = null) {
+    const labels = { alex: 'Alex', sam: 'Sam', beide: 'Beide' };
+    const title = String(rawTitle || '').trim();
+    if (!labels[who]) throw new Error('Unbekannte Person');
+    if (!title) throw new Error('Leerer Titel');
+    if (title.length > 120) throw new Error('Titel ist zu lang');
+    const fullTitle = new RegExp(`^${who}\\s*[-–:]`, 'i').test(title) ? title : `${labels[who]} - ${title}`;
+    const now = new Date().toISOString();
+    const item = {
+      id: randomUUID(), title: fullTitle, completed: false, due: reminderDue(rawDue),
+      description: null, priority: null, created: now, edited: now, source: 'hmi',
+    };
+    update((data) => data.reminders.push(item));
+    return item;
+  }
+
+  function completeReminder(id) {
+    let found = false;
+    update((data) => {
+      const item = data.reminders.find((entry) => entry.id === id);
+      if (!item) return;
+      item.completed = true;
+      item.edited = new Date().toISOString();
+      found = true;
+    });
+    if (!found) throw new Error('Erinnerung nicht gefunden');
+  }
+
+  function updateReminder(id, rawTitle, rawDue) {
+    const title = String(rawTitle || '').trim();
+    if (!title) throw new Error('Leerer Titel');
+    if (title.length > 120) throw new Error('Titel ist zu lang');
+    const due = reminderDue(rawDue);
+    let found = false;
+    update((data) => {
+      const item = data.reminders.find((entry) => entry.id === id);
+      if (!item) return;
+      item.title = title;
+      item.due = due;
+      item.edited = new Date().toISOString();
+      found = true;
+    });
+    if (!found) throw new Error('Erinnerung nicht gefunden');
+  }
+
+  function shopping() {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    let changed = false;
+    const data = read();
+    for (const section of data.shopping) {
+      const retained = section.items.filter((item) => !item.checked || !item.checkedAt
+        || new Date(item.checkedAt).getTime() > cutoff);
+      changed ||= retained.length !== section.items.length;
+      section.items = retained;
+    }
+    if (changed) {
+      data.updatedAt = new Date().toISOString();
+      write(data);
+    }
+    return { updated_at: data.updatedAt, source_name: 'HMI Einkaufsliste', sections: data.shopping };
+  }
+
+  function addShoppingItem(store, rawTitle) {
+    const title = String(rawTitle || '').trim();
+    if (!store) throw new Error('Unbekannter Laden');
+    if (!title) throw new Error('Leerer Titel');
+    if (title.length > 120) throw new Error('Titel ist zu lang');
+    const item = { id: randomUUID(), title, checked: false, checkedAt: null };
+    let found = false;
+    update((data) => {
+      const section = data.shopping.find((entry) => entry.id === store);
+      if (!section) return;
+      section.items.push(item);
+      found = true;
+    });
+    if (!found) throw new Error('Laden nicht gefunden');
+    return item;
+  }
+
+  function toggleShoppingItem(id, checked) {
+    let found = false;
+    update((data) => {
+      const item = data.shopping.flatMap((section) => section.items).find((entry) => entry.id === id);
+      if (!item) return;
+      item.checked = Boolean(checked);
+      item.checkedAt = item.checked ? new Date().toISOString() : null;
+      found = true;
+    });
+    if (!found) throw new Error('Einkaufsartikel nicht gefunden');
+  }
+
+  function addShoppingStore(id, rawLabel) {
+    const label = String(rawLabel || '').trim();
+    if (!/^[a-z0-9-]{1,64}$/.test(id) || !label) throw new Error('Ungültiger Laden');
+    update((data) => {
+      if (data.shopping.some((entry) => entry.id === id)) throw new Error('Laden existiert bereits');
+      data.shopping.push({ id, title: label, items: [] });
+    });
+  }
+
+  function deleteShoppingStore(id) {
+    let found = false;
+    update((data) => {
+      const index = data.shopping.findIndex((entry) => entry.id === id);
+      if (index < 0) return;
+      data.shopping.splice(index, 1);
+      found = true;
+    });
+    if (!found) throw new Error('Laden nicht gefunden');
+  }
+
+  return {
+    addReminder, addShoppingItem, addShoppingStore, completeReminder,
+    deleteShoppingStore, reminders, shopping, toggleShoppingItem, updateReminder,
+  };
+}
+
+function serveConfig(req, res, store) {
+  if (req.method === 'GET') {
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ values: store.read() }));
+    return;
+  }
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > CONFIG_BODY_MAX) oversized = true;
+  });
+  req.on('end', () => {
+    if (oversized) {
+      res.writeHead(413, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Konfiguration zu groß"}');
+      return;
+    }
+    let payload;
+    try { payload = JSON.parse(body); } catch { payload = null; }
+    if (!payload?.updates || typeof payload.updates !== 'object' || Array.isArray(payload.updates)) {
+      res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Ungültige Konfiguration"}');
+      return;
+    }
+    try {
+      const values = store.update(payload.updates);
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ values }));
+    } catch {
+      res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Konfiguration konnte nicht gespeichert werden"}');
+    }
+  });
+}
+
+export function staticPathFor(url) {
+  const pathname = decodeURIComponent(new URL(url, 'http://hmi.local').pathname);
+  const candidate = resolve(DIST, `.${pathname}`);
+  if (candidate !== DIST && !candidate.startsWith(`${DIST}${sep}`)) return null;
+  return candidate;
+}
+
+function readHermesKey() {
+  const key = execFileSync('/usr/bin/security', [
+    'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE, '-w',
+  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  if (!key) throw new Error('Hermes-Key fehlt im macOS-Schlüsselbund.');
+  return key;
+}
+
+function proxy(req, res, key, targetPath, upstreamHost, upstreamPort) {
+  const headers = {
+    accept: req.headers.accept || '*/*',
+    authorization: `Bearer ${key}`,
+  };
+  if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+  if (req.headers['last-event-id']) headers['last-event-id'] = req.headers['last-event-id'];
+  if (req.headers['content-length']) headers['content-length'] = req.headers['content-length'];
+
+  const upstream = http.request({
+    hostname: upstreamHost,
+    port: upstreamPort,
+    method: req.method,
+    path: targetPath,
+    headers,
+  }, (upstreamResponse) => {
+    const responseHeaders = {};
+    for (const name of ['content-type', 'cache-control', 'content-length']) {
+      if (upstreamResponse.headers[name] !== undefined) responseHeaders[name] = upstreamResponse.headers[name];
+    }
+    res.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
+    upstreamResponse.pipe(res);
+  });
+  upstream.on('error', () => {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+    res.end('{"error":"Hermes nicht erreichbar"}');
+  });
+  req.on('aborted', () => upstream.destroy());
+  req.pipe(upstream);
+}
+
+
+
+function jsonResponse(res, status, payload, headers = {}) {
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    ...headers,
+  });
+  res.end(JSON.stringify(payload));
+}
+
+function readSmallJson(req, res, callback) {
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > ABLAGE_BODY_MAX) oversized = true;
+  });
+  req.on('end', () => {
+    if (oversized) return jsonResponse(res, 413, { error: 'Anfrage zu groß' });
+    let payload;
+    try { payload = JSON.parse(body); } catch { payload = null; }
+    callback(payload);
+  });
+}
+
+function serveFamilyData(req, res, store) {
+  const pathname = new URL(req.url || '/', 'http://hmi.local').pathname;
+  try {
+    if (pathname === '/api/reminders' && req.method === 'GET') {
+      return jsonResponse(res, 200, store.reminders());
+    }
+    if (pathname === '/api/shopping' && req.method === 'GET') {
+      return jsonResponse(res, 200, store.shopping());
+    }
+    const reminderComplete = pathname.match(/^\/api\/reminders\/([0-9a-f-]{36})\/complete$/i);
+    if (reminderComplete && req.method === 'POST') {
+      store.completeReminder(reminderComplete[1]);
+      return jsonResponse(res, 200, { ok: true });
+    }
+    const reminderItem = pathname.match(/^\/api\/reminders\/([0-9a-f-]{36})$/i);
+    if (reminderItem && req.method === 'PATCH') {
+      return readSmallJson(req, res, (payload) => {
+        try {
+          store.updateReminder(reminderItem[1], payload?.title, payload?.due);
+          jsonResponse(res, 200, { ok: true });
+        } catch (error) { jsonResponse(res, 422, { error: error.message }); }
+      });
+    }
+    const shoppingItem = pathname.match(/^\/api\/shopping\/items\/([0-9a-f-]{36})$/i);
+    if (shoppingItem && req.method === 'PATCH') {
+      return readSmallJson(req, res, (payload) => {
+        try {
+          if (typeof payload?.checked !== 'boolean') throw new Error('Ungültiger Status');
+          store.toggleShoppingItem(shoppingItem[1], payload.checked);
+          jsonResponse(res, 200, { ok: true });
+        } catch (error) { jsonResponse(res, 422, { error: error.message }); }
+      });
+    }
+    const shoppingStore = pathname.match(/^\/api\/shopping\/stores\/([a-z0-9-]{1,64})$/);
+    if (shoppingStore && req.method === 'DELETE') {
+      store.deleteShoppingStore(shoppingStore[1]);
+      return jsonResponse(res, 200, { ok: true });
+    }
+    if (pathname === '/api/reminders' && req.method === 'POST') {
+      return readSmallJson(req, res, (payload) => {
+        try { jsonResponse(res, 201, { ok: true, item: store.addReminder(payload?.who, payload?.title, payload?.due) }); }
+        catch (error) { jsonResponse(res, 422, { error: error.message }); }
+      });
+    }
+    if (pathname === '/api/shopping/items' && req.method === 'POST') {
+      return readSmallJson(req, res, (payload) => {
+        try { jsonResponse(res, 201, { ok: true, item: store.addShoppingItem(payload?.store, payload?.title) }); }
+        catch (error) { jsonResponse(res, 422, { error: error.message }); }
+      });
+    }
+    if (pathname === '/api/shopping/stores' && req.method === 'POST') {
+      return readSmallJson(req, res, (payload) => {
+        try {
+          store.addShoppingStore(payload?.id, payload?.label);
+          jsonResponse(res, 201, { ok: true });
+        } catch (error) { jsonResponse(res, 422, { error: error.message }); }
+      });
+    }
+    jsonResponse(res, 404, { error: 'Route nicht gefunden' });
+  } catch (error) {
+    jsonResponse(res, 422, { error: error instanceof Error ? error.message : 'Daten konnten nicht gespeichert werden' });
+  }
+}
+
+function proxyAce(req, res, path, upstreamHost, upstreamPort, body = null) {
+  const headers = { accept: req.headers.accept || '*/*' };
+  if (body !== null) {
+    headers['content-type'] = 'application/json';
+    headers['content-length'] = Buffer.byteLength(body);
+  }
+  const upstream = http.request({
+    hostname: upstreamHost, port: upstreamPort, method: req.method, path, headers,
+  }, (upstreamResponse) => {
+    const responseHeaders = { 'cache-control': 'no-store' };
+    for (const name of ['content-type', 'content-length', 'content-disposition', 'accept-ranges']) {
+      if (upstreamResponse.headers[name] !== undefined) responseHeaders[name] = upstreamResponse.headers[name];
+    }
+    res.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
+    upstreamResponse.pipe(res);
+  });
+  upstream.on('error', () => jsonResponse(res, 502, { error: 'ACE-Step ist nicht erreichbar' }));
+  req.on('aborted', () => upstream.destroy());
+  upstream.end(body ?? undefined);
+}
+
+function readSongJson(req, res, callback) {
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > SONG_BODY_MAX) oversized = true;
+  });
+  req.on('end', () => {
+    if (oversized) return jsonResponse(res, 413, { error: 'Songidee ist zu groß' });
+    try { callback(JSON.parse(body)); }
+    catch { jsonResponse(res, 400, { error: 'Ungültige Song-Anfrage' }); }
+  });
+}
+
+export function buildSongPlanMessages({ idea, style, era, voice, experimental }) {
+  return [
+    {
+      role: 'system',
+      content: [
+        'Du schreibst Liedtexte für eine deutsche Songgenerierung.',
+        'Antworte ausschließlich als valides JSON mit den Schlüsseln caption und lyrics.',
+        'caption ist eine präzise englische Produktionsbeschreibung für ein Musikmodell.',
+        'lyrics ist ein vollständig ausformulierter, verständlicher deutscher Liedtext.',
+        'Verwende mindestens [Verse 1], [Chorus] und [Verse 2].',
+        'Keine Fantasiesprache, keine Lautmalerei außer wenn sie ausdrücklich gewünscht wurde.',
+        'Der Refrain muss die zentrale Idee des Nutzers klar und wiedererkennbar aufgreifen.',
+      ].join(' '),
+    },
+    {
+      role: 'user',
+      content: `Thema: ${idea}\nStil: ${style}\nEpoche: ${era}\nStimme: ${voice}\nExperimentiergrad: ${experimental}%`,
+    },
+  ];
+}
+
+export function parseSongPlan(content) {
+  const normalized = String(content || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let plan;
+  try { plan = JSON.parse(normalized); } catch { return null; }
+  const caption = typeof plan?.caption === 'string' ? plan.caption.trim() : '';
+  const lyrics = typeof plan?.lyrics === 'string' ? plan.lyrics.trim() : '';
+  if (caption.length < 20 || caption.length > 2_000 || lyrics.length < 80 || lyrics.length > 8_000) return null;
+  if (!/\[Verse 1\]/i.test(lyrics) || !/\[Chorus\]/i.test(lyrics) || !/\[Verse 2\]/i.test(lyrics)) return null;
+  return { caption, lyrics };
+}
+
+export function buildAceSongRequest({ idea, style, era, voice, experimental }, plan = null) {
+  const instrumental = voice === 'Instrumental';
+  const intensity = experimental < 34 ? 'accessible' : experimental < 67 ? 'creative' : 'experimental';
+  return {
+    prompt: instrumental
+      ? `${style}, ${era}, instrumental, no vocals, ${intensity} arrangement. ${idea}`
+      : plan.caption,
+    lyrics: instrumental ? '[Instrumental]' : plan.lyrics,
+    thinking: true,
+    vocal_language: instrumental ? 'unknown' : 'de',
+    audio_format: 'mp3',
+    batch_size: 1,
+    inference_steps: 8,
+    lm_temperature: 0.55 + experimental * 0.004,
+    use_cot_caption: false,
+    use_cot_language: false,
+  };
+}
+
+function requestSongPlan(payload, upstreamHost, upstreamPort, callback) {
+  const upstreamBody = JSON.stringify({
+    model: SONG_LYRICS_MODEL,
+    messages: buildSongPlanMessages(payload),
+    stream: false,
+    temperature: 0.4,
+    max_tokens: 1_600,
+    reasoning_effort: 'none',
+  });
+  const upstream = http.request({
+    hostname: upstreamHost,
+    port: upstreamPort,
+    method: 'POST',
+    path: '/v1/chat/completions',
+    headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(upstreamBody) },
+  }, (upstreamResponse) => {
+    let body = '';
+    upstreamResponse.setEncoding('utf8');
+    upstreamResponse.on('data', (chunk) => {
+      body += chunk;
+      if (Buffer.byteLength(body) > 64 * 1024) upstreamResponse.destroy();
+    });
+    upstreamResponse.on('end', () => {
+      let response;
+      try { response = JSON.parse(body); } catch { response = null; }
+      const plan = parseSongPlan(response?.choices?.[0]?.message?.content);
+      callback(plan, plan ? null : 'Der deutsche Liedtext konnte nicht erstellt werden.');
+    });
+  });
+  upstream.setTimeout(90_000, () => upstream.destroy(new Error('timeout')));
+  upstream.on('error', () => callback(null, 'Der Liedtext-Dienst ist nicht erreichbar.'));
+  upstream.end(upstreamBody);
+}
+
+function isSongId(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || '');
+}
+
+export function createSongLibrary(
+  directory = SONG_LIBRARY_DIR,
+  catalogPath = SONG_LIBRARY_PATH,
+  sourceRoot = ACESTEP_AUDIO_ROOT,
+) {
+  function read() {
+    try {
+      const parsed = JSON.parse(readFileSync(catalogPath, 'utf8'));
+      return Array.isArray(parsed) ? parsed.filter((song) => song && isSongId(song.id)) : [];
+    } catch { return []; }
+  }
+  function write(songs) {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const temporary = `${catalogPath}.${process.pid}.tmp`;
+    writeFileSync(temporary, `${JSON.stringify(songs, null, 2)}\n`, { mode: 0o600 });
+    renameSync(temporary, catalogPath);
+    chmodSync(catalogPath, 0o600);
+  }
+  function publicSong(song) {
+    return { ...song, audioUrl: `/api/songs/library/${song.id}/audio` };
+  }
+  function list() {
+    return read().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(publicSong);
+  }
+  function register(payload) {
+    const id = typeof payload?.id === 'string' ? payload.id : '';
+    const sourceAudioUrl = typeof payload?.sourceAudioUrl === 'string' ? payload.sourceAudioUrl : '';
+    if (!isSongId(id)) return { error: 'Ungültige Song-ID' };
+    let sourcePath = '';
+    try {
+      const parsed = new URL(sourceAudioUrl, 'http://hmi.local');
+      if (parsed.pathname !== '/api/songs/audio') return { error: 'Ungültige Audioquelle' };
+      sourcePath = resolve(parsed.searchParams.get('path') || '');
+    } catch { return { error: 'Ungültige Audioquelle' }; }
+    const root = resolve(sourceRoot);
+    if (!sourcePath.startsWith(`${root}${sep}`) || !sourcePath.toLowerCase().endsWith('.mp3') || !existsSync(sourcePath)) {
+      return { error: 'Audiodatei wurde nicht gefunden' };
+    }
+    const fields = ['title', 'idea', 'style', 'era', 'voice', 'createdAt'];
+    if (fields.some((field) => typeof payload?.[field] !== 'string' || payload[field].length > 800)) {
+      return { error: 'Ungültige Song-Metadaten' };
+    }
+    const duration = Number(payload?.duration);
+    if (!Number.isFinite(duration) || duration < 0 || duration > 3_600) return { error: 'Ungültige Songdauer' };
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const targetPath = resolve(directory, `${id}.mp3`);
+    copyFileSync(sourcePath, targetPath);
+    chmodSync(targetPath, 0o600);
+    const song = {
+      id,
+      title: payload.title.trim() || 'Unbenannter Song',
+      idea: payload.idea.trim(),
+      style: payload.style,
+      era: payload.era,
+      voice: payload.voice,
+      duration,
+      createdAt: payload.createdAt,
+    };
+    write([song, ...read().filter((entry) => entry.id !== id)]);
+    return { song: publicSong(song) };
+  }
+  function remove(id) {
+    if (!isSongId(id)) return false;
+    const songs = read();
+    if (!songs.some((song) => song.id === id)) return false;
+    write(songs.filter((song) => song.id !== id));
+    const audioPath = resolve(directory, `${id}.mp3`);
+    if (existsSync(audioPath)) unlinkSync(audioPath);
+    return true;
+  }
+  function rename(id, title) {
+    if (!isSongId(id)) return { error: 'Ungültige Song-ID' };
+    const normalizedTitle = typeof title === 'string' ? title.trim().replace(/\s+/g, ' ') : '';
+    if (!normalizedTitle || normalizedTitle.length > 120) return { error: 'Ungültiger Songtitel' };
+    const songs = read();
+    const index = songs.findIndex((song) => song.id === id);
+    if (index < 0) return { error: 'Song wurde nicht gefunden', notFound: true };
+    songs[index] = { ...songs[index], title: normalizedTitle };
+    write(songs);
+    return { song: publicSong(songs[index]) };
+  }
+  function audioPath(id) {
+    if (!isSongId(id) || !read().some((song) => song.id === id)) return null;
+    const path = resolve(directory, `${id}.mp3`);
+    return existsSync(path) ? path : null;
+  }
+  return { audioPath, list, register, remove, rename };
+}
+
+function serveLibraryAudio(req, res, path) {
+  const size = statSync(path).size;
+  const range = String(req.headers.range || '').match(/^bytes=(\d*)-(\d*)$/);
+  let start = 0;
+  let end = size - 1;
+  if (range) {
+    start = range[1] ? Number(range[1]) : 0;
+    end = range[2] ? Number(range[2]) : end;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end >= size) {
+      res.writeHead(416, { 'content-range': `bytes */${size}` });
+      res.end();
+      return;
+    }
+  }
+  res.writeHead(range ? 206 : 200, {
+    'content-type': 'audio/mpeg',
+    'content-length': end - start + 1,
+    'accept-ranges': 'bytes',
+    'cache-control': 'private, max-age=86400',
+    ...(range ? { 'content-range': `bytes ${start}-${end}/${size}` } : {}),
+  });
+  if (req.method === 'HEAD') res.end();
+  else createReadStream(path, { start, end }).pipe(res);
+}
+
+function serveSongs(req, res, target, upstreamHost, upstreamPort, lyricsHost, lyricsPort, library) {
+  if (target.kind === 'health' || target.kind === 'audio') {
+    proxyAce(req, res, target.path, upstreamHost, upstreamPort);
+    return;
+  }
+  if (target.kind === 'library' && req.method === 'GET') {
+    jsonResponse(res, 200, { songs: library.list() });
+    return;
+  }
+  if (target.kind === 'library-audio') {
+    const path = library.audioPath(target.id);
+    if (!path) jsonResponse(res, 404, { error: 'Song wurde nicht gefunden' });
+    else serveLibraryAudio(req, res, path);
+    return;
+  }
+  if (target.kind === 'library-item' && req.method === 'DELETE') {
+    if (!library.remove(target.id)) jsonResponse(res, 404, { error: 'Song wurde nicht gefunden' });
+    else jsonResponse(res, 200, { ok: true });
+    return;
+  }
+  readSongJson(req, res, (payload) => {
+    if (target.kind === 'library-item') {
+      const result = library.rename(target.id, payload?.title);
+      if (result.error) jsonResponse(res, result.notFound ? 404 : 400, { error: result.error });
+      else jsonResponse(res, 200, result);
+      return;
+    }
+    if (target.kind === 'library') {
+      const result = library.register(payload);
+      if (result.error) jsonResponse(res, 400, { error: result.error });
+      else jsonResponse(res, 201, result);
+      return;
+    }
+    if (target.kind === 'status') {
+      const taskId = typeof payload?.taskId === 'string' ? payload.taskId : '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+        jsonResponse(res, 400, { error: 'Ungültige Song-ID' });
+        return;
+      }
+      proxyAce(req, res, target.path, upstreamHost, upstreamPort, JSON.stringify({ task_id_list: [taskId] }));
+      return;
+    }
+
+    const idea = typeof payload?.idea === 'string' ? payload.idea.trim() : '';
+    const style = SONG_STYLES.has(payload?.style) ? payload.style : null;
+    const era = SONG_ERAS.has(payload?.era) ? payload.era : null;
+    const voice = SONG_VOICES.has(payload?.voice) ? payload.voice : null;
+    const experimental = Number(payload?.experimental);
+    if (!idea || idea.length > 800 || !style || !era || !voice || !Number.isFinite(experimental) || experimental < 0 || experimental > 100) {
+      jsonResponse(res, 400, { error: 'Songparameter sind ungültig' });
+      return;
+    }
+    const song = { idea, style, era, voice, experimental };
+    if (voice === 'Instrumental') {
+      proxyAce(req, res, target.path, upstreamHost, upstreamPort, JSON.stringify(buildAceSongRequest(song)));
+      return;
+    }
+    requestSongPlan(song, lyricsHost, lyricsPort, (plan, planError) => {
+      if (!plan) {
+        jsonResponse(res, 502, { error: planError });
+        return;
+      }
+      proxyAce(req, res, target.path, upstreamHost, upstreamPort, JSON.stringify(buildAceSongRequest(song, plan)));
+    });
+  });
+}
+
+function ablageCookie(req, value, maxAge) {
+  const forwarded = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const secure = req.socket.encrypted || forwarded === 'https' ? '; Secure' : '';
+  return `hmi_ablage=${value}; Path=/api/ablage; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+}
+
+export function paperlessTargetPath(url) {
+  const parsed = new URL(url, 'http://hmi.local');
+  if (parsed.pathname === '/api/ablage/documents/import' && !parsed.search) {
+    return { kind: 'upload', path: '/api/documents/post_document/' };
+  }
+  if (parsed.pathname === '/api/ablage/tasks' && !parsed.search) {
+    return { kind: 'tasks', path: '/api/tasks/?page=1&page_size=100&ordering=-date_created&task_name=consume_file' };
+  }
+  if (parsed.pathname === '/api/ablage/documents') {
+    const query = (parsed.searchParams.get('query') || '').trim().slice(0, 200);
+    const page = Math.max(1, Math.min(1000, Number(parsed.searchParams.get('page')) || 1));
+    const search = new URLSearchParams({ page: String(page), page_size: '30', ordering: '-created' });
+    if (query) search.set('query', query);
+    for (const [source, target] of [['from', 'created__date__gte'], ['to', 'created__date__lte']]) {
+      const value = parsed.searchParams.get(source) || '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) search.set(target, value);
+    }
+    return { kind: 'documents', path: `/api/documents/?${search}` };
+  }
+  const match = parsed.pathname.match(/^\/api\/ablage\/documents\/(\d+)\/(thumb|preview|download)$/);
+  if (!match) return null;
+  return { kind: match[2], path: `/api/documents/${match[1]}/${match[2]}/` };
+}
+
+function proxyPaperless(req, res, target, access, upstreamHost, upstreamPort) {
+  const upstream = http.request({
+    hostname: upstreamHost,
+    port: upstreamPort,
+    method: 'GET',
+    path: target.path,
+    headers: { accept: req.headers.accept || '*/*', authorization: `Token ${access.token}` },
+  }, (upstreamResponse) => {
+    if (!['documents', 'tasks'].includes(target.kind)) {
+      const responseHeaders = { 'cache-control': 'private, no-store' };
+      for (const name of ['content-type', 'content-length', 'content-disposition']) {
+        if (upstreamResponse.headers[name] !== undefined) responseHeaders[name] = upstreamResponse.headers[name];
+      }
+      res.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
+      upstreamResponse.pipe(res);
+      return;
+    }
+    let body = '';
+    upstreamResponse.setEncoding('utf8');
+    upstreamResponse.on('data', (chunk) => { body += chunk; });
+    upstreamResponse.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body); } catch { payload = null; }
+      if (!payload || !Array.isArray(payload.results)) {
+        jsonResponse(res, upstreamResponse.statusCode || 502, { error: 'Paperless-Antwort ungültig' });
+        return;
+      }
+      if (target.kind === 'tasks') {
+        const activeStates = new Set(['PENDING', 'RECEIVED', 'STARTED', 'RETRY']);
+        jsonResponse(res, upstreamResponse.statusCode || 200, {
+          processing: payload.results
+            .filter((task) => task.task_name === 'consume_file' && activeStates.has(task.status))
+            .map((task) => ({
+              id: String(task.task_id || task.id),
+              fileName: task.task_file_name || null,
+              status: task.status,
+            })),
+        });
+        return;
+      }
+      jsonResponse(res, upstreamResponse.statusCode || 200, {
+        count: Number(payload.count) || payload.results.length,
+        next: Boolean(payload.next),
+        previous: Boolean(payload.previous),
+        results: payload.results.map((document) => ({
+          id: document.id,
+          title: document.title || document.original_file_name || `Dokument ${document.id}`,
+          created: document.created || null,
+          added: document.added || null,
+          archiveSerialNumber: document.archive_serial_number ?? null,
+          originalFileName: document.original_file_name || null,
+        })),
+      });
+    });
+  });
+  upstream.on('error', () => jsonResponse(res, 502, { error: 'Paperless nicht erreichbar' }));
+  req.on('aborted', () => upstream.destroy());
+  upstream.end();
+}
+
+function proxyPaperlessUpload(req, res, target, access, upstreamHost, upstreamPort) {
+  const contentType = String(req.headers['content-type'] || '');
+  const declaredLength = Number(req.headers['content-length'] || 0);
+  if (!contentType.toLowerCase().startsWith('multipart/form-data; boundary=')) {
+    jsonResponse(res, 415, { error: 'Datei-Upload muss multipart/form-data verwenden' });
+    return;
+  }
+  if (declaredLength > ABLAGE_UPLOAD_MAX) {
+    jsonResponse(res, 413, { error: 'Datei ist größer als 50 MiB' });
+    return;
+  }
+
+  let received = 0;
+  let settled = false;
+  const upstream = http.request({
+    hostname: upstreamHost,
+    port: upstreamPort,
+    method: 'POST',
+    path: target.path,
+    headers: {
+      accept: 'application/json',
+      authorization: `Token ${access.token}`,
+      'content-type': contentType,
+      ...(req.headers['content-length'] ? { 'content-length': req.headers['content-length'] } : {}),
+    },
+  }, (upstreamResponse) => {
+    upstreamResponse.resume();
+    upstreamResponse.on('end', () => {
+      if (settled) return;
+      settled = true;
+      const status = upstreamResponse.statusCode || 502;
+      if (status >= 200 && status < 300) {
+        jsonResponse(res, 202, { imported: true });
+      } else {
+        jsonResponse(res, status, { error: 'Paperless hat die Datei abgelehnt' });
+      }
+    });
+  });
+  upstream.on('error', () => {
+    if (settled) return;
+    settled = true;
+    jsonResponse(res, 502, { error: 'Paperless nicht erreichbar' });
+  });
+  req.on('data', (chunk) => {
+    received += chunk.length;
+    if (received <= ABLAGE_UPLOAD_MAX || settled) return;
+    settled = true;
+    req.unpipe(upstream);
+    upstream.destroy();
+    req.resume();
+    jsonResponse(res, 413, { error: 'Datei ist größer als 50 MiB' });
+  });
+  req.on('aborted', () => upstream.destroy());
+  req.pipe(upstream);
+}
+
+function serveAblage(req, res, access, upstreamHost, upstreamPort) {
+  const parsed = new URL(req.url || '/', 'http://hmi.local');
+  if (parsed.pathname === '/api/ablage/status' && req.method === 'GET') {
+    jsonResponse(res, 200, { configured: access.configured(), unlocked: access.authenticated(req) });
+    return;
+  }
+  if (parsed.pathname === '/api/ablage/unlock' && req.method === 'POST') {
+    if (!access.configured()) return jsonResponse(res, 503, { error: 'Ablage ist noch nicht konfiguriert' });
+    readSmallJson(req, res, (payload) => {
+      const result = access.unlock(payload?.pin, req.socket.remoteAddress || '');
+      if (!result.ok) {
+        jsonResponse(res, result.limited ? 429 : 401, {
+          error: result.limited ? 'Zu viele Versuche. Bitte kurz warten.' : 'PIN ist nicht korrekt',
+        });
+        return;
+      }
+      jsonResponse(res, 200, { unlocked: true }, { 'set-cookie': ablageCookie(req, result.session, ABLAGE_SESSION_MS / 1000) });
+    });
+    return;
+  }
+  if (parsed.pathname === '/api/ablage/lock' && req.method === 'POST') {
+    access.lock(req);
+    jsonResponse(res, 200, { unlocked: false }, { 'set-cookie': ablageCookie(req, '', 0) });
+    return;
+  }
+  const target = paperlessTargetPath(req.url || '/');
+  if (target?.kind === 'upload' && req.method === 'POST') {
+    if (!access.configured()) return jsonResponse(res, 503, { error: 'Ablage ist noch nicht konfiguriert' });
+    if (!access.authenticated(req)) return jsonResponse(res, 401, { error: 'PIN erforderlich' });
+    proxyPaperlessUpload(req, res, target, access, upstreamHost, upstreamPort);
+    return;
+  }
+  if (target && req.method === 'GET') {
+    if (!access.configured()) return jsonResponse(res, 503, { error: 'Ablage ist noch nicht konfiguriert' });
+    if (!access.authenticated(req)) return jsonResponse(res, 401, { error: 'PIN erforderlich' });
+    proxyPaperless(req, res, target, access, upstreamHost, upstreamPort);
+    return;
+  }
+  jsonResponse(res, 404, { error: 'Ablage-Route nicht gefunden' });
+}
+
+function proxyAmbient(req, res, upstreamHost, upstreamPort, mode = 'ambient') {
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > AMBIENT_BODY_MAX) oversized = true;
+  });
+  req.on('end', () => {
+    if (oversized) {
+      res.writeHead(413, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Ambient-Anfrage zu groß"}');
+      return;
+    }
+    let payload;
+    try { payload = JSON.parse(body); } catch { payload = null; }
+    const messages = Array.isArray(payload?.messages) ? payload.messages : null;
+    const valid = messages && messages.length >= 1 && messages.length <= 4
+      && messages.every((message) => message && ['system', 'user'].includes(message.role)
+        && typeof message.content === 'string' && message.content.length <= 16_000);
+    if (!valid) {
+      res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Ungültiger Ambient-Kontext"}');
+      return;
+    }
+    const upstreamBody = JSON.stringify({
+      model: AMBIENT_MODEL,
+      messages,
+      stream: false,
+      temperature: mode === 'shopping' ? 0.1 : 0.85,
+      top_p: mode === 'shopping' ? 1 : 0.9,
+      max_tokens: mode === 'shopping' ? 2_000 : 80,
+      ...(mode === 'shopping' ? { reasoning_effort: 'none' } : {}),
+    });
+    const upstream = http.request({
+      hostname: upstreamHost,
+      port: upstreamPort,
+      method: 'POST',
+      path: '/v1/chat/completions',
+      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(upstreamBody) },
+    }, (upstreamResponse) => {
+      res.writeHead(upstreamResponse.statusCode || 502, {
+        'content-type': upstreamResponse.headers['content-type'] || 'application/json; charset=utf-8',
+      });
+      upstreamResponse.pipe(res);
+    });
+    upstream.on('error', () => {
+      if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Ambient-Modell nicht erreichbar"}');
+    });
+    upstream.end(upstreamBody);
+  });
+}
+
+export function staticCacheControl(path) {
+  const extension = extname(path).toLowerCase();
+  const mutablePwaResource = extension === '.html'
+    || extension === '.webmanifest'
+    || path.endsWith(`${sep}sw.js`);
+  return mutablePwaResource ? 'no-cache' : 'public, max-age=31536000, immutable';
+}
+
+function serveStatic(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405, { allow: 'GET, HEAD' });
+    res.end();
+    return;
+  }
+  let path;
+  try { path = staticPathFor(req.url || '/'); } catch { path = null; }
+  if (!path) {
+    res.writeHead(400);
+    res.end();
+    return;
+  }
+  if (existsSync(path) && statSync(path).isDirectory()) path = resolve(path, 'index.html');
+  if (!existsSync(path) || !statSync(path).isFile()) path = resolve(DIST, 'index.html');
+  const extension = extname(path).toLowerCase();
+  res.writeHead(200, {
+    'content-type': MIME.get(extension) || 'application/octet-stream',
+    'cache-control': staticCacheControl(path),
+  });
+  if (req.method === 'HEAD') res.end();
+  else createReadStream(path).pipe(res);
+}
+
+export function createHmiServer(
+  key = readHermesKey(),
+  {
+    upstreamHost = HERMES_HOST,
+    upstreamPort = HERMES_PORT,
+    ambientHost = AMBIENT_HOST,
+    ambientPort = AMBIENT_PORT,
+
+    paperlessHost = PAPERLESS_HOST,
+    paperlessPort = PAPERLESS_PORT,
+    aceStepHost = ACESTEP_HOST,
+    aceStepPort = ACESTEP_PORT,
+    songLibrary = null,
+    paperlessPin = readKeychainSecret(ABLAGE_PIN_ACCOUNT, ABLAGE_KEYCHAIN_SERVICE),
+    paperlessToken = readKeychainSecret(ABLAGE_TOKEN_ACCOUNT, ABLAGE_KEYCHAIN_SERVICE),
+    allowedOrigins = ALLOWED_ORIGINS,
+    configPath = CONFIG_PATH,
+    familyDataPath = FAMILY_DATA_PATH,
+    familyData = null,
+  } = {},
+) {
+  const configStore = createCentralConfigStore(configPath);
+  const familyStore = familyData || createFamilyDataStore(familyDataPath);
+  const ablageAccess = createAblageAccess(paperlessPin, paperlessToken);
+  const library = songLibrary || createSongLibrary();
+  return http.createServer((req, res) => {
+    const targetPath = proxyTargetPath(req.url || '/');
+
+    const songTarget = songTargetPath(req.url || '/');
+    const familyDataRoute = (req.url || '').startsWith('/api/reminders')
+      || (req.url || '').startsWith('/api/shopping');
+    if (familyDataRoute && familyDataRequestAllowed(req, allowedOrigins)) {
+      serveFamilyData(req, res, familyStore);
+    } else if (familyDataRoute) {
+      jsonResponse(res, 403, { error: 'Familiendaten-Route nicht freigegeben' });
+    } else if (songTarget && songRequestAllowed(req, songTarget, allowedOrigins)) {
+      serveSongs(req, res, songTarget, aceStepHost, aceStepPort, ambientHost, ambientPort, library);
+    } else if ((req.url || '').startsWith('/api/songs')) {
+      jsonResponse(res, 403, { error: 'Song-Route nicht freigegeben' });
+    } else if ((req.url || '').startsWith('/api/ablage/') && ablageRequestAllowed(req, allowedOrigins)) {
+      serveAblage(req, res, ablageAccess, paperlessHost, paperlessPort);
+    } else if ((req.url || '').startsWith('/api/ablage')) {
+      jsonResponse(res, 403, { error: 'Ablage-Route nicht freigegeben' });
+    } else if ((req.url || '') === '/api/config' && configRequestAllowed(req, allowedOrigins)) {
+      serveConfig(req, res, configStore);
+    } else if ((req.url || '').startsWith('/api/config')) {
+      res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Konfigurationsroute nicht freigegeben"}');
+    } else if ((req.url || '') === '/shopping-llm/v1/chat/completions'
+        && ambientRequestAllowed(req, allowedOrigins)) {
+      proxyAmbient(req, res, ambientHost, ambientPort, 'shopping');
+    } else if ((req.url || '').startsWith('/shopping-llm')) {
+      res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Shopping-Route nicht freigegeben"}');
+    } else if ((req.url || '') === '/ambient-llm/v1/chat/completions'
+        && ambientRequestAllowed(req, allowedOrigins)) {
+      proxyAmbient(req, res, ambientHost, ambientPort);
+    } else if ((req.url || '').startsWith('/ambient-llm')) {
+      res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Ambient-Route nicht freigegeben"}');
+    } else if (targetPath !== null && proxyRequestAllowed(req, allowedOrigins)) {
+      proxy(req, res, key, targetPath, upstreamHost, upstreamPort);
+    } else if ((req.url || '').startsWith('/hermes')) {
+      res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+      res.end('{"error":"Hermes-Route nicht freigegeben"}');
+    } else {
+      serveStatic(req, res);
+    }
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  let server;
+  try {
+    server = createHmiServer();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : 'HMI-Server konnte nicht starten.');
+    process.exit(1);
+  }
+  server.listen(PORT, HOST, () => console.log(`Smart Home HMI hört auf ${HOST}:${PORT}`));
+}

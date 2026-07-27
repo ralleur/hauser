@@ -1,0 +1,50 @@
+Hauser — third-party notices
+============================
+
+The MIT license in LICENSE covers the source code of this project. The
+components below are included or depended upon under their own terms.
+
+
+Fonts (bundled in app/public/fonts/)
+------------------------------------
+
+Inter — SIL Open Font License 1.1
+  Copyright (c) The Inter Project Authors
+  Full license: app/public/fonts/LICENSE-Inter-OFL.txt
+
+Instrument Serif — SIL Open Font License 1.1
+  Copyright (c) The Instrument Serif Project Authors
+  Full license: app/public/fonts/LICENSE-InstrumentSerif-OFL.txt
+
+Both are subsetted for size. The unmodified license texts ship alongside them,
+as the OFL requires.
+
+
+Icons
+-----
+
+Material Design Icons (@mdi/svg) — Apache License 2.0
+  https://github.com/Templarian/MaterialDesign
+  Icons are generated into a local registry at build time; see
+  app/scripts/generate-icon-registry.mjs.
+
+
+Runtime dependencies
+--------------------
+
+home-assistant-js-websocket — Apache License 2.0
+  https://github.com/home-assistant/home-assistant-js-websocket
+  The official Home Assistant WebSocket client.
+
+hls.js — Apache License 2.0
+  https://github.com/video-dev/hls.js
+
+Build tooling (Svelte, Vite, TypeScript, Vitest) is MIT licensed; see the
+respective packages in app/package.json.
+
+
+Images
+------
+
+Room illustrations and background artwork are AI-generated and are licensed
+separately from the code. See ASSETS-LICENSE.md.

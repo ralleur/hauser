@@ -1,0 +1,48 @@
+/* ── Demo-Modus (docs/12): dauerhafte, dezente Kennzeichnung. Die Demo darf
+   nie den Eindruck erwecken, ein echtes Zuhause zu steuern. Greift nur, wenn
+   demo-mode.ts das Attribut gesetzt hat. ── */
+
+.demo-badge {
+  /* Über der Tab-Bar (72 px) statt darauf — das Badge darf keine Bedienelemente
+     verdecken, sonst wirkt ausgerechnet die Demo unaufgeräumt. */
+  --demo-badge-inset: 84px;
+
+  position: fixed;
+  inset-block-end: calc(var(--demo-badge-inset) + env(safe-area-inset-bottom));
+  inset-inline-end: max(var(--space-3, 12px), env(safe-area-inset-right));
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-accent-warm) 35%, transparent);
+  border-radius: 999px;
+
+  background: color-mix(in srgb, var(--color-surface-3) 82%, transparent);
+  backdrop-filter: blur(12px);
+
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+.demo-badge::before {
+  content: '';
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-warm);
+}
+
+@media (max-width: 600px) {
+  .demo-badge {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+}

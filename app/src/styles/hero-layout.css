@@ -1,0 +1,239 @@
+/* ============================================================
+   B-13 · Hauser-Hero-Layout — Home als Vollbild-Bühne + fester Karten-Block
+   ------------------------------------------------------------
+   Ein einziger, themed Karten-Block links (Vorbild Hauser „Drive Modes"):
+     .room-select     = 2×3-Raumauswahl (obere Hälfte)
+     .panel-controls  = Steuerung des gewählten Raums (untere Hälfte)
+   Das Hero-Bild (RoomHero) füllt die Fläche rechts neben der Karte. Weil die
+   Karte die Theme-Surface nutzt (hell bei Tag / dunkel bei Nacht), sind die
+   Steuer-Details ohne Sondertricks lesbar — Full-Immersion zeigt sich rechts.
+
+   Performance (docs/03): Bildwechsel = Opacity-Crossfade zweier Ebenen
+   (Compositor-only), kein Live-backdrop-filter über dem bewegten Bild.
+   ============================================================ */
+
+.home-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ── Hero-Bildebenen ── */
+.room-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--color-surface-0);
+}
+.hero-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity var(--duration-enter) var(--ease-out);
+  will-change: opacity;
+}
+.hero-layer.is-front { opacity: 1; }
+
+.immersion-light-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.immersion-light-layer.is-visible { opacity: 1; }
+.immersion-light-layer circle {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.immersion-light-layer circle.is-on { opacity: var(--light-opacity); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-layer, .immersion-light-layer, .immersion-light-layer circle { transition: none; }
+}
+
+/* ── Datengetriebene Kontrollflächen links ──
+   Die Gesamtbreite kommt ausschließlich aus robusten Presets. calc() schützt
+   die Hero-Mindestfläche; jede Kontrollfläche behält ihre Mindestbreite. */
+.home-panels {
+  position: absolute;
+  inset: var(--space-4) auto var(--space-4) var(--space-4);
+  z-index: 2;
+  width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  max-width: calc(100% - var(--hero-min) - var(--space-8));
+  display: flex;
+  gap: var(--space-3);
+}
+.home-stage.has-two-slots .home-panels {
+  width: max(calc(var(--slot-min) + var(--slot-min) + var(--space-3)), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  overflow-x: auto;
+}
+.home-panel {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-overlay-shadow);
+  overflow: hidden;
+}
+.home-stage.has-two-slots .home-panel {
+  min-width: var(--slot-min);
+}
+.hero-config-hitarea {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  touch-action: pan-x pan-y;
+}
+
+.panel-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+}
+.panel-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.panel-security {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.panel-security .icon { color: var(--color-success); }
+.panel-security.has-warning { color: var(--color-text-primary); }
+.panel-security.has-warning .icon { color: var(--color-warning); }
+
+/* ── Raumauswahl: 2 pro Zeile (obere Hälfte) ── */
+.room-select {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-5);
+}
+.room-btn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  border: 1px solid transparent;
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    transform var(--duration-quick) var(--ease-spring);
+}
+.room-btn.is-pressed { transform: scale(0.97); }
+/* Aktiver Raum: invertierte Füllung (wie Hausers selektierter Modus) —
+   funktioniert in beiden Themes, weil text-primary/surface-1 gegenläufig kippen. */
+.room-btn.is-active {
+  background: var(--color-text-primary);
+  color: var(--color-surface-1);
+}
+
+.room-btn-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.room-btn-name {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+}
+.room-btn-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.room-btn.is-active .room-btn-stats { color: color-mix(in srgb, var(--color-surface-1) 72%, transparent); }
+.rb-temp { display: inline-flex; align-items: center; gap: var(--space-1); font-variant-numeric: tabular-nums; }
+.rb-temp.mode-heat .icon { color: var(--color-warning); }
+.rb-temp.mode-cool .icon { color: var(--color-info); }
+.rb-light .icon { color: currentColor; opacity: 0.5; }
+.rb-light.is-on .icon { color: var(--color-accent-warm); opacity: 1; }
+.rb-window { color: var(--color-warning); }
+
+/* ── Steuerung des gewählten Raums (untere Hälfte) ── */
+.panel-controls {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+/* ── Globales Klima-Dock in der Bottom-Leiste (B-13, Vorbild Hauser) ──
+   Zentrale Synchron-Steuerung links in der TabBar → aus JEDEM Screen erreichbar.
+   Die Tabs bleiben mittig, weil beide Rand-Zonen (.tab-edge) gleich breit sind. */
+.tab-bar {
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0 var(--space-4);
+}
+.tab-edge {
+  flex: 0 0 240px;
+  display: flex;
+  align-items: center;
+}
+.tab-edge-start { justify-content: flex-start; }
+.tab-edge-end { justify-content: flex-end; }
+.tab-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+/* ── Layout-Konfiguration ── */
+.layout-dialog-scrim { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: var(--space-6); background: rgb(0 0 0 / 0.62); }
+.layout-dialog { width: min(760px, 100%); max-height: min(860px, calc(100dvh - 96px)); overflow-y: auto; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-2xl); background: var(--color-surface-1); box-shadow: var(--elevation-overlay-shadow); }
+.layout-dialog-head, .layout-dialog-actions, .system-layout-settings { display: flex; align-items: center; gap: var(--space-3); }
+.layout-dialog-head { justify-content: space-between; }
+.layout-dialog-head h2, .layout-config-section h3, .layout-config-section legend, .system-layout-settings h2 { margin: 0; }
+.dialog-close { width: 48px; height: 48px; border-radius: var(--radius-full); font-size: var(--text-xl); background: var(--color-surface-2); color: var(--color-text-primary); }
+.layout-config-section { margin-top: var(--space-6); padding: 0; border: 0; }
+.layout-slot-settings, .width-presets { display: grid; gap: var(--space-3); margin: var(--space-3) 0; }
+.layout-slot-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.layout-slot-settings label { display: grid; gap: var(--space-2); }
+.layout-slot-settings select { min-height: 48px; padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-2); color: var(--color-text-primary); }
+.width-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.width-presets label { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-2); }
+.width-presets label.is-selected { border-color: var(--color-accent-cool); }
+.width-presets small { color: var(--color-text-secondary); }
+.primary-btn, .secondary-btn, .text-btn { min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-lg); font-weight: var(--font-weight-semibold); }
+.primary-btn { background: var(--color-text-primary); color: var(--color-surface-1); }
+.secondary-btn { border: 1px solid var(--color-border); background: var(--color-surface-2); }
+.text-btn { color: var(--color-text-secondary); }
+.danger-btn { color: var(--color-error); }
+.layout-dialog-actions { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.dialog-action-spacer { flex: 1; }
+.system-layout-settings { justify-content: space-between; margin-bottom: var(--space-5); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface-1); }
+.system-layout-settings p { margin: var(--space-1) 0 0; color: var(--color-text-secondary); }
+@media (max-width: 1100px) {
+  .home-stage.has-two-slots .home-panels { overflow-x: auto; }
+  .layout-slot-settings, .width-presets { grid-template-columns: 1fr; }
+}

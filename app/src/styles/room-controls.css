@@ -1,0 +1,106 @@
+/* Gemeinsame Darstellung der RoomControls-Komponente. Die Komponente wird in
+   Panel und Phone wiederverwendet; shell-spezifische Anpassungen bleiben in
+   den jeweiligen Shell-Styles. */
+.room-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.camera-feed {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-1);
+}
+
+.camera-feed-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.camera-feed-status {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.camera-feed-status.is-live { color: var(--color-success); }
+
+.camera-feed-frame {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-0);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.camera-feed-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Ist-Temperatur links, Ziel- und Modus-Pille rechts. */
+.room-controls .climate-hero {
+  align-items: center;
+  margin: var(--space-2) 0 0;
+}
+
+.climate-pills {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.climate-pills .room-climate-pill {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.mode-pill {
+  display: flex;
+  width: 100%;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+
+.mode-seg {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 38px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+
+.mode-seg[data-mode='heat'] .icon { color: var(--color-error); }
+.mode-seg[data-mode='cool'] .icon { color: var(--color-accent-cool); }
+.mode-seg[data-mode='off'] .icon { color: var(--color-text-tertiary); }
+
+.mode-seg.is-active {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}

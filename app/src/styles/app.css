@@ -1,0 +1,3828 @@
+/* ============================================
+   Smart Home HMI — App Styles (Phase 3, portiert aus prototype/styles/main.css)
+   Basis: ../../../design-tokens/tokens.css (Single Source of Truth)
+   Animationen NUR transform + opacity (docs/01, docs/03)
+   ============================================ */
+
+/* ── ADR-011: Inter Variable, self-hosted, kein FOUT ── */
+@font-face {
+  font-family: 'Inter Variable';
+  src: url('/fonts/InterVariable-subset.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ── ADR-012: Instrument Serif, nur für die Ambient-Begrüßung ── */
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('/fonts/InstrumentSerif-subset.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/* Tabular Numbers für alle Datenwerte — Werte dürfen beim Update nicht wackeln */
+.num {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+html {
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── App-Shell: Status-Bar / Screens / Tab-Bar ── */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr 72px;
+  height: 100dvh;
+  background: var(--color-surface-0);
+}
+
+/* ── Icons (Outline, 1.5px, currentColor) ── */
+.icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.icon-sm { width: var(--icon-sm); height: var(--icon-sm); }
+.icon-md { width: var(--icon-md); height: var(--icon-md); }
+.icon-xl { width: var(--icon-xl); height: var(--icon-xl); }
+.tabler-icon-mask {
+  display: inline-block;
+  background: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+
+/* ── Pressed-Feedback (global): <16 ms rein, Spring-Release ── */
+.pressable {
+  transition: transform var(--duration-quick) var(--ease-spring);
+}
+.pressable.is-pressed {
+  transform: scale(0.97);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ── Status-Bar ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background: var(--color-surface-0);
+  border-bottom: 1px solid var(--color-border);
+}
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.status-clock {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+.status-date {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.ha-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.theme-toggle,
+.standby-btn {
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.lock-control {
+  position: relative;
+  display: grid;
+  z-index: 40;
+}
+.lock-control.is-large {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(72px + var(--space-4));
+}
+
+/* ── Standby-FAB: prominenter Lock-Button unten rechts über der Tab-Bar
+   (Grid-Zeile 72px). Schwebt über allen Screens; Modals (z-200) und der
+   Ambient-Layer (z-50) liegen darüber. ── */
+.standby-fab {
+  display: grid;
+  place-items: center;
+  width: 144px;
+  height: 144px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-primary);
+}
+/* Icon wächst mit dem Button mit (2× icon-xl). */
+.standby-fab .icon {
+  width: calc(var(--icon-xl) * 2);
+  height: calc(var(--icon-xl) * 2);
+}
+.lock-position-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-3));
+  width: max-content;
+  max-width: calc(100vw - var(--space-8));
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.lock-position-menu.from-titlebar {
+  top: calc(100% + var(--space-3));
+  bottom: auto;
+}
+.lock-position-option {
+  min-height: var(--touch-min);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  text-align: left;
+  white-space: normal;
+}
+.lock-position-option:active {
+  background: var(--color-surface-2);
+}
+
+/* ── Status-Dots ── */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+.dot-online   { background: var(--color-dot-online); }
+.dot-warning  { background: var(--color-dot-warning); }
+.dot-offline  { background: var(--color-dot-offline); }
+.dot-presence { background: var(--color-dot-presence); }
+
+/* ── Screens & Transitions ── */
+.screens {
+  position: relative;
+  overflow: hidden;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface-0);
+}
+.screen.is-active,
+.screen.is-leaving { display: block; }
+.screen.is-leaving { z-index: 1; pointer-events: none; }
+.screen.is-entering { z-index: 2; }
+
+.screen-inner {
+  padding: var(--space-6);
+  max-width: 1696px;
+  margin: 0 auto;
+}
+@media (min-width: 1696px) {
+  .screen-inner { padding: var(--space-6) var(--space-8); }
+}
+
+/* Tab-Wechsel: Crossfade 200 ms (docs/07 Transitions-Tabelle) */
+:root { --duration-tabfade: 200ms; }
+
+@keyframes screen-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes screen-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.anim-fade-in  { animation: screen-fade-in  var(--duration-tabfade) var(--ease-out) both; }
+.anim-fade-out { animation: screen-fade-out var(--duration-tabfade) var(--ease-out) both; }
+
+/* ── Room Overlay (docs/07 Screen 2): Scrim mit Blur+Dim, Panel modal-enter.
+   Liegt im .screens-Bereich — Status- und Tab-Bar bleiben scharf.
+   Blur wird NIE animiert, nur die Scrim-Opacity (docs/01). ── */
+.room-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.room-overlay[hidden] { display: none; }
+
+.overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-scrim);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .overlay-scrim { backdrop-filter: blur(var(--overlay-blur)); }
+}
+
+.overlay-panel {
+  position: relative;
+  width: min(100%, 1080px);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-6);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+
+@keyframes overlay-scrim-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-scrim-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modal-enter { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes modal-exit  { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
+
+.room-overlay.is-open .overlay-scrim {
+  animation: overlay-scrim-in var(--duration-enter) var(--ease-out) both;
+}
+.room-overlay.is-open .overlay-panel {
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.room-overlay.is-closing .overlay-scrim {
+  animation: overlay-scrim-out var(--duration-fast) var(--ease-in) both;
+}
+.room-overlay.is-closing .overlay-panel {
+  animation: modal-exit var(--duration-fast) var(--ease-in) both;
+}
+.room-overlay.is-closing { pointer-events: none; }
+
+/* ── Theme-Crossfade (≤300 ms, docs/07 Day/Night) ──
+   Nur während des Umschaltens aktiv; überschreibt kurzzeitig alle Transitions. */
+body.theme-fade,
+body.theme-fade * {
+  transition:
+    background-color var(--duration-enter) var(--ease-out),
+    border-color var(--duration-enter) var(--ease-out),
+    color var(--duration-enter) var(--ease-out) !important;
+}
+
+/* ── Tab-Bar ── */
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-surface-0);
+  border-top: 1px solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 96px;
+  padding: 0 var(--space-4);
+  color: var(--color-text-tertiary);
+}
+.tab-icon {
+  width: 28px;
+  height: 28px;
+  transition: transform var(--duration-quick) var(--ease-spring);
+}
+.tab.is-pressed .tab-icon {
+  transform: scale(0.9);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.tab-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+}
+.tab.is-active { color: var(--color-text-primary); }
+
+/* Gold-Unterstrich 24×3px — Hauser-Aktiv-Pattern, kein gefüllter Hintergrund */
+.tab-indicator {
+  position: absolute;
+  bottom: 8px;
+  width: 24px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-warm);
+  opacity: 0;
+  transform: scaleX(0.5);
+  transition: opacity var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out);
+}
+.tab.is-active .tab-indicator { opacity: 1; transform: scaleX(1); }
+
+/* ── Caps-Mikro-Label (Hauser „MISSION/GOALS"-Pattern) ── */
+.caps-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.section-label { margin: var(--space-5) 0 var(--space-4); }
+
+/* ── SecurityPresence: Status-Bar-Variante ── */
+.security-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--touch-preferred);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+/* Mehrsprachig (ADR-021): Der Statustext ist je Sprache unterschiedlich lang
+   („Alles ruhig" gegen „Wszystko spokojnie"). Die Bar bleibt innerhalb ihrer
+   240-px-Randzone (siehe .tab-edge) und der Text kürzt, statt sie aufzuweiten —
+   sonst verlieren die Tabs ihre Mitte. Der volle Text steht im title-Attribut. */
+.security-bar {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.security-bar > span {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.security-bar .icon { color: var(--color-success); flex: none; }
+.security-bar.has-warning { color: var(--color-text-primary); }
+.security-bar.has-warning .icon { color: var(--color-warning); }
+
+/* ── RoomTile (docs/06 §1, seit 2026-07-05 verschmolzen mit ClimateControl
+   Compact): Name/Präsenz/Fenster oben, Ist→Ziel mit Richtungs-Codierung,
+   Modus- und Licht-Status unten ── */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--grid-gap);
+}
+@media (min-width: 1200px) { .room-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1696px) { .room-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.room-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 160px;
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.room-tile.is-pressed { background: var(--color-surface-2); }
+
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+/* Raumname = Anker der Kachel. Größer, semibold und leicht enger gespurt —
+   dieselbe „bewusste, enge" Sans-Anmutung wie Uhr/Zahlen, damit der Name
+   nicht als nackter Default-Span neben dem Foto steht. */
+.tile-name {
+  font-size: var(--text-xl);
+  font-weight: 300;
+  letter-spacing: var(--tracking-snug);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+}
+
+/* ── Gleichrangige Werte-Zeile ────────────────────────────────
+   Temperatur, Licht und (falls offen) Fenster als Stats unter
+   Gleichen. Die Temperatur ist eine Eigenschaft des Raums, nicht
+   der Star — der HVAC-Modus steckt nur noch in der Icon-Farbe. */
+.tile-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.tile-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.tile-stat .stat-val {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+/* Temperatur: Modus über Icon-Farbe codiert (Flamme/Tropfen/Aus) */
+.stat-temp.mode-heat .icon { color: var(--color-warning); }
+.stat-temp.mode-cool .icon { color: var(--color-info); }
+.stat-temp.mode-off  .icon { color: var(--color-text-tertiary); }
+.stat-temp.is-passive .stat-val {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+/* Ziel mit Richtungs-Codierung: wärmer = warning, kühler = info (Hauser-Klima-Bar) */
+.stat-target {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+.stat-target.is-warmer { color: var(--color-warning); }
+.stat-target.is-cooler { color: var(--color-info); }
+.stat-note { color: var(--color-warning); font-weight: var(--font-weight-normal); }
+/* Licht */
+.stat-light .icon { color: var(--color-text-tertiary); }
+.stat-light.is-on .icon,
+.stat-light.is-on .stat-val { color: var(--color-accent-warm); }
+/* Fenster offen (Warnung) */
+.stat-window .icon,
+.stat-window .stat-val {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-normal);
+}
+
+/* ── Room Overlay: Panel-Inhalt (ehem. Room Detail) ── */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.detail-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.detail-presence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.room-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--grid-gap-section);
+  align-items: start;
+}
+.room-detail-grid.no-climate .detail-col {
+  grid-column: 1 / -1; /* eine Spalte → volle Breite */
+}
+@media (min-width: 1200px) {
+  .room-detail-grid { grid-template-columns: 5fr 7fr; }
+}
+
+/* ── ClimateControl Card (docs/06 §3) ── */
+.climate-card {
+  padding: var(--space-5);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+.climate-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: var(--space-4) 0 var(--space-5);
+}
+.climate-temp {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-tightest);
+}
+.climate-temp .unit {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  vertical-align: 55%;
+  letter-spacing: var(--tracking-normal);
+  margin-left: var(--space-1);
+}
+
+/* ValueChip: Label über Wert (Hauser „Ride/Soft"-Pattern) */
+.value-chip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 96px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+}
+.value-chip .chip-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.value-chip .chip-value {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-medium);
+}
+.value-chip .chip-value .icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  vertical-align: -2px;
+  margin-left: 2px;
+}
+.value-chip.mode-heat .chip-value .icon { color: var(--color-warning); }
+.value-chip.mode-cool .chip-value .icon { color: var(--color-info); }
+
+/* Fenster-offen-Warnung */
+.climate-warning {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-warning);
+}
+.climate-warning.is-visible { display: flex; }
+.climate-warning .icon { width: var(--icon-md); height: var(--icon-md); }
+
+/* Ziel-Stepper: − Punktreihe + (Hauser-Lüfter-Pattern, adaptiert auf ±0.5°C) */
+.climate-target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stepper-btn {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: transparent;
+}
+.stepper-value {
+  min-width: 104px;
+  text-align: center;
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.stepper-value .unit {
+  font-size: var(--text-3xs);
+  color: var(--color-text-secondary);
+  vertical-align: super;
+  margin-left: 2px;
+}
+
+/* ModeSelector: Segmented, aktiv = Inverse-Pille (docs/06 §8) */
+.mode-selector {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.mode-segment {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--touch-min);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.mode-segment .icon { width: var(--icon-sm); height: var(--icon-sm); }
+.mode-segment.is-active {
+  background: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+
+/* ── LightTiles (B-xx): Icon+Name-Kachel, ganze Fläche togglet ──
+   Responsives Grid (auto-fit), Mindestkachelbreite ~155px → 2–3 pro Reihe auf
+   dem 13"-Panel. Kein Einzelspalten-Stack, kein Slider, kein Prozent/Text. */
+.light-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: var(--space-2);
+}
+.light-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  text-align: left;
+  transition: transform var(--duration-quick) var(--ease-spring);
+}
+.light-tile:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+
+/* Icon-Feld: quadratisch (~36px). Der Zustand wird ausschließlich hierüber
+   kommuniziert — Fill, Icon-Farbe und Rand kippen zwischen Aus/An. */
+.light-tile-icon {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-1);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.light-tile.is-on .light-tile-icon {
+  background: var(--accent-light-on-fill);
+  border-color: var(--accent-light-on-border);
+  color: var(--accent-light-on-icon);
+}
+.light-tile-name {
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Label-Spalte: Name + optionale Wert-Zeile (info/temp/media-Kacheln).
+   Bei Wert-Zeile bleibt der Name einzeilig, damit die Kachelhöhe hält. */
+.light-tile-label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.light-tile-label:has(.light-tile-state) .light-tile-name {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+.light-tile-state {
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Licht-Detail (zweite Ebene): Modal über der Kachel-Ebene ──
+   Reuse overlay-scrim/overlay-panel/modal-enter (s. Room-Overlay). */
+.light-detail {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* Modal-Tier, über Inline-Panel + Hero */
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.light-detail[hidden] { display: none; }
+.light-detail.is-open .overlay-scrim {
+  animation: overlay-scrim-in var(--duration-enter) var(--ease-out) both;
+}
+.light-detail.is-open .light-detail-panel {
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.light-detail.is-closing .overlay-scrim {
+  animation: overlay-scrim-out var(--duration-fast) var(--ease-in) both;
+}
+.light-detail.is-closing .light-detail-panel {
+  animation: modal-exit var(--duration-fast) var(--ease-in) both;
+}
+.light-detail-panel {
+  width: min(100%, 460px);
+  outline: none;
+}
+
+.ld-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+/* Piktogramm-Chip (Lampenform-Trigger) im Kachel-Icon-Stil (accent-light-on) */
+.ld-symbol {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.ld-symbol.is-on {
+  background: var(--accent-light-on-fill);
+  border-color: var(--accent-light-on-border);
+  color: var(--accent-light-on-icon);
+}
+/* Ein/Aus-Schalter: Ghost-Kreis, akzentuiert wenn an */
+.ld-power {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: transparent;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.ld-power.is-on { color: var(--color-accent-warm); border-color: var(--color-accent-warm); }
+
+/* B-22: vollständiger, lazy geladener Tabler-Icon-Picker. */
+.icon-picker-layer { position: fixed; inset: 0; z-index: 240; display: flex; flex-direction: column; padding: var(--space-4); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.icon-picker-scrim { position: fixed; inset: 0; width: 100%; height: 100%; background: color-mix(in srgb, var(--color-bg) 80%, transparent); backdrop-filter: blur(8px); }
+.icon-picker-panel {
+  position: relative; display: flex; flex-direction: column; width: min(760px, 96vw); max-height: 96dvh;
+  margin: auto; padding: var(--space-5); overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-surface-1); box-shadow: var(--shadow-overlay); animation: modal-enter var(--duration-quick) var(--ease-out) both;
+}
+.icon-picker-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.icon-picker-header h2 { margin-top: var(--space-1); font-size: var(--text-xl); }
+.icon-search { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); padding: 0 var(--space-4); min-height: 48px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); color: var(--color-text-secondary); background: var(--color-surface-2); }
+.icon-search:focus-within { border-color: var(--color-accent-warm); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-warm) 25%, transparent); }
+.icon-search input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--color-text-primary); background: transparent; font: inherit; }
+.icon-tabs { display: flex; gap: var(--space-2); margin-top: var(--space-3); padding-bottom: var(--space-2); overflow-x: auto; scrollbar-width: thin; }
+.icon-tabs button { flex: none; padding: var(--space-2) var(--space-3); border-radius: var(--radius-full); color: var(--color-text-secondary); background: var(--color-surface-2); font-size: var(--text-xs); }
+.icon-tabs button.is-active { color: var(--color-text-primary); background: var(--accent-light-on-fill); box-shadow: inset 0 0 0 1px var(--accent-light-on-border); }
+.icon-picker-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-2) 0; color: var(--color-text-tertiary); font-size: var(--text-xs); }
+.icon-reset { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--color-text-secondary); background: var(--color-surface-2); }
+.icon-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2); flex: 1; min-height: 0; padding: var(--space-1); overflow-y: auto; overscroll-behavior: contain; }
+.icon-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); min-height: 74px; padding: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-md); color: var(--color-text-secondary); background: var(--color-surface-2); }
+.icon-option .icon { width: 24px; height: 24px; }
+.icon-option span:last-child { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.icon-option[aria-checked='true'] { color: var(--accent-light-on-icon); background: var(--accent-light-on-fill); border-color: var(--accent-light-on-border); }
+.icon-option:focus-visible { outline: 2px solid var(--color-accent-warm); outline-offset: 1px; }
+.icon-empty { margin: auto; color: var(--color-text-secondary); }
+@media (max-width: 560px) { .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .icon-picker-panel { padding: var(--space-3); } }
+.ld-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+}
+.ld-title-button {
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ld-title-input {
+  width: 100%;
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1);
+  border: 1px solid var(--color-accent-warm);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  background: var(--color-surface-2);
+  outline: none;
+}
+.ld-name-error {
+  margin: calc(var(--space-3) * -1) 0 var(--space-4);
+  color: var(--color-danger, #d85b5b);
+  font-size: var(--text-sm);
+}
+.ld-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+}
+
+/* Großer Wert/Zustand (info-/switch-/media-Overlay): tnum via .num */
+.ld-big-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+.ld-meta {
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.ld-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.ld-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.ld-section > .caps-label { margin-bottom: var(--space-1); }
+.ld-scale-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+/* ── TickScale (Hauser-Regler): Leiter kleiner Rechtecke ── */
+.tickscale { touch-action: none; outline: none; }
+.tickscale.is-disabled { opacity: 0.4; pointer-events: none; }
+.tickscale:focus-visible { outline: 2px solid var(--color-accent-warm); outline-offset: 4px; border-radius: var(--radius-md); }
+.tickscale-track { display: flex; }
+.tick {
+  background: var(--color-border);
+  border-radius: 2px;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+/* Beim Öffnen lädt die aktive Helligkeitsleiter von unten nach oben. Jeder Tick
+   bewegt nur seine eigene Compositor-Layer; Pointerdown beendet den Effekt sofort. */
+@keyframes tick-charge-in {
+  from { opacity: 0.2; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+.tickscale.is-vertical.is-intro .tick.is-active {
+  transform-origin: left center;
+  animation: tick-charge-in 120ms var(--ease-out) both;
+  animation-delay: calc(var(--charge-order) * 6ms);
+}
+
+/* Vertikal (Helligkeit): großer Wert links, Tick-Leiter rechts (oben = hell) */
+.tickscale.is-vertical {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+.tickscale.is-vertical .tickscale-track {
+  flex-direction: column;
+  gap: 5px;
+  width: 88px;
+  height: 240px;
+}
+.tickscale.is-vertical .tick { width: 100%; flex: 1; }
+.tickscale.is-vertical .tickscale-value {
+  order: -1; /* Wert vor die Leiter (links) */
+  /* Feste Breite (fasst „100%"), damit die Tick-Leiter NICHT wandert, wenn die
+     Zahl 1-/2-/3-stellig wird — tabular-nums allein hält nur die Ziffernbreite. */
+  flex: none;
+  width: 2.7em;
+  text-align: left;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+}
+.tick.is-active { background: var(--ts-fill, var(--color-accent-warm)); }
+.tick.is-current { background: var(--color-surface-inverse); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tickscale.is-vertical.is-intro .tick.is-active { animation: none; }
+}
+
+/* Horizontal (Farbtemperatur): Verlaufs-Ticks, aktueller als Marker */
+.tickscale.is-horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.tickscale.is-horizontal .tickscale-track {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 3px;
+  height: 48px;
+}
+.tickscale.is-horizontal .tick { flex: 1; }
+.tickscale.is-horizontal .tick.is-current {
+  transform: scaleY(1.18);
+  box-shadow: inset 0 0 0 2px var(--color-surface-inverse);
+  border-radius: 3px;
+}
+.tickscale.is-horizontal .tickscale-value {
+  align-self: flex-end;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+/* ── Farb-Swatches (kuratierte Palette) ── */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: var(--space-2);
+}
+.swatch {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--sw, var(--color-surface-2));
+  border: 1px solid color-mix(in srgb, var(--color-surface-inverse) 12%, transparent);
+  display: grid;
+  place-items: center;
+}
+/* „Weiß"-Swatch = zurück in den Temp-Modus (heller Verlauf statt Volltonfarbe) */
+.swatch-white {
+  background: linear-gradient(135deg, var(--light-temp-warm), var(--light-temp-cool));
+}
+.swatch-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-spring);
+}
+.swatch-check .icon { width: var(--icon-sm); height: var(--icon-sm); }
+.swatch[aria-checked='true'] { box-shadow: 0 0 0 2px var(--color-surface-1), 0 0 0 4px var(--color-accent-warm); }
+.swatch[aria-checked='true'] .swatch-check { opacity: 1; transform: scale(1); }
+
+/* ValueSlider (docs/06 Primitives, das Hauser-Thumb-Pattern): 2px-Haarlinien-Track,
+   Wert IM 40px-Thumb-Badge (Inverse), 48px Touch-Zone, Fill via scaleX (GPU) */
+.slider {
+  position: relative;
+  height: var(--touch-preferred);
+  touch-action: none;
+  opacity: 1;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--color-border);
+  overflow: hidden;
+}
+.slider-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--color-accent-warm);
+  /* Snap bei Tap auf den Track; beim Drag setzt JS transition: none */
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: var(--slider-thumb);
+  height: var(--slider-thumb);
+  margin: calc(var(--slider-thumb) / -2) 0 0 calc(var(--slider-thumb) / -2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transform: var(--thumb-x, translateX(0));
+  transition: transform var(--duration-fast) var(--ease-out);
+  will-change: transform;
+}
+.slider.is-dragging .slider-thumb,
+.slider.is-dragging .slider-fill { transition: none; }
+.slider.is-dragging .slider-thumb {
+  /* 40 → 44px (--slider-thumb-active) nur via scale, kein width/height-Reflow */
+  transform: var(--thumb-x, translateX(0)) scale(1.1);
+}
+
+/* ── Reconciliation-Feedback (docs/02, ADR-017 Addendum) ──
+   Pending-Dot (Timeout), Toggle-Wobble (Widerspruch), Slider-/Wert-Korrektur.
+   Ausschließlich transform/opacity — das Framework rendert, es animiert nicht. */
+.transport-play, .value-chip { position: relative; }
+.pending-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-dot-warning);
+  box-shadow: 0 0 0 2px var(--color-surface-1);
+  animation: pending-pulse 1.2s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+@keyframes pending-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Toggle-Widerspruch (docs/02): Zurückspringen auf die Server-Wahrheit + Wobble */
+@keyframes control-wobble {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+.is-wobble { animation: control-wobble var(--duration-wobble) var(--ease-out); }
+
+/* Slider-Widerspruch (docs/02): kein Sprung — Korrektur über 300 ms interpolieren.
+   Transient von der Slider-Action gesetzt, überschreibt die 80-ms-Default-Transition. */
+.slider.is-correcting .slider-fill,
+.slider.is-correcting .slider-thumb {
+  transition: transform var(--duration-correct) var(--ease-out);
+}
+
+/* Stepper-Wert-Korrektur (docs/02): Temperatur ist diskret (kein Slider) →
+   Opacity-Crossfade des korrigierten Werts statt Transform-Interpolation. */
+@keyframes correct-fade { from { opacity: 0.35; } to { opacity: 1; } }
+.is-correct-fade { animation: correct-fade var(--duration-correct) var(--ease-out); }
+
+/* ── Verbindungs-Banner + Offline-Sperre (docs/02 Offline/Reconnect) ──
+   Banner absolut im .screens-Bereich (overflow:hidden clippt es im Ruhezustand
+   nach oben weg); Slide nur über transform/opacity. */
+.conn-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 36px;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform var(--duration-normal) var(--ease-out),
+              opacity var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+}
+.conn-banner.is-visible { transform: translateY(0); opacity: 1; }
+
+/* Offline: Controls deaktiviert (keine Commands, docs/02) — Navigation (Tabs,
+   Raum-/Player-Auswahl) bleibt bewusst aktiv, das Panel friert nicht ein. */
+.app.is-disconnected .light-list,
+.app.is-disconnected .slider,
+.app.is-disconnected .stepper,
+.app.is-disconnected .mode-selector,
+.app.is-disconnected .transport,
+.app.is-disconnected .preset-grid,
+.app.is-disconnected .scene-row {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── Szenen: Ghost-Pills ── */
+.scene-row {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.scene-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--touch-preferred);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  background: transparent;
+}
+.scene-btn .scene-check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  color: var(--color-success);
+  opacity: 0;
+  pointer-events: none;
+}
+.scene-btn.is-success .scene-check {
+  animation: scene-success 400ms var(--ease-out) both;
+}
+@keyframes scene-success {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Sektionen im Room Detail ── */
+.detail-section { margin-bottom: var(--space-5); }
+.detail-section > .caps-label { display: block; margin-bottom: var(--space-3); }
+
+/* ── Screen-Titel (Klima, System — docs/07) ── */
+.screen-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  margin-bottom: var(--space-5);
+}
+
+/* ── SystemStatus Cards (docs/06 §6: 3.5:1, Dot 8px, Name md, Label sm) ── */
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--grid-gap);
+}
+@media (min-width: 1440px) { .system-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 80px;
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.status-name {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-medium);
+}
+.status-detail {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.status-badge {
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.status-card.is-degraded .status-badge { color: var(--color-warning); }
+.status-card.is-offline .status-badge { color: var(--color-error); }
+
+/* ── Update-Liste (docs/07 Screen 5) ── */
+.update-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  overflow: hidden;
+}
+.update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--touch-preferred);
+  padding: var(--space-2) var(--space-5);
+}
+.update-row + .update-row { border-top: 1px solid var(--color-border); }
+.update-name { font-size: var(--text-base); }
+.update-version {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.update-version .update-arrow { color: var(--color-text-tertiary); }
+
+/* ── Media (docs/07 Screen 3): Room-Selector + MediaControl Expanded ── */
+
+/* Ghost-Card (docs/06 §4: Hauser-Preset-Muster — outlined, Label 2xs + Wert md,
+   min 160×72px, 4 Spalten). Dient Raum-Auswahl UND Presets. */
+.select-grid,
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--grid-gap);
+}
+@media (min-width: 1200px) { .select-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.ghost-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 160px;
+  min-height: 72px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition: transform var(--duration-quick) var(--ease-spring),
+              background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+.ghost-card-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.ghost-card-value {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-medium);
+}
+/* Aktive Auswahl = Inverse-Fläche (Hauser-Selektions-Pattern, docs/06 §3) */
+.ghost-card.is-active {
+  background: var(--color-surface-inverse);
+  border-color: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+.ghost-card.is-active .ghost-card-label { color: inherit; opacity: 0.65; }
+.ghost-card.is-unavailable {
+  border-style: dashed;
+  color: var(--color-text-tertiary);
+}
+.ghost-card.is-unavailable .ghost-card-label { color: var(--color-text-tertiary); }
+.ghost-card:disabled { opacity: 0.4; cursor: default; }
+
+.media-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--grid-gap-section);
+  align-items: start;
+}
+@media (min-width: 1200px) { .media-layout { grid-template-columns: 7fr 5fr; } }
+
+/* MediaControl Expanded (docs/06 §4) */
+.player-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  text-align: center;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+.player-card.is-unavailable { border-style: dashed; }
+
+.player-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 76px;
+  justify-content: center;
+}
+.player-track .icon { color: var(--color-text-tertiary); margin-bottom: var(--space-2); }
+.player-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+}
+.player-title.is-muted {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+.player-artist {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Fortschritt: 2px-Haarlinie (nicht interaktiv), Zeiten tnum */
+.player-progress { width: 100%; max-width: 520px; }
+.player-progress.is-hidden { visibility: hidden; }
+.progress-track {
+  position: relative;
+  height: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: var(--color-accent-warm);
+}
+.progress-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Transport: Play 64px-Kreis mit 1.5px-Border (Hauser-Transport-Optik) */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+}
+.transport-btn {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+}
+.transport-btn:hover { color: var(--color-text-primary); }
+.transport-btn:disabled { opacity: 0.4; cursor: default; }
+.transport-play {
+  width: 64px;
+  height: 64px;
+  border: 1.5px solid var(--color-text-primary);
+  color: var(--color-text-primary);
+}
+.transport-play .icon-play { width: 28px; height: 28px; }
+
+/* Volume: ValueSlider (docs/06 Primitives) in voller Card-Breite */
+.player-volume {
+  display: grid;
+  grid-template-columns: var(--icon-md) 1fr;
+  column-gap: var(--space-4);
+  align-items: center;
+  width: 100%;
+  max-width: 520px;
+  color: var(--color-text-secondary);
+}
+.player-volume.is-disabled .slider {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.player-source {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.player-source .source-value {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Energie (docs/07 Screen 10, docs/06 §12) ──
+   B-13-verwandtes Hero-Layout: feste Nutzinformation links, großer visueller
+   Energy-Eyecatcher rechts. Bewegung bleibt transform/opacity-only. */
+.energy-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-surface-0);
+}
+
+.energy-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--color-surface-0);
+}
+.energy-hero-img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 1;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+.energy-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--color-surface-0) 78%, transparent) 0%,
+    color-mix(in srgb, var(--color-surface-0) 45%, transparent) 34%,
+    color-mix(in srgb, var(--color-surface-0) 12%, transparent) 62%,
+    transparent 100%);
+  pointer-events: none;
+}
+
+.energy-panel {
+  position: absolute;
+  inset: var(--space-4) auto var(--space-4) var(--space-4);
+  z-index: 2;
+  /* Breite folgt dem geteilten Layout-Preset (Kontrollflächen anpassen) —
+     dieselbe Formel wie .home-panels mit einer Fläche; Fallbacks = Preset
+     „Ausgewogen", falls die Variablen fehlen. */
+  width: max(var(--slot-min, 378px), min(var(--layout-total, 44%), calc(100% - var(--hero-min, 480px) - var(--space-8))));
+  max-width: calc(100% - var(--hero-min, 480px) - var(--space-8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-overlay-shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.energy-panel-top {
+  display: grid;
+  grid-template-columns: 1fr var(--touch-preferred);
+  align-items: center;
+  gap: var(--space-3);
+}
+.energy-period-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.energy-period-btn {
+  height: 44px;
+  padding: 0 var(--space-4);
+  color: var(--color-text-secondary);
+}
+.energy-period-btn.is-active {
+  background: var(--color-surface-inverse);
+  border-color: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+.energy-page-toggle {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+  transition: color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out),
+              transform var(--duration-quick) var(--ease-spring);
+}
+.energy-page-toggle.is-consumption {
+  color: var(--color-accent-cool);
+  border-color: color-mix(in srgb, var(--color-accent-cool) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent-cool) 13%, var(--color-surface-2));
+}
+.energy-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.energy-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.energy-primary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.energy-primary .chip-label,
+.value-chip .chip-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.energy-primary-value {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-tightest);
+}
+.energy-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.energy-flow {
+  display: grid;
+  grid-template-columns: auto minmax(36px, 1fr) auto minmax(36px, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.node-circle {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  transition: color var(--duration-normal) var(--ease-out);
+}
+.flow-node.is-warm .node-circle { color: var(--color-accent-warm); }
+.flow-node.is-cool .node-circle { color: var(--color-accent-cool); }
+.node-value {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.node-value .kpi-unit,
+.chip-value .kpi-unit,
+.energy-primary-value .kpi-unit {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-left: var(--space-1);
+  letter-spacing: var(--tracking-wide);
+}
+.node-label {
+  max-width: 80px;
+  text-align: center;
+  line-height: var(--leading-tight);
+}
+
+/* Fluss-Linie: 2px-Haarlinie (ValueSlider-Track-Muster), auf Kreis-Mitte
+   ausgerichtet; Punkte laufen via translateX über die Linienbreite —
+   100cqw = Container-Breite (container-type: inline-size) */
+.flow-line {
+  display: flex;
+  align-items: center;
+  height: 72px; /* = Kreis → Linie mittig auf Knoten-Achse */
+}
+.line-track {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border);
+  container-type: inline-size;
+}
+.flow-dot {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-warm);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+.flow-line.is-cool .flow-dot { background: var(--color-accent-cool); }
+.flow-line.is-active .flow-dot {
+  opacity: 1;
+  animation: flow-dot var(--flow-duration, 2s) linear infinite;
+}
+.flow-line.is-reverse .flow-dot { animation-direction: reverse; }
+/* Nach der Shorthand-Regel und spezifischer — sonst setzt die Shorthand
+   das delay implizit auf 0 zurück */
+.flow-line.is-active .flow-dot.dot-2 {
+  animation-delay: calc(var(--flow-duration, 2s) * -0.5);
+}
+@keyframes flow-dot {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100cqw); }
+}
+
+/* KPI-Chips: ValueChip-Anzeige-Variante (docs/06 §0: transparent, nur Anzeige) */
+.energy-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.value-chip.is-plain {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+.value-chip.is-plain .chip-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Tagesverlauf: 24 Balkenpaare, Entrance via scaleY + Stagger (einmalig) */
+.energy-hint {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+.energy-chart { max-width: 100%; }
+.consumption-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 112px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface-2) 84%, transparent);
+}
+.consumption-mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  color: var(--color-accent-cool);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent-cool) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent-cool) 10%, transparent);
+}
+.consumption-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.consumption-copy .chip-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  border-bottom: 1px solid var(--color-border);
+}
+.chart-hour {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+.bar {
+  flex: 1;
+  height: 100%;
+  transform: scaleY(var(--h, 0));
+  transform-origin: bottom;
+  animation: bar-in 400ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 18ms);
+}
+.bar-prod { background: var(--color-accent-warm); }
+.bar-load { background: var(--color-border); }
+@keyframes bar-in { from { transform: scaleY(0); } }
+
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+}
+.chart-legend {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.chart-legend span { display: flex; align-items: center; gap: var(--space-2); }
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+.legend-prod { background: var(--color-accent-warm); }
+.legend-load { background: var(--color-border); }
+
+/* ── Last-Overlay (B-19): Touch-Trigger + Kuchen-Overlay ──
+   Reuse overlay-scrim/overlay-panel/modal-enter (s. Room-/Licht-Overlay). */
+.flow-node-trigger,
+.consumption-card-trigger {
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.flow-node-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-lg);
+}
+.consumption-card-trigger { width: 100%; }
+
+.energy-load-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* Modal-Tier, gleicher Stack wie .light-detail */
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.energy-load-overlay[hidden] { display: none; }
+.energy-load-overlay.is-open .overlay-scrim {
+  animation: overlay-scrim-in var(--duration-enter) var(--ease-out) both;
+}
+.energy-load-overlay.is-open .elo-panel {
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.energy-load-overlay.is-closing .overlay-scrim {
+  animation: overlay-scrim-out var(--duration-fast) var(--ease-in) both;
+}
+.energy-load-overlay.is-closing .elo-panel {
+  animation: modal-exit var(--duration-fast) var(--ease-in) both;
+}
+.energy-load-overlay.is-closing { pointer-events: none; }
+
+.elo-panel {
+  width: min(100%, 520px);
+  outline: none;
+}
+.elo-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.elo-title-group { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; }
+.elo-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.elo-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  font-size: var(--text-2xl);
+  line-height: 1;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+.elo-empty {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  padding: var(--space-4) 0;
+}
+
+.elo-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.elo-donut {
+  position: relative;
+  width: min(64%, 240px);
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+.elo-donut svg { width: 100%; height: 100%; display: block; }
+.elo-seg { transition: stroke-dashoffset var(--duration-enter) var(--ease-out); }
+.elo-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  pointer-events: none;
+}
+.elo-center-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.elo-legend {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.elo-legend-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.elo-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  align-self: center;
+}
+.elo-legend-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+.elo-legend-value {
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.elo-legend-pct {
+  min-width: 3.5ch;
+  text-align: right;
+  color: var(--color-text-secondary);
+}
+
+/* Reduced Motion: Flüsse stehen (Werte tragen die Information), Balken sofort */
+@media (prefers-reduced-motion: reduce) {
+  .flow-line.is-active .flow-dot { animation: none; opacity: 0; }
+  .bar { animation: none; }
+  .elo-seg { transition: none; }
+}
+
+/* ── Bibliothek (docs/07 Screen 6, docs/08): MediaShelf + MediaCard ──
+   Poster-Platzhalter: pro Item ein Farbton (--ph) statt Artwork — Poster
+   sind „Artwork" und bleiben in beiden Themes dunkel (wie echte Cover). */
+.shelf { margin-bottom: var(--space-6); }
+.shelf-label { display: block; margin-bottom: var(--space-3); }
+
+.library-header {
+  min-height: 48px;
+  margin-bottom: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.library-main-title { margin-bottom: 0; }
+.library-header { view-transition-name: library-header; }
+.library-search-button,
+.search-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  background: var(--color-surface-1);
+}
+.library-search-button svg,
+.search-close svg,
+.library-search-wrap > svg,
+.library-view-title svg,
+.shelf-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.library-view-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-preferred);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+.library-view-title svg { width: 28px; height: 28px; }
+.library-search-wrap {
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-1);
+}
+.library-search-wrap > svg { color: var(--color-text-tertiary); }
+.library-search-input {
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--color-text-primary);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-md);
+}
+.library-search-input::placeholder { color: var(--color-text-tertiary); }
+.search-close { border: 0; background: transparent; }
+.library-stage { position: relative; min-height: 40vh; }
+.library-overview,
+.library-expanded { width: 100%; }
+
+/* Shared-Element-Transition: vorhandene Cover behalten eine dynamische
+   view-transition-name und interpolieren dadurch ihre echte alte/neue Position.
+   Nur fremde Shelves verlassen die Bühne vollständig nach links. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(library-header),
+::view-transition-group(*) {
+  animation-duration: 240ms;
+  animation-timing-function: var(--ease-out);
+}
+/* Shared Cover bleiben visuell dasselbe Objekt; nur ihre Group interpoliert
+   Position und Größe. Kein alter/neuer Crossfade. */
+::view-transition-old(.library-shared-card),
+::view-transition-new(.library-shared-card) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(.library-enter-card) {
+  animation: library-card-enter 240ms var(--ease-out) both;
+  animation-delay: 200ms;
+  mix-blend-mode: normal;
+}
+::view-transition-old(library-exit-continue),
+::view-transition-old(library-exit-latest),
+::view-transition-old(library-exit-series),
+::view-transition-old(library-exit-movies) {
+  animation: library-shelf-out 240ms var(--ease-in) both;
+}
+::view-transition-new(library-return-continue),
+::view-transition-new(library-return-latest),
+::view-transition-new(library-return-series),
+::view-transition-new(library-return-movies) {
+  animation: library-shelf-return 240ms var(--ease-out) both;
+}
+@keyframes library-shelf-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes library-shelf-return {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes library-card-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: var(--space-5) var(--grid-gap);
+  align-items: start;
+}
+.library-grid .media-card { width: 100%; min-width: 0; }
+.library-result-count {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+.library-empty {
+  padding: var(--space-8) 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-md);
+}
+.shelf-button {
+  width: max-content;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+.shelf-button svg { width: 17px; height: 17px; transition: transform 120ms var(--ease-out); }
+.shelf-button:active svg { transform: translateX(2px); }
+
+@media (min-width: 1696px) {
+  .library-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none; }
+  .shelf-button svg { transition: none; }
+}
+
+.shelf-row {
+  display: flex;
+  gap: var(--grid-gap);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.shelf-row::-webkit-scrollbar { display: none; }
+
+/* ── Bibliothek: Live-Zustände (Loading/Login/Error, docs/08) ── */
+.skeleton-poster {
+  flex: none;
+  width: 176px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@media (min-width: 1696px) { .skeleton-poster { width: 196px; } }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-poster { animation: none; } }
+
+.lib-gate {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+.detail-loading { color: var(--color-text-tertiary); }
+
+.media-card {
+  flex: none;
+  width: 176px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: left;
+  scroll-snap-align: start;
+}
+@media (min-width: 1696px) { .media-card { width: 196px; } }
+
+.poster {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(168deg,
+    hsl(var(--ph) 34% 30%) 0%,
+    hsl(var(--ph) 40% 14%) 62%,
+    hsl(calc(var(--ph) + 40) 36% 9%) 100%);
+}
+.poster-genre { color: rgba(255, 255, 255, 0.55); }
+.poster-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-snug);
+  color: rgba(255, 255, 255, 0.92);
+}
+/* Echtes Jellyfin-Poster (docs/08): füllt die Platzhalter-Fläche; der
+   Farbton-Gradient bleibt dahinter sichtbar, bis das Bild geladen ist. */
+.poster-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Resume-Fortschritt (docs/07 Screen 6): Balken unten IM Poster */
+.card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.card-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--color-accent-warm);
+}
+
+.card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ── Media Detail (docs/07 Screen 7): Hero + Overview + Folgenliste ──
+   Hero liegt auf „Artwork" (Backdrop-Platzhalter) → feste helle Textfarben,
+   unabhängig vom Theme — wie bei den Postern. */
+.detail-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 340px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  background: linear-gradient(155deg,
+    hsl(var(--ph) 36% 32%) 0%,
+    hsl(var(--ph) 42% 13%) 55%,
+    hsl(calc(var(--ph) + 40) 36% 8%) 100%);
+}
+@media (min-width: 1696px) { .detail-hero { min-height: 420px; } }
+
+/* Echter Backdrop (docs/08) unter dem Scrim; Farbton-Gradient bleibt Fallback. */
+.hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top,
+    rgba(5, 7, 10, 0.82) 0%,
+    rgba(5, 7, 10, 0.15) 55%,
+    rgba(5, 7, 10, 0) 100%);
+}
+
+/* Ghost-Kreis-Button auf Artwork (Hero-Back, Player-Back) */
+.circle-btn {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-full);
+  background: rgba(8, 10, 14, 0.45);
+  color: #e6eef6;
+}
+.hero-back {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 2;
+}
+
+.hero-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+.hero-title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-tighter);
+  color: #fff;
+}
+.hero-meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.72);
+}
+.hero-meta .meta-dot { color: rgba(255, 255, 255, 0.35); }
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* Play/Resume: helle Pille auf Artwork (theme-unabhängig, wie Poster-Text) */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 56px;
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-full);
+  background: rgba(242, 246, 250, 0.95);
+  color: #0b0e12;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+}
+.btn-hero-ghost {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  background: transparent;
+}
+
+.detail-overview {
+  max-width: 720px;
+  margin: var(--space-5) 0 var(--space-6);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+
+/* Staffel-Pills + Folgenliste (EpisodeList, docs/08) */
+.season-row {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.season-pill {
+  height: var(--touch-min);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+.season-pill.is-active {
+  background: var(--color-surface-inverse);
+  border-color: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+
+.episode-list {
+  max-width: 960px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  overflow: hidden;
+}
+.episode-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-2) var(--space-5);
+  text-align: left;
+}
+.episode-row + .episode-row { border-top: 1px solid var(--color-border); }
+.ep-num {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+.ep-title { font-size: var(--text-base); }
+.episode-row.is-watched .ep-title { color: var(--color-text-secondary); }
+.ep-state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+.ep-state .icon { color: var(--color-success); }
+.ep-progress {
+  position: relative;
+  width: 72px;
+  height: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.ep-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--color-accent-warm);
+}
+
+/* ── Player (docs/07 Screen 8): Vollbild-Layer über der App inkl. Tab-Bar.
+   Immer dunkel (liegt auf „Video") → feste Farben statt Theme-Tokens.
+   Ein-/Ausblenden wie Ambient: visibility+opacity, Stage skaliert leicht. ── */
+.player-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40; /* über App, unter Ambient (50) und HUD (99) */
+  background: #000;
+  color: #e6eef6;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--duration-enter) var(--ease-out),
+              visibility 0s linear var(--duration-enter);
+}
+.player-layer.is-on {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+
+.player-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: radial-gradient(120% 90% at 50% 40%,
+    hsl(var(--ph, 220) 30% 14%) 0%, #05070a 70%);
+  transform: scale(0.98);
+  transition: transform var(--duration-enter) var(--ease-out);
+}
+.player-layer.is-on .player-stage { transform: scale(1); }
+
+.stage-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(230, 238, 246, 0.28);
+  white-space: nowrap;
+}
+
+/* Echtes HLS-<video> (Funktionsumfang 9): füllt die Bühne hinter dem Chrome. */
+.player-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Start-/Fehler-/Buffer-Overlay über dem Video, unter dem Chrome. */
+.player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: rgba(230, 238, 246, 0.7);
+  background: rgba(5, 7, 10, 0.55);
+  pointer-events: none;
+}
+.player-overlay button { pointer-events: auto; }
+.player-overlay-soft { background: transparent; }
+
+.player-spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid rgba(230, 238, 246, 0.18);
+  border-top-color: rgba(230, 238, 246, 0.75);
+  animation: player-spin 0.8s linear infinite;
+}
+@keyframes player-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Chrome: Top-/Bottom-Bars mit Verlauf, Auto-Hide nur via opacity */
+.player-chrome {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+.player-top {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+.player-bottom {
+  gap: var(--space-5);
+  padding-bottom: var(--space-6);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+}
+.player-layer.is-chrome-hidden .player-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.p-title-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.p-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p-sub {
+  font-size: var(--text-xs);
+  color: rgba(230, 238, 246, 0.6);
+}
+.p-tools {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.p-tool {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border-radius: var(--radius-md);
+  color: rgba(230, 238, 246, 0.75);
+}
+.p-tool.is-active { color: var(--color-accent-warm); }
+
+.p-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+/* Transport auf Video: feste helle Farben (Theme-Tokens wären im
+   Light-Mode dunkel auf dunkel) */
+.player-layer .transport-btn { color: rgba(230, 238, 246, 0.8); }
+.player-layer .transport-play {
+  border-color: #e6eef6;
+  color: #e6eef6;
+}
+
+/* Seek: ValueSlider-Mechanik mit Plain-Thumb (16px-Punkt statt Wert-Badge) */
+.slider-seek { flex: 1; }
+.slider-seek .slider-track { background: rgba(255, 255, 255, 0.22); }
+.slider-seek .slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  background: #fff;
+  color: transparent;
+  font-size: 0;
+}
+.slider-seek.is-dragging .slider-thumb {
+  transform: var(--thumb-x, translateX(0)) scale(1.4);
+}
+
+.p-time {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: rgba(230, 238, 246, 0.75);
+  white-space: nowrap;
+}
+.p-time-sep { color: rgba(230, 238, 246, 0.35); }
+
+/* ── Ambient / Idle (docs/07 Screen 9): Vollbild-Layer über allem,
+   Fade ≤300 ms rein/raus (nur opacity), statisch bis auf Minutenwechsel.
+   Kein [hidden]: visibility+opacity, damit der Fade in beide Richtungen läuft. ── */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 50; /* über App, unter Dev-HUD (99) */
+  display: grid;
+  grid-template-rows: 1fr auto; /* Uhr zentriert oben, Wochenband fest unten */
+  place-items: center;
+  background: var(--color-surface-0);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--duration-enter) var(--ease-out),
+              visibility 0s linear var(--duration-enter);
+}
+.ambient.is-on {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+
+.ambient-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  /* Pixel-Shift (LCD-Schonung): JS setzt translate, sanft statt Sprung */
+  transition: transform var(--duration-enter) var(--ease-in-out);
+}
+
+/* Ohne Hero-Kommentar wird die Uhr selbst zum Hero statt als verkleinerter
+   Restblock stehenzubleiben. Datum und Status bilden darunter eine ruhige,
+   klar getrennte Informationsgruppe für den großen Wandbildschirm. */
+.ambient-content.without-hero {
+  gap: var(--space-4);
+}
+.ambient-content.without-hero .ambient-clock {
+  font-size: calc(var(--text-4xl) * 2);
+}
+.ambient-content.without-hero .ambient-date {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-wide);
+}
+.ambient-content.without-hero .ambient-status {
+  min-width: calc(var(--space-8) * 5);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+  gap: var(--space-6);
+  font-size: var(--text-lg);
+}
+
+/* Serif-Begrüßung (ADR-012) — einziger Einsatzort von --font-family-display */
+.ambient-greeting {
+  font-family: var(--font-family-display);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+}
+.ambient-clock {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-tightest);
+}
+@keyframes ambient-tick { from { opacity: 0.25; } to { opacity: 1; } }
+.ambient-clock.is-tick { animation: ambient-tick var(--duration-normal) var(--ease-out); }
+
+.ambient-date {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+}
+.ambient-status {
+  margin-top: var(--space-5);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+/* Innen-/Außentemperatur: Piktogramm — Zahl — Trendpfeil, eng gruppiert. */
+.ambient-temp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.ambient-temp-icon {
+  width: 1.15em;
+  height: 1.15em;
+  opacity: 0.85;
+}
+.ambient-temp-trend {
+  width: 0.9em;
+  height: 0.9em;
+  opacity: 0.7;
+}
+
+/* LLM-Variante der Hero-Zeile: ein Satz in der Serif-Stimme der Begrüßung */
+.ambient-copy {
+  max-width: min(88vw, 1100px);
+  text-wrap: balance;
+}
+
+/* Hängen Zettel an den Rändern (Einkaufsliste links, Post-its rechts), wird
+   die Hero-Zeile schmaler: beidseitig die breiteste Zettelspalte + Randabstand
+   + Luft freihalten — symmetrisch, damit Uhr und Text zentriert bleiben. */
+.ambient.has-side-notes {
+  --ambient-side-reserve: calc(
+    clamp(160px, 18vw, 250px) + clamp(var(--space-4), 3vw, var(--space-8)) + var(--space-5)
+  );
+}
+.ambient.has-side-notes .ambient-greeting,
+.ambient.has-side-notes .ambient-copy,
+.ambient.has-side-notes .ambient-today {
+  max-width: min(calc(100vw - 2 * var(--ambient-side-reserve)), 1100px);
+}
+
+/* ── Hero-Zeile: heutige Termine an der Stelle der Begrüßung. Titel bleiben
+   in der Serif-Stimme der Begrüßung, Zeiten treten als kleine Sans-Marken
+   daneben — „Jetzt" in der Akzentfarbe. ── */
+.ambient-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  max-width: min(88vw, 1200px);
+}
+.ambient-today-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.ambient-today-time {
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+.ambient-today-time.is-now { color: var(--color-accent-cool); }
+.ambient-today-sep { color: var(--color-text-tertiary); }
+.ambient-today-more {
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  color: var(--color-text-tertiary);
+}
+/* ── Ambient-Wochenband (B-10-Ausbau): 6 gleichbreite Spalten ab morgen
+   unter dem Uhr-Block — heute lebt in der Hero-Zeile. Hairline pro Spalte
+   segmentiert die Woche wie eine Instrumenten-Skala. Bleibt statisch und
+   sekundär — die Uhr ist weiter der Held des Screens. ── */
+.ambient-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-5);
+  width: min(88vw, 1480px);
+  margin-bottom: clamp(var(--space-4), 4vh, var(--space-8));
+  text-align: left;
+}
+.ambient-week-day {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+.ambient-week-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+.ambient-week-name {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.ambient-week-num { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
+.ambient-week-event { display: grid; gap: 2px; }
+.ambient-week-time { font-size: var(--text-2xs); color: var(--color-text-secondary); }
+.ambient-week-time.is-accent { color: var(--color-accent-cool); }
+/* Titel brechen um statt abzuschneiden — der Screen hat vertikal Platz,
+   und ein halber Terminname ist keine Information. */
+.ambient-week-title {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.ambient-week-more,
+.ambient-week-empty { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
+
+/* ── Post-its: offene Erinnerungen als gelbe Notizzettel in der freien oberen
+   rechten Ecke. Am Rand statt im Zentrum — sie ergänzen die Wandtafel, ohne die
+   zentrale Information zu überlagern. Leicht gekippt für den angehefteten
+   Papier-Eindruck; das Gelb bleibt themen-unabhängig (Papier ist gelb), wird
+   nachts aber gedämpft, damit kein Zettel den dunklen Screen überstrahlt. ── */
+.ambient-postits {
+  position: absolute;
+  top: clamp(var(--space-4), 4vh, var(--space-8));
+  right: clamp(var(--space-4), 3vw, var(--space-8));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+  width: clamp(150px, 17vw, 230px);
+  /* Touch-Zone: ein Tap auf die Zettel entsperrt zur Notizen-Seite —
+     die Zettel müssen deshalb Pointer-Ziele sein (AmbientLayer wakeTo). */
+}
+.ambient-postit {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--postit-paper, #fde68a);
+  color: var(--postit-ink, #3f3406);
+  border-radius: 2px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.20), 0 1px 2px rgba(0, 0, 0, 0.14);
+  transform: rotate(-1.6deg);
+}
+.ambient-postit:nth-child(even) { transform: rotate(1.3deg); }
+.ambient-postit-title {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.ambient-postit-person {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--postit-muted, #7a6712);
+}
+.ambient-postit-due {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--postit-muted, #7a6712);
+}
+.ambient-postit.is-overdue .ambient-postit-due { color: #9a3412; font-weight: var(--font-weight-semibold); }
+
+/* ── Post-it-Farben pro Person: Sam gelb, Alex grün, Beide gelbgrün.
+   Als Custom-Property-Sets, damit Standby-Zettel und Notizen-Seite dieselbe
+   Papier-Palette teilen. ── */
+.postit-sam    { --postit-paper: #fde68a; --postit-ink: #3f3406; --postit-muted: #7a6712; }
+.postit-alex { --postit-paper: #bce29e; --postit-ink: #263d10; --postit-muted: #567433; }
+.postit-beide   { --postit-paper: #dde579; --postit-ink: #383b0a; --postit-muted: #6f7420; }
+.ambient-postit-more {
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+  transform: rotate(-0.8deg);
+}
+:root[data-theme='dark'] .ambient-postits { opacity: 0.6; }
+
+/* ── Einkaufsliste auf dem Standby: ein langer weißlicher Zettel in der
+   oberen linken Ecke — Gegenstück zu den Post-its, gleiche Papier-Sprache
+   (leicht gekippt, weicher Schatten), aber ruhiges, fast weißes Papier mit
+   Laden-Überschriften als kleine Kapitälchen. Keine Checkboxen: der Zettel
+   ist Anzeige, gepflegt wird in Notion bzw. auf der Notizen-Seite. ── */
+.ambient-shopping {
+  position: absolute;
+  top: clamp(var(--space-4), 4vh, var(--space-8));
+  left: clamp(var(--space-4), 3vw, var(--space-8));
+  width: clamp(160px, 18vw, 250px);
+}
+.ambient-shopping-paper {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: linear-gradient(174deg, #fbf8ef 0%, #f3efe2 100%);
+  color: #33302a;
+  border-radius: 2px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
+  transform: rotate(0.9deg);
+}
+.ambient-shopping-title {
+  font-family: var(--font-family-display);
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid rgba(51, 48, 42, 0.18);
+}
+.ambient-shopping-store {
+  margin-top: var(--space-3);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: #837c6d;
+}
+.ambient-shopping-items {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.ambient-shopping-items li {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+:root[data-theme='dark'] .ambient-shopping { opacity: 0.6; }
+
+/* ── B-10 Kalender: durchscrollbares Monatsraster im Stil des Ambient-Wochenbands.
+   Woche beginnt montags; die klebende Kopfzeile trägt den mitscrollenden Monat. ── */
+.calendar-screen {
+  position: relative; /* Bezug für offsetTop der Wochen (Scroll-Spy) */
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 clamp(var(--space-5), 5vw, 72px) calc(88px + var(--space-6));
+  --cal-col-gap: var(--space-4);
+}
+.cal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-7) 0 var(--space-3);
+  background: var(--color-surface-0);
+}
+.cal-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.cal-month {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  text-transform: capitalize;
+}
+.cal-actions { display: flex; align-items: center; gap: var(--space-4); }
+.cal-updated { color: var(--color-text-secondary); font-size: var(--text-sm); white-space: nowrap; }
+.calendar-refresh {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+.calendar-refresh:disabled { opacity: 0.4; }
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--cal-col-gap);
+  margin-top: var(--space-4);
+  padding-bottom: var(--space-2);
+}
+.cal-weekdays span {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.calendar-error { margin-bottom: var(--space-3); color: var(--color-warning); font-size: var(--text-sm); }
+
+.cal-grid { display: grid; gap: 0; }
+/* Wochenzeile als 7-Spalten-Grid: Kopfzeile (Reihe 1), darunter die Balken-Lanes
+   für mehrtägige Termine (Reihen 2…), zuunterst die eintägigen Tagestermine.
+   Balken spannen per grid-column über mehrere Spalten und decken dabei die
+   Spaltenlücken mit ab. */
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: var(--cal-col-gap);
+  row-gap: 2px;
+}
+.cal-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  grid-row: 1;
+  min-width: 0;
+  padding: var(--space-3) 0 var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+.cal-day-events {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: 52px;
+  padding-bottom: var(--space-4);
+}
+.cal-day-head.is-past,
+.cal-day-events.is-past { opacity: 0.5; }
+.cal-day-month {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.cal-day-num { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.cal-day-num.is-today {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.35em;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-cool);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-semibold);
+}
+.cal-event { display: grid; grid-template-columns: 3px 1fr; gap: var(--space-2); align-items: stretch; }
+.cal-event-mark { border-radius: var(--radius-pill); background: var(--color-accent-cool); }
+.cal-event-body { display: grid; gap: 1px; min-width: 0; }
+.cal-event-time { font-size: var(--text-2xs); color: var(--color-text-secondary); }
+.cal-event.is-accent .cal-event-time { color: var(--color-accent-cool); }
+.cal-event-time.is-now { color: var(--color-accent-cool); font-weight: var(--font-weight-medium); }
+.cal-event-title {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.cal-day-more { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
+
+/* Mehrtägiger Termin als durchgehender Balken über seine Spalten. Weicher
+   Farbfüllung der Quelle mit farbiger Startkante; an Wochengrenzen läuft der
+   Balken kantig weiter (continues-left/right), sonst rundet er ab. */
+.cal-bar {
+  --bar-color: var(--color-accent-cool);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--bar-color);
+  background: color-mix(in srgb, var(--bar-color) 26%, transparent);
+}
+.cal-bar.continues-left {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 0;
+  padding-left: var(--space-2);
+}
+.cal-bar.continues-right {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.cal-bar.is-now { box-shadow: inset 0 0 0 1px var(--bar-color); }
+.cal-bar.is-past { opacity: 0.5; }
+.cal-bar-title {
+  overflow: hidden;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-width: 760px) {
+  .calendar-screen { --cal-col-gap: var(--space-2); }
+  .cal-day-events { min-height: 40px; }
+}
+
+/* Nachtabsenkung (Phase 2: Night-Theme = Nacht — docs/07 Screen 9):
+   reines Schwarz + stark abgesenkter Inhalt; Phase 3/4 verfeinert
+   über sun.sun bzw. Fully-Kiosk-Brightness-API. */
+:root[data-theme='dark'] .ambient { background: #000; }
+:root[data-theme='dark'] .ambient-content { opacity: 0.55; }
+
+/* Deep Night nach dem iPhone-StandBy-Prinzip: kein Informationsdashboard,
+   sondern nur eine sehr dunkle rote Uhr. Die eigene Opacity hebt die normale
+   Nachtabsenkung gezielt auf; der Rotton ist bereits gedämpft tokenisiert. */
+.ambient.deep-night {
+  grid-template-rows: 1fr;
+  background: var(--color-ambient-deep-night-background);
+}
+.ambient.deep-night .ambient-content {
+  opacity: 1;
+}
+.ambient-content.deep-night-content .ambient-clock {
+  font-size: calc(var(--text-4xl) * 2);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ambient-deep-night-clock);
+}
+
+/* ── Dev-HUD (Hardware-Smoke-Test: Viewport, dpr, fps) ── */
+.hud {
+  position: fixed;
+  left: var(--space-4);
+  bottom: calc(72px + var(--space-4));
+  z-index: 99;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+  box-shadow: var(--elevation-overlay-shadow);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+/* ── Login-Gate (ADR-018): Token-Eingabe fürs echte HA, über allem (z 200) ── */
+.login-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--color-surface-0);
+}
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-7);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.login-title {
+  font-family: var(--font-family-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.login-hint {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.login-error {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error);
+}
+.login-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-sm);
+}
+.login-input:focus {
+  outline: none;
+  border-color: var(--color-accent-cool);
+}
+.login-submit {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent-cool);
+  color: var(--color-text-on-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+}
+.login-submit:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── Raum-Geräte-Editor (Long-Press auf Raum-Kachel): Modal wie Licht-Detail ──
+   Reuse overlay-scrim/overlay-panel/modal-enter + ld-header/ld-title/ld-close. */
+.room-edit {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* Modal-Tier, gleicher Stack wie .light-detail */
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.room-edit[hidden] { display: none; }
+.room-edit.is-open .overlay-scrim {
+  animation: overlay-scrim-in var(--duration-enter) var(--ease-out) both;
+}
+.room-edit.is-open .room-edit-panel {
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.room-edit.is-closing .overlay-scrim {
+  animation: overlay-scrim-out var(--duration-fast) var(--ease-in) both;
+}
+.room-edit.is-closing .room-edit-panel {
+  animation: modal-exit var(--duration-fast) var(--ease-in) both;
+}
+.room-edit.is-closing { pointer-events: none; }
+.room-edit-panel {
+  width: min(100%, 560px);
+  outline: none;
+}
+.room-edit-panel.is-immersion {
+  width: calc(100vw - var(--space-8));
+}
+.re-subtitle {
+  margin-left: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-tertiary);
+}
+
+.re-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.re-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+}
+.re-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-1);
+  color: var(--color-text-secondary);
+}
+.re-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.re-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.re-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+.re-actions {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+}
+/* Ghost-Kreise wie .ld-power; Entfernen leicht abgesetzt */
+.re-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+.re-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.re-remove {
+  margin-left: var(--space-2);
+  color: var(--color-dot-offline);
+  border-color: color-mix(in srgb, var(--color-dot-offline) 35%, var(--color-border));
+}
+
+/* Suche + Vorschläge (Typeahead statt Vollliste) */
+.re-search {
+  min-height: 46px;
+  width: 100%;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.re-search::placeholder { color: var(--color-text-tertiary); }
+.re-search:focus-visible {
+  outline: none;
+  border-color: var(--color-text-tertiary);
+}
+.re-suggest { animation: modal-enter var(--duration-quick) var(--ease-out) both; }
+.re-suggest-btn { cursor: pointer; }
+.re-icon-add {
+  border-style: dashed;
+  color: var(--color-text-tertiary);
+}
+.re-tag {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.re-empty {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* Immersion-Light-Zuordnung: feste Asset-Geometrie rechts, kompakte Auswahl
+   links. Der Runtime-Effekt selbst bleibt ein einzelnes SVG im RoomHero. */
+.re-immersion-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+}
+.re-immersion-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.re-immersion-lights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.re-light-choice.is-selected {
+  border-color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 10%, var(--color-surface-2));
+}
+.re-light-choice.is-placed .re-icon { color: var(--color-accent-warm); }
+.re-immersion-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 212 / 150;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  cursor: crosshair;
+}
+.re-immersion-preview:disabled { cursor: default; }
+.re-light-marker {
+  position: absolute;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border: 2px solid var(--color-text-on-accent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-accent-warm) 72%, transparent);
+  box-shadow: var(--elevation-card-shadow);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.re-light-marker.is-selected {
+  background: var(--color-accent-warm);
+  border-color: var(--color-text-primary);
+}
+.re-radius {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.re-radius input { width: 100%; accent-color: var(--color-accent-warm); }
+.re-unassign {
+  min-height: var(--touch-min);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 760px) {
+  .room-edit-panel.is-immersion { width: 100%; }
+  .re-immersion-editor { grid-template-columns: 1fr; }
+  .re-immersion-lights .re-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Szenen-Editor (Long-Press auf eine Szenen-Pille): Modal auf dem
+   room-edit-Muster (Shell-Klassen wiederverwendet), plus Szenen-Tabs,
+   Wirkungs-Hinweis und Standard/Zurücksetzen-Zeile. ── */
+.se-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.se-tab {
+  flex: 1;
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+.se-tab.is-active {
+  background: var(--color-surface-1);
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+.se-hint {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+.se-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.se-section-head > .caps-label { margin-bottom: 0; }
+.se-standard {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+.se-reset {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* ============================================
+   Notizen-Seite (Einkaufsliste + Erinnerungen) — die Pinnwand der Familie.
+   Vollbild-Hintergrund (Day/Night folgt dem Theme), darauf zwei Kontroll-
+   flächen im Stil der Home-Panels. Die Post-it-Farben pro Person kommen aus
+   den .postit-*-Custom-Properties (Standby und Seite teilen die Palette).
+   ============================================ */
+.notes-screen {
+  height: 100%;
+  padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-8)) calc(88px + var(--space-4));
+  background: url('/notes/notes-day.webp') center / cover no-repeat var(--color-surface-0);
+}
+:root[data-theme='dark'] .notes-screen {
+  background-image: url('/notes/notes-night.webp');
+}
+.notes-panels {
+  display: flex;
+  gap: clamp(var(--space-4), 2vw, var(--space-6));
+  height: 100%;
+}
+/* Wie .home-panel, aber etwas transparenter — der Hintergrund darf als
+   Atmosphäre durchscheinen, die Fläche bleibt lesbares UI. */
+.notes-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface-1) 88%, transparent);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-overlay-shadow);
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+.notes-head-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.notes-updated {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+.notes-refresh {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.notes-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-5) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Sektions-Kopf: Titel + Zähler links, + rechts (Touch-Ziel 44px) */
+.notes-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.notes-section-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+}
+.notes-section-count {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+.notes-add-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-quick) var(--ease-out);
+}
+.notes-add-btn.is-pressed { background: var(--color-surface-2); }
+
+/* Einkaufsliste: ruhige Zeilen ohne Checkboxen — der Zettel-Charakter lebt
+   von der Typo, nicht von Formular-Chrome. */
+.shop-items {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+.shop-item {
+  padding: var(--space-2) 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  border-bottom: 1px dotted color-mix(in srgb, var(--color-border) 65%, transparent);
+  touch-action: manipulation;
+}
+.shop-item:last-child { border-bottom: none; }
+.shop-toggle {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  touch-action: manipulation;
+}
+.shop-item.is-done {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.shop-item.is-empty {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* Erinnerungen: Mini-Post-its in der Personenfarbe, leicht gekippt wie auf
+   dem Standby — derselbe Zettel, nur an der Pinnwand. */
+.rem-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--postit-paper);
+  transform: rotate(-6deg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+/* EINE Reihe pro Person: horizontal scrollbar (Wischen nach rechts), offene
+   Zettel links, erledigte ausgegraut dahinter. Etwas vertikale Luft, damit
+   die gekippten Zettel beim Scrollen nicht am Rand clippen. */
+.rem-cards {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.rem-card {
+  flex: 0 0 clamp(140px, 14vw, 180px);
+  scroll-snap-align: start;
+  text-align: left;
+  border: none;
+  font: inherit;
+  padding: var(--space-3) var(--space-4);
+  background: var(--postit-paper, #fde68a);
+  color: var(--postit-ink, #3f3406);
+  border-radius: 2px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transform: rotate(-1.2deg);
+  transition: transform var(--duration-quick) var(--ease-spring);
+}
+.rem-card:nth-child(even) { transform: rotate(1.1deg); }
+.rem-card.is-pressed { transform: scale(0.96); }
+.rem-card.is-selected { outline: 2px solid var(--color-accent-cool); outline-offset: 2px; }
+/* Erledigt: entfärbt und zurückgenommen — sichtbar als „geschafft", ohne mit
+   den offenen Zetteln zu konkurrieren. */
+.rem-card.is-done {
+  filter: grayscale(0.9);
+  opacity: 0.5;
+}
+.rem-card.is-done .rem-card-title { text-decoration: line-through; }
+/* Hairline zwischen offen und erledigt */
+.rem-done-sep {
+  flex: none;
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-border);
+}
+.rem-card-title {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.rem-card-due {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--postit-muted, #7a6712);
+}
+.rem-card-due.is-overdue { color: #9a3412; font-weight: var(--font-weight-semibold); }
+.rem-empty {
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ── Erledigt-Popout: ein kleiner schwebender Bestätigungs-Knopf an der
+   Tipp-Stelle (position:fixed, Koordinaten vom Pointer-Event). ── */
+.rem-popout {
+  position: fixed;
+  z-index: 40; /* über den Panels, unter Ambient (50) */
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-overlay-shadow);
+  animation: rem-popout-in var(--duration-quick) var(--ease-out);
+}
+@keyframes rem-popout-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.rem-popout-btn {
+  padding: var(--space-3) var(--space-5);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-text-primary);
+  color: var(--color-surface-1);
+}
+.rem-popout-btn:disabled { opacity: 0.6; }
+.rem-popout-btn.secondary {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+.rem-popout-error {
+  max-width: 220px;
+  font-size: var(--text-xs);
+  color: var(--color-error);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rem-popout { animation: none; }
+}
+
+/* Inline-Add: Eingabezeile + Bestätigen; Fehler (Bridge aus, Notion lehnt ab)
+   erscheinen direkt unter der Zeile statt als Overlay. */
+.notes-add-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.notes-add-form.has-calendar { grid-template-columns: 1fr auto auto; }
+.notes-add-input {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.notes-add-input:focus-visible {
+  outline: 2px solid var(--color-accent-cool);
+  outline-offset: -1px;
+}
+.notes-add-confirm {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-text-primary);
+  color: var(--color-surface-1);
+}
+.notes-add-confirm:disabled { opacity: 0.4; }
+.notes-add-calendar {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+.notes-add-calendar.is-active {
+  background: var(--color-accent-cool);
+  color: var(--color-surface-1);
+}
+.notes-add-date {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+.notes-add-date input,
+.rem-edit-dialog input {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.rem-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.rem-edit-dialog {
+  display: grid;
+  gap: var(--space-4);
+  width: min(100%, calc(var(--space-8) * 6));
+  padding: var(--space-5);
+  color: var(--color-text-primary);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.rem-edit-dialog label { display: grid; gap: var(--space-2); }
+.rem-edit-dialog label > span { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.rem-edit-hint { font-size: var(--text-xs); color: var(--color-text-tertiary); }
+.rem-edit-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+.rem-table-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+.rem-table-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, calc(var(--space-8) * 14));
+  max-height: calc(100dvh - var(--space-8));
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.rem-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.rem-table-head p { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--color-text-secondary); }
+.rem-table-scroll { overflow: auto; }
+.rem-table {
+  width: 100%;
+  min-width: calc(var(--space-8) * 10);
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.rem-table th,
+.rem-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+}
+.rem-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.rem-table tr.is-done td { color: var(--color-text-tertiary); }
+.rem-table-person {
+  display: inline-flex;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--postit-paper);
+  color: var(--postit-ink);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.rem-table-empty { text-align: center !important; color: var(--color-text-tertiary); }
+.notes-add-error {
+  grid-column: 1 / -1;
+  font-size: var(--text-xs);
+  color: var(--color-error);
+}

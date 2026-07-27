@@ -1,0 +1,126 @@
+/* ============================================================
+   Raum-Atmosphäre — Foto als Hintergrund-Ebene der Home-Kacheln
+   ------------------------------------------------------------
+   Bewusst dunkel, leicht unscharf und entsättigt: das Bild soll
+   „gefühlter Raum" bleiben, keine Foto-Fläche, die mit Text und
+   Temperatur konkurriert. Umgesetzt rein über den bereits
+   vorhandenen [data-room]-Hook der Kachel — kein Eingriff in
+   HomeScreen.svelte oder app.css (konfliktarm zum Hauptstrang).
+
+   Schichtung pro Kachel:
+     ::before  = Foto (blur + entsättigt + abgedunkelt, leicht
+                 hochskaliert, damit die Blur-Kante nicht ausfranst)
+     ::after   = Scrim-Verlauf für Text-Lesbarkeit (unten dichter,
+                 wo Ist/Ziel-Temperatur sitzt)
+     Inhalt    = reale Kinder, per z-index darüber gehoben
+   ============================================================ */
+
+.room-tile[data-room] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Foto-Ebene */
+.room-tile[data-room]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Die stilisierten, poppigen Illustrationen dürfen Eye-Catcher sein:
+     Farbe fast voll erhalten, nur minimal weich (Text-Kante), gut sichtbar.
+     Nicht mehr „getönte Fläche" — der Raum ist wieder erkennbares Motiv.
+     Lesbarkeit macht der bandförmige Scrim (oben/unten), nicht das Abdunkeln. */
+  filter: blur(0.5px) saturate(1.02) brightness(0.94);
+  /* leicht überzeichnen, damit die weiche Blur-Kante vom overflow:hidden
+     geschnitten wird und keinen hellen Rand zeigt */
+  transform: scale(1.06);
+  opacity: 0.92;
+  transition: opacity var(--duration-quick, 160ms) var(--ease-out, ease);
+  pointer-events: none;
+}
+
+/* Scrim: gerichtet. Der Text sitzt komplett links — also links satt
+   dunkel für vollen Kontrast, nach rechts läuft er aus und gibt das
+   poppige Bild frei (Eye-Catcher). Ein flacher Boden-Verlauf schützt
+   zusätzlich die Werte-Zeile über die ganze Breite. */
+.room-tile[data-room]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      95deg,
+      rgba(11, 14, 18, 0.94) 0%,
+      rgba(11, 14, 18, 0.8) 24%,
+      rgba(11, 14, 18, 0.42) 52%,
+      rgba(11, 14, 18, 0) 82%
+    ),
+    linear-gradient(
+      to top,
+      rgba(11, 14, 18, 0.66) 0%,
+      rgba(11, 14, 18, 0.2) 34%,
+      rgba(11, 14, 18, 0) 52%
+    );
+}
+
+/* realer Inhalt über beide Ebenen */
+.room-tile[data-room] > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* leichtes Aufleuchten beim Drücken — das Foto „atmet" mit */
+.room-tile[data-room].is-pressed::before {
+  opacity: 1;
+}
+
+/* ── Raum → Bild ──────────────────────────────────────────── */
+.room-tile[data-room='wohnzimmer']::before   { background-image: url('/rooms/wohnzimmer.webp'); }
+.room-tile[data-room='kueche']::before       { background-image: url('/rooms/kueche.webp'); }
+.room-tile[data-room='bad']::before          { background-image: url('/rooms/bad.webp'); }
+.room-tile[data-room='schlafzimmer']::before { background-image: url('/rooms/schlafzimmer.webp'); }
+.room-tile[data-room='kinderzimmer']::before { background-image: url('/rooms/kinderzimmer.webp'); }
+.room-tile[data-room='flur']::before         { background-image: url('/rooms/flur.webp'); }
+
+/* Räume ohne Bild: kein ::before-Hintergrund gesetzt → Kachel bleibt
+   auf der normalen Flächenfarbe (graceful degradation). */
+
+/* ── Light-Theme (Day) ────────────────────────────────────────
+   Auch im hellen Theme sollen die poppigen Illustrationen als
+   Eye-Catcher wirken — nicht mehr fast weiß gewaschen. Bild deutlich
+   präsenter, Farbe voll; die dunkle Typo schützt der Scrim in den
+   Text-Bändern (oben/unten), nicht das Aufhellen der ganzen Fläche. */
+:root[data-theme='light'] .room-tile[data-room]::before {
+  filter: blur(0.5px) saturate(1.02) brightness(1);
+  opacity: 0.62;
+}
+:root[data-theme='light'] .room-tile[data-room].is-pressed::before {
+  opacity: 0.7;
+}
+:root[data-theme='light'] .room-tile[data-room]::after {
+  background:
+    linear-gradient(
+      95deg,
+      rgba(245, 245, 245, 0.92) 0%,
+      rgba(245, 245, 245, 0.78) 24%,
+      rgba(245, 245, 245, 0.4) 52%,
+      rgba(245, 245, 245, 0) 82%
+    ),
+    linear-gradient(
+      to top,
+      rgba(245, 245, 245, 0.64) 0%,
+      rgba(245, 245, 245, 0.18) 34%,
+      rgba(245, 245, 245, 0) 52%
+    );
+}
+
+/* Reduced Motion: keine Deko-Transition */
+@media (prefers-reduced-motion: reduce) {
+  .room-tile[data-room]::before { transition: none; }
+}
