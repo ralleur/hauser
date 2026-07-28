@@ -1,0 +1,15 @@
+.git
+.github
+.hermes
+.DS_Store
+.env
+.env.*
+!/.env.example
+**/node_modules
+**/dist
+**/dist-demo
+**/.vite
+app/public/mdi-icons
+app/src/paraglide
+backups
+website

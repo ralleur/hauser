@@ -4,7 +4,11 @@ dist/
 dist-demo/
 .env
 .env.*
+!.env.example
 *.local
+
+# Local backup archives may contain service credentials.
+backups/
 
 # Generated at build time from @mdi/svg
 app/public/mdi-icons/

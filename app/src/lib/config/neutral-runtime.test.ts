@@ -48,7 +48,7 @@ describe('neutral household FakeBackend runtime', () => {
     expect(result.backendType).toBe('fake');
     expect(result.configId).toBe('household-v1:studio');
     expect(result.model.rooms.map(({ id }) => id)).toEqual(['studio', 'patio', 'utility']);
-    expect(result.model.navigation.map(({ id }) => id)).toEqual(['start', 'studio', 'listen']);
+    expect(result.model.navigation.map(({ id }) => id)).toEqual(['start', 'listen']);
   });
 
   it('derives every seed and injected catalog entry exclusively from the compiled neutral model', async () => {

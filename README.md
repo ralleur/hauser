@@ -20,17 +20,16 @@ room, quiet until touched, and a direct path into the relevant household view.
 
 ## Read this first
 
-Hauser is a **reference implementation**, not a product you install.
+Hauser is a **private pre-beta reference implementation**, not a released
+product.
 
 It is a complete, working smart home interface that runs on a wall-mounted
 tablet in one specific home. The code is licensed under MIT and is currently
-developed in a private repository that is kept ready for publication. What it
-is *not* yet is
-plug-and-play: the rooms, entity IDs and energy sensors are defined in a
-TypeScript file, and adapting it to your house means editing that file.
-
-If you are comfortable reading code, that is a half-hour of work. If you are
-not, this is probably not for you yet — see [the roadmap](ROADMAP.md).
+developed in a private repository that is kept ready for publication. A
+source-built Docker Compose path and external versioned household configuration
+now exist. What is still missing is the deterministic setup wizard, a published
+registry image and independent second-household evidence. Installation therefore
+remains a technical pre-beta workflow — see [the roadmap](ROADMAP.md).
 
 The static demo build runs the real interface against simulated devices. It is
 kept release-ready in the repository and will be hosted publicly with the first
@@ -128,7 +127,27 @@ shipped to the browser. The core —
 rooms, lights, climate, calendar, media and energy — runs without the companion.
 The public demo has no Notion dependency.
 
-## Running it
+## Running it with Docker Compose
+
+The current primary installation path builds a pinned local image and starts it
+with persistent config, data and asset volumes:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose ps
+docker compose exec hauser node container/healthcheck.mjs
+```
+
+Open <http://localhost:4173>. The default bind is loopback-only; LAN exposure
+must be enabled deliberately in `.env`. The complete installation, health,
+backup, restore, update and rollback contract is documented in
+[`docs/08-installation.md`](docs/08-installation.md).
+
+No pre-beta image is published to a registry. A clean checkout can produce a
+commit-bound local image with `./scripts/build-image.sh`.
+
+## Running the developer build
 
 ```bash
 cd app
@@ -167,8 +186,8 @@ The JSON contract is versioned and validated before the app starts; invalid or
 partial input fails closed instead of falling back to another household. See
 [`docs/07-configuration.md`](docs/07-configuration.md).
 
-There is no supported kiosk installer or Docker image in this private pre-beta
-development line.
+There is no setup wizard, kiosk installer or published registry image in this
+private pre-beta development line.
 
 ### Building the demo
 
@@ -193,6 +212,7 @@ hosted demo that will accompany the public beta.
 | [`docs/05-screens-and-flows.md`](docs/05-screens-and-flows.md) | Current panel and phone navigation model |
 | [`docs/06-component-catalog.md`](docs/06-component-catalog.md) | Component inventory |
 | [`docs/07-configuration.md`](docs/07-configuration.md) | Versioned household configuration contract and failure modes |
+| [`docs/08-installation.md`](docs/08-installation.md) | Container/Compose installation, persistence, health, backup and rollback |
 
 The interface speaks German, English, French, Italian, Portuguese and Polish,
 and follows the browser language unless you pick one in the settings. Dates,

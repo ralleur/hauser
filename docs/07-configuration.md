@@ -36,6 +36,11 @@ Open `http://localhost:4173`. Configure the Home Assistant URL and long-lived
 access token in the System settings. Credentials are browser/runtime settings;
 they do not belong in the household JSON or repository.
 
+The Compose installation fixes the config path to
+`/config/household.json`. The file lives in its persistent config volume and is
+seeded once from `neutral-small.json`; later image updates do not overwrite it.
+See [`08-installation.md`](08-installation.md) for the export/edit/import flow.
+
 `HMI_HOUSEHOLD_CONFIG_MODE` accepts exactly:
 
 - `active` — validate and project the external configuration before starting the
@@ -59,7 +64,7 @@ accepts invalid public configuration.
   "mediaTargets": [],
   "globalEntities": {
     "sun": "sun.sun",
-    "vacationMode": "input_boolean.vacation_mode",
+    "vacationMode": "switch.vacation_mode",
     "homeOffScript": "script.home_off",
     "laundry": {
       "washer": "input_boolean.washer_running",
@@ -83,12 +88,14 @@ INVALID_ENTITY_ID at $.rooms[0].visibleEntities[0].entityId
 
 Active mode is fail-closed:
 
-1. the server mode and configuration are fetched with `no-store` semantics;
-2. JSON and schema validation run before application modules are imported;
-3. the normalized runtime model is projected before state consumers start;
-4. invalid, missing, unreadable or unprojectable configuration prevents the
+1. the native server validates the bundle, JSON and complete schema before it
+   starts listening or reports ready;
+2. the browser fetches server mode and configuration with `no-store` semantics;
+3. the same schema validation runs before application modules are imported;
+4. the normalized runtime model is projected before state consumers start;
+5. invalid, missing, unreadable or unprojectable configuration prevents the
    productive application from mounting;
-5. the browser renders a bounded configuration error with a stable
+6. the browser renders a bounded configuration error with a stable
    `HOUSEHOLD_CONFIG_*` reference code.
 
 There is no silent fallback to another household's rooms or entity IDs in active
@@ -109,8 +116,9 @@ screens.
 
 ## Current pre-beta boundary
 
-This document covers the configuration core. The deterministic setup wizard,
-container image, Compose file and persistent `/config`, `/data` and `/assets`
-mounts are the next beta milestones. Until those exist, this remains a
-technically oriented pre-beta setup rather than the supported public install
-path.
+The configuration core, source-built container, Compose file, persistent
+`/config`, `/data` and `/assets` volumes and manual backup/restore path are
+implemented. The deterministic setup wizard, automatic migrations, published
+registry image and independent household pilot remain beta milestones. Until
+those exist, this is still a technically oriented pre-beta setup rather than a
+supported public install path.

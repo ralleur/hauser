@@ -19,12 +19,11 @@
   ],
   "navigation": [
     { "id": "home", "name": "Home", "order": 0, "target": { "type": "module", "id": "home" } },
-    { "id": "den", "name": "Den", "order": 10, "target": { "type": "room", "id": "den" } },
-    { "id": "energy", "name": "Energy", "order": 20, "target": { "type": "module", "id": "energy" } }
+    { "id": "energy", "name": "Energy", "order": 10, "target": { "type": "module", "id": "energy" } }
   ],
   "enabledModules": [
     "home", "energy", "calendar", "notes", "shopping", "reminders", "media",
-    "songs", "library", "ablage", "system", "laundry", "vacation"
+    "library", "ablage", "system", "laundry", "vacation"
   ],
   "energy": {
     "sensors": {

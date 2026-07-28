@@ -85,9 +85,11 @@ published. The first public release is the installable beta.
 The critical path is configuration, installation and upgrade evidence — not
 adding every feature in the backlog. The versioned external household
 configuration core is built and exercised with independent neutral fixtures.
-The next technical milestone is reproducible container/Compose installation,
-followed by a deterministic Home Assistant setup wizard. AI-assisted setup may
-complement it later but is not a v1 gate.
+The source-built container/Compose installation path, persistent volumes,
+readiness contract and backup/restore helpers are built. The next technical
+milestone is a deterministic Home Assistant setup wizard, followed by an
+independent second-household installation. AI-assisted setup may complement it
+later but is not a v1 gate.
 
 ## Internationalisation
 
@@ -117,8 +119,10 @@ configuration, not from the interface.
 
 - Household configuration and entity mappings are external versioned JSON, but
   editing that JSON is still a technical/manual pre-beta workflow.
-- There is no supported container image, persistent user-asset mount, setup
-  wizard, migration or rollback path yet.
+- The container image is built locally from source; no registry image is
+  published before the beta gate.
+- Persistent config/data/assets, backup/restore and manual image rollback exist,
+  but there is no setup wizard or automatic migration path yet.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional

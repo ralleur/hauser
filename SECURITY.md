@@ -30,6 +30,15 @@ achieve. I will confirm receipt when I can, but I cannot promise a timeline.
   system. Treat it as such.
 - Home Assistant is reached with a long-lived access token. That token grants
   broad control of your home. Keep it out of version control, and prefer a
-  dedicated token you can revoke.
+  dedicated token you can revoke. In the Compose installation, connection
+  settings are stored in the `/data` volume; backups of that volume must be
+  treated as secrets.
+- The container runs as an unprivileged user with a read-only root filesystem,
+  dropped Linux capabilities and three writable persistent volumes. Those
+  controls reduce accidental damage; they do not make the application safe for
+  direct public-internet exposure.
+- `GET /api/health` deliberately requires no authentication so the container
+  runtime can probe it. It returns readiness metadata and the first config issue,
+  never credentials or configuration values.
 - There is no telemetry, no analytics, and no outbound connection other than to
   the backends you configure yourself.

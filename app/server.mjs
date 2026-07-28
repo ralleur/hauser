@@ -1,12 +1,22 @@
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  chmodSync, copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync,
+  accessSync, chmodSync, constants as fsConstants, copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import http from 'node:http';
 import { homedir } from 'node:os';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const SERVER_CONTRACT_COMPILED = process.env.HMI_SERVER_CONTRACT === 'compiled';
+const serverContractBase = SERVER_CONTRACT_COMPILED ? './server-contract' : './src/lib/config';
+const serverContractExtension = SERVER_CONTRACT_COMPILED ? 'js' : 'ts';
+const { compileHouseholdConfig, parseHouseholdConfig } = await import(
+  `${serverContractBase}/household-config.${serverContractExtension}`
+);
+const { projectActiveHouseholdData } = await import(
+  `${serverContractBase}/household-runtime-data.${serverContractExtension}`
+);
 
 const HOST = process.env.HMI_HOST || '0.0.0.0';
 const PORT = Number(process.env.HMI_PORT || 4173);
@@ -55,6 +65,8 @@ const CONFIG_BODY_MAX = 1024 * 1024;
 const HOUSEHOLD_CONFIG_PATH = process.env.HMI_HOUSEHOLD_CONFIG_PATH || null;
 const HOUSEHOLD_CONFIG_BODY_MAX = 1024 * 1024;
 const HOUSEHOLD_CONFIG_MODE_HEADER = 'x-hmi-household-config-mode';
+const REQUIRED_WRITABLE_DIRS = (process.env.HMI_REQUIRED_WRITABLE_DIRS || '')
+  .split(',').map((path) => path.trim()).filter(Boolean);
 const SHARED_CONFIG_KEYS = new Set([
   'hmi:backend', 'hmi:ha-url', 'hmi:ha-token', 'hmi:jf-url', 'hmi:jf-token',
   'hmi:jf-user', 'hmi:library', 'hmi:lock-button',
@@ -356,6 +368,123 @@ export function normalizeHouseholdConfigMode(value) {
   throw new Error('HMI_HOUSEHOLD_CONFIG_MODE muss exakt "shadow" oder "active" sein.');
 }
 
+function notReady(code, message, extra = {}) {
+  return {
+    ok: false,
+    status: 503,
+    payload: { ok: false, status: 'not_ready', code, message, ...extra },
+  };
+}
+
+export function assessHmiReadiness({
+  staticRoot = DIST,
+  householdConfigPath = HOUSEHOLD_CONFIG_PATH,
+  householdConfigMode = process.env.HMI_HOUSEHOLD_CONFIG_MODE,
+  requiredWritableDirs = REQUIRED_WRITABLE_DIRS,
+} = {}) {
+  const normalizedMode = normalizeHouseholdConfigMode(householdConfigMode);
+  const indexPath = resolve(staticRoot, 'index.html');
+  try {
+    if (!statSync(indexPath).isFile()) throw new Error('not a file');
+  } catch {
+    return notReady(
+      'APP_BUNDLE_NOT_FOUND',
+      `Das gebaute Frontend fehlt unter ${indexPath}.`,
+    );
+  }
+
+  for (const directory of requiredWritableDirs) {
+    try {
+      if (!statSync(directory).isDirectory()) throw new Error('not a directory');
+      accessSync(directory, fsConstants.R_OK | fsConstants.W_OK);
+    } catch {
+      return notReady(
+        'RUNTIME_DIRECTORY_NOT_WRITABLE',
+        `Das Laufzeitverzeichnis ist nicht les- und schreibbar: ${directory}`,
+      );
+    }
+  }
+
+  if (normalizedMode === 'shadow') {
+    return {
+      ok: true,
+      status: 200,
+      payload: {
+        ok: true,
+        status: 'ready',
+        householdConfigMode: normalizedMode,
+        schemaVersion: null,
+      },
+    };
+  }
+
+  const configResult = createHouseholdConfigReader(householdConfigPath).read();
+  if (!configResult.ok) return notReady(configResult.code, configResult.message);
+
+  let document;
+  try {
+    document = JSON.parse(configResult.body);
+  } catch {
+    return notReady(
+      'HOUSEHOLD_CONFIG_INVALID_JSON',
+      'Die Haushaltskonfiguration enthält kein gültiges JSON.',
+    );
+  }
+  const parsed = parseHouseholdConfig(document);
+  if (!parsed.ok) {
+    const issue = parsed.issues[0];
+    return notReady(
+      'HOUSEHOLD_CONFIG_INVALID',
+      `Die Haushaltskonfiguration ist ungültig (${parsed.issues.length} Problem${parsed.issues.length === 1 ? '' : 'e'}).`,
+      { issue: issue ? { code: issue.code, path: issue.path, message: issue.message } : null },
+    );
+  }
+  try {
+    projectActiveHouseholdData(compileHouseholdConfig(parsed.value));
+  } catch (error) {
+    const code = error && typeof error === 'object' && typeof error.code === 'string'
+      ? error.code
+      : 'HOUSEHOLD_CONFIG_PROJECTION_FAILED';
+    const message = error instanceof Error
+      ? error.message
+      : 'Die Haushaltskonfiguration kann nicht in die produktive Runtime projiziert werden.';
+    return notReady(code, message);
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    payload: {
+      ok: true,
+      status: 'ready',
+      householdConfigMode: normalizedMode,
+      schemaVersion: parsed.value.schemaVersion,
+    },
+  };
+}
+
+export function serveHmiHealth(req, res, options = {}) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    jsonResponse(res, 405, {
+      ok: false,
+      status: 'not_ready',
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Der Health-Endpunkt unterstützt ausschließlich GET und HEAD.',
+    }, { allow: 'GET, HEAD' });
+    return;
+  }
+  const readiness = assessHmiReadiness(options);
+  if (req.method === 'HEAD') {
+    res.writeHead(readiness.status, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+    });
+    res.end();
+    return;
+  }
+  jsonResponse(res, readiness.status, readiness.payload);
+}
+
 export function serveHouseholdConfigMode(req, res, mode = 'shadow') {
   const normalizedMode = normalizeHouseholdConfigMode(mode);
   const headers = { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedMode };
@@ -629,11 +758,15 @@ export function staticPathFor(url, staticRoot = DIST) {
 }
 
 function readHermesKey() {
-  const key = execFileSync('/usr/bin/security', [
-    'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE, '-w',
-  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-  if (!key) throw new Error('Hermes-Key fehlt im macOS-Schlüsselbund.');
-  return key;
+  if (process.platform !== 'darwin') return '';
+  try {
+    const key = execFileSync('/usr/bin/security', [
+      'find-generic-password', '-a', KEYCHAIN_ACCOUNT, '-s', KEYCHAIN_SERVICE, '-w',
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return key;
+  } catch {
+    return '';
+  }
 }
 
 function proxy(req, res, key, targetPath, upstreamHost, upstreamPort) {
@@ -1398,6 +1531,7 @@ export function createHmiServer(
     householdConfigPath = HOUSEHOLD_CONFIG_PATH,
     householdConfigMode = process.env.HMI_HOUSEHOLD_CONFIG_MODE,
     staticRoot = DIST,
+    requiredWritableDirs = REQUIRED_WRITABLE_DIRS,
     notionShoppingPath = NOTION_SHOPPING_PATH,
     familyDataPath = FAMILY_DATA_PATH,
     familyData = null,
@@ -1415,7 +1549,14 @@ export function createHmiServer(
 
     const songTarget = songTargetPath(req.url || '/');
     const familyDataRoute = (req.url || '').startsWith('/api/reminders');
-    if (familyDataRoute && familyDataRequestAllowed(req, allowedOrigins)) {
+    if ((req.url || '') === '/api/health') {
+      serveHmiHealth(req, res, {
+        staticRoot,
+        householdConfigPath,
+        householdConfigMode: normalizedHouseholdConfigMode,
+        requiredWritableDirs,
+      });
+    } else if (familyDataRoute && familyDataRequestAllowed(req, allowedOrigins)) {
       serveFamilyData(req, res, familyStore);
     } else if (familyDataRoute) {
       jsonResponse(res, 403, { error: 'Familiendaten-Route nicht freigegeben' });
@@ -1481,7 +1622,11 @@ export function createHmiServer(
       res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
       res.end('{"error":"Ambient-Route nicht freigegeben"}');
     } else if (targetPath !== null && proxyRequestAllowed(req, allowedOrigins)) {
-      proxy(req, res, key, targetPath, upstreamHost, upstreamPort);
+      if (!key) {
+        jsonResponse(res, 503, { error: 'Hermes-Integration ist nicht konfiguriert' });
+      } else {
+        proxy(req, res, key, targetPath, upstreamHost, upstreamPort);
+      }
     } else if ((req.url || '').startsWith('/hermes')) {
       res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
       res.end('{"error":"Hermes-Route nicht freigegeben"}');
@@ -1494,6 +1639,12 @@ export function createHmiServer(
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   let server;
   try {
+    const readiness = assessHmiReadiness();
+    if (!readiness.ok) {
+      const issue = readiness.payload.issue;
+      const issueText = issue ? ` ${issue.path}: ${issue.message}` : '';
+      throw new Error(`[${readiness.payload.code}] ${readiness.payload.message}${issueText}`);
+    }
     server = createHmiServer();
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'HMI-Server konnte nicht starten.');

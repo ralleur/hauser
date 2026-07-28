@@ -332,6 +332,17 @@ describe('HMI-Backend-Proxy', () => {
     expect(proxyTargetPath('/api/sessions')).toBeNull();
   });
 
+  it('startet ohne macOS-Schlüsselbund und deaktiviert den optionalen Hermes-Proxy fail-safe', async () => {
+    const server = createHmiServer('', { paperlessPin: '', paperlessToken: '' });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const response = await fetch(`http://127.0.0.1:${port}/hermes/health`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'Hermes-Integration ist nicht konfiguriert' });
+  });
+
   it('weist fremde Browser-Origins und unbekannte Methoden ab', () => {
     const allowed = new Set(['http://localhost:4173']);
     expect(proxyRequestAllowed({ method: 'GET', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);

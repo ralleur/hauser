@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // @ts-expect-error Native Node test without @types/node.
 import { readFileSync } from 'node:fs';
 import currentHousehold from '../../../config/households/current-v1.json';
+import neutralSmall from '../../../config/examples/neutral-small.json';
 import neutralStudio from '../../../config/examples/neutral-studio.json';
 import {
   compileHouseholdConfig,
@@ -121,6 +122,16 @@ describe('active household runtime projection', () => {
     expect(projectedSeedIds.filter((id) => legacyIds.has(id))).toEqual([]);
   });
 
+  it('projects both shipped neutral household examples without application-code changes', () => {
+    const small = projectActiveHouseholdData(compileValid(neutralSmall));
+    const studio = projectActiveHouseholdData(compileValid(neutralStudio));
+
+    expect(small.ROOM_SEED.map(({ id }) => id)).toEqual(['den', 'entry']);
+    expect(small.NAV_TABS.map(({ id }) => id)).toEqual(['home', 'energy']);
+    expect(studio.ROOM_SEED.map(({ id }) => id)).toEqual(['studio', 'patio', 'utility']);
+    expect(studio.NAV_TABS.map(({ id }) => id)).toEqual(['home', 'media']);
+  });
+
   it('selects the first configured media target and rejects an enabled media module without targets', () => {
     const projected = projectActiveHouseholdData(compileValid(syntheticActiveConfig()));
     expect(projected.MEDIA_SEED[0]?.id).toBe('patio_audio');
@@ -161,7 +172,11 @@ describe('active household runtime projection', () => {
   });
 
   it('fails closed for navigation the productive shell cannot represent and incomplete song targets', () => {
-    expect(() => projectActiveHouseholdData(compileValid(neutralStudio))).toThrowError(
+    const unsupportedNavigation = structuredClone(neutralStudio) as HouseholdConfigV1;
+    unsupportedNavigation.navigation.splice(1, 0, {
+      id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
+    });
+    expect(() => projectActiveHouseholdData(compileValid(unsupportedNavigation))).toThrowError(
       expect.objectContaining({ code: 'HOUSEHOLD_CONFIG_UNSUPPORTED_NAVIGATION' }),
     );
 
@@ -234,7 +249,10 @@ describe('productive household bootstrap cutover', () => {
   });
 
   it('does not import App, runtime or backend for active invalid, unavailable or projection errors', async () => {
-    const projectionError = structuredClone(neutralStudio);
+    const projectionError = structuredClone(neutralStudio) as HouseholdConfigV1;
+    projectionError.navigation.splice(1, 0, {
+      id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
+    });
     const candidates = [
       response('{not-json', 'active'),
       response({ code: 'HOUSEHOLD_CONFIG_NOT_READABLE' }, 'active', 500),

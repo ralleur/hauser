@@ -1,0 +1,46 @@
+name: hauser
+
+services:
+  hauser:
+    image: "${HAUSER_IMAGE_REPOSITORY:-hauser}:${HAUSER_IMAGE_TAG:-pre-beta}"
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        HAUSER_VERSION: "${HAUSER_IMAGE_TAG:-pre-beta}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${HAUSER_BIND_ADDRESS:-127.0.0.1}:${HAUSER_PORT:-4173}:4173"
+    environment:
+      HMI_ALLOWED_ORIGINS: "${HMI_ALLOWED_ORIGINS:-http://localhost:4173,http://127.0.0.1:4173}"
+      HMI_HOUSEHOLD_CONFIG_PATH: /config/household.json
+      HMI_HOUSEHOLD_CONFIG_MODE: active
+      HMI_CONFIG_PATH: /data/config.json
+      HMI_FAMILY_DATA_PATH: /data/family-data.json
+      HMI_SONG_LIBRARY_DIR: /data/songs
+      HMI_REQUIRED_WRITABLE_DIRS: /config,/data,/assets
+    volumes:
+      - hauser_config:/config
+      - hauser_data:/data
+      - hauser_assets:/assets
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m
+    healthcheck:
+      test: ["CMD", "node", "container/healthcheck.mjs"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    stop_grace_period: 15s
+
+volumes:
+  hauser_config:
+  hauser_data:
+  hauser_assets:

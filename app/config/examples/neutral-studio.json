@@ -26,8 +26,7 @@
   ],
   "navigation": [
     { "id": "start", "name": "Start", "order": 0, "target": { "type": "module", "id": "home" } },
-    { "id": "studio", "name": "Studio", "order": 5, "target": { "type": "room", "id": "studio" } },
-    { "id": "listen", "name": "Listen", "order": 15, "target": { "type": "module", "id": "media" } }
+    { "id": "listen", "name": "Listen", "order": 10, "target": { "type": "module", "id": "media" } }
   ],
   "enabledModules": ["media", "home"],
   "energy": null,
