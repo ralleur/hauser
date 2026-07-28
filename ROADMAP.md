@@ -83,10 +83,11 @@ published. The first public release is the installable beta.
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
 The critical path is configuration, installation and upgrade evidence — not
-adding every feature in the backlog. The next technical milestone is the
-versioned external household configuration. A deterministic Home Assistant
-setup wizard follows; AI-assisted setup may complement it later but is not a
-v1 gate.
+adding every feature in the backlog. The versioned external household
+configuration core is built and exercised with independent neutral fixtures.
+The next technical milestone is reproducible container/Compose installation,
+followed by a deterministic Home Assistant setup wizard. AI-assisted setup may
+complement it later but is not a v1 gate.
 
 ## Internationalisation
 
@@ -114,9 +115,10 @@ configuration, not from the interface.
 
 ## Known gaps
 
-- Household configuration and entity mappings are still source-bound.
-- There is no supported container image, setup wizard, migration or rollback
-  path yet.
+- Household configuration and entity mappings are external versioned JSON, but
+  editing that JSON is still a technical/manual pre-beta workflow.
+- There is no supported container image, persistent user-asset mount, setup
+  wizard, migration or rollback path yet.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional
