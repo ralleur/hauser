@@ -124,47 +124,53 @@
     {:else}
       <nav class="settings-nav" aria-label={m.sys_sections()}>
         {#each sidebar as { group, sections } (group.id)}
-          <h2 class="caps-label settings-nav-group">{group.label}</h2>
-          {#each sections as s (s.id)}
-            <button class="settings-nav-btn pressable" type="button"
-                    class:is-active={settingsUi.section === s.id}
-                    aria-current={settingsUi.section === s.id ? 'true' : undefined}
-                    onclick={() => selectSection(s.id)}>
-              <span class="settings-icon-tile tint-{s.tint}"><Icon name={s.icon} cls="icon icon-md" /></span>
-              <span class="settings-nav-label">{s.label}</span>
-              {#if s.id === 'updates' && appState.system.updates.length}
-                <span class="settings-badge num">{appState.system.updates.length}</span>
-              {/if}
-              <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
-            </button>
-          {/each}
+          <section class="settings-nav-section" aria-labelledby="settings-nav-{group.id}">
+            <h2 id="settings-nav-{group.id}" class="caps-label settings-nav-group">{group.label}</h2>
+            <div class="settings-nav-card">
+              {#each sections as s (s.id)}
+                <button class="settings-nav-btn pressable" type="button"
+                        class:is-active={settingsUi.section === s.id}
+                        aria-current={settingsUi.section === s.id ? 'true' : undefined}
+                        onclick={() => selectSection(s.id)}>
+                  <span class="settings-icon-tile tint-{s.tint}"><Icon name={s.icon} cls="icon icon-md" /></span>
+                  <span class="settings-nav-label">{s.label}</span>
+                  {#if s.id === 'updates' && appState.system.updates.length}
+                    <span class="settings-badge num">{appState.system.updates.length}</span>
+                  {/if}
+                  <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
+                </button>
+              {/each}
+            </div>
+          </section>
         {/each}
       </nav>
     {/if}
   </aside>
 
   <section class="settings-pane" class:is-phone-hidden={phone && !phoneSectionOpen} bind:this={paneEl} aria-live="polite">
-    <header class="settings-pane-head">
-      {#if phone}
-        <button class="settings-phone-back pressable" type="button" aria-label="Zurück zu System" onclick={() => (phoneSectionOpen = false)}>
-          <Icon name="i-back" cls="icon icon-md" />
-        </button>
+    <div class="settings-pane-content">
+      <header class="settings-pane-head">
+        {#if phone}
+          <button class="settings-phone-back pressable" type="button" aria-label="Zurück zu System" onclick={() => (phoneSectionOpen = false)}>
+            <Icon name="i-back" cls="icon icon-md" />
+          </button>
+        {/if}
+        <span class="settings-icon-tile is-lg tint-{section.tint}"><Icon name={section.icon} cls="icon icon-lg" /></span>
+        <div>
+          <h2>{section.label}</h2>
+          <p>{section.description}</p>
+        </div>
+      </header>
+
+      {#if settingsUi.needsReload}
+        <div class="settings-reload" role="status">
+          <Icon name="i-refresh" cls="icon icon-md" />
+          <span class="settings-reload-text">{m.sys_reload_hint()}</span>
+          <button class="secondary-btn pressable" type="button" onclick={() => location.reload()}>{m.sys_reload_now()}</button>
+        </div>
       {/if}
-      <span class="settings-icon-tile is-lg tint-{section.tint}"><Icon name={section.icon} cls="icon icon-lg" /></span>
-      <div>
-        <h2>{section.label}</h2>
-        <p>{section.description}</p>
-      </div>
-    </header>
 
-    {#if settingsUi.needsReload}
-      <div class="settings-reload" role="status">
-        <Icon name="i-refresh" cls="icon icon-md" />
-        <span class="settings-reload-text">{m.sys_reload_hint()}</span>
-        <button class="secondary-btn pressable" type="button" onclick={() => location.reload()}>{m.sys_reload_now()}</button>
-      </div>
-    {/if}
-
-    <SectionView />
+      <SectionView />
+    </div>
   </section>
 </div>

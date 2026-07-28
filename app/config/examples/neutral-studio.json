@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "rooms": [
+    {
+      "id": "studio",
+      "name": "Studio",
+      "visibleEntities": [
+        { "id": "ceiling", "name": "Ceiling", "entityId": "light.studio_ceiling", "role": "light" },
+        { "id": "thermostat", "name": "Thermostat", "entityId": "climate.studio", "role": "climate" },
+        { "id": "occupancy", "name": "Occupancy", "entityId": "binary_sensor.studio_occupancy", "role": "presence" }
+      ]
+    },
+    {
+      "id": "patio",
+      "name": "Patio",
+      "visibleEntities": [
+        { "id": "string_lights", "name": "String lights", "entityId": "switch.patio_string_lights", "role": "other" },
+        { "id": "camera", "name": "Camera", "entityId": "camera.patio", "role": "camera" }
+      ]
+    },
+    {
+      "id": "utility",
+      "name": "Utility",
+      "visibleEntities": []
+    }
+  ],
+  "navigation": [
+    { "id": "start", "name": "Start", "order": 0, "target": { "type": "module", "id": "home" } },
+    { "id": "studio", "name": "Studio", "order": 5, "target": { "type": "room", "id": "studio" } },
+    { "id": "listen", "name": "Listen", "order": 15, "target": { "type": "module", "id": "media" } }
+  ],
+  "enabledModules": ["media", "home"],
+  "energy": null,
+  "mediaTargets": [
+    { "id": "patio_audio", "name": "Patio audio", "entityId": "media_player.patio_audio", "roomId": "patio" },
+    { "id": "studio_audio", "name": "Studio audio", "entityId": "media_player.studio_audio", "roomId": "studio" }
+  ],
+  "globalEntities": {
+    "sun": "sun.fixture_neutral_studio",
+    "vacationMode": "switch.away_mode",
+    "homeOffScript": "script.fixture_neutral_studio_home_off",
+    "laundry": {
+      "washer": "input_boolean.washer_running",
+      "dryer": "input_boolean.dryer_running"
+    }
+  }
+}

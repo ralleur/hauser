@@ -87,9 +87,10 @@ configured live service are not the same thing:
 | **Home Assistant** | Implemented. The official WebSocket client supplies entity state, commands, reconciliation and reconnects. | Simulated entities; no connection to a live HA instance. |
 | **Jellyfin** | Implemented. A dedicated REST client handles authentication, shelves, browse and detail data; playback uses PlaybackInfo, HLS and progress reporting. | Curated simulated library data; no connection to a live Jellyfin server. |
 | **Calendar** | Implemented through Home Assistant, not as a separate calendar backend. Hauser discovers `calendar.*` entities and reads events with HA's `calendar/list` WebSocket command. The settings UI can also start HA's iCloud/CalDAV config flow. | Curated simulated events. |
-| **Reminders and shopping** | Implemented by the optional companion server as a central `family-data.json` store. Reminders can additionally merge selected HA `todo.*` lists read via WebSocket. | Curated simulated data. |
+| **Reminders** | Implemented by the optional companion server as central household data. Selected HA `todo.*` lists can additionally be merged through WebSocket. | Curated simulated data. |
+| **Shopping** | A local server-side bridge keeps the HMI and a shared Notion shopping page in sync without exposing the Notion token to the browser. | Curated simulated data; no Notion connection. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
-| **Notion** | **Not integrated.** There is no Notion client, API route or runtime adapter in this pre-beta line. Household reminders and shopping were moved to Hauser's central companion store instead. | Not applicable. |
+| **Notion** | Optional private integration for the shared shopping list only. Reminders do not depend on Notion. | Not connected; shopping uses fixtures. |
 
 ## Screenshots
 
@@ -120,11 +121,12 @@ command queue, and a swappable backend. The UI only ever reads `merged()` and
 writes `dispatch()`. That seam is what makes both the optimistic behaviour and
 the offline demo possible.
 
-An optional companion server (`app/server.mjs`) adds centrally stored reminders
-and shopping lists plus the PIN-gated Paperless-ngx bridge. Paperless credentials
-stay in the server keychain and are never shipped to the browser. The core —
+An optional companion server (`app/server.mjs`) adds centrally stored reminders,
+the same-origin proxy for the local Notion shopping bridge, and the PIN-gated
+Paperless-ngx bridge. Integration credentials stay server-side and are never
+shipped to the browser. The core —
 rooms, lights, climate, calendar, media and energy — runs without the companion.
-There is no Notion dependency.
+The public demo has no Notion dependency.
 
 ## Running it
 
@@ -146,14 +148,24 @@ npm test
 
 ### Against your own Home Assistant
 
-1. Create a long-lived access token in Home Assistant.
-2. Point the app at your instance — `VITE_HA_URL`, or the connection settings
-   in the System tab at runtime.
-3. Edit [`app/src/lib/state/app.svelte.ts`](app/src/lib/state/app.svelte.ts):
-   `ROOM_SEED` describes your rooms, their lights and their climate entities;
-   `ENERGY_SENSORS` lists your power sensors. This is the step there is no way
-   around yet.
-4. `npm run build`, then serve `app/dist/` however you like.
+1. Copy one of the neutral examples from [`app/config/examples/`](app/config/examples/)
+   and map its rooms, visible entities, navigation, modules, energy sensors and
+   media targets to your Home Assistant instance.
+2. Build the app with `npm run build` from `app/`.
+3. Start the companion server with the external config in active mode:
+
+   ```bash
+   HMI_HOUSEHOLD_CONFIG_PATH="$PWD/config/examples/neutral-small.json" \
+   HMI_HOUSEHOLD_CONFIG_MODE=active \
+   node server.mjs
+   ```
+
+4. Open `http://localhost:4173` and configure the Home Assistant URL and
+   long-lived access token in System settings.
+
+The JSON contract is versioned and validated before the app starts; invalid or
+partial input fails closed instead of falling back to another household. See
+[`docs/07-configuration.md`](docs/07-configuration.md).
 
 There is no supported kiosk installer or Docker image in this private pre-beta
 development line.
@@ -180,6 +192,7 @@ hosted demo that will accompany the public beta.
 | [`docs/04-integrations.md`](docs/04-integrations.md) | Implemented service paths and demo boundaries |
 | [`docs/05-screens-and-flows.md`](docs/05-screens-and-flows.md) | Current panel and phone navigation model |
 | [`docs/06-component-catalog.md`](docs/06-component-catalog.md) | Component inventory |
+| [`docs/07-configuration.md`](docs/07-configuration.md) | Versioned household configuration contract and failure modes |
 
 The interface speaks German, English, French, Italian, Portuguese and Polish,
 and follows the browser language unless you pick one in the settings. Dates,

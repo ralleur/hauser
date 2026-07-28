@@ -1,16 +1,23 @@
 import { iconForDevice } from './light-icons.ts';
 import type { LightSeed, RoomSeed, Room } from './app.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
+import {
+  MANAGED_DOMAINS,
+  type EntityCatalogItem,
+  type ManagedDomain,
+} from './fake-discovery-catalog.ts';
+
+export {
+  FAKE_DISCOVERY_CATALOG,
+  MANAGED_DOMAINS,
+  type EntityCatalogItem,
+  type ManagedDomain,
+} from './fake-discovery-catalog.ts';
 
 /* Verwaltbare HA-Domänen: alles, was über die RoomEdit-Suche in einen Raum
    gelegt werden kann. Die Overlay-/Kachel-Semantik hängt an der KATEGORIE
    (categoryOf), nicht an der Domäne — neue Domänen brauchen hier nur einen
    Eintrag + eine Kategorie-Zuordnung. */
-export const MANAGED_DOMAINS = [
-  'light', 'switch', 'sensor', 'binary_sensor', 'climate', 'media_player', 'cover', 'fan', 'input_boolean',
-] as const;
-export type ManagedDomain = (typeof MANAGED_DOMAINS)[number];
-
 /* Overlay-/Kachel-Kategorien: light = volles Licht-Detail, switch = Ein/Aus
    (auch fan/cover, bis eigene Overlays existieren), temp = Solltemp+Modus,
    info = read-only Wert/Zustand, media = Play/Pause+Lautstärke (Stufe 1). */
@@ -52,16 +59,6 @@ export interface ManagedDevice {
   icon?: string;
 }
 
-export interface EntityCatalogItem {
-  entityId: string;
-  domain: ManagedDomain;
-  name: string;
-  area?: string | null;
-  unit?: string | null;
-  deviceClass?: string | null;
-  capabilities?: Partial<Pick<ManagedDevice, 'dimmable' | 'colorTemp' | 'color' | 'colorTempMin' | 'colorTempMax'>>;
-}
-
 export interface DeviceOverride {
   visible?: boolean;
   roomId?: string;
@@ -84,45 +81,6 @@ export interface DeviceStorage {
 export const DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
 
 export const EMPTY_DEVICE_CONFIG: DeviceConfig = { version: 1, devices: {}, order: {} };
-
-export const FAKE_DISCOVERY_CATALOG: EntityCatalogItem[] = [
-  {
-    entityId: 'switch.steckdose_wohnzimmer_regal',
-    domain: 'switch',
-    name: 'Regal Steckdose',
-    area: 'wohnzimmer',
-  },
-  {
-    entityId: 'light.flur_deckenlicht',
-    domain: 'light',
-    name: 'Deckenlicht Flur',
-    area: 'flur',
-    capabilities: { dimmable: false, colorTemp: false, color: false },
-  },
-  {
-    // Tunable-White mit gemeldeter Kelvin-Range (B-16B): die Farbtemp-Skala
-    // der Detail-Ebene folgt min/max des Geräts statt der fixen UI-Range.
-    entityId: 'light.demo_stehlampe',
-    domain: 'light',
-    name: 'Stehlampe',
-    area: 'schlafzimmer',
-    capabilities: { dimmable: true, colorTemp: true, color: false, colorTempMin: 2700, colorTempMax: 5000 },
-  },
-  {
-    entityId: 'sensor.demo_aussentemperatur',
-    domain: 'sensor',
-    name: 'Außentemperatur',
-    area: 'wohnzimmer',
-    unit: '°C',
-    deviceClass: 'temperature',
-  },
-  {
-    entityId: 'climate.demo_buero',
-    domain: 'climate',
-    name: 'Heizung Büro',
-    area: 'buero',
-  },
-];
 
 export function cloneDeviceConfig(config: DeviceConfig): DeviceConfig {
   return {

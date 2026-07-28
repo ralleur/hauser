@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "rooms": [
+    {
+      "id": "den",
+      "name": "Den",
+      "visibleEntities": [
+        { "id": "main_light", "name": "Main light", "entityId": "light.den_main", "role": "light" },
+        { "id": "temperature", "name": "Temperature", "entityId": "sensor.den_temperature", "role": "temperature" }
+      ]
+    },
+    {
+      "id": "entry",
+      "name": "Entry",
+      "visibleEntities": [
+        { "id": "door", "name": "Front door", "entityId": "binary_sensor.entry_door", "role": "window" }
+      ]
+    }
+  ],
+  "navigation": [
+    { "id": "home", "name": "Home", "order": 0, "target": { "type": "module", "id": "home" } },
+    { "id": "den", "name": "Den", "order": 10, "target": { "type": "room", "id": "den" } },
+    { "id": "energy", "name": "Energy", "order": 20, "target": { "type": "module", "id": "energy" } }
+  ],
+  "enabledModules": [
+    "home", "energy", "calendar", "notes", "shopping", "reminders", "media",
+    "songs", "library", "ablage", "system", "laundry", "vacation"
+  ],
+  "energy": {
+    "sensors": {
+      "productionPower": "sensor.solar_power",
+      "consumptionPower": [
+        { "id": "workshop", "name": "Workshop", "entityId": "sensor.workshop_power" }
+      ]
+    },
+    "kpis": {
+      "producedToday": "sensor.solar_energy_today",
+      "consumedToday": "sensor.consumption_today",
+      "fedInToday": null,
+      "drawnToday": null
+    }
+  },
+  "mediaTargets": [
+    { "id": "den_speaker", "name": "Den speaker", "entityId": "media_player.den_speaker", "roomId": "den" }
+  ],
+  "globalEntities": {
+    "sun": "sun.fixture_neutral_small",
+    "vacationMode": "switch.vacation_mode",
+    "homeOffScript": "script.fixture_neutral_small_home_off",
+    "laundry": {
+      "washer": "input_boolean.washer_running",
+      "dryer": "input_boolean.dryer_running"
+    }
+  }
+}

@@ -601,6 +601,85 @@
 .ai-choice-actions .primary-btn,
 .ai-choice-actions .secondary-btn { min-height: 56px; }
 
+/* ── GitHub-iOS-inspirierte Settings-Chrome ──
+   Kompakte, eingefasste Gruppen statt frei schwebender Einzelzeilen. Die
+   bestehende Informationsarchitektur und alle stabilen Setting-IDs bleiben
+   unverändert; geändert wird ausschließlich die visuelle Hierarchie. */
+.settings-sidebar {
+  background: var(--color-surface-1);
+}
+.settings-title {
+  font-size: var(--text-xl);
+}
+.settings-search {
+  background: var(--color-surface-0);
+}
+.settings-nav {
+  gap: var(--space-5);
+}
+.settings-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.settings-nav-group,
+.settings-nav-group:first-child {
+  margin: 0;
+  padding: 0 var(--space-3);
+}
+.settings-nav-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-2);
+}
+.settings-nav-btn {
+  width: 100%;
+  min-height: calc(var(--touch-min) + var(--space-2));
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-none);
+}
+.settings-nav-btn + .settings-nav-btn {
+  border-top: 1px solid var(--color-border);
+}
+.settings-nav-btn:hover {
+  background: var(--color-surface-3);
+}
+.settings-nav-btn.is-active {
+  background: color-mix(in srgb, var(--color-accent-cool) 14%, var(--color-surface-2));
+}
+.settings-nav-btn.is-active .settings-nav-label {
+  font-weight: var(--font-weight-semibold);
+}
+.settings-nav-btn .settings-icon-tile {
+  width: calc(var(--touch-min) - var(--space-3));
+  height: calc(var(--touch-min) - var(--space-3));
+}
+.settings-pane {
+  background: var(--color-surface-0);
+}
+.settings-pane-content {
+  width: 100%;
+  max-width: calc(var(--grid-padding) * 32);
+  margin: 0 auto;
+}
+.settings-group {
+  margin-bottom: var(--space-5);
+  border-color: var(--color-border);
+  background: var(--color-surface-1);
+}
+.settings-row {
+  min-height: calc(var(--touch-min) + var(--space-3));
+  padding: var(--space-3) var(--space-4);
+}
+.settings-row + .settings-row {
+  border-top-color: var(--color-border);
+}
+.settings-row :where(.secondary-btn, .settings-input) {
+  border-color: var(--overlay-border);
+  background: var(--color-surface-2);
+}
+
 /* ── Schmalere Viewports (iPad-Sekundärziel): Sidebar kompakter ── */
 @media (max-width: 1100px) {
   .settings-sidebar { width: 264px; padding-right: var(--space-3); }

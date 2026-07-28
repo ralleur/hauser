@@ -1,6 +1,7 @@
 import type { ScreenId } from './nav.svelte.ts';
 import { IS_DEMO } from '../demo/demo-mode.ts';
 import { m } from '../../paraglide/messages.js';
+import { HOUSEHOLD_DATA_SOURCE, NAV_TABS } from '../config/household-runtime-data.ts';
 
 /* ── Reihenfolge aller Phone-Ziele: Die ersten drei landen direkt in der
    Bottom-Nav, alle weiteren hinter dem festen vierten Punkt „Mehr". ── */
@@ -27,8 +28,47 @@ const DEFAULT_ORDER: readonly PhoneNavTarget[] = PHONE_NAV_TARGETS
   .map((target) => target.id)
   .filter((id) => !(id === 'ablage' && IS_DEMO));
 
-export function normalizeNavOrder(value: unknown): PhoneNavTarget[] {
-  const known = new Set<PhoneNavTarget>(DEFAULT_ORDER);
+export function projectPhoneNavOrder(
+  source: typeof HOUSEHOLD_DATA_SOURCE,
+  tabs: typeof NAV_TABS,
+  demo = IS_DEMO,
+): PhoneNavTarget[] {
+  const defaults = PHONE_NAV_TARGETS
+    .map((target) => target.id)
+    .filter((id) => !(id === 'ablage' && demo));
+  if (source === 'legacy') return defaults;
+  const order: PhoneNavTarget[] = [];
+  for (const tab of tabs) {
+    const targets: PhoneNavTarget[] = tab.id === 'notes'
+      ? ['shopping', 'reminders']
+      : tab.id === 'library'
+        ? ['media']
+        : [tab.id as PhoneNavTarget];
+    for (const id of targets) {
+      if (defaults.includes(id) && !order.includes(id)) order.push(id);
+    }
+  }
+  return order;
+}
+
+function configuredOrder(): PhoneNavTarget[] {
+  return projectPhoneNavOrder(HOUSEHOLD_DATA_SOURCE, NAV_TABS);
+}
+
+/* Die aktive Haushaltskonfiguration definiert, welche Ziele verfügbar sind und
+   liefert die Standardreihenfolge. Die Reihenfolge bleibt trotzdem eine lokale
+   Gerätepräferenz: Phone und Panel dürfen dieselbe Config unterschiedlich
+   projizieren, ohne den zentralen Config-Vertrag zu verändern. */
+export const PHONE_NAV_REORDERABLE = configuredOrder().length > 1;
+
+export function normalizePhoneNavOrder(
+  value: unknown,
+  source: typeof HOUSEHOLD_DATA_SOURCE,
+  tabs: typeof NAV_TABS,
+  demo = IS_DEMO,
+): PhoneNavTarget[] {
+  const configured = projectPhoneNavOrder(source, tabs, demo);
+  const known = new Set<PhoneNavTarget>(configured);
   const order: PhoneNavTarget[] = [];
   if (Array.isArray(value)) {
     for (const id of value) {
@@ -37,21 +77,26 @@ export function normalizeNavOrder(value: unknown): PhoneNavTarget[] {
       }
     }
   }
-  for (const id of DEFAULT_ORDER) if (!order.includes(id)) order.push(id);
+  for (const id of configured) if (!order.includes(id)) order.push(id);
   return order;
+}
+
+export function normalizeNavOrder(value: unknown): PhoneNavTarget[] {
+  return normalizePhoneNavOrder(value, HOUSEHOLD_DATA_SOURCE, NAV_TABS);
 }
 
 function loadOrder(): PhoneNavTarget[] {
   try {
     return normalizeNavOrder(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
   } catch {
-    return [...DEFAULT_ORDER];
+    return configuredOrder();
   }
 }
 
 export const phoneNavOrder = $state({ order: loadOrder() });
 
 export function moveNavTarget(id: PhoneNavTarget, delta: -1 | 1): void {
+  if (!PHONE_NAV_REORDERABLE) return;
   const index = phoneNavOrder.order.indexOf(id);
   const next = index + delta;
   if (index < 0 || next < 0 || next >= phoneNavOrder.order.length) return;

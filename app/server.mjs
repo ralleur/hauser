@@ -14,6 +14,8 @@ const HERMES_HOST = process.env.HMI_HERMES_HOST || '127.0.0.1';
 const HERMES_PORT = Number(process.env.HMI_HERMES_PORT || 8642);
 const AMBIENT_HOST = process.env.HMI_AMBIENT_HOST || '127.0.0.1';
 const AMBIENT_PORT = Number(process.env.HMI_AMBIENT_PORT || 18088);
+const NOTION_BRIDGE_HOST = process.env.HMI_NOTION_BRIDGE_HOST || '127.0.0.1';
+const NOTION_BRIDGE_PORT = Number(process.env.HMI_NOTION_BRIDGE_PORT || 8790);
 
 const PAPERLESS_HOST = process.env.HMI_PAPERLESS_HOST || '127.0.0.1';
 const PAPERLESS_PORT = Number(process.env.HMI_PAPERLESS_PORT || 8000);
@@ -38,6 +40,8 @@ const SONG_LIBRARY_DIR = process.env.HMI_SONG_LIBRARY_DIR || resolve(homedir(), 
 const SONG_LIBRARY_PATH = resolve(SONG_LIBRARY_DIR, 'library.json');
 const FAMILY_DATA_PATH = process.env.HMI_FAMILY_DATA_PATH || resolve(homedir(), '.local', 'share', 'smart-home-hmi', 'family-data.json');
 const FAMILY_DATA_SEED_PATH = fileURLToPath(new URL('./data/family-data.seed.json', import.meta.url));
+const NOTION_SHOPPING_PATH = process.env.HMI_NOTION_SHOPPING_PATH
+  || fileURLToPath(new URL('./public/notion-shopping.json', import.meta.url));
 const ACESTEP_AUDIO_ROOT = process.env.HMI_ACESTEP_AUDIO_ROOT || '/path/to/ace-step-1.5/.cache/acestep/tmp/api_audio';
 
 const ALLOWED_ORIGINS = new Set(
@@ -48,6 +52,9 @@ const DIST = resolve(fileURLToPath(new URL('./dist', import.meta.url)));
 const CONFIG_PATH = process.env.HMI_CONFIG_PATH
   || resolve(homedir(), '.config', 'smart-home-hmi', 'config.json');
 const CONFIG_BODY_MAX = 1024 * 1024;
+const HOUSEHOLD_CONFIG_PATH = process.env.HMI_HOUSEHOLD_CONFIG_PATH || null;
+const HOUSEHOLD_CONFIG_BODY_MAX = 1024 * 1024;
+const HOUSEHOLD_CONFIG_MODE_HEADER = 'x-hmi-household-config-mode';
 const SHARED_CONFIG_KEYS = new Set([
   'hmi:backend', 'hmi:ha-url', 'hmi:ha-token', 'hmi:jf-url', 'hmi:jf-token',
   'hmi:jf-user', 'hmi:library', 'hmi:lock-button',
@@ -75,6 +82,18 @@ export function proxyTargetPath(url) {
     || path === '/v1/runs'
     || path.startsWith('/v1/runs/');
   return allowed ? `${path}${parsed.search}` : null;
+}
+
+export function notionBridgeTargetPath(url) {
+  const parsed = new URL(url, 'http://hmi.local');
+  if (!parsed.pathname.startsWith('/notion-bridge/')) return null;
+  const path = parsed.pathname.slice('/notion-bridge'.length);
+  const allowed = path === '/health'
+    || path === '/shopping/add'
+    || path === '/shopping/toggle'
+    || path === '/shopping/store/add'
+    || path === '/shopping/store/delete';
+  return allowed ? path : null;
 }
 
 
@@ -119,6 +138,14 @@ export function proxyRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   return allowedOrigins.has(origin);
 }
 
+export function notionBridgeRequestAllowed(req, targetPath, allowedOrigins = ALLOWED_ORIGINS) {
+  const methodAllowed = (targetPath === '/health' && req.method === 'GET')
+    || (targetPath !== '/health' && req.method === 'POST');
+  if (!methodAllowed) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
 export function ambientRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   if (req.method !== 'POST') return false;
   const origin = req.headers.origin;
@@ -127,6 +154,12 @@ export function ambientRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
 
 export function configRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   if (!['GET', 'PUT'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+export function householdConfigRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (req.method !== 'GET') return false;
   const origin = req.headers.origin;
   return !origin || allowedOrigins.has(origin);
 }
@@ -232,6 +265,144 @@ export function createCentralConfigStore(path = CONFIG_PATH) {
   }
 
   return { read, update };
+}
+
+export function createHouseholdConfigReader(
+  path = HOUSEHOLD_CONFIG_PATH,
+  maxBytes = HOUSEHOLD_CONFIG_BODY_MAX,
+) {
+  function read() {
+    if (!path) {
+      return {
+        ok: false,
+        status: 503,
+        code: 'HOUSEHOLD_CONFIG_NOT_CONFIGURED',
+        message: 'Der Pfad zur Haushaltskonfiguration ist nicht konfiguriert.',
+      };
+    }
+
+    let metadata;
+    try {
+      metadata = statSync(path);
+    } catch (error) {
+      if (error && typeof error === 'object' && error.code === 'ENOENT') {
+        return {
+          ok: false,
+          status: 404,
+          code: 'HOUSEHOLD_CONFIG_NOT_FOUND',
+          message: 'Die Haushaltskonfiguration wurde nicht gefunden.',
+        };
+      }
+      return {
+        ok: false,
+        status: 500,
+        code: 'HOUSEHOLD_CONFIG_NOT_READABLE',
+        message: 'Die Haushaltskonfiguration konnte nicht gelesen werden.',
+      };
+    }
+
+    if (!metadata.isFile()) {
+      return {
+        ok: false,
+        status: 500,
+        code: 'HOUSEHOLD_CONFIG_NOT_READABLE',
+        message: 'Die Haushaltskonfiguration ist keine lesbare Datei.',
+      };
+    }
+    if (metadata.size > maxBytes) {
+      return {
+        ok: false,
+        status: 413,
+        code: 'HOUSEHOLD_CONFIG_TOO_LARGE',
+        message: 'Die Haushaltskonfiguration ist größer als 1 MiB.',
+      };
+    }
+
+    try {
+      const contents = readFileSync(path);
+      if (contents.length > maxBytes) {
+        return {
+          ok: false,
+          status: 413,
+          code: 'HOUSEHOLD_CONFIG_TOO_LARGE',
+          message: 'Die Haushaltskonfiguration ist größer als 1 MiB.',
+        };
+      }
+      return { ok: true, body: contents.toString('utf8') };
+    } catch (error) {
+      if (error && typeof error === 'object' && error.code === 'ENOENT') {
+        return {
+          ok: false,
+          status: 404,
+          code: 'HOUSEHOLD_CONFIG_NOT_FOUND',
+          message: 'Die Haushaltskonfiguration wurde nicht gefunden.',
+        };
+      }
+      return {
+        ok: false,
+        status: 500,
+        code: 'HOUSEHOLD_CONFIG_NOT_READABLE',
+        message: 'Die Haushaltskonfiguration konnte nicht gelesen werden.',
+      };
+    }
+  }
+
+  return { read };
+}
+
+export function normalizeHouseholdConfigMode(value) {
+  if (value === undefined || value === null) return 'shadow';
+  if (value === 'shadow' || value === 'active') return value;
+  throw new Error('HMI_HOUSEHOLD_CONFIG_MODE muss exakt "shadow" oder "active" sein.');
+}
+
+export function serveHouseholdConfigMode(req, res, mode = 'shadow') {
+  const normalizedMode = normalizeHouseholdConfigMode(mode);
+  const headers = { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedMode };
+  if (req.method !== 'GET') {
+    jsonResponse(res, 405, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Der Haushaltsmodus ist ausschließlich per GET lesbar.',
+    }, { allow: 'GET', ...headers });
+    return;
+  }
+  jsonResponse(res, 200, { mode: normalizedMode }, headers);
+}
+
+export function serveHouseholdConfig(req, res, reader, mode = 'shadow') {
+  const normalizedMode = normalizeHouseholdConfigMode(mode);
+  const modeHeader = { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedMode };
+  if (req.method !== 'GET') {
+    res.writeHead(405, {
+      allow: 'GET',
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...modeHeader,
+    });
+    res.end(JSON.stringify({
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Die Haushaltskonfiguration ist ausschließlich per GET lesbar.',
+    }));
+    return;
+  }
+
+  const result = reader.read();
+  if (!result.ok) {
+    res.writeHead(result.status, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...modeHeader,
+    });
+    res.end(JSON.stringify({ code: result.code, message: result.message }));
+    return;
+  }
+
+  res.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    ...modeHeader,
+  });
+  res.end(result.body);
 }
 
 export function createFamilyDataStore(
@@ -449,10 +620,11 @@ function serveConfig(req, res, store) {
   });
 }
 
-export function staticPathFor(url) {
+export function staticPathFor(url, staticRoot = DIST) {
+  const root = resolve(staticRoot);
   const pathname = decodeURIComponent(new URL(url, 'http://hmi.local').pathname);
-  const candidate = resolve(DIST, `.${pathname}`);
-  if (candidate !== DIST && !candidate.startsWith(`${DIST}${sep}`)) return null;
+  const candidate = resolve(root, `.${pathname}`);
+  if (candidate !== root && !candidate.startsWith(`${root}${sep}`)) return null;
   return candidate;
 }
 
@@ -495,7 +667,32 @@ function proxy(req, res, key, targetPath, upstreamHost, upstreamPort) {
   req.pipe(upstream);
 }
 
+function proxyNotionBridge(req, res, targetPath, upstreamHost, upstreamPort) {
+  const headers = { accept: req.headers.accept || '*/*' };
+  if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+  if (req.headers['content-length']) headers['content-length'] = req.headers['content-length'];
 
+  const upstream = http.request({
+    hostname: upstreamHost,
+    port: upstreamPort,
+    method: req.method,
+    path: targetPath,
+    headers,
+  }, (upstreamResponse) => {
+    const responseHeaders = {};
+    for (const name of ['content-type', 'cache-control', 'content-length']) {
+      if (upstreamResponse.headers[name] !== undefined) responseHeaders[name] = upstreamResponse.headers[name];
+    }
+    res.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
+    upstreamResponse.pipe(res);
+  });
+  upstream.on('error', () => {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+    res.end('{"ok":false,"error":"Notion-Einkaufslisten-Bridge nicht erreichbar"}');
+  });
+  req.on('aborted', () => upstream.destroy());
+  req.pipe(upstream);
+}
 
 function jsonResponse(res, status, payload, headers = {}) {
   res.writeHead(status, {
@@ -504,6 +701,16 @@ function jsonResponse(res, status, payload, headers = {}) {
     ...headers,
   });
   res.end(JSON.stringify(payload));
+}
+
+function serveNotionShopping(res, path = NOTION_SHOPPING_PATH) {
+  try {
+    const payload = JSON.parse(readFileSync(path, 'utf8'));
+    if (!Array.isArray(payload?.sections)) throw new Error('Ungültiger Notion-Snapshot');
+    jsonResponse(res, 200, payload);
+  } catch {
+    jsonResponse(res, 503, { error: 'Notion-Einkaufsliste ist noch nicht synchronisiert' });
+  }
 }
 
 function readSmallJson(req, res, callback) {
@@ -1144,21 +1351,22 @@ export function staticCacheControl(path) {
   return mutablePwaResource ? 'no-cache' : 'public, max-age=31536000, immutable';
 }
 
-function serveStatic(req, res) {
+function serveStatic(req, res, staticRoot = DIST) {
+  const root = resolve(staticRoot);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { allow: 'GET, HEAD' });
     res.end();
     return;
   }
   let path;
-  try { path = staticPathFor(req.url || '/'); } catch { path = null; }
+  try { path = staticPathFor(req.url || '/', root); } catch { path = null; }
   if (!path) {
     res.writeHead(400);
     res.end();
     return;
   }
   if (existsSync(path) && statSync(path).isDirectory()) path = resolve(path, 'index.html');
-  if (!existsSync(path) || !statSync(path).isFile()) path = resolve(DIST, 'index.html');
+  if (!existsSync(path) || !statSync(path).isFile()) path = resolve(root, 'index.html');
   const extension = extname(path).toLowerCase();
   res.writeHead(200, {
     'content-type': MIME.get(extension) || 'application/octet-stream',
@@ -1175,6 +1383,8 @@ export function createHmiServer(
     upstreamPort = HERMES_PORT,
     ambientHost = AMBIENT_HOST,
     ambientPort = AMBIENT_PORT,
+    notionBridgeHost = NOTION_BRIDGE_HOST,
+    notionBridgePort = NOTION_BRIDGE_PORT,
 
     paperlessHost = PAPERLESS_HOST,
     paperlessPort = PAPERLESS_PORT,
@@ -1185,24 +1395,41 @@ export function createHmiServer(
     paperlessToken = readKeychainSecret(ABLAGE_TOKEN_ACCOUNT, ABLAGE_KEYCHAIN_SERVICE),
     allowedOrigins = ALLOWED_ORIGINS,
     configPath = CONFIG_PATH,
+    householdConfigPath = HOUSEHOLD_CONFIG_PATH,
+    householdConfigMode = process.env.HMI_HOUSEHOLD_CONFIG_MODE,
+    staticRoot = DIST,
+    notionShoppingPath = NOTION_SHOPPING_PATH,
     familyDataPath = FAMILY_DATA_PATH,
     familyData = null,
   } = {},
 ) {
+  const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
   const configStore = createCentralConfigStore(configPath);
+  const householdConfigReader = createHouseholdConfigReader(householdConfigPath);
   const familyStore = familyData || createFamilyDataStore(familyDataPath);
   const ablageAccess = createAblageAccess(paperlessPin, paperlessToken);
   const library = songLibrary || createSongLibrary();
   return http.createServer((req, res) => {
     const targetPath = proxyTargetPath(req.url || '/');
+    const notionTargetPath = notionBridgeTargetPath(req.url || '/');
 
     const songTarget = songTargetPath(req.url || '/');
-    const familyDataRoute = (req.url || '').startsWith('/api/reminders')
-      || (req.url || '').startsWith('/api/shopping');
+    const familyDataRoute = (req.url || '').startsWith('/api/reminders');
     if (familyDataRoute && familyDataRequestAllowed(req, allowedOrigins)) {
       serveFamilyData(req, res, familyStore);
     } else if (familyDataRoute) {
       jsonResponse(res, 403, { error: 'Familiendaten-Route nicht freigegeben' });
+    } else if (notionTargetPath !== null
+        && notionBridgeRequestAllowed(req, notionTargetPath, allowedOrigins)) {
+      proxyNotionBridge(req, res, notionTargetPath, notionBridgeHost, notionBridgePort);
+    } else if ((req.url || '').startsWith('/notion-bridge')) {
+      jsonResponse(res, 403, { error: 'Notion-Bridge-Route nicht freigegeben' });
+    } else if ((req.url || '') === '/notion-shopping.json' && req.method === 'GET') {
+      serveNotionShopping(res, notionShoppingPath);
+    } else if ((req.url || '').startsWith('/notion-shopping.json')) {
+      jsonResponse(res, 405, { error: 'Notion-Snapshot ist ausschließlich per GET lesbar' }, { allow: 'GET' });
+    } else if ((req.url || '').startsWith('/api/shopping')) {
+      jsonResponse(res, 410, { error: 'Einkaufsliste wird über die Notion-Bridge synchronisiert' });
     } else if (songTarget && songRequestAllowed(req, songTarget, allowedOrigins)) {
       serveSongs(req, res, songTarget, aceStepHost, aceStepPort, ambientHost, ambientPort, library);
     } else if ((req.url || '').startsWith('/api/songs')) {
@@ -1211,6 +1438,31 @@ export function createHmiServer(
       serveAblage(req, res, ablageAccess, paperlessHost, paperlessPort);
     } else if ((req.url || '').startsWith('/api/ablage')) {
       jsonResponse(res, 403, { error: 'Ablage-Route nicht freigegeben' });
+    } else if ((req.url || '') === '/api/household-config-mode'
+        && householdConfigRequestAllowed(req, allowedOrigins)) {
+      serveHouseholdConfigMode(req, res, normalizedHouseholdConfigMode);
+    } else if ((req.url || '') === '/api/household-config-mode') {
+      jsonResponse(
+        res,
+        403,
+        { code: 'HOUSEHOLD_CONFIG_MODE_FORBIDDEN', message: 'Haushaltsmodusroute nicht freigegeben.' },
+        { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedHouseholdConfigMode },
+      );
+    } else if ((req.url || '') === '/api/household-config'
+        && householdConfigRequestAllowed(req, allowedOrigins)) {
+      serveHouseholdConfig(req, res, householdConfigReader, normalizedHouseholdConfigMode);
+    } else if ((req.url || '') === '/api/household-config') {
+      const origin = req.headers.origin;
+      if (!origin || allowedOrigins.has(origin)) {
+        serveHouseholdConfig(req, res, householdConfigReader, normalizedHouseholdConfigMode);
+      } else {
+        jsonResponse(
+          res,
+          403,
+          { code: 'HOUSEHOLD_CONFIG_FORBIDDEN', message: 'Haushaltskonfigurationsroute nicht freigegeben.' },
+          { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedHouseholdConfigMode },
+        );
+      }
     } else if ((req.url || '') === '/api/config' && configRequestAllowed(req, allowedOrigins)) {
       serveConfig(req, res, configStore);
     } else if ((req.url || '').startsWith('/api/config')) {
@@ -1234,7 +1486,7 @@ export function createHmiServer(
       res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
       res.end('{"error":"Hermes-Route nicht freigegeben"}');
     } else {
-      serveStatic(req, res);
+      serveStatic(req, res, staticRoot);
     }
   });
 }

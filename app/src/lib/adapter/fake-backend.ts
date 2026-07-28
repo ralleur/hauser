@@ -8,12 +8,24 @@
    ============================================ */
 
 import type { Backend, ConnectionStatus, LightValue, ClimateValue, MediaValue, SwitchValue } from './types.ts';
-import { FAKE_DISCOVERY_CATALOG, type EntityCatalogItem } from '../state/device-config.ts';
+import {
+  FAKE_DISCOVERY_CATALOG,
+  type EntityCatalogItem,
+} from '../state/fake-discovery-catalog.ts';
 import { rgbToHex } from './ha-entities.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 
 type ForceMode = 'contradict' | 'drop';
+
+export type FakeBackendCatalogItem = EntityCatalogItem;
+
+function cloneCatalog(items: readonly EntityCatalogItem[]): EntityCatalogItem[] {
+  return items.map((item) => ({
+    ...item,
+    ...(item.capabilities ? { capabilities: { ...item.capabilities } } : {}),
+  }));
+}
 
 export class FakeBackend implements Backend {
   #truth: Map<string, unknown>;
@@ -23,11 +35,16 @@ export class FakeBackend implements Backend {
   #status: ConnectionStatus = 'connected';
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
-  #catalog = FAKE_DISCOVERY_CATALOG.map((item) => ({ ...item }));
+  #catalog: EntityCatalogItem[];
 
-  constructor(seed: Map<string, unknown>, latencyMs = 40) {
+  constructor(
+    seed: Map<string, unknown>,
+    latencyMs = 40,
+    catalog: readonly EntityCatalogItem[] = FAKE_DISCOVERY_CATALOG,
+  ) {
     this.#truth = new Map(seed);
     this.#latencyMs = latencyMs;
+    this.#catalog = cloneCatalog(catalog);
   }
 
   subscribe(onUpdate: (entityId: string, value: unknown) => void): void {
@@ -39,7 +56,7 @@ export class FakeBackend implements Backend {
 
   subscribeCatalog(cb: (items: EntityCatalogItem[]) => void): void {
     this.#catalogCb = cb;
-    cb(this.#catalog.map((item) => ({ ...item })));
+    cb(cloneCatalog(this.#catalog));
   }
 
   async renameEntity(entityId: string, name: string): Promise<void> {
@@ -47,7 +64,7 @@ export class FakeBackend implements Backend {
     if (!normalized) throw new Error('Der Gerätename darf nicht leer sein.');
     const item = this.#catalog.find((entry) => entry.entityId === entityId);
     if (item) item.name = normalized;
-    this.#catalogCb?.(this.#catalog.map((entry) => ({ ...entry })));
+    this.#catalogCb?.(cloneCatalog(this.#catalog));
   }
 
   async listCalendarSources(): Promise<CalendarSource[]> {
@@ -170,7 +187,7 @@ export class FakeBackend implements Backend {
         // Farbtemperatur ↔ Farbe schließen sich aus (HA-color_mode).
         if (typeof data.color_temp_kelvin === 'number') { v.colorTemp = data.color_temp_kelvin; v.color = null; }
         if (Array.isArray(data.rgb_color)) v.color = rgbToHex(data.rgb_color as number[]);
-      }
+      } else if (service === 'toggle') v.on = !v.on;
       // Widerspruch am zum Command passenden Feld (docs/02): Dimm-/Temp-/Farb-
       // Commands widersprechen ihrem Wert (Korrektur), ein Schalt-Command dem
       // on-Zustand (Toggle-Wobble).

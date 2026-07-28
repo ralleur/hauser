@@ -8,20 +8,29 @@
    ============================================ */
 
 import type { LightValue, ClimateValue, MediaValue } from '../adapter/types.ts';
-import { appState, MEDIA_SEED, SUN_ENTITY, ENERGY_SENSORS, energyRefIds, type RoomSeed, type MediaSeed } from './app.svelte.ts';
+import {
+  ENERGY_SENSORS,
+  LAUNDRY_ENTITIES,
+  MEDIA_SEED,
+  ROOM_CAMERA_ENTITIES as CONFIGURED_ROOM_CAMERA_ENTITIES,
+  SUN_ENTITY,
+  VACATION_MODE_ENTITY,
+  HOUSEHOLD_RUNTIME_MODEL,
+} from '../config/household-runtime-data.ts';
+import { energyRefIds } from '../config/legacy-household-data.ts';
+import { appState, ROOM_SEED, type RoomSeed, type MediaSeed } from './app.svelte.ts';
 import { IS_DEMO } from '../demo/demo-mode.ts';
 
-export const VACATION_MODE_ENTITY = 'switch.urlaubsmodus';
-export const LAUNDRY_ENTITIES = {
-  washer: 'input_boolean.waschmaschine_laeuft',
-  dryer: 'input_boolean.trockner_laeuft',
-} as const;
+export {
+  LAUNDRY_ENTITIES,
+  VACATION_MODE_ENTITY,
+};
+export { HOME_OFF_SCRIPT_ENTITY } from '../config/household-runtime-data.ts';
 /* In der Demo gibt es keinen Kamerastream — ein leeres „nicht verfügbar"-Panel
    anzubieten wäre schlechter als gar keins (docs/12). */
-export const ROOM_CAMERA_ENTITIES: Readonly<Record<string, string>> = IS_DEMO ? {} : {
-  // Live in HA geprüft: Camera1 ist dem Bereich Wohnzimmer zugeordnet und zeigt den Balkon.
-  wohnzimmer: 'camera.balkon',
-};
+export const ROOM_CAMERA_ENTITIES: Readonly<Record<string, string>> = IS_DEMO
+  ? {}
+  : CONFIGURED_ROOM_CAMERA_ENTITIES;
 
 /* Explizite Maps aus dem Seed (ADR-018): Domänensicht → reale entity_id. */
 const climateIds = new Map<string, string>();    // roomId → entity_id
@@ -32,6 +41,11 @@ for (const p of MEDIA_SEED) mediaIds.set(p.id, p.entityId);
 
 function currentLightIds(): Map<string, string> {
   const ids = new Map<string, string>();
+  // Der aktive/Legacy-Seed ist bereits die validierte Config-Projektion. Er
+  // hält kanonische Ziele verfügbar, auch während appState neu hydriert wird.
+  for (const r of ROOM_SEED) {
+    for (const l of r.lights) ids.set(`${r.id}/${l.id}`, l.entityId);
+  }
   for (const r of appState.rooms) {
     for (const l of r.lights) ids.set(`${r.id}/${l.id}`, l.entityId);
   }
@@ -48,7 +62,9 @@ function rebuildClimateIds(rooms: readonly RoomSeed[]): void {
 }
 
 export function lightEntityId(roomId: string, lightId: string): string {
-  return currentLightIds().get(`${roomId}/${lightId}`) ?? `light.${roomId}_${lightId}`;
+  const entityId = currentLightIds().get(`${roomId}/${lightId}`);
+  if (!entityId) throw new Error(`Unknown configured light target: ${roomId}/${lightId}`);
+  return entityId;
 }
 
 export function climateEntityId(roomId: string): string {
@@ -69,7 +85,9 @@ export function roomCameraEntityId(roomId: string): string {
 }
 
 export function mediaEntityId(playerId: string): string {
-  return mediaIds.get(playerId) ?? `media_player.${playerId}`;
+  const entityId = mediaIds.get(playerId);
+  if (!entityId) throw new Error(`Unknown configured media target: ${playerId}`);
+  return entityId;
 }
 
 /* Initial-State/Fallback-Cache des EntityStores aus dem Raum-Seed (ADR-018):
@@ -124,8 +142,7 @@ export function ambientEntityIds(): string[] {
 /* Volle Menge der gemappten entity_ids (ADR-006-Startset fürs Abo): steuerbar
    (Licht/Klima/Media) + read-only-Ambient (sun/Energie). */
 export function allEntityIds(): string[] {
-  const lightIds = currentLightIds();
-  return [...climateIds.values(), ...tempSensorIds.values(), ...lightIds.values(), ...mediaIds.values(), ...Object.values(ROOM_CAMERA_ENTITIES), VACATION_MODE_ENTITY, ...ambientEntityIds()];
+  return [...HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds];
 }
 
 /* Sichtbare entity_ids je Screen (ADR-006): der Home-Screen zeigt Räume

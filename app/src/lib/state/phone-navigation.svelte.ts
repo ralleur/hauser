@@ -22,6 +22,10 @@ export function rememberMediaTarget(current: MediaRootTarget, screen: ScreenId):
   return current;
 }
 
+export function initialMediaTarget(screens: readonly { id: ScreenId }[]): MediaRootTarget {
+  return screens.some(({ id }) => id === 'media') ? 'media' : 'library';
+}
+
 export function canonicalTargetForMain(
   target: PhoneMainTarget,
   lastMediaTarget: MediaRootTarget,

@@ -21,13 +21,14 @@
     type PhoneRoomLayer,
     type PhoneRoomSummary,
   } from '../state/phone-home.ts';
-  import { endTransition, nav, projectPhoneTarget, showScreen } from '../state/nav.svelte.ts';
+  import { endTransition, nav, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
   import { navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
   import { closeDeviceDetail, deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../state/scene-manager.svelte.ts';
   import {
     createPhoneModalLifecycle,
     createPhoneLayerController,
+    initialMediaTarget,
     rememberMediaTarget,
     restorePhoneFocus,
     type LayerChangeReason,
@@ -70,7 +71,9 @@
   const roomOpen = $derived(activeLayer === 'room');
   let modalBlocking = $state(false);
   let outroGeneration = $state(0);
-  let lastMediaTarget = $state<MediaRootTarget>('media');
+  const hasMediaScreen = SCREENS.some(({ id }) => id === 'media');
+  const hasLibraryScreen = SCREENS.some(({ id }) => id === 'library');
+  let lastMediaTarget = $state<MediaRootTarget>(initialMediaTarget(SCREENS));
   let moreButton = $state<HTMLButtonElement>();
   let titleAnchor = $state<HTMLHeadingElement>();
   let focusTrigger: HTMLButtonElement | null = null;
@@ -231,8 +234,8 @@
           <div class="phone-media-area">
             {#if nav.screen !== 'library-detail'}
               <nav class="phone-media-switcher" aria-label="Medienbereich">
-                <button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => showScreen('media')}>Audio</button>
-                <button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => showScreen('library')}>Bibliothek</button>
+                {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => showScreen('media')}>Audio</button>{/if}
+                {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => showScreen('library')}>Bibliothek</button>{/if}
               </nav>
             {/if}
             {#if target.subtarget === 'audio'}

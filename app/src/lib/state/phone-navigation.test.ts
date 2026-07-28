@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import bottomNav from '../components/phone/PhoneBottomNav.svelte?raw';
 import moreSheet from '../components/phone/MoreSheet.svelte?raw';
+import phoneNavIcon from '../components/phone/PhoneNavIcon.svelte?raw';
 import mainEntry from '../../main.ts?raw';
 import {
   PHONE_MAIN_TARGETS,
@@ -12,6 +13,7 @@ import {
   createPhoneModalLifecycle,
   createPhoneLayerController,
   mainAreaForScreen,
+  initialMediaTarget,
   rememberMediaTarget,
   restorePhoneFocus,
   wrappedFocusIndex,
@@ -93,6 +95,11 @@ describe('phone navigation mapping', () => {
     expect(rememberMediaTarget('media', 'library-detail')).toBe('library');
     expect(rememberMediaTarget('library', 'energy')).toBe('library');
     expect(rememberMediaTarget('library', 'media')).toBe('media');
+  });
+
+  it('starts the grouped media target on library when active config has no audio module', () => {
+    expect(initialMediaTarget([{ id: 'home' }, { id: 'library' }])).toBe('library');
+    expect(initialMediaTarget([{ id: 'home' }, { id: 'media' }, { id: 'library' }])).toBe('media');
   });
 });
 
@@ -534,7 +541,7 @@ describe('phone source and accessibility boundaries', () => {
     expect(phoneShell).not.toMatch(/<RoomControlSheet[^>]*\{outroGeneration\}/);
     expect(phoneShell).not.toMatch(/<MoreSheet[^>]*\{outroGeneration\}/);
     expect(phoneShell).toMatch(/onouteroutroend=\{handleOuterOutroEnd\}/);
-    for (const source of [phoneShell, bottomNav, moreSheet]) {
+    for (const source of [phoneShell, bottomNav, moreSheet, phoneNavIcon]) {
       for (const forbidden of ['PanelAppShell', 'StatusBar', 'TabBar.svelte', 'RoomHero', 'PlayerLayer', 'hls.js', 'IconPicker', 'icon-recents']) {
         expect(source).not.toContain(forbidden);
       }
@@ -551,6 +558,10 @@ describe('phone source and accessibility boundaries', () => {
     expect(moreSheet).toMatch(/phoneNavOrder\.order\.slice\(3\)/);
     expect(moreSheet).toMatch(/\{#each phoneNavOrder\.order as id, index \(id\)\}/);
     expect(moreSheet).toContain('Anordnen');
+    expect(bottomNav).toContain('<PhoneNavIcon {id} />');
+    expect(moreSheet).toContain('<PhoneNavIcon {id} />');
+    expect(moreSheet).toMatch(/<header>[\s\S]*more-arrange-toggle[\s\S]*more-sheet-close[\s\S]*<\/header>/);
+    expect(moreSheet).not.toContain('more-sheet-target more-arrange-toggle');
     expect(moreSheet).toMatch(/moveNavTarget\(id, -1\)/);
     expect(moreSheet).toMatch(/moveNavTarget\(id, 1\)/);
   });

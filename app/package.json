@@ -13,6 +13,7 @@
     "build": "vite build",
     "prebuild:demo": "npm run icons:assets && npm run paraglide:compile",
     "build:demo": "VITE_BACKEND=fake VITE_DEMO=1 vite build --outDir dist-demo",
+    "build:neutral": "vite build --config vite.neutral.config.ts",
     "preview": "node server.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",

@@ -12,90 +12,49 @@ import {
   loadDeviceConfig,
   mergeCatalog,
   seedCatalog,
-  type DeviceCategory,
-  type ManagedDomain,
 } from './device-config.ts';
 
-/* Statische Raum-Metadaten (ADR-017): Name, Ist-Temperatur (sensor.*, read-only),
-   Präsenz/Fenster (binary_sensor.*, read-only) + Licht-Liste OHNE Zustand. Die
-   steuerbaren Werte (on/brightness/target/hvac) liegen im EntityStore und werden
-   über mergedLight/mergedClimate (state/commands.ts) gelesen, nicht hier. */
-/* Fähigkeiten (`dimmable`/`colorTemp`/`color` + Kelvin-Range) werden zur
-   Laufzeit aus den HA-Attributen erkannt (`supported_color_modes`,
-   `min/max_color_temp_kelvin` — adapter/capabilities.ts, B-16B) und
-   überschreiben beim Katalog-Merge die Seed-Flags. Die Flags hier sind nur
-   noch Fallback für Fake-Backend/Offline-Start. `colorTemp`/`color` blenden
-   im Licht-Detail (zweite Ebene) die jeweilige Skala/Palette ein. */
-export interface Light {
-  id: string; entityId: string; domain?: ManagedDomain; name: string; dimmable: boolean;
-  /** Overlay-/Kachel-Kategorie (categoryOf(domain)); fehlt bei Seed-Lichtern = 'light'. */
-  category?: DeviceCategory;
-  colorTemp?: boolean; color?: boolean;
-  colorTempMin?: number; colorTempMax?: number;
-  /** Anzeige-Metadaten der info-Kategorie (sensor/binary_sensor) */
-  unit?: string | null;
-  deviceClass?: string | null;
-  /** Piktogramm-Symbol (Sprite-id); im Detail-Overlay umstellbar (Symbolwahl). */
-  icon?: string;
-}
+import {
+  ENERGY_SENSORS,
+  MEDIA_SEED,
+  ROOM_SEED,
+  SUN_ENTITY,
+} from '../config/household-runtime-data.ts';
+import {
+  energyRefIds,
+  type EnergySensorRef,
+  type EnergySensors,
+  type Light,
+  type LightSeed,
+  type LoadSource,
+  type MediaPlayerMeta,
+  type MediaSeed,
+  type Room,
+  type RoomSeed,
+} from '../config/legacy-household-data.ts';
+export {
+  ENERGY_SENSORS,
+  MEDIA_SEED,
+  ROOM_SEED,
+  SUN_ENTITY,
+} from '../config/household-runtime-data.ts';
+export {
+  energyRefIds,
+} from '../config/legacy-household-data.ts';
+export type {
+  EnergySensorRef,
+  EnergySensors,
+  Light,
+  LightSeed,
+  LoadSource,
+  MediaPlayerMeta,
+  MediaSeed,
+  Room,
+  RoomSeed,
+} from '../config/legacy-household-data.ts';
 
-/* Farbtemperatur-Bereich der UI (Kelvin) — warm ↔ kühl (Hauser-Tick-Skala). */
-export const COLOR_TEMP_MIN = 2000;
-export const COLOR_TEMP_MAX = 6500;
-
-/* Die Ist-Temperatur ist bewusst KEIN statisches Room-Feld mehr (das war der
-   alte Mock): sie wird live über roomTemperature() (state/commands.ts) aus dem
-   EntityStore gelesen — dedizierter Raum-Sensor > Thermostat-Ist > nichts. */
-export interface Room {
-  id: string; name: string;
-  presence: boolean; windowOpen: boolean; lights: Light[];
-}
-
-/* Seed für den EntityStore: die volle Ausgangs-Wahrheit inkl. der steuerbaren
-   Felder. Quelle für buildEntitySeed() (state/entities.ts) UND für die statische
-   appState.rooms-Projektion. In der HA-Session ersetzen echte Subscriptions den
-   Seed; die Raum-Metadaten (Name, Licht-Liste) bleiben Konfiguration. */
-export interface LightSeed extends Light {
-  on: boolean; brightness: number; entityId: string;
-  colorTemp?: boolean; color?: boolean; icon?: string;
-  /** Startwerte (Fallback-Cache bis zum ersten Echo) für die Detail-Ebene */
-  colorTempK?: number; colorHex?: string | null;
-}
-
-
-export interface RoomSeed extends Room {
-  /** Räume OHNE Klima-Entität (z. B. Flur) haben keine steuerbare Heizung.
-      target/hvac/climateEntityId sind dann undefined — die UI blendet
-      die Klima-Steuerung aus und zeigt nur Licht + Temp (Sensor). */
-  target?: number;
-  hvac?: 'heat' | 'cool' | 'off';
-  lights: LightSeed[];
-  /** reale HA climate.*-entity_id (ADR-018: explizite Map statt Konvention) */
-  climateEntityId?: string;
-  /** Dedizierter Raum-Temperatursensor (reale HA sensor.*-entity_id). Hat in der
-      Anzeige VORRANG vor dem Thermostat-Ist (roomTemperature()). Nicht gesetzt →
-      Fallback auf climate.current_temperature bzw. keine Anzeige. */
-  tempSensorId?: string;
-  /** Ist-Temp-Startwert (Fallback-Cache bis zum ersten HA-Echo) — landet als
-      `current` im climate-Seed. Nur bei Räumen MIT climateEntityId sinnvoll. */
-  current?: number;
-}
-
-/* Statische Player-Metadaten (ADR-017 Addendum): nur id + name sind Konfig — die
-   steuerbaren (playing/volume/source) und server-gepushten (track/artist/duration/
-   available) Werte liegen im EntityStore (MediaValue) und werden über mergedMedia
-   (state/media) gelesen, nicht hier. */
-export interface MediaPlayerMeta { id: string; name: string }
-
-/* Seed für den EntityStore: volle Ausgangs-Wahrheit inkl. optimistischer + Meta-
-   Felder + Start-Position. `position` ist bewusst KEIN Entity-Feld (lokale
-   Simulation, state/media) — der Seed trägt nur den Startwert. */
-export interface MediaSeed extends MediaPlayerMeta {
-  /** reale HA media_player.*-entity_id (ADR-018: explizite Map statt Konvention) */
-  entityId: string;
-  available: boolean; playing: boolean; volume: number; source: string | null;
-  track: string | null; artist: string | null; duration: number; position: number;
-}
+/* Static room/media/energy values are installed before this module is imported.
+   Shadow keeps the exact legacy references; active exposes the config projection. */
 
 export interface Episode {
   n: number; title: string; dur: number; watched: boolean; pos: number;
@@ -149,180 +108,9 @@ function makeSeason(n: number, count: number, dur: number, watchedThrough = 0): 
   };
 }
 
-/* ── Seed = reale HA-Entitäten (ADR-018) ──
-   6 Räume mit korrekten Entity-Mappings. 3 Räume haben Klima-Entitäten
-   (Wohnzimmer/Schlafzimmer/Bad); Küche/Kinderzimmer/Flur haben nur Licht,
-   kein `climateEntityId` → die UI blendet die Klima-Steuerung aus.
-   `entityId` trägt die reale HA-`entity_id`; die on/brightness/target/current-
-   Startwerte sind Fallback-Cache, bis das erste subscribe_entities-Echo greift.
-   Ist-Temp: `current` (nur Klima-Räume) ist der Fallback-Cache fürs Thermostat-
-   Ist; dedizierte Raum-Sensoren werden über `tempSensorId` gemappt und haben in
-   der Anzeige Vorrang (roomTemperature(), state/commands.ts). Räume ohne beides
-   zeigen keine Temperatur an. */
-export const ROOM_SEED: RoomSeed[] = [
-    {
-      id: 'wohnzimmer', name: 'Wohnzimmer', target: 21.0, current: 23.5,
-      hvac: 'heat', presence: true, windowOpen: false,
-      climateEntityId: 'climate.wohnzimmer',
-      // color/colorTemp-Flags sind Fallback (Fake/Offline) — gegen echtes HA
-      // gilt die Laufzeit-Erkennung aus supported_color_modes (B-16B).
-      lights: [
-        { id: 'kugellampen', name: 'Kugellampen', entityId: 'light.wohnzimmer_kugellampen', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
-        { id: 'esstisch', name: 'Esstisch', entityId: 'light.wohnzimmer_esstisch', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 3000, colorHex: null, icon: 'i-lamp-pendant' },
-        { id: 'kugel_tv', name: 'Kugellampe TV', entityId: 'light.wohnzimmer_tv', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
-        { id: 'kugel_fenster', name: 'Kugellampe Fenster', entityId: 'light.wohnzimmer_fensterlampe', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 4000, colorHex: null },
-      ],
-    },
-    {
-      id: 'kinderzimmer', name: 'Kinderzimmer',
-      // Kein climate + kein dedizierter Sensor gemappt → keine Temp-Anzeige.
-      // TODO: sensor.*-Raumtemperatur als tempSensorId eintragen, falls vorhanden.
-      presence: false, windowOpen: false,
-      lights: [
-        // TODO: Kinderzimmer-Lichter zuordnen (aktuell keine smarten Lichter identifiziert)
-      ],
-    },
-    {
-      id: 'schlafzimmer', name: 'Schlafzimmer', target: 16.0, current: 23.0,
-      hvac: 'heat', presence: false, windowOpen: false,
-      climateEntityId: 'climate.schlafzimmer',
-      lights: [
-        { id: 'bett', name: 'Bett', entityId: 'light.schlafzimmer_bett', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
-        { id: 'schreibtisch', name: 'Schreibtisch', entityId: 'light.schlafzimmer_schreibtisch', on: false, brightness: 50, dimmable: true, colorTemp: true, colorTempK: 4000 },
-      ],
-    },
-    {
-      id: 'bad', name: 'Bad', target: 17.0, current: 22.5,
-      hvac: 'heat', presence: false, windowOpen: false,
-      climateEntityId: 'climate.bad',
-      lights: [
-        { id: 'spiegel', name: 'Spiegellicht', entityId: 'light.bad_spiegel', on: false, brightness: 50, dimmable: true, colorTemp: true, colorTempK: 4000 },
-      ],
-    },
-    {
-      id: 'kueche', name: 'Küche',
-      // Kein climate + kein dedizierter Sensor gemappt → keine Temp-Anzeige.
-      // TODO: sensor.*-Raumtemperatur als tempSensorId eintragen, falls vorhanden.
-      presence: false, windowOpen: false,
-      lights: [
-        { id: 'ledfridge', name: 'LED-Leiste', entityId: 'light.kueche_ledleiste', on: false, brightness: 50, dimmable: true, color: true, colorHex: null, icon: 'i-led-strip' },
-      ],
-    },
-    {
-      id: 'flur', name: 'Flur',
-      // Kein climate + kein dedizierter Sensor gemappt → keine Temp-Anzeige.
-      // TODO: sensor.*-Raumtemperatur als tempSensorId eintragen, falls vorhanden.
-      presence: false, windowOpen: false,
-      lights: [
-        // TODO: Flur-Lichter zuordnen (aktuell keine smarten Lichter identifiziert)
-      ],
-    },
-];
-
-/* Media-Seed = reale HA-Audio-Zonen (ADR-018): die beiden HomePods. Startwerte
-   sind Fallback-Cache bis zum ersten Echo. `entityId` trägt die reale HA-`entity_id`.
-   TODO: media_player.oled42/fernseher (TV) sind nicht als Raum-Audio gemappt. */
-export const MEDIA_SEED: MediaSeed[] = [
-  {
-    id: 'wohnzimmer', name: 'Wohnzimmer', entityId: 'media_player.wohnzimmer_speaker',
-    available: true, playing: false,
-    track: null, artist: null, source: null,
-    volume: 30, duration: 0, position: 0,
-  },
-  {
-    id: 'kueche', name: 'Küche', entityId: 'media_player.kueche_speaker',
-    available: true, playing: false,
-    track: null, artist: null, source: null,
-    volume: 30, duration: 0, position: 0,
-  },
-];
-
-/* ── Read-only-Ambient-Entitäten (ADR-018) ──
-   `sun.sun` ist eine Standard-HA-Entität (immer vorhanden) und treibt die
-   Day/Night-Automatik (docs/07 Screen 9). Die Energie-Sensoren sind dagegen
-   installationsspezifisch — ihre realen entity_ids kennt nur die HA-Instanz.
-   TODO: echte PV-/Last-/Tages-Sensor-IDs eintragen. Nicht gesetzte
-   (null) Sensoren → Node inaktiv bzw. KPI „—" (gleiche Graceful-Absence wie
-   bei Räumen ohne climate.*). PV/Last kommen live über subscribe_entities;
-   der Netz-Fluss wird aus (PV − Last) abgeleitet, die Tages-KPIs aus
-   Tages-Total-Sensoren (utility_meter o. Ä.). */
-export const SUN_ENTITY = 'sun.sun';
-
-export type EnergySensorRef = string | readonly string[] | null;
-
-/* Eine einzelne, benannte Lastquelle (B-19): trägt neben der realen entity_id
-   ein lesbares Label für Legende/Kuchensegment und optional eine Gruppe, unter
-   der mehrere Quellen zu EINEM Segment zusammenfallen. Die Summenbildung der
-   „Erfassten Last" bleibt identisch (Summe über alle entityId). */
-export interface LoadSource {
-  /** reale HA-`entity_id` des Leistungssensors (W oder kW) */
-  entityId: string;
-  /** menschenlesbares Label für Legende/Segment */
-  label: string;
-  /** optionale Gruppierung: gleich benannte Quellen fallen zu EINEM Segment zusammen */
-  group?: string;
-}
-
-export interface EnergySensors {
-  /** aktuelle PV-Erzeugung (W oder kW — Einheit wird normalisiert) */
-  pv: EnergySensorRef;
-  /** aktuelle Last (W oder kW); alle Quellen werden zur „Erfassten Last" summiert. */
-  load: readonly LoadSource[];
-  /** Tages-Erzeugung (Wh oder kWh) */
-  producedToday: EnergySensorRef;
-  /** Tages-Verbrauch */
-  consumedToday: EnergySensorRef;
-  /** Tages-Einspeisung */
-  fedInToday: EnergySensorRef;
-  /** Tages-Netzbezug */
-  drawnToday: EnergySensorRef;
-}
-
-/* Flache Liste konfigurierter entity_ids eines ENERGY_SENSORS-Werts (null → []).
-   Deckt alle drei Formen ab: Einzel-ID, ID-Liste und Lastquellen-Objekte. Eine
-   Stelle für Subscription (entities.ts), Summenbildung (energy.svelte.ts) und
-   Tests, damit das Datenmodell-Format nur hier interpretiert wird. */
-export function energyRefIds(ref: EnergySensorRef | readonly LoadSource[]): string[] {
-  if (!ref) return [];
-  if (typeof ref === 'string') return [ref];
-  return ref.map((item) => (typeof item === 'string' ? item : item.entityId));
-}
-export const ENERGY_SENSORS: EnergySensors = {
-  // Live geprüft 2026-07-09: keine eindeutigen PV-/Netz-/Hausanschluss-Sensoren
-  // vorhanden. Deshalb kein geratenes PV/Grid-Mapping.
-  pv: null,
-  // Echte HA-Leistungssensoren für erfasste Steckdosen/Geräte. Das ist bewusst
-  // „erfasste Last", nicht vollständige Hauslast. Labels sind aus der entity_id
-  // abgeleitet (B-19) und per Geräte-Detail umbenennbar; die beiden Shelly-Kanäle
-  // fallen über `group` zu einem Legenden-Segment zusammen.
-  load: [
-    { entityId: 'sensor.strom_leiste_kanal_1_power', label: 'Steckdosenleiste Kanal 1', group: 'Steckdosenleiste' },
-    { entityId: 'sensor.strom_leiste_kanal_2_power', label: 'Steckdosenleiste Kanal 2', group: 'Steckdosenleiste' },
-    { entityId: 'sensor.waschmaschine_strom_power', label: 'Waschmaschine' },
-    { entityId: 'sensor.strom_schreibtisch_links_power', label: 'Schreibtisch links' },
-    { entityId: 'sensor.strom_bad_klein_power', label: 'Bad (klein)' },
-    { entityId: 'sensor.strom_schlafzimmer_tuer_power', label: 'Schlafzimmer Tür' },
-    { entityId: 'sensor.strom_wohnzimmer_regal_power', label: 'Wohnzimmer Regal' },
-    { entityId: 'sensor.strom_couch_lang_power', label: 'Couch' },
-    { entityId: 'sensor.strom_glastuer_power', label: 'Glastür' },
-    { entityId: 'sensor.strom_spuele_power', label: 'Spüle' },
-    { entityId: 'sensor.strom_kinderzimmer_tuer_power', label: 'Kinderzimmer Tür' },
-    { entityId: 'sensor.strom_zigbee_steckdose_power', label: 'Zigbee-Steckdose' },
-    { entityId: 'sensor.strom_trockner_power', label: 'Trockner' },
-    { entityId: 'sensor.strom_kaffeemaschine_power', label: 'Kaffeemaschine' },
-    { entityId: 'sensor.strom_server_power', label: 'Server' },
-  ],
-  // Erzeugung/Einspeisung/Netzbezug brauchen PV bzw. einen Netzzähler — beides
-  // nicht vorhanden → bewusst null (Graceful Absence, nicht geraten).
-  producedToday: null,
-  // Tages-Verbrauch der erfassten Last: HA-utility_meter (cycle: daily) auf einem
-  // template-Summensensor der 15 *_energy-Zählerstände (configuration.yaml,
-  // 2026-07-09). Startet ab Erstellung bei 0 → heute Teilwert, ab morgen 0-Uhr voll.
-  // Die restlichen *_energy sind reine Zählerstände, keine Tageswerte.
-  consumedToday: 'sensor.hmi_erfasste_last_taeglich',
-  fedInToday: null,
-  drawnToday: null,
-};
+/* Farbtemperatur-Bereich der UI (Kelvin) — warm ↔ kühl (Hauser-Tick-Skala). */
+export const COLOR_TEMP_MIN = 2000;
+export const COLOR_TEMP_MAX = 6500;
 
 export const appState = $state({
   theme: 'dark' as 'dark' | 'light',
@@ -335,7 +123,7 @@ export const appState = $state({
   // und liest reale HA-Sensoren (ENERGY_SENSORS) über den Adapter-Seam — kein
   // Fake-State mehr im appState.
   media: {
-    current: 'wohnzimmer',
+    current: MEDIA_SEED[0]?.id ?? '',
     // Statische Player-Liste (id/name); steuerbare + gepushte Werte kommen aus
     // dem EntityStore über mergedMedia (ADR-017 Addendum).
     players: MEDIA_SEED.map(({ id, name }): MediaPlayerMeta => ({ id, name })),

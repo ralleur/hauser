@@ -8,7 +8,13 @@
    ============================================ */
 
 import { runtime } from '../adapter/runtime.svelte.ts';
-import { lightEntityId, climateEntityId, tempSensorEntityId, VACATION_MODE_ENTITY } from './entities.ts';
+import {
+  climateEntityId,
+  HOME_OFF_SCRIPT_ENTITY,
+  lightEntityId,
+  tempSensorEntityId,
+  VACATION_MODE_ENTITY,
+} from './entities.ts';
 import type { LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
 import type { Light } from './app.svelte.ts';
 
@@ -208,8 +214,6 @@ export function setMediaVolume(entityId: string, pct: number): void {
   );
 }
 
-const HOME_OFF_SCRIPT = 'script.hmi_home_ausser_schlafzimmer_aus';
-
 export function shouldConfirmHomeOff(now: Date, before: string | null): boolean {
   if (!before) return false;
   const [hours, minutes] = before.split(':').map(Number);
@@ -219,7 +223,7 @@ export function shouldConfirmHomeOff(now: Date, before: string | null): boolean 
 
 export function turnOffHomeExceptBedroom(): void {
   runtime.dispatch(
-    { entityId: HOME_OFF_SCRIPT, domain: 'script', service: 'turn_on', data: {}, queuedAt: Date.now() },
+    { entityId: HOME_OFF_SCRIPT_ENTITY, domain: 'script', service: 'turn_on', data: {}, queuedAt: Date.now() },
     { on: true } satisfies SwitchValue,
   );
 }

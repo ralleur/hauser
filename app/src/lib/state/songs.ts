@@ -1,3 +1,8 @@
+import {
+  SONG_MEDIA_TARGETS,
+  type SongMediaTargetKey,
+} from '../config/household-runtime-data.ts';
+
 /* Modell, mit dem der Server (server.mjs, SONG_LYRICS_MODEL) die Songtexte
    schreibt. Hier nur zur Anzeige in den Einstellungen — die Wahrheit liegt im
    Server; bei einer Änderung dort muss dieser Wert mitgezogen werden. */
@@ -30,12 +35,16 @@ export interface GeneratedSong {
   createdAt: string;
 }
 
-export const HOME_POD_TARGETS = {
-  wohnzimmer: { entityId: 'media_player.wohnzimmer_speaker', label: 'Wohnzimmer' },
-  kueche: { entityId: 'media_player.kueche_speaker', label: 'Küche' },
-} as const;
+const HOME_POD_TARGET_IDS = ['wohnzimmer', 'kueche'] as const satisfies readonly SongMediaTargetKey[];
+type HomePodTargetId = (typeof HOME_POD_TARGET_IDS)[number];
+type HomePodTargetConfig = Readonly<{ entityId: string; label: string }>;
 
-export type HomePodTarget = keyof typeof HOME_POD_TARGETS | 'both';
+/* Die aktive Projektion garantiert beide öffentlichen Schlüssel, sobald das
+   Songs-Modul aktiv ist. Ohne Songs darf die Quelle leer bleiben; deshalb wird
+   hier beim Modulimport kein Legacy-Fallback ergänzt. */
+export const HOME_POD_TARGETS = SONG_MEDIA_TARGETS as Readonly<Record<HomePodTargetId, HomePodTargetConfig>>;
+
+export type HomePodTarget = HomePodTargetId | 'both';
 
 const HMI_LAN_ORIGIN = 'http://localhost:4173';
 const STORAGE_KEY = 'hmi:generated-songs:v1';

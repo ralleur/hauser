@@ -66,9 +66,10 @@ be implemented in a static browser bundle.
 
 ### Shared household data
 
-Reminders and shopping data are stored in one companion-owned JSON document.
-The path can be changed with `HMI_FAMILY_DATA_PATH`. Writes are serialized by
-the family-data store and exposed through same-origin API routes.
+Reminders are stored in a companion-owned JSON document. The path can be
+changed with `HMI_FAMILY_DATA_PATH`; writes are serialized and exposed through
+same-origin API routes. Shopping remains separate because the private deployment
+shares that list through Notion.
 
 ### Paperless-ngx
 
@@ -80,9 +81,11 @@ safe synthetic document server.
 
 ## Notion
 
-Notion is not part of the current architecture. There is no Notion client,
-bridge route or runtime adapter. Shared reminders and shopping data belong to
-the companion store, so a Notion account is neither required nor supported.
+Notion is an optional private integration for the shopping list only. A local
+Python bridge polls the shared shopping page, writes a same-origin JSON snapshot,
+and accepts a narrow set of shopping write routes through the companion proxy.
+The browser never receives the Notion token. Reminders remain companion-owned.
+The public demo uses fixtures and does not connect to Notion.
 
 ## Demo isolation
 

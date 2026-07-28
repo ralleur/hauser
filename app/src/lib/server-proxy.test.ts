@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createSongLibrary, familyDataRequestAllowed, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -342,7 +342,7 @@ describe('HMI-Backend-Proxy', () => {
     expect(proxyRequestAllowed({ method: 'PUT', headers: { host: 'localhost:4173' } }, allowed)).toBe(false);
   });
 
-  it('speichert Erinnerungen und Einkaufsliste zentral im HMI-Backend', async () => {
+  it('speichert Erinnerungen zentral im HMI-Backend', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'hmi-family-data-'));
     tempDirs.push(dir);
     const dataPath = join(dir, 'family-data.json');
@@ -393,14 +393,63 @@ describe('HMI-Backend-Proxy', () => {
       title: 'Alex - Terrassentür schließen', due: '2026-08-02',
     });
 
-    const shoppingCreated = await fetch(`http://127.0.0.1:${port}/api/shopping/items`, {
+  });
+
+  it('erlaubt nur die Shopping-Routen der Notion-Bridge', () => {
+    const allowed = new Set(['https://dashboard.example.com']);
+    expect(notionBridgeTargetPath('/notion-bridge/health')).toBe('/health');
+    expect(notionBridgeTargetPath('/notion-bridge/shopping/add')).toBe('/shopping/add');
+    expect(notionBridgeTargetPath('/notion-bridge/shopping/toggle')).toBe('/shopping/toggle');
+    expect(notionBridgeTargetPath('/notion-bridge/tasks/add')).toBeNull();
+    expect(notionBridgeTargetPath('/notion-bridge/tasks/complete')).toBeNull();
+    expect(notionBridgeRequestAllowed({ method: 'POST', headers: { origin: 'https://dashboard.example.com' } }, '/shopping/add', allowed)).toBe(true);
+    expect(notionBridgeRequestAllowed({ method: 'GET', headers: {} }, '/health', allowed)).toBe(true);
+    expect(notionBridgeRequestAllowed({ method: 'GET', headers: {} }, '/shopping/add', allowed)).toBe(false);
+    expect(notionBridgeRequestAllowed({ method: 'POST', headers: { origin: 'https://evil.invalid' } }, '/shopping/add', allowed)).toBe(false);
+  });
+
+  it('reicht Shopping-POSTs zur lokalen Notion-Bridge weiter', async () => {
+    const snapshotDir = mkdtempSync(join(tmpdir(), 'hmi-notion-shopping-'));
+    tempDirs.push(snapshotDir);
+    const notionShoppingPath = join(snapshotDir, 'notion-shopping.json');
+    writeFileSync(notionShoppingPath, JSON.stringify({ sections: [{ id: 'aldi', title: 'Aldi', items: [] }] }));
+    let observedPath = '';
+    let observedBody = '';
+    const notionBridge = http.createServer((req: any, res: any) => {
+      observedPath = req.url || '';
+      req.on('data', (chunk: any) => { observedBody += chunk.toString(); });
+      req.on('end', () => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{"ok":true}');
+      });
+    });
+    servers.push(notionBridge);
+    await new Promise<void>((resolve) => notionBridge.listen(0, '127.0.0.1', resolve));
+    const server = createHmiServer('server-secret', {
+      notionBridgePort: (notionBridge.address() as { port: number }).port,
+      notionShoppingPath,
+      allowedOrigins: new Set(['https://dashboard.example.com']),
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const response = await fetch(`http://127.0.0.1:${port}/notion-bridge/shopping/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: 'https://dashboard.example.com' },
-      body: JSON.stringify({ store: 'rewe', title: 'Hafermilch' }),
+      body: '{"store":"aldi","title":"Test"}',
     });
-    expect(shoppingCreated.status).toBe(201);
-    const shopping = await (await fetch(`http://127.0.0.1:${port}/api/shopping`)).json();
-    expect(shopping.sections[0].items[0].title).toBe('Hafermilch');
+    expect(response.status).toBe(200);
+    expect(observedPath).toBe('/shopping/add');
+    expect(observedBody).toBe('{"store":"aldi","title":"Test"}');
+
+    const snapshot = await fetch(`http://127.0.0.1:${port}/notion-shopping.json`);
+    expect(snapshot.status).toBe(200);
+    expect(snapshot.headers.get('content-type')).toContain('application/json');
+    expect((await snapshot.json()).sections[0].id).toBe('aldi');
+
+    const obsoleteCompanionRoute = await fetch(`http://127.0.0.1:${port}/api/shopping`);
+    expect(obsoleteCompanionRoute.status).toBe(410);
   });
 
   it('erlaubt den Ambient-LLM-Pfad nur als POST vom freigegebenen Origin', () => {
@@ -415,6 +464,38 @@ describe('HMI-Backend-Proxy', () => {
     expect(staticPathFor('/../../etc/passwd')).toContain('/app/dist/etc/passwd');
     expect(staticPathFor('/%2e%2e/%2e%2e/etc/passwd')).toContain('/app/dist/etc/passwd');
     expect(staticPathFor('/../../etc/passwd')).not.toBe('/etc/passwd');
+  });
+
+  it('serves an injected static root without changing the default dist root', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-static-root-'));
+    tempDirs.push(root);
+    mkdirSync(join(root, 'assets'), { recursive: true });
+    writeFileSync(join(root, 'index.html'), '<!doctype html><title>Neutral harness</title>');
+    writeFileSync(join(root, 'assets', 'neutral.js'), 'export const neutral = true;');
+
+    expect(staticPathFor('/index.html')).toContain('/app/dist/index.html');
+    expect(staticPathFor('/index.html', root)).toBe(join(root, 'index.html'));
+    expect(staticPathFor('/../../etc/passwd', root)).toBe(join(root, 'etc', 'passwd'));
+
+    const server = createHmiServer('server-secret', {
+      staticRoot: root,
+      paperlessPin: '',
+      paperlessToken: '',
+      allowedOrigins: new Set(),
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const document = await fetch(`http://127.0.0.1:${port}/`);
+    expect(document.status).toBe(200);
+    expect(document.headers.get('cache-control')).toBe('no-cache');
+    expect(await document.text()).toContain('Neutral harness');
+
+    const asset = await fetch(`http://127.0.0.1:${port}/assets/neutral.js`);
+    expect(asset.status).toBe(200);
+    expect(asset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    expect(await asset.text()).toContain('neutral = true');
   });
 
   it('cached veränderliche PWA-Ressourcen nicht unveränderlich', () => {
@@ -549,4 +630,178 @@ describe('HMI-Backend-Proxy', () => {
       { role: 'system', content: 'Regeln' }, { role: 'user', content: 'Kontext' },
     ]);
   });
+
+  it('liest die Haushaltskonfiguration ausschließlich read-only vom expliziten Pfad', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-household-config-'));
+    tempDirs.push(root);
+    const configPath = join(root, 'current-v1.json');
+    const body = '{"schemaVersion":1,"rooms":[]}';
+    writeFileSync(configPath, body);
+    const allowed = new Set(['http://test-client.local']);
+
+    expect(householdConfigRequestAllowed({
+      method: 'GET', headers: { origin: 'http://test-client.local' },
+    }, allowed)).toBe(true);
+    expect(householdConfigRequestAllowed({ method: 'POST', headers: {} }, allowed)).toBe(false);
+    expect(householdConfigRequestAllowed({
+      method: 'GET', headers: { origin: 'https://evil.invalid' },
+    }, allowed)).toBe(false);
+
+    const response = invokeHouseholdConfig(createHouseholdConfigReader(configPath));
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.body).toBe(body);
+  });
+
+  it('liefert den serverseitigen Household-Modus als Header und aktiviert nur explizites active', () => {
+    const reader = { read: () => ({ ok: true, body: '{"schemaVersion":1}' }) };
+
+    expect(normalizeHouseholdConfigMode(undefined)).toBe('shadow');
+    expect(normalizeHouseholdConfigMode('shadow')).toBe('shadow');
+    expect(normalizeHouseholdConfigMode('active')).toBe('active');
+    expect(() => normalizeHouseholdConfigMode('enabled')).toThrow(/HMI_HOUSEHOLD_CONFIG_MODE/);
+
+    expect(invokeHouseholdConfig(reader, 'GET', 'shadow').headers['x-hmi-household-config-mode']).toBe('shadow');
+    expect(invokeHouseholdConfig(reader, 'GET', 'active').headers['x-hmi-household-config-mode']).toBe('active');
+  });
+
+  it('liefert den Modus über einen separaten nicht cachebaren Read-Kanal', async () => {
+    const direct = invokeHouseholdConfigMode('active');
+    expect(direct).toMatchObject({
+      status: 200,
+      headers: {
+        'cache-control': 'no-store',
+        'x-hmi-household-config-mode': 'active',
+      },
+      json: { mode: 'active' },
+    });
+
+    const server = createHmiServer('server-secret', {
+      householdConfigMode: 'shadow',
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    const response = await fetch(`http://127.0.0.1:${port}/api/household-config-mode`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('x-hmi-household-config-mode')).toBe('shadow');
+    expect(await response.json()).toEqual({ mode: 'shadow' });
+  });
+
+  it('setzt den Mode-Header auch auf Household-Fehlerantworten und weist ungültige Servermodi fail-closed ab', async () => {
+    const missing = invokeHouseholdConfig(createHouseholdConfigReader(null), 'GET', 'active');
+    expect(missing.status).toBe(503);
+    expect(missing.headers['x-hmi-household-config-mode']).toBe('active');
+
+    expect(() => createHmiServer('server-secret', {
+      householdConfigMode: 'enabled',
+      paperlessPin: '',
+      paperlessToken: '',
+    })).toThrow(/HMI_HOUSEHOLD_CONFIG_MODE/);
+
+    const server = createHmiServer('server-secret', {
+      householdConfigMode: 'active',
+      householdConfigPath: null,
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    const response = await fetch(`http://127.0.0.1:${port}/api/household-config`);
+    expect(response.status).toBe(503);
+    expect(response.headers.get('x-hmi-household-config-mode')).toBe('active');
+  });
+
+  it('meldet fehlende Pfadkonfiguration, Datei und falsche Methode fail-closed', () => {
+    expect(invokeHouseholdConfig(createHouseholdConfigReader(null))).toMatchObject({
+      status: 503,
+      json: { code: 'HOUSEHOLD_CONFIG_NOT_CONFIGURED' },
+    });
+    expect(invokeHouseholdConfig(createHouseholdConfigReader('/definitely/missing/current-v1.json')))
+      .toMatchObject({ status: 404, json: { code: 'HOUSEHOLD_CONFIG_NOT_FOUND' } });
+    expect(invokeHouseholdConfig(createHouseholdConfigReader(null), 'PUT')).toMatchObject({
+      status: 405,
+      json: { code: 'METHOD_NOT_ALLOWED' },
+    });
+  });
+
+  it('nutzt für die Serverroute nie den vorhandenen zentralen configPath als Household-Fallback', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-household-no-fallback-'));
+    tempDirs.push(root);
+    const configPath = join(root, 'central-config.json');
+    writeFileSync(configPath, '{"hmi:backend":"fake"}');
+
+    const server = createHmiServer('server-secret', {
+      configPath,
+      householdConfigPath: null,
+      allowedOrigins: new Set(['http://test-client.local']),
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/household-config`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      code: 'HOUSEHOLD_CONFIG_NOT_CONFIGURED',
+    });
+  });
+
+  it('weist nicht lesbare und zu große Haushaltsdateien verständlich ab', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-household-config-limits-'));
+    tempDirs.push(root);
+
+    expect(invokeHouseholdConfig(createHouseholdConfigReader(root))).toMatchObject({
+      status: 500,
+      json: { code: 'HOUSEHOLD_CONFIG_NOT_READABLE' },
+    });
+
+    const oversizedPath = join(root, 'oversized.json');
+    writeFileSync(oversizedPath, 'x'.repeat(1025));
+    expect(invokeHouseholdConfig(createHouseholdConfigReader(oversizedPath, 1024))).toMatchObject({
+      status: 413,
+      json: { code: 'HOUSEHOLD_CONFIG_TOO_LARGE' },
+    });
+  });
 });
+
+function invokeHouseholdConfig(reader: unknown, method = 'GET', mode = 'shadow'): {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+  json: Record<string, unknown> | null;
+} {
+  let status = 0;
+  let headers: Record<string, string> = {};
+  let body = '';
+  const response = {
+    writeHead(nextStatus: number, nextHeaders: Record<string, string>) {
+      status = nextStatus;
+      headers = nextHeaders;
+    },
+    end(chunk = '') { body += chunk; },
+  };
+  serveHouseholdConfig({ method, headers: {} }, response, reader, mode);
+  let json: Record<string, unknown> | null = null;
+  try { json = JSON.parse(body); } catch { /* Success is the raw JSON file. */ }
+  return { status, headers, body, json };
+}
+
+function invokeHouseholdConfigMode(mode = 'shadow', method = 'GET') {
+  let status = 0;
+  let headers: Record<string, string> = {};
+  let body = '';
+  const response = {
+    writeHead(nextStatus: number, nextHeaders: Record<string, string>) {
+      status = nextStatus;
+      headers = nextHeaders;
+    },
+    end(chunk = '') { body += chunk; },
+  };
+  serveHouseholdConfigMode({ method, headers: {} }, response, mode);
+  return { status, headers, body, json: JSON.parse(body) as Record<string, unknown> };
+}

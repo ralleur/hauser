@@ -9,7 +9,7 @@
    ============================================ */
 
 import { describe, expect, it } from 'vitest';
-import { ambientEntityIds, visibleEntityIds, allEntityIds, LAUNDRY_ENTITIES } from './entities.ts';
+import { ambientEntityIds, visibleEntityIds, allEntityIds, LAUNDRY_ENTITIES, lightEntityId } from './entities.ts';
 import { SUN_ENTITY, ENERGY_SENSORS, energyRefIds } from './app.svelte.ts';
 
 /* ENERGY_SENSORS-Refs → flache Liste konfigurierter entity_ids (null ausgelassen);
@@ -49,6 +49,10 @@ describe('ambient subscription set (ADR-006)', () => {
 });
 
 describe('per-screen subscription set (ADR-006)', () => {
+  it('weist unbekannte Lichtziele fail-closed ab', () => {
+    expect(() => lightEntityId('unknown-room', 'unknown-light')).toThrow(/Unknown configured light target/);
+  });
+
   it('trägt das Ambient-Set auf JEDEM Screen mit — nur so erklärt sich die Beobachtung', () => {
     const ambient = ambientEntityIds();
     for (const screen of SCREENS) {

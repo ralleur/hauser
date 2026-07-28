@@ -131,6 +131,12 @@
      Blur wird NIE animiert — nur die Scrim-Opacity (docs/01) ── */
   --overlay-scrim: rgba(11, 14, 18, 0.55);
   --overlay-blur: 20px;
+  /* Glass-Ebenen: Der diagonale Tonverlauf bricht große monotone Flächen auf.
+     Controls bleiben deutlich heller als das Panel und damit als bedienbare
+     Ebene erkennbar — auch wenn iOS den Backdrop-Blur reduziert. */
+  --overlay-panel-background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-2) 86%, transparent), color-mix(in srgb, var(--color-surface-1) 78%, transparent));
+  --overlay-control-background: color-mix(in srgb, var(--color-surface-3) 96%, transparent);
+  --overlay-border: color-mix(in srgb, var(--color-text-primary) 24%, transparent);
 
   /* ── Motion: Easing ── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -212,6 +218,9 @@
     /* Light Mode darf echte Schatten (weiße Cards mit Soft-Shadow) */
     --elevation-overlay-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     --overlay-scrim: rgba(236, 236, 236, 0.55);
+    --overlay-panel-background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-3) 90%, transparent), color-mix(in srgb, var(--color-surface-1) 82%, transparent));
+    --overlay-control-background: color-mix(in srgb, var(--color-surface-0) 94%, transparent);
+    --overlay-border: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
 }
 
 /* ── Reduced Motion ── */

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { ScreenId } from '../../state/nav.svelte.ts';
-  import { moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
+  import { PHONE_NAV_REORDERABLE, moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
+  import PhoneNavIcon from './PhoneNavIcon.svelte';
 
   let {
     current,
@@ -106,15 +107,26 @@
   <div class="more-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="more-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
     <header>
       <h2 id="more-sheet-title">Mehr</h2>
-      <button class="more-sheet-close pressable" type="button" aria-label="Mehr schließen" onclick={() => onclose('close')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg>
-      </button>
+      <div class="more-sheet-header-actions">
+        {#if PHONE_NAV_REORDERABLE}
+          <button class="more-sheet-action more-arrange-toggle pressable" type="button"
+                  aria-label={arranging ? 'Anordnen beenden' : 'Navigation anordnen'}
+                  aria-pressed={arranging} onclick={() => (arranging = !arranging)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5-5 5 5M17 15l-5 5-5-5" /></svg>
+          </button>
+        {/if}
+        <button class="more-sheet-action more-sheet-close pressable" type="button" aria-label="Mehr schließen" onclick={() => onclose('close')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg>
+        </button>
+      </div>
     </header>
     {#if !arranging}
       <div class="more-sheet-list">
         {#each phoneNavOrder.order.slice(3) as id (id)}
           <button use:rememberFirstTarget class="more-sheet-target pressable" type="button" aria-current={navTargetForScreen(current) === id ? 'page' : undefined} onclick={() => onselect(id)}>
-            <span aria-hidden="true">›</span><span>{navTargetLabel(id)}</span>
+            <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
+            <span>{navTargetLabel(id)}</span>
+            <svg class="more-sheet-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
           </button>
         {/each}
       </div>
@@ -122,6 +134,7 @@
       <div class="more-sheet-list" aria-label="Reihenfolge der Navigation">
         {#each phoneNavOrder.order as id, index (id)}
           <div class="more-arrange-row">
+            <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
             <span>{navTargetLabel(id)}</span>
             <span class="more-arrange-actions">
               <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach oben" disabled={index === 0} onclick={() => moveNavTarget(id, -1)}>
@@ -135,8 +148,5 @@
         {/each}
       </div>
     {/if}
-    <button class="more-sheet-target more-arrange-toggle pressable" type="button" aria-pressed={arranging} onclick={() => (arranging = !arranging)}>
-      <span aria-hidden="true">⇅</span><span>{arranging ? 'Fertig' : 'Anordnen'}</span>
-    </button>
   </div>
 </div>

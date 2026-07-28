@@ -63,9 +63,10 @@ adapter boundary. See [Interaction contract](02-interaction-contract.md).
 - Calendar and selected reminder sources are Home Assistant domains
   (`calendar.*` and `todo.*`), not separate browser-side CalDAV clients.
 - Jellyfin uses a small fetch-based client and an isolated playback adapter.
-- The companion owns shared reminders and shopping data and exposes the
-  PIN-gated Paperless proxy. Secrets remain server-side.
-- Notion is not a runtime dependency or integration.
+- The companion owns shared reminders and exposes the PIN-gated Paperless proxy.
+- A local server-side bridge optionally synchronizes shopping with Notion.
+  The browser receives only same-origin JSON and restricted shopping routes;
+  credentials remain server-side.
 
 Details and public-demo differences are listed in
 [Integrations](04-integrations.md).

@@ -14,13 +14,14 @@
    ============================================ */
 
 import { m } from '../../paraglide/messages.js';
+import demoHouseholdConfig from '../../../config/households/current-v1.json';
 
 export const IS_DEMO = import.meta.env?.VITE_DEMO === '1';
 
-function json(body: unknown, status = 200): Response {
+function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 }
 
@@ -83,7 +84,17 @@ function demoShopping() {
    Leerzustand, was ehrlicher ist als vorgetäuschte Wiedergabe. */
 const demoSongs = () => ({ songs: [] });
 
-function demoResponse(path: string, method: string): Response | null {
+export function demoResponse(path: string, method: string): Response | null {
+  if (path === '/api/household-config-mode') {
+    return method === 'GET'
+      ? json({ mode: 'active' }, 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' });
+  }
+  if (path === '/api/household-config') {
+    return method === 'GET'
+      ? json(demoHouseholdConfig, 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' });
+  }
   /* Die Ambient-Texte entstehen normalerweise über einen lokalen LLM-Dienst.
      In der Demo gibt es den nicht — hier wird bewusst der vorhandene
      Fallback-Pfad ausgelöst statt eine LLM-Antwort vorzutäuschen. Ohne diese

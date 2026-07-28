@@ -14,7 +14,8 @@ import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overla
 import { enqueue } from './command-queue.ts';
 import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue } from './types.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
-import { buildEntitySeed, buildMediaSeed, allEntityIds, LAUNDRY_ENTITIES } from '../state/entities.ts';
+import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
+import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
 import { FAKE_DISCOVERY_CATALOG } from '../state/device-config.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
@@ -237,7 +238,7 @@ function useFake(): boolean {
 
 export const backend: Backend = useFake()
   ? new FakeBackend(seed)
-  : new HaBackend({ url: HA_URL, entityIds: allEntityIds(), seed });
+  : new HaBackend({ url: HA_URL, entityIds: HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds, seed });
 
 export const runtime = new AdapterRuntime(backend);
 

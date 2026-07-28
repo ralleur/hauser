@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "rooms": [
+    {
+      "id": "wohnzimmer",
+      "name": "Wohnzimmer",
+      "visibleEntities": [
+        { "id": "kugellampen", "name": "Kugellampen", "entityId": "light.wohnzimmer_kugellampen", "role": "light" },
+        { "id": "esstisch", "name": "Esstisch", "entityId": "light.wohnzimmer_esstisch", "role": "light" },
+        { "id": "kugel_tv", "name": "Kugellampe TV", "entityId": "light.wohnzimmer_tv", "role": "light" },
+        { "id": "kugel_fenster", "name": "Kugellampe Fenster", "entityId": "light.wohnzimmer_fensterlampe", "role": "light" },
+        { "id": "climate", "name": "Klima", "entityId": "climate.wohnzimmer", "role": "climate" },
+        { "id": "camera", "name": "Kamera", "entityId": "camera.balkon", "role": "camera" }
+      ]
+    },
+    {
+      "id": "kinderzimmer",
+      "name": "Kinderzimmer",
+      "visibleEntities": []
+    },
+    {
+      "id": "schlafzimmer",
+      "name": "Schlafzimmer",
+      "visibleEntities": [
+        { "id": "bett", "name": "Bett", "entityId": "light.schlafzimmer_bett", "role": "light" },
+        { "id": "schreibtisch", "name": "Schreibtisch", "entityId": "light.schlafzimmer_schreibtisch", "role": "light" },
+        { "id": "climate", "name": "Klima", "entityId": "climate.schlafzimmer", "role": "climate" }
+      ]
+    },
+    {
+      "id": "bad",
+      "name": "Bad",
+      "visibleEntities": [
+        { "id": "spiegel", "name": "Spiegellicht", "entityId": "light.bad_spiegel", "role": "light" },
+        { "id": "climate", "name": "Klima", "entityId": "climate.bad", "role": "climate" }
+      ]
+    },
+    {
+      "id": "kueche",
+      "name": "Küche",
+      "visibleEntities": [
+        { "id": "ledfridge", "name": "LED-Leiste", "entityId": "light.kueche_ledleiste", "role": "light" }
+      ]
+    },
+    {
+      "id": "flur",
+      "name": "Flur",
+      "visibleEntities": []
+    }
+  ],
+  "navigation": [
+    { "id": "home", "name": "Home", "order": 0, "target": { "type": "module", "id": "home" } },
+    { "id": "energy", "name": "Energie", "order": 1, "target": { "type": "module", "id": "energy" } },
+    { "id": "calendar", "name": "Kalender", "order": 2, "target": { "type": "module", "id": "calendar" } },
+    { "id": "notes", "name": "Notizen", "order": 3, "target": { "type": "module", "id": "notes" } },
+    { "id": "media", "name": "Media", "order": 4, "target": { "type": "module", "id": "media" } },
+    { "id": "songs", "name": "Songs", "order": 5, "target": { "type": "module", "id": "songs" } },
+    { "id": "library", "name": "Bibliothek", "order": 6, "target": { "type": "module", "id": "library" } },
+    { "id": "ablage", "name": "Ablage", "order": 7, "target": { "type": "module", "id": "ablage" } },
+    { "id": "system", "name": "System", "order": 8, "target": { "type": "module", "id": "system" } }
+  ],
+  "enabledModules": [
+    "home",
+    "energy",
+    "calendar",
+    "notes",
+    "shopping",
+    "reminders",
+    "media",
+    "songs",
+    "library",
+    "ablage",
+    "system",
+    "laundry",
+    "vacation"
+  ],
+  "energy": {
+    "sensors": {
+      "productionPower": null,
+      "consumptionPower": [
+        { "id": "load_1", "name": "Steckdosenleiste Kanal 1", "entityId": "sensor.strom_leiste_kanal_1_power", "group": "Steckdosenleiste" },
+        { "id": "load_2", "name": "Steckdosenleiste Kanal 2", "entityId": "sensor.strom_leiste_kanal_2_power", "group": "Steckdosenleiste" },
+        { "id": "load_3", "name": "Waschmaschine", "entityId": "sensor.waschmaschine_strom_power" },
+        { "id": "load_4", "name": "Schreibtisch links", "entityId": "sensor.strom_schreibtisch_links_power" },
+        { "id": "load_5", "name": "Bad (klein)", "entityId": "sensor.strom_bad_klein_power" },
+        { "id": "load_6", "name": "Schlafzimmer Tür", "entityId": "sensor.strom_schlafzimmer_tuer_power" },
+        { "id": "load_7", "name": "Wohnzimmer Regal", "entityId": "sensor.strom_wohnzimmer_regal_power" },
+        { "id": "load_8", "name": "Couch", "entityId": "sensor.strom_couch_lang_power" },
+        { "id": "load_9", "name": "Glastür", "entityId": "sensor.strom_glastuer_power" },
+        { "id": "load_10", "name": "Spüle", "entityId": "sensor.strom_spuele_power" },
+        { "id": "load_11", "name": "Kinderzimmer Tür", "entityId": "sensor.strom_kinderzimmer_tuer_power" },
+        { "id": "load_12", "name": "Zigbee-Steckdose", "entityId": "sensor.strom_zigbee_steckdose_power" },
+        { "id": "load_13", "name": "Trockner", "entityId": "sensor.strom_trockner_power" },
+        { "id": "load_14", "name": "Kaffeemaschine", "entityId": "sensor.strom_kaffeemaschine_power" },
+        { "id": "load_15", "name": "Server", "entityId": "sensor.strom_server_power" }
+      ]
+    },
+    "kpis": {
+      "producedToday": null,
+      "consumedToday": "sensor.hmi_erfasste_last_taeglich",
+      "fedInToday": null,
+      "drawnToday": null
+    }
+  },
+  "mediaTargets": [
+    { "id": "wohnzimmer", "name": "Wohnzimmer", "entityId": "media_player.wohnzimmer_speaker", "roomId": "wohnzimmer" },
+    { "id": "kueche", "name": "Küche", "entityId": "media_player.kueche_speaker", "roomId": "kueche" }
+  ],
+  "globalEntities": {
+    "sun": "sun.sun",
+    "vacationMode": "switch.urlaubsmodus",
+    "homeOffScript": "script.hmi_home_ausser_schlafzimmer_aus",
+    "laundry": {
+      "washer": "input_boolean.waschmaschine_laeuft",
+      "dryer": "input_boolean.trockner_laeuft"
+    }
+  }
+}

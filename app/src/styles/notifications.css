@@ -10,6 +10,18 @@
   pointer-events: none;
 }
 
+.notification-tile-shell {
+  position: relative;
+  transform: translate3d(var(--notification-drag), 0, 0);
+  transition: transform var(--duration-normal) var(--ease-out);
+  touch-action: pan-y;
+  pointer-events: auto;
+  animation: notification-enter var(--duration-enter) var(--ease-out) both;
+}
+
+.notification-tile-shell.is-dragging { transition: none; }
+.notification-tile-shell.is-dismissing { pointer-events: none; }
+
 .notification-tile {
   --notification-accent: var(--color-text-secondary);
   position: relative;
@@ -24,11 +36,6 @@
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
   box-shadow: var(--elevation-overlay-shadow);
-  transform: translate3d(var(--notification-drag), 0, 0);
-  transition: transform var(--duration-normal) var(--ease-out);
-  touch-action: pan-y;
-  pointer-events: auto;
-  animation: notification-enter var(--duration-enter) var(--ease-out) both;
 }
 
 .notification-tile::before {
@@ -43,7 +50,9 @@
 .notification-tile.is-success { --notification-accent: var(--color-success); }
 .notification-tile.is-warning { --notification-accent: var(--color-warning); }
 .notification-tile.is-critical { --notification-accent: var(--color-error); }
-.notification-tile.is-dragging { transition: none; }
+.notification-tile.is-dismissing {
+  animation: notification-pop var(--duration-enter) var(--ease-in) both;
+}
 
 .notification-icon {
   display: grid;
@@ -91,9 +100,64 @@
 }
 .notification-dismiss:focus-visible { outline: 2px solid var(--notification-accent); outline-offset: 2px; }
 
+.notification-confetti {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.notification-confetti-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--space-2);
+  height: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-warm);
+  animation: notification-confetti var(--duration-enter) var(--ease-out) both;
+}
+
+.notification-confetti-piece:nth-child(3n + 2) { background: var(--color-accent-cool); }
+.notification-confetti-piece:nth-child(3n) { background: var(--color-success); }
+.notification-confetti-piece:nth-child(even) {
+  width: var(--space-1);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.notification-confetti-piece.piece-1  { --confetti-x: calc(0px - var(--space-8)); --confetti-y: calc(0px - var(--space-8)); --confetti-r: -135deg; }
+.notification-confetti-piece.piece-2  { --confetti-x: calc(0px - var(--space-6)); --confetti-y: calc(0px - var(--space-8) - var(--space-5)); --confetti-r: -90deg; }
+.notification-confetti-piece.piece-3  { --confetti-x: 0px; --confetti-y: calc(0px - var(--space-8)); --confetti-r: -45deg; }
+.notification-confetti-piece.piece-4  { --confetti-x: var(--space-6); --confetti-y: calc(0px - var(--space-8) - var(--space-5)); --confetti-r: 45deg; }
+.notification-confetti-piece.piece-5  { --confetti-x: var(--space-8); --confetti-y: calc(0px - var(--space-8)); --confetti-r: 90deg; }
+.notification-confetti-piece.piece-6  { --confetti-x: calc(var(--space-8) + var(--space-5)); --confetti-y: calc(0px - var(--space-5)); --confetti-r: 135deg; }
+.notification-confetti-piece.piece-7  { --confetti-x: var(--space-8); --confetti-y: var(--space-6); --confetti-r: 180deg; }
+.notification-confetti-piece.piece-8  { --confetti-x: var(--space-6); --confetti-y: var(--space-8); --confetti-r: 225deg; }
+.notification-confetti-piece.piece-9  { --confetti-x: 0px; --confetti-y: calc(var(--space-8) + var(--space-4)); --confetti-r: 270deg; }
+.notification-confetti-piece.piece-10 { --confetti-x: calc(0px - var(--space-6)); --confetti-y: var(--space-8); --confetti-r: 315deg; }
+.notification-confetti-piece.piece-11 { --confetti-x: calc(0px - var(--space-8)); --confetti-y: var(--space-6); --confetti-r: 360deg; }
+.notification-confetti-piece.piece-12 { --confetti-x: calc(0px - var(--space-8) - var(--space-5)); --confetti-y: calc(0px - var(--space-5)); --confetti-r: 405deg; }
+
 @keyframes notification-enter {
   from { opacity: 0; transform: translate3d(120%, 0, 0); }
   to { opacity: 1; transform: translate3d(var(--notification-drag), 0, 0); }
+}
+
+@keyframes notification-pop {
+  0% { opacity: 1; transform: scale(1); }
+  35% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 0; transform: scale(0.72); }
+}
+
+@keyframes notification-confetti {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(0.3) rotate(0deg); }
+  15% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(-50% + var(--confetti-x)), calc(-50% + var(--confetti-y)), 0) scale(1) rotate(var(--confetti-r));
+  }
 }
 
 @media (max-width: 767px) {
@@ -106,5 +170,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notification-tile { animation: none; }
+  .notification-tile-shell,
+  .notification-tile,
+  .notification-confetti-piece { animation: none; }
 }

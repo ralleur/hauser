@@ -1,4 +1,4 @@
-import { hmiDataRequest } from './hmi-data.ts';
+import { bridgePost } from './notion-bridge.ts';
 import {
   SHOPPING_CATEGORIES,
   categoryLabel,
@@ -28,7 +28,7 @@ function persist(stores: ShoppingStoreConfig[]): void {
 export async function addShoppingStore(label: string): Promise<boolean> {
   const store = createStore(label, shoppingConfig.stores);
   if (!store) return false;
-  await hmiDataRequest('/api/shopping/stores', 'POST', { id: store.id, label: store.label });
+  await bridgePost('/shopping/store/add', { id: store.id, label: store.label });
   persist([...shoppingConfig.stores, store]);
   return true;
 }
@@ -36,7 +36,7 @@ export async function addShoppingStore(label: string): Promise<boolean> {
 export async function deleteShoppingStore(id: StoreId): Promise<void> {
   const store = shoppingConfig.stores.find((entry) => entry.id === id);
   if (!store) return;
-  await hmiDataRequest(`/api/shopping/stores/${encodeURIComponent(id)}`, 'DELETE');
+  await bridgePost('/shopping/store/delete', { id, label: store.label });
   persist(shoppingConfig.stores.filter((entry) => entry.id !== id));
 }
 

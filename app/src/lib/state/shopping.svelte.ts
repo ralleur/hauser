@@ -1,8 +1,9 @@
-import { hmiDataRequest } from './hmi-data.ts';
+import { bridgePost } from './notion-bridge.ts';
 import { purgeDoneEntries, type ShoppingDoneEntry, type ShoppingFile, type ShoppingItem, type ShoppingSection, type StoreId } from './shopping.ts';
 import { shoppingConfig } from './shopping-settings.svelte.ts';
 
-/* Zentrale HMI-Einkaufsliste mit lokalem Cache für einen schnellen Start. */
+/* Notion bleibt die gemeinsame Quelle der Einkaufsliste. Der lokale Cache
+   sorgt nur für einen schnellen Start; die Bridge liest und schreibt Notion. */
 
 const CACHE_KEY = 'hmi:shopping-cache';
 const DONE_KEY = 'hmi:shopping-done-log.v1';
@@ -40,7 +41,7 @@ export async function refreshShopping(): Promise<void> {
   return refreshPromise;
 }
 
-/* Neues Item zentral speichern und optimistisch anzeigen. */
+/* Neues Item über die lokale Bridge in Notion speichern. */
 export async function addShoppingItem(store: StoreId, title: string): Promise<void> {
   const id = `optimistic-shopping-${Date.now()}-${optimisticSequence++}`;
   const expectedCount = (shopping.sections.find((section) => section.id === store)?.items
@@ -57,7 +58,7 @@ export async function addShoppingItem(store: StoreId, title: string): Promise<vo
       items: [{ id, title, checked: false }],
     }];
   try {
-    await hmiDataRequest('/api/shopping/items', 'POST', { store, title });
+    await bridgePost('/shopping/add', { store, title });
     scheduleReconcile();
   } catch (error) {
     pendingAdds.delete(id);
@@ -68,7 +69,7 @@ export async function addShoppingItem(store: StoreId, title: string): Promise<vo
   }
 }
 
-/* Double-Tap schaltet sofort lokal um; bei Backend-Fehler wird zurückgerollt. */
+/* Double-Tap schaltet sofort lokal um; bei Bridge-Fehler wird zurückgerollt. */
 export async function toggleShoppingItem(store: StoreId, item: ShoppingItem): Promise<void> {
   const checked = !item.checked;
   const checkedAt = checked ? new Date().toISOString() : null;
@@ -82,7 +83,7 @@ export async function toggleShoppingItem(store: StoreId, item: ShoppingItem): Pr
 
   pendingToggles.set(item.id, checked);
   try {
-    await hmiDataRequest(`/api/shopping/items/${encodeURIComponent(item.id)}`, 'PATCH', { checked });
+    await bridgePost('/shopping/toggle', { id: item.id, checked });
     scheduleReconcile();
   } catch (error) {
     pendingToggles.delete(item.id);
@@ -103,7 +104,7 @@ export function purgeDoneLog(): void {
 async function refresh(): Promise<void> {
   shopping.loading = true;
   try {
-    const resp = await fetch('/api/shopping', { cache: 'no-store' });
+    const resp = await fetch('/notion-shopping.json', { cache: 'no-cache' });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json() as ShoppingFile;
     shopping.sections = mergePendingAdds(data.sections ?? []);
@@ -145,7 +146,7 @@ function mergePendingAdds(sections: ShoppingSection[]): ShoppingSection[] {
               : item),
           }));
           pendingToggles.set(remote.id, true);
-          void hmiDataRequest(`/api/shopping/items/${encodeURIComponent(remote.id)}`, 'PATCH', { checked: true }).then(scheduleReconcile);
+          void bridgePost('/shopping/toggle', { id: remote.id, checked: true }).then(scheduleReconcile);
         }
       }
       continue;
