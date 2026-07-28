@@ -41,6 +41,23 @@ after_healthy() {
 docker compose up -d --no-build
 after_healthy
 docker compose exec -T hauser node container/healthcheck.mjs
+docker compose exec -T hauser node -e '
+  fetch("http://127.0.0.1:4173/api/health")
+    .then((response) => response.json())
+    .then((health) => {
+      if (health.status !== "setup_required") process.exit(1);
+    });
+'
+docker compose cp app/config/examples/neutral-small.json hauser:/config/household.json >/dev/null
+docker compose restart hauser >/dev/null
+after_healthy
+docker compose exec -T hauser node -e '
+  fetch("http://127.0.0.1:4173/api/health")
+    .then((response) => response.json())
+    .then((health) => {
+      if (health.status !== "ready" || health.schemaVersion !== 1) process.exit(1);
+    });
+'
 test "$(docker compose exec -T hauser id -u | tr -d '\r')" = "1000"
 if docker compose exec -T hauser sh -c 'touch /opt/hauser/rootfs-must-be-read-only' 2>/dev/null; then
   printf '%s\n' 'Root filesystem unexpectedly writable.' >&2
@@ -92,5 +109,5 @@ set -e
 test "$invalid_status" -ne 0
 printf '%s' "$invalid_output" | grep -q 'HOUSEHOLD_CONFIG_INVALID'
 
-printf 'project=%s\nimage=%s\nconfig_hash=%s\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\n' \
+printf 'project=%s\nimage=%s\nconfig_hash=%s\nsetup_required=PASS\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\n' \
   "$project" "$image" "$config_hash_after"

@@ -134,7 +134,8 @@ export function buildMediaSeed(players: readonly MediaSeed[]): Map<string, unkno
    Entitäten), die Dauer-Subscription damit vernachlässigbar. Nicht konfigurierte
    (null) Energie-Sensoren werden ausgelassen. */
 export function ambientEntityIds(): string[] {
-  const ids = [SUN_ENTITY, ...Object.values(LAUNDRY_ENTITIES)];
+  const ids = [SUN_ENTITY, ...Object.values(LAUNDRY_ENTITIES)]
+    .filter((entityId): entityId is string => entityId !== null);
   for (const ref of Object.values(ENERGY_SENSORS)) ids.push(...energyRefIds(ref));
   return ids;
 }
@@ -152,7 +153,7 @@ export function allEntityIds(): string[] {
 export function visibleEntityIds(screen: string): string[] {
   const ambient = ambientEntityIds();
   const lightIds = currentLightIds();
-  if (screen === 'home') return [...climateIds.values(), ...tempSensorIds.values(), ...lightIds.values(), ...mediaIds.values(), ...Object.values(ROOM_CAMERA_ENTITIES), VACATION_MODE_ENTITY, ...ambient];
+  if (screen === 'home') return [...climateIds.values(), ...tempSensorIds.values(), ...lightIds.values(), ...mediaIds.values(), ...Object.values(ROOM_CAMERA_ENTITIES), ...(VACATION_MODE_ENTITY ? [VACATION_MODE_ENTITY] : []), ...ambient];
   if (screen === 'media') return [...mediaIds.values(), ...ambient];
   return ambient;
 }

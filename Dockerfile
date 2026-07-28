@@ -50,8 +50,7 @@ COPY --from=build --chown=node:node /build/app/dist ./dist
 COPY --from=build --chown=node:node /build/server-contract ./server-contract
 COPY --chown=node:node app/server.mjs app/package.json ./
 COPY --chown=node:node container/healthcheck.mjs ./container/healthcheck.mjs
-COPY --chown=node:node app/config/examples/neutral-small.json /config/household.json
-RUN mkdir -p /data/songs /assets && chown -R node:node /opt/hauser /config /data /assets
+RUN mkdir -p /config /data/songs /assets && chown -R node:node /opt/hauser /config /data /assets
 
 VOLUME ["/config", "/data", "/assets"]
 USER node

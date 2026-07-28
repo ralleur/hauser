@@ -222,6 +222,7 @@ export function shouldConfirmHomeOff(now: Date, before: string | null): boolean 
 }
 
 export function turnOffHomeExceptBedroom(): void {
+  if (!HOME_OFF_SCRIPT_ENTITY) return;
   runtime.dispatch(
     { entityId: HOME_OFF_SCRIPT_ENTITY, domain: 'script', service: 'turn_on', data: {}, queuedAt: Date.now() },
     { on: true } satisfies SwitchValue,
@@ -229,10 +230,12 @@ export function turnOffHomeExceptBedroom(): void {
 }
 
 export function vacationModeActive(): boolean {
+  if (!VACATION_MODE_ENTITY) return false;
   return Boolean((runtime.merged(VACATION_MODE_ENTITY) as SwitchValue | undefined)?.on);
 }
 
 export function toggleVacationMode(): void {
+  if (!VACATION_MODE_ENTITY) return;
   const next = !vacationModeActive();
   runtime.dispatch(
     {

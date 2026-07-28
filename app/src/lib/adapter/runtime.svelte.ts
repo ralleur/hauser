@@ -197,9 +197,9 @@ const seed = new Map<string, unknown>([
   // Read-only-Ambient: sun.sun-Fallback (Nacht) bis zum ersten echten Push —
   // deckt sich mit dem Default-Theme 'dark'. Energie-Sensoren haben keinen
   // Seed (installationsspezifisch, null bis konfiguriert).
-  [SUN_ENTITY, { day: false } satisfies SunValue],
-  [LAUNDRY_ENTITIES.washer, { on: true, changedAt: Date.now() - 42 * 60_000 }],
-  [LAUNDRY_ENTITIES.dryer, { on: true, changedAt: Date.now() - 8 * 60_000 }],
+  ...(SUN_ENTITY ? [[SUN_ENTITY, { day: false } satisfies SunValue] as const] : []),
+  ...(LAUNDRY_ENTITIES.washer ? [[LAUNDRY_ENTITIES.washer, { on: true, changedAt: Date.now() - 42 * 60_000 }] as const] : []),
+  ...(LAUNDRY_ENTITIES.dryer ? [[LAUNDRY_ENTITIES.dryer, { on: true, changedAt: Date.now() - 8 * 60_000 }] as const] : []),
   // Demo-Build: Energie-Sensoren bekommen Startwerte, sonst zeigt der Screen
   // nur „—" (leer außerhalb der Demo).
   ...demoEnergySeed(),

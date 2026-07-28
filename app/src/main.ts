@@ -15,6 +15,21 @@ const shellLoaders = {
 // Vor den Bootstrap-Fetches: die Demo stellt ihre isolierten API-Antworten bereit.
 installDemoApi();
 
+async function setupIsRequired(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) return false;
+    const payload = await response.json() as { status?: unknown };
+    return payload.status === 'setup_required';
+  } catch {
+    return false;
+  }
+}
+
 function renderHouseholdConfigError(code: string): void {
   const main = document.createElement('main');
   main.setAttribute('role', 'alert');
@@ -29,43 +44,50 @@ function renderHouseholdConfigError(code: string): void {
   document.body.replaceChildren(main);
 }
 
-const householdConfigRuntime = await bootstrapHouseholdConfigRuntime({
-  startProductiveApp: async () => {
-    // Zentrale Browser-Konfiguration ebenfalls vor State-/Runtime-Singletons laden.
-    const { bootstrapSharedConfig } = await import('./lib/state/shared-config.ts');
-    await bootstrapSharedConfig();
-    const [{ standalone }, { default: App }] = await Promise.all([
-      import('./lib/state/standalone.svelte.ts'),
-      import('./App.svelte'),
-    ]);
+let mountedApp: unknown = null;
 
-    document.documentElement.setAttribute('data-standalone', String(standalone.active));
+if (await setupIsRequired()) {
+  const { default: SetupWizard } = await import('./lib/components/SetupWizard.svelte');
+  mountedApp = mount(SetupWizard, { target: document.body });
+} else {
+  const householdConfigRuntime = await bootstrapHouseholdConfigRuntime({
+    startProductiveApp: async () => {
+      // Zentrale Browser-Konfiguration ebenfalls vor State-/Runtime-Singletons laden.
+      const { bootstrapSharedConfig } = await import('./lib/state/shared-config.ts');
+      await bootstrapSharedConfig();
+      const [{ standalone }, { default: App }] = await Promise.all([
+        import('./lib/state/standalone.svelte.ts'),
+        import('./App.svelte'),
+      ]);
 
-    /* Demo-Deep-Link (#library, #energy …) vor dem Mount: der Startscreen soll
-       ohne Übergang direkt stehen, damit die Landing Page gezielt verlinken kann. */
-    const [{ nav }, { appState }] = await Promise.all([
-      import('./lib/state/nav.svelte.ts'),
-      import('./lib/state/app.svelte.ts'),
-    ]);
-    applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
+      document.documentElement.setAttribute('data-standalone', String(standalone.active));
 
-    const app = mount(App, { target: document.body, props: { shellLoaders } });
+      /* Demo-Deep-Link (#library, #energy …) vor dem Mount: der Startscreen soll
+         ohne Übergang direkt stehen, damit die Landing Page gezielt verlinken kann. */
+      const [{ nav }, { appState }] = await Promise.all([
+        import('./lib/state/nav.svelte.ts'),
+        import('./lib/state/app.svelte.ts'),
+      ]);
+      applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
 
-    // Registrierung erst nach dem ersten Render. Ein wartendes Update wird nur im
-    // Ambient-Zustand oder bei verdeckter App aktiviert (ADR-016/B-15C1).
-    void import('./lib/state/pwa-lifecycle.ts').then(({ startPwaLifecycle }) => startPwaLifecycle());
+      const app = mount(App, { target: document.body, props: { shellLoaders } });
 
-    /* Nach dem Mount: initDeviceManager() baut die Räume beim Start aus Seed und
-       gespeicherter Konfiguration neu auf und würde frühere Namen überschreiben. */
-    applyDemoNames(appState.rooms);
-    return app;
-  },
-});
+      // Registrierung erst nach dem ersten Render. Ein wartendes Update wird nur im
+      // Ambient-Zustand oder bei verdeckter App aktiviert (ADR-016/B-15C1).
+      void import('./lib/state/pwa-lifecycle.ts').then(({ startPwaLifecycle }) => startPwaLifecycle());
 
-if (householdConfigRuntime.status === 'error') {
-  renderHouseholdConfigError(householdConfigRuntime.code);
+      /* Nach dem Mount: initDeviceManager() baut die Räume beim Start aus Seed und
+         gespeicherter Konfiguration neu auf und würde frühere Namen überschreiben. */
+      applyDemoNames(appState.rooms);
+      return app;
+    },
+  });
+
+  if (householdConfigRuntime.status === 'error') {
+    renderHouseholdConfigError(householdConfigRuntime.code);
+  } else {
+    mountedApp = householdConfigRuntime.app;
+  }
 }
 
-export default householdConfigRuntime.status === 'error'
-  ? null
-  : householdConfigRuntime.app;
+export default mountedApp;

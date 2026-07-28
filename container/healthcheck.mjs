@@ -8,7 +8,8 @@ try {
     headers: { accept: 'application/json' },
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || payload?.ok !== true || payload?.status !== 'ready') {
+  const healthyStatus = payload?.status === 'ready' || payload?.status === 'setup_required';
+  if (!response.ok || payload?.ok !== true || !healthyStatus) {
     throw new Error(payload?.code || `HTTP_${response.status}`);
   }
 } catch (error) {

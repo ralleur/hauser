@@ -38,10 +38,10 @@ export interface ProjectedHouseholdData {
   ROOM_SEED: RoomSeed[];
   MEDIA_SEED: MediaSeed[];
   ENERGY_SENSORS: EnergySensors;
-  SUN_ENTITY: string;
-  VACATION_MODE_ENTITY: string;
-  HOME_OFF_SCRIPT_ENTITY: string;
-  LAUNDRY_ENTITIES: Readonly<{ washer: string; dryer: string }>;
+  SUN_ENTITY: string | null;
+  VACATION_MODE_ENTITY: string | null;
+  HOME_OFF_SCRIPT_ENTITY: string | null;
+  LAUNDRY_ENTITIES: Readonly<{ washer: string | null; dryer: string | null }>;
   ROOM_CAMERA_ENTITIES: Readonly<Record<string, string>>;
   NAV_SCREENS: readonly LegacyScreenEntry[];
   NAV_TABS: readonly RuntimeTab[];
@@ -50,9 +50,12 @@ export interface ProjectedHouseholdData {
 }
 
 export class HouseholdConfigProjectionError extends Error {
-  constructor(readonly code: string, message: string) {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
     super(message);
     this.name = 'HouseholdConfigProjectionError';
+    this.code = code;
   }
 }
 
@@ -63,10 +66,10 @@ export let HOUSEHOLD_RUNTIME_MODEL: HouseholdRuntimeModel = legacyHouseholdRunti
 export let ROOM_SEED: RoomSeed[] = LEGACY_ROOM_SEED;
 export let MEDIA_SEED: readonly MediaSeed[] = LEGACY_MEDIA_SEED;
 export let ENERGY_SENSORS: EnergySensors = LEGACY_ENERGY_SENSORS;
-export let SUN_ENTITY = LEGACY_SUN_ENTITY;
-export let VACATION_MODE_ENTITY = LEGACY_VACATION_MODE_ENTITY;
-export let HOME_OFF_SCRIPT_ENTITY = LEGACY_HOME_OFF_SCRIPT_ENTITY;
-export let LAUNDRY_ENTITIES: Readonly<{ washer: string; dryer: string }> = LEGACY_LAUNDRY_ENTITIES;
+export let SUN_ENTITY: string | null = LEGACY_SUN_ENTITY;
+export let VACATION_MODE_ENTITY: string | null = LEGACY_VACATION_MODE_ENTITY;
+export let HOME_OFF_SCRIPT_ENTITY: string | null = LEGACY_HOME_OFF_SCRIPT_ENTITY;
+export let LAUNDRY_ENTITIES: Readonly<{ washer: string | null; dryer: string | null }> = LEGACY_LAUNDRY_ENTITIES;
 export let ROOM_CAMERA_ENTITIES: Readonly<Record<string, string>> = LEGACY_ROOM_CAMERA_ENTITIES;
 export let NAV_SCREENS: readonly LegacyScreenEntry[] = LEGACY_SCREENS;
 export let NAV_TABS: readonly RuntimeTab[] = LEGACY_TABS;

@@ -376,6 +376,19 @@ function notReady(code, message, extra = {}) {
   };
 }
 
+function setupRequired(mode) {
+  return {
+    ok: true,
+    status: 200,
+    payload: {
+      ok: true,
+      status: 'setup_required',
+      householdConfigMode: mode,
+      schemaVersion: null,
+    },
+  };
+}
+
 export function assessHmiReadiness({
   staticRoot = DIST,
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
@@ -419,7 +432,12 @@ export function assessHmiReadiness({
   }
 
   const configResult = createHouseholdConfigReader(householdConfigPath).read();
-  if (!configResult.ok) return notReady(configResult.code, configResult.message);
+  if (!configResult.ok) {
+    if (configResult.code === 'HOUSEHOLD_CONFIG_NOT_FOUND' && householdConfigPath) {
+      return setupRequired(normalizedMode);
+    }
+    return notReady(configResult.code, configResult.message);
+  }
 
   let document;
   try {
@@ -745,6 +763,164 @@ function serveConfig(req, res, store) {
     } catch {
       res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
       res.end('{"error":"Konfiguration konnte nicht gespeichert werden"}');
+    }
+  });
+}
+
+function setupRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  if (req.method !== 'POST') return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
+}
+
+function normalizeSetupHaUrl(value) {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value.trim());
+    if (!['http:', 'https:'].includes(url.protocol)
+        || url.username || url.password || url.search || url.hash) return null;
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function setupPayloadError(payload) {
+  const haUrl = normalizeSetupHaUrl(payload?.haUrl);
+  if (!haUrl) {
+    return {
+      code: 'SETUP_INVALID_HOME_ASSISTANT_URL',
+      message: 'Die Home-Assistant-URL muss eine gültige HTTP- oder HTTPS-Adresse sein.',
+    };
+  }
+  if (typeof payload?.haToken !== 'string' || !payload.haToken.trim()
+      || Buffer.byteLength(payload.haToken) > 16 * 1024) {
+    return {
+      code: 'SETUP_INVALID_HOME_ASSISTANT_TOKEN',
+      message: 'Der Home-Assistant-Token fehlt oder ist zu groß.',
+    };
+  }
+  const parsed = parseHouseholdConfig(payload?.householdConfig);
+  if (!parsed.ok) {
+    return {
+      code: 'SETUP_INVALID_HOUSEHOLD_CONFIG',
+      message: `Die Haushaltskonfiguration ist ungültig (${parsed.issues.length} Probleme).`,
+      issue: parsed.issues[0] ?? null,
+    };
+  }
+  try {
+    projectActiveHouseholdData(compileHouseholdConfig(parsed.value));
+  } catch (error) {
+    return {
+      code: error && typeof error === 'object' && typeof error.code === 'string'
+        ? error.code
+        : 'HOUSEHOLD_CONFIG_PROJECTION_FAILED',
+      message: error instanceof Error
+        ? error.message
+        : 'Die Haushaltskonfiguration kann nicht aktiviert werden.',
+    };
+  }
+  return { haUrl, haToken: payload.haToken.trim(), householdConfig: parsed.value };
+}
+
+export async function verifySetupHomeAssistant(haUrl, haToken, fetchImpl = fetch) {
+  try {
+    const response = await fetchImpl(`${haUrl}/api/config`, {
+      method: 'GET',
+      headers: {
+        accept: 'application/json',
+        authorization: `Bearer ${haToken}`,
+      },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (response.ok) return { ok: true };
+    if (response.status === 401 || response.status === 403) {
+      return {
+        ok: false,
+        code: 'SETUP_HOME_ASSISTANT_AUTH_FAILED',
+        message: 'Home Assistant hat den Token abgelehnt.',
+      };
+    }
+    return {
+      ok: false,
+      code: 'SETUP_HOME_ASSISTANT_HTTP_ERROR',
+      message: `Home Assistant antwortet mit HTTP ${response.status}.`,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: 'SETUP_HOME_ASSISTANT_UNREACHABLE',
+      message: 'Home Assistant ist vom Hauser-Server aus nicht erreichbar.',
+    };
+  }
+}
+
+function serveSetupActivation(
+  req,
+  res,
+  { configStore, householdConfigPath, setupConnectionVerifier },
+) {
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > HOUSEHOLD_CONFIG_BODY_MAX) oversized = true;
+  });
+  req.on('end', async () => {
+    if (oversized) {
+      jsonResponse(res, 413, {
+        ok: false,
+        code: 'SETUP_REQUEST_TOO_LARGE',
+        message: 'Die Setup-Anfrage ist größer als 1 MiB.',
+      });
+      return;
+    }
+    let payload;
+    try { payload = JSON.parse(body); } catch { payload = null; }
+    const result = setupPayloadError(payload);
+    if (!('householdConfig' in result)) {
+      jsonResponse(res, 400, { ok: false, ...result });
+      return;
+    }
+    if (!householdConfigPath) {
+      jsonResponse(res, 500, {
+        ok: false,
+        code: 'SETUP_CONFIG_PATH_NOT_CONFIGURED',
+        message: 'Der Zielpfad für die Haushaltskonfiguration fehlt.',
+      });
+      return;
+    }
+    const connection = await setupConnectionVerifier(result.haUrl, result.haToken);
+    if (!connection.ok) {
+      jsonResponse(res, 502, connection);
+      return;
+    }
+    try {
+      // Zugangsdaten zuerst persistieren. Die Haushaltsdatei ist der letzte,
+      // atomare Aktivierungsmarker; bei einem früheren Fehler bleibt Setup aktiv.
+      configStore.update({
+        'hmi:backend': 'ha',
+        'hmi:ha-url': result.haUrl,
+        'hmi:ha-token': result.haToken,
+      });
+      mkdirSync(dirname(householdConfigPath), { recursive: true, mode: 0o700 });
+      const temporary = `${householdConfigPath}.${process.pid}.${randomUUID()}.tmp`;
+      writeFileSync(temporary, `${JSON.stringify(result.householdConfig, null, 2)}\n`, { mode: 0o600 });
+      renameSync(temporary, householdConfigPath);
+      chmodSync(householdConfigPath, 0o600);
+      jsonResponse(res, 201, {
+        ok: true,
+        status: 'activated',
+        schemaVersion: result.householdConfig.schemaVersion,
+      });
+    } catch {
+      jsonResponse(res, 500, {
+        ok: false,
+        code: 'SETUP_ACTIVATION_FAILED',
+        message: 'Die Konfiguration konnte nicht atomar aktiviert werden.',
+      });
     }
   });
 }
@@ -1535,6 +1711,7 @@ export function createHmiServer(
     notionShoppingPath = NOTION_SHOPPING_PATH,
     familyDataPath = FAMILY_DATA_PATH,
     familyData = null,
+    setupConnectionVerifier = verifySetupHomeAssistant,
   } = {},
 ) {
   const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
@@ -1544,17 +1721,43 @@ export function createHmiServer(
   const ablageAccess = createAblageAccess(paperlessPin, paperlessToken);
   const library = songLibrary || createSongLibrary();
   return http.createServer((req, res) => {
+    const readinessOptions = {
+      staticRoot,
+      householdConfigPath,
+      householdConfigMode: normalizedHouseholdConfigMode,
+      requiredWritableDirs,
+    };
+    const readiness = assessHmiReadiness(readinessOptions);
+    const setupIsRequired = readiness.payload.status === 'setup_required';
     const targetPath = proxyTargetPath(req.url || '/');
     const notionTargetPath = notionBridgeTargetPath(req.url || '/');
 
     const songTarget = songTargetPath(req.url || '/');
     const familyDataRoute = (req.url || '').startsWith('/api/reminders');
     if ((req.url || '') === '/api/health') {
-      serveHmiHealth(req, res, {
-        staticRoot,
+      serveHmiHealth(req, res, readinessOptions);
+    } else if (setupIsRequired && (req.url || '') === '/api/setup/activate'
+        && setupRequestAllowed(req, allowedOrigins)) {
+      serveSetupActivation(req, res, {
+        configStore,
         householdConfigPath,
-        householdConfigMode: normalizedHouseholdConfigMode,
-        requiredWritableDirs,
+        setupConnectionVerifier,
+      });
+    } else if (setupIsRequired && (req.url || '') === '/api/setup/activate') {
+      jsonResponse(res, 403, {
+        ok: false,
+        code: 'SETUP_REQUEST_FORBIDDEN',
+        message: 'Die Setup-Anfrage ist nicht freigegeben.',
+      });
+    } else if (setupIsRequired && ((req.url || '').startsWith('/api/')
+        || (req.url || '').startsWith('/hermes')
+        || (req.url || '').startsWith('/ambient-llm')
+        || (req.url || '').startsWith('/shopping-llm')
+        || (req.url || '').startsWith('/notion-bridge'))) {
+      jsonResponse(res, 503, {
+        ok: false,
+        code: 'SETUP_REQUIRED',
+        message: 'Die Ersteinrichtung muss zuerst abgeschlossen werden.',
       });
     } else if (familyDataRoute && familyDataRequestAllowed(req, allowedOrigins)) {
       serveFamilyData(req, res, familyStore);

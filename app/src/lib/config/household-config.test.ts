@@ -39,6 +39,21 @@ describe('household config v1', () => {
     expect(second.rooms.map((room: { id: string }) => room.id)).toEqual(['studio', 'patio', 'utility']);
   });
 
+  it('represents unavailable optional global integrations explicitly as null', () => {
+    const setupConfig = structuredClone(neutralStudio) as HouseholdConfigV1;
+    setupConfig.globalEntities = {
+      sun: null,
+      vacationMode: null,
+      homeOffScript: null,
+      laundry: { washer: null, dryer: null },
+    };
+    const runtime = compileHouseholdConfig(parseValid(setupConfig));
+
+    expect(runtime.globalEntities).toEqual(setupConfig.globalEntities);
+    expect(runtime.subscriptionEntityIds.every((entityId) => entityId !== '')).toBe(true);
+    expect(runtime.commandContracts.every(({ entityId }) => entityId !== '')).toBe(true);
+  });
+
   it('fails closed for partial data, wrong types, unknown fields and invalid HA entity IDs', () => {
     expectIssue({}, 'REQUIRED', '$.schemaVersion');
     expectIssue({ ...neutralSmall, rooms: 'den' }, 'TYPE_MISMATCH', '$.rooms');

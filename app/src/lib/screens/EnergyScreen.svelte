@@ -36,7 +36,7 @@
   function closeLoadOverlay() {
     if (loadOverlay === 'open') loadOverlay = 'closing';
   }
-  const sun = $derived(runtime.merged(SUN_ENTITY) as SunValue | undefined);
+  const sun = $derived(SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined);
   const energyHeroUrl = $derived(energyAssetUrl({
     baseUrl: import.meta.env.BASE_URL,
     sun,

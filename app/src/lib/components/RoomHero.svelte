@@ -22,7 +22,7 @@
   // (Tag → light, Abend/Nacht → dark). appState.theme ist nur Fallback, solange
   // noch kein sun-State angekommen ist — ein manueller UI-Theme-Toggle soll das
   // Raummotiv nicht auf Tag/Nacht umschalten.
-  const sun = $derived(runtime.merged(SUN_ENTITY) as SunValue | undefined);
+  const sun = $derived(SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined);
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const placements = $derived(roomLightPlacements(room?.id));
   const assignedLights = $derived((room?.lights ?? []).filter((light) => placements[light.entityId]));

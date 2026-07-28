@@ -61,6 +61,7 @@ function setTheme(theme: Theme, animate: boolean): void {
 function syncFromSun(animate: boolean): void {
   if (override.until && Date.now() >= override.until) clearOverride();
   if (override.until) return; // manueller Vorrang aktiv
+  if (!SUN_ENTITY) return;
   const sun = runtime.merged(SUN_ENTITY) as SunValue | undefined;
   if (!sun) return; // noch kein sun.sun-State (Cache/Seed füllt das initial)
   setTheme(sun.day ? 'light' : 'dark', animate);

@@ -76,12 +76,12 @@ export interface MediaTargetConfig {
 }
 
 export interface GlobalEntitiesConfig {
-  sun: string;
-  vacationMode: string;
-  homeOffScript: string;
+  sun: string | null;
+  vacationMode: string | null;
+  homeOffScript: string | null;
   laundry: {
-    washer: string;
-    dryer: string;
+    washer: string | null;
+    dryer: string | null;
   };
 }
 
@@ -505,37 +505,37 @@ function parseGlobalEntities(
   path: string,
 ): GlobalEntitiesConfig {
   if (value === MISSING) {
-    return { sun: '', vacationMode: '', homeOffScript: '', laundry: { washer: '', dryer: '' } };
+    return { sun: null, vacationMode: null, homeOffScript: null, laundry: { washer: null, dryer: null } };
   }
   const object = validator.object(value, path);
-  if (!object) return { sun: '', vacationMode: '', homeOffScript: '', laundry: { washer: '', dryer: '' } };
+  if (!object) return { sun: null, vacationMode: null, homeOffScript: null, laundry: { washer: null, dryer: null } };
   validator.exactKeys(object, ['sun', 'vacationMode', 'homeOffScript', 'laundry'], path);
 
   const laundryValue = validator.required(object, 'laundry', path);
   const laundry = laundryValue === MISSING ? undefined : validator.object(laundryValue, `${path}.laundry`);
-  let washer = '';
-  let dryer = '';
+  let washer: string | null = null;
+  let dryer: string | null = null;
   if (laundry) {
     validator.exactKeys(laundry, ['washer', 'dryer'], `${path}.laundry`);
-    washer = validator.entityId(
+    washer = validator.nullableEntityId(
       validator.required(laundry, 'washer', `${path}.laundry`),
       `${path}.laundry.washer`,
       'input_boolean',
     );
-    dryer = validator.entityId(
+    dryer = validator.nullableEntityId(
       validator.required(laundry, 'dryer', `${path}.laundry`),
       `${path}.laundry.dryer`,
       'input_boolean',
     );
   }
   return {
-    sun: validator.entityId(validator.required(object, 'sun', path), `${path}.sun`, 'sun'),
-    vacationMode: validator.entityId(
+    sun: validator.nullableEntityId(validator.required(object, 'sun', path), `${path}.sun`, 'sun'),
+    vacationMode: validator.nullableEntityId(
       validator.required(object, 'vacationMode', path),
       `${path}.vacationMode`,
       'switch',
     ),
-    homeOffScript: validator.entityId(
+    homeOffScript: validator.nullableEntityId(
       validator.required(object, 'homeOffScript', path),
       `${path}.homeOffScript`,
       'script',
@@ -776,12 +776,14 @@ export function compileHouseholdConfig(config: HouseholdConfigV1): HouseholdRunt
       'media_stop',
     ]);
   }
-  subscriptionEntityIds.add(globalEntities.sun);
-  subscriptionEntityIds.add(globalEntities.vacationMode);
-  subscriptionEntityIds.add(globalEntities.laundry.washer);
-  subscriptionEntityIds.add(globalEntities.laundry.dryer);
-  addCommand(globalEntities.vacationMode, 'switch', ['turn_on', 'turn_off']);
-  addCommand(globalEntities.homeOffScript, 'script', ['turn_on']);
+  if (globalEntities.sun) subscriptionEntityIds.add(globalEntities.sun);
+  if (globalEntities.vacationMode) {
+    subscriptionEntityIds.add(globalEntities.vacationMode);
+    addCommand(globalEntities.vacationMode, 'switch', ['turn_on', 'turn_off']);
+  }
+  if (globalEntities.laundry.washer) subscriptionEntityIds.add(globalEntities.laundry.washer);
+  if (globalEntities.laundry.dryer) subscriptionEntityIds.add(globalEntities.laundry.dryer);
+  if (globalEntities.homeOffScript) addCommand(globalEntities.homeOffScript, 'script', ['turn_on']);
   if (energy) {
     if (energy.sensors.productionPower) subscriptionEntityIds.add(energy.sensors.productionPower);
     for (const source of energy.sensors.consumptionPower) subscriptionEntityIds.add(source.entityId);

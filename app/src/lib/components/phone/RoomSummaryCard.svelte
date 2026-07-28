@@ -19,7 +19,7 @@
 
   // Kachelhintergrund = dasselbe Hero-Motiv wie die Tablet-Bühne (Tag/Nacht
   // folgt sun.sun, via room-hero-assets). Räume ohne Hero-Asset bleiben Flächenfarbe.
-  const sun = $derived(runtime.merged(SUN_ENTITY) as SunValue | undefined);
+  const sun = $derived(SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined);
   const heroUrl = $derived(normalizeHeroRoom(summary.id) === summary.id
     ? heroAssetUrl({ baseUrl: import.meta.env.BASE_URL, roomId: summary.id, sun, fallbackTheme: appState.theme })
     : null);

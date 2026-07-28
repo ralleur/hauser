@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 // @ts-expect-error Native Node test without @types/node.
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 // @ts-expect-error Native Node test without @types/node.
 import { tmpdir } from 'node:os';
 // @ts-expect-error Native Node test without @types/node.
 import { join } from 'node:path';
 // @ts-expect-error The production server intentionally remains native Node ESM.
-import { assessHmiReadiness, createHmiServer } from '../../server.mjs';
+import { assessHmiReadiness, createHmiServer, verifySetupHomeAssistant } from '../../server.mjs';
 
 const roots: string[] = [];
 const servers: Array<{ close: (callback: () => void) => void }> = [];
@@ -139,7 +139,7 @@ describe('container readiness contract', () => {
       staticRoot: files.staticRoot,
       householdConfigPath: join(files.configDir, 'missing.json'),
       householdConfigMode: 'active',
-    })).toMatchObject({ payload: { code: 'HOUSEHOLD_CONFIG_NOT_FOUND' } });
+    })).toMatchObject({ payload: { status: 'setup_required', schemaVersion: null } });
 
     expect(assessHmiReadiness({
       staticRoot: files.staticRoot,
@@ -147,6 +147,99 @@ describe('container readiness contract', () => {
       householdConfigMode: 'active',
       requiredWritableDirs: [join(files.root, 'missing-data')],
     })).toMatchObject({ payload: { code: 'RUNTIME_DIRECTORY_NOT_WRITABLE' } });
+  });
+
+  it('starts a restricted setup runtime only when the configured active file is absent', async () => {
+    const files = fixture();
+    rmSync(files.householdConfigPath);
+    const centralConfigPath = join(files.dataDir, 'config.json');
+    const options = {
+      staticRoot: files.staticRoot,
+      householdConfigPath: files.householdConfigPath,
+      householdConfigMode: 'active',
+      requiredWritableDirs: [files.configDir, files.dataDir, files.assetsDir],
+    };
+
+    expect(assessHmiReadiness(options)).toEqual({
+      ok: true,
+      status: 200,
+      payload: {
+        ok: true,
+        status: 'setup_required',
+        householdConfigMode: 'active',
+        schemaVersion: null,
+      },
+    });
+
+    const server = createHmiServer('', {
+      ...options,
+      configPath: centralConfigPath,
+      paperlessPin: '',
+      paperlessToken: '',
+      setupConnectionVerifier: async () => ({ ok: true }),
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const blocked = await fetch(`http://127.0.0.1:${port}/api/config`);
+    expect(blocked.status).toBe(503);
+    expect(await blocked.json()).toMatchObject({ code: 'SETUP_REQUIRED' });
+
+    const invalid = await fetch(`http://127.0.0.1:${port}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ haUrl: 'file:///tmp/ha', haToken: 'secret', householdConfig: {} }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toMatchObject({ code: 'SETUP_INVALID_HOME_ASSISTANT_URL' });
+
+    const activated = await fetch(`http://127.0.0.1:${port}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        haUrl: 'http://homeassistant.local:8123/',
+        haToken: 'setup-token',
+        householdConfig: validConfig(),
+      }),
+    });
+    expect(activated.status).toBe(201);
+    expect(await activated.json()).toEqual({ ok: true, status: 'activated', schemaVersion: 1 });
+    expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
+    expect(statSync(files.householdConfigPath).mode & 0o777).toBe(0o600);
+    expect(JSON.parse(readFileSync(centralConfigPath, 'utf8'))).toMatchObject({
+      'hmi:backend': 'ha',
+      'hmi:ha-url': 'http://homeassistant.local:8123',
+      'hmi:ha-token': 'setup-token',
+    });
+
+    const ready = await fetch(`http://127.0.0.1:${port}/api/health`);
+    expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 1 });
+  });
+
+  it('requires the Hauser server itself to reach and authenticate with Home Assistant', async () => {
+    const requested: Array<{ url: string; authorization: string | null }> = [];
+    const rejected = await verifySetupHomeAssistant(
+      'http://homeassistant.local:8123',
+      'setup-token',
+      async (url: string, init: RequestInit) => {
+        requested.push({
+          url,
+          authorization: new Headers(init.headers).get('authorization'),
+        });
+        return new Response(null, { status: 401 });
+      },
+    );
+
+    expect(requested).toEqual([{
+      url: 'http://homeassistant.local:8123/api/config',
+      authorization: 'Bearer setup-token',
+    }]);
+    expect(rejected).toEqual({
+      ok: false,
+      code: 'SETUP_HOME_ASSISTANT_AUTH_FAILED',
+      message: 'Home Assistant hat den Token abgelehnt.',
+    });
   });
 
   it('does not require household config in explicit shadow mode', () => {

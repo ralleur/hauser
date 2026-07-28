@@ -28,7 +28,15 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-Open <http://localhost:4173>. The default binding is deliberately loopback-only.
+Open <http://localhost:4173>. A fresh config volume starts the restricted setup
+runtime. Enter a Home Assistant URL and long-lived token; Hauser verifies the
+connection from both browser and server, reads the HA area/device/entity
+registries, proposes rooms and relevant entities, validates the result and only
+then activates `/config/household.json`. Before activation, room and entity names
+can be corrected, entities can be omitted, and compatible entities can be moved
+between rooms. Ambiguous singleton roles are not offered as invalid moves.
+
+The default binding is deliberately loopback-only.
 To make Hauser reachable on a trusted home LAN, set exact values in `.env`, for
 example:
 
@@ -51,15 +59,15 @@ Compose creates three project-scoped named volumes:
 | `/data` | Home Assistant/Jellyfin connection settings, shared household data and generated song catalogue/audio | Required; may contain credentials |
 | `/assets` | User-owned assets reserved for installation-specific media | Required when used |
 
-The image seeds `/config/household.json` with the neutral small-household example
-only when the config volume is first created. A later image update does not
-overwrite the volume.
+The image does not seed a household configuration. A missing
+`/config/household.json` is the explicit first-run marker. The wizard writes the
+file atomically with mode `0600`; later image updates do not overwrite it.
 
 The root filesystem is read-only. The service runs as the unprivileged `node`
 user, drops Linux capabilities, enables `no-new-privileges`, and can write only
 to the three volumes and its temporary in-memory filesystem.
 
-## Replace the starter household configuration
+## Replace the household configuration manually
 
 Export the current file, edit it using the contract in
 [`07-configuration.md`](07-configuration.md), and copy it back:
@@ -81,8 +89,8 @@ does not silently load another household. Inspect the exact first issue with:
 docker compose logs --tail=100 hauser
 ```
 
-After a valid config starts, enter the Home Assistant URL and token in System
-settings. These settings live in `/data/config.json`, not in the image or Git.
+The wizard stores the Home Assistant URL and token in `/data/config.json`, not
+in the image or Git. Manual config replacement does not alter those credentials.
 
 ## Health and startup errors
 
@@ -99,12 +107,24 @@ is HTTP 200:
 ```
 
 Readiness returns HTTP 503 with a stable code when the frontend bundle, active
-configuration or writable runtime directories are missing or invalid. Relevant
-codes are:
+configuration or writable runtime directories are invalid. A deliberately
+missing active configuration is different: it returns HTTP 200 and keeps Docker
+healthy while exposing only health, static setup assets and setup activation:
+
+```json
+{
+  "ok": true,
+  "status": "setup_required",
+  "householdConfigMode": "active",
+  "schemaVersion": null
+}
+```
+
+All regular API and proxy paths return `503 SETUP_REQUIRED` in this state.
+Relevant fail-closed codes are:
 
 - `APP_BUNDLE_NOT_FOUND`
 - `HOUSEHOLD_CONFIG_NOT_CONFIGURED`
-- `HOUSEHOLD_CONFIG_NOT_FOUND`
 - `HOUSEHOLD_CONFIG_INVALID_JSON`
 - `HOUSEHOLD_CONFIG_INVALID`
 - `RUNTIME_DIRECTORY_NOT_WRITABLE`
