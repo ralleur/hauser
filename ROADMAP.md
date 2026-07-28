@@ -18,11 +18,11 @@ Status vocabulary:
 
 ## Where the project is today
 
-`v0.3.0-alpha.1` is the public reference alpha. The design system, Home
-Assistant and Jellyfin integrations, landscape panel, compact phone shell and
-everyday household screens are implemented. The release is published to show,
-run and adapt the working reference implementation — not to claim that it can
-already be installed in an arbitrary home without editing source code.
+Hauser is currently developed in a private pre-beta repository. The design
+system, Home Assistant and Jellyfin integrations, landscape panel, compact phone
+shell and everyday household screens are implemented. The repository is kept
+publication-ready throughout development, but no alpha release will be
+published. The first public release is the installable beta.
 
 ---
 
@@ -72,13 +72,12 @@ already be installed in an arbitrary home without editing source code.
 
 ---
 
-## Path from reference alpha to v1
+## Path from private development to v1
 
 | Stage | Target | Exit evidence |
 |---|---|---|
-| Public reference alpha | `v0.3.0-alpha.1` | Anonymised export, public test suite and static demo build pass; no general installability claim |
-| Configuration alpha | `v0.3.x-alpha.N` | Two different household models load through one versioned external configuration path without application-code changes |
-| Installable beta | `v0.4.0-beta.1` | A second real Home Assistant installation completes setup without source edits and retains configuration after restart |
+| Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
+| Installable public beta | `v0.4.0-beta.1` | First public release: a second real Home Assistant installation completes setup without source edits and retains configuration after restart |
 | Beta stabilisation | `v0.4.x-beta.N` | A real release-to-release upgrade, backup/restore and rollback pass on the independent installation |
 | Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |

@@ -7,7 +7,7 @@
 One design system, one interaction language, and a hard rule that the screen
 never waits for the network.
 
-[Live demo](https://hauser-demo.pages.dev) · [Landing page](https://ralleur.github.io/hauser/website/) · [Architecture](docs/00-architecture.md) · [Design system](docs/01-design-system.md) · [Roadmap](ROADMAP.md)
+[Architecture](docs/00-architecture.md) · [Design system](docs/01-design-system.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -23,16 +23,18 @@ room, quiet until touched, and a direct path into the relevant household view.
 Hauser is a **reference implementation**, not a product you install.
 
 It is a complete, working smart home interface that runs on a wall-mounted
-tablet in one specific home. It is published under MIT so you can read it, run
-it, take the parts you want, and fork it without asking. What it is *not* is
+tablet in one specific home. The code is licensed under MIT and is currently
+developed in a private repository that is kept ready for publication. What it
+is *not* yet is
 plug-and-play: the rooms, entity IDs and energy sensors are defined in a
 TypeScript file, and adapting it to your house means editing that file.
 
 If you are comfortable reading code, that is a half-hour of work. If you are
 not, this is probably not for you yet — see [the roadmap](ROADMAP.md).
 
-**Try [the live demo](https://hauser-demo.pages.dev) before you clone anything.**
-It runs the real interface against simulated devices.
+The static demo build runs the real interface against simulated devices. It is
+kept release-ready in the repository and will be hosted publicly with the first
+installable beta.
 
 ---
 
@@ -80,14 +82,14 @@ deliberately omits superseded plans and rejected alternatives.
 This distinction matters because the static demo, an implemented adapter and a
 configured live service are not the same thing:
 
-| Integration | Repository implementation | Public demo |
+| Integration | Repository implementation | Static beta demo |
 |---|---|---|
 | **Home Assistant** | Implemented. The official WebSocket client supplies entity state, commands, reconciliation and reconnects. | Simulated entities; no connection to a live HA instance. |
 | **Jellyfin** | Implemented. A dedicated REST client handles authentication, shelves, browse and detail data; playback uses PlaybackInfo, HLS and progress reporting. | Curated simulated library data; no connection to a live Jellyfin server. |
 | **Calendar** | Implemented through Home Assistant, not as a separate calendar backend. Hauser discovers `calendar.*` entities and reads events with HA's `calendar/list` WebSocket command. The settings UI can also start HA's iCloud/CalDAV config flow. | Curated simulated events. |
 | **Reminders and shopping** | Implemented by the optional companion server as a central `family-data.json` store. Reminders can additionally merge selected HA `todo.*` lists read via WebSocket. | Curated simulated data. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
-| **Notion** | **Not integrated.** There is no Notion client, API route or runtime adapter in this alpha. Household reminders and shopping were moved to Hauser's central companion store instead. | Not applicable. |
+| **Notion** | **Not integrated.** There is no Notion client, API route or runtime adapter in this pre-beta line. Household reminders and shopping were moved to Hauser's central companion store instead. | Not applicable. |
 
 ## Screenshots
 
@@ -135,7 +137,7 @@ npm run dev
 That starts against a fake backend with simulated devices, which is the fastest
 way to look around.
 
-Run the public test suite with:
+Run the publication-gate test suite with:
 
 ```bash
 cd app
@@ -153,7 +155,8 @@ npm test
    around yet.
 4. `npm run build`, then serve `app/dist/` however you like.
 
-There is no supported kiosk installer or Docker image in this alpha.
+There is no supported kiosk installer or Docker image in this private pre-beta
+development line.
 
 ### Building the demo
 
@@ -163,7 +166,8 @@ npm run build:demo
 ```
 
 Produces a fully static bundle in `app/dist-demo/` with a simulated backend, no
-companion server, and a permanent "demo" badge. This is what the live demo runs.
+companion server, and a permanent "demo" badge. This is the candidate for the
+hosted demo that will accompany the public beta.
 
 ## Documentation
 
@@ -185,18 +189,17 @@ All repository documentation intended for users and contributors is in English.
 
 ## Status and expectations
 
-`v0.3.0-alpha.1` is the public reference alpha: the design system, Home
-Assistant and Jellyfin adapters, HA-backed calendar path, optional Paperless
-bridge, companion-backed household data, panel shell and phone shell are
-implemented. The public demo uses simulated data and omits Paperless. The live
-setup is still tied to one household configuration and does not promise a
-general installation or upgrade path. See [ROADMAP.md](ROADMAP.md) for the path
-from this reference implementation to an installable v1.
+Hauser is in private pre-beta development. The design system, Home Assistant and
+Jellyfin adapters, HA-backed calendar path, optional Paperless bridge,
+companion-backed household data, panel shell and phone shell are implemented.
+The repository, documentation and static demo are maintained as publication-ready,
+but no alpha will be published. The repository becomes public with the first
+installable beta, `v0.4.0-beta.1`, after the independent-installation gate passes.
+See [ROADMAP.md](ROADMAP.md) for the path to v1.
 
-This is a hobby project maintained by one person. Issues and small pull requests
-are welcome; response times are unpredictable and may be measured in weeks. If
-that does not suit you, fork it — the license exists to make that easy. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+This is a hobby project maintained by one person. The contribution workflow
+becomes active when the repository is made public for beta; response times will
+remain unpredictable. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
