@@ -5,8 +5,11 @@ before the public beta. It runs a synthetic Home Assistant household and a fresh
 Hauser installation beside existing services without sharing containers,
 networks, configuration, credentials or persistent volumes.
 
-It is not a substitute for the later external-person beta gate: its purpose is
-to find installation, wizard and persistence defects before that gate.
+It is the technical clean-room gate for the first public beta: its purpose is to
+prove installation, wizard, control, reconnect and persistence without source
+edits. It does not prove external-user usability or compatibility with a second
+real device topology; that evidence remains mandatory during beta stabilisation
+before the release candidate.
 
 ## Isolation contract
 

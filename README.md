@@ -27,9 +27,10 @@ It is a complete, working smart home interface that runs on a wall-mounted
 tablet in one specific home. The code is licensed under MIT and is currently
 developed in a private repository that is kept ready for publication. A
 source-built Docker Compose path, external versioned household configuration and
-deterministic setup wizard now exist. What is still missing is a published
-registry image and independent second-household evidence. Installation therefore
-remains a technical pre-beta workflow — see [the roadmap](ROADMAP.md).
+deterministic setup wizard now exist. The isolated clean-room pilot has passed;
+what is still missing is the final release package and published registry image.
+An external real-home installation remains required during beta stabilisation,
+before the release candidate — see [the roadmap](ROADMAP.md).
 
 The static demo build runs the real interface against simulated devices. It is
 kept release-ready in the repository and will be hosted publicly with the first

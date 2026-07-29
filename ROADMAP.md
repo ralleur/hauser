@@ -77,8 +77,8 @@ published. The first public release is the installable beta.
 | Stage | Target | Exit evidence |
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
-| Installable public beta | `v0.4.0-beta.1` | First public release: a second real Home Assistant installation completes setup without source edits and retains configuration after restart |
-| Beta stabilisation | `v0.4.x-beta.N` | A real release-to-release upgrade, backup/restore and rollback pass on the independent installation |
+| Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
+| Beta stabilisation | `v0.4.x-beta.N` | An external real-home installation plus a release-to-release upgrade, backup/restore and rollback pass before RC |
 | Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
@@ -86,10 +86,12 @@ The critical path is configuration, installation and upgrade evidence — not
 adding every feature in the backlog. The versioned external household
 configuration core is built and exercised with independent neutral fixtures.
 The source-built container/Compose installation path, persistent volumes,
-readiness contract and backup/restore helpers are built. The next technical
-milestone is a deterministic Home Assistant setup wizard, followed by an
-independent second-household installation. AI-assisted setup may complement it
-later but is not a v1 gate.
+readiness contract, backup/restore helpers and deterministic Home Assistant setup
+wizard are built. The isolated development pilot has passed both explicit-Area
+and no-Area onboarding, command/state echo, reconnect and persistence. The next
+technical milestone is the final release package and registry image. A real
+external household remains mandatory during beta stabilisation before RC;
+AI-assisted setup may complement it later but is not a v1 gate.
 
 ## Internationalisation
 
@@ -117,12 +119,10 @@ configuration, not from the interface.
 
 ## Known gaps
 
-- Household configuration and entity mappings are external versioned JSON, but
-  editing that JSON is still a technical/manual pre-beta workflow.
 - The container image is built locally from source; no registry image is
   published before the beta gate.
-- Persistent config/data/assets, backup/restore and manual image rollback exist,
-  but there is no setup wizard or automatic migration path yet.
+- The clean-room pilot proves the technical setup contract, not yet usability by
+  an external person or compatibility with a second real device topology.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional
