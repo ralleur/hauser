@@ -21,6 +21,7 @@ jobs:
       contents: read
     env:
       CI: "true"
+      TZ: Europe/Berlin
     steps:
       - name: Check out exact revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
