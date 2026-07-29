@@ -14,6 +14,9 @@ const serverContractExtension = SERVER_CONTRACT_COMPILED ? 'js' : 'ts';
 const { compileHouseholdConfig, parseHouseholdConfig } = await import(
   `${serverContractBase}/household-config.${serverContractExtension}`
 );
+const { migrateHouseholdConfigDocument } = await import(
+  `${serverContractBase}/household-config-migration.${serverContractExtension}`
+);
 const { projectActiveHouseholdData } = await import(
   `${serverContractBase}/household-runtime-data.${serverContractExtension}`
 );
@@ -362,6 +365,122 @@ export function createHouseholdConfigReader(
   return { read };
 }
 
+function migrationTimestamp(date) {
+  return date.toISOString().replace(/[-:.]/g, '');
+}
+
+export function migrateHouseholdConfigFile(
+  path = HOUSEHOLD_CONFIG_PATH,
+  {
+    now = () => new Date(),
+    replaceConfig = renameSync,
+  } = {},
+) {
+  if (!path) return { ok: true, status: 'not_configured' };
+
+  let original;
+  try {
+    original = readFileSync(path);
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return { ok: true, status: 'missing' };
+    }
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_READ_FAILED',
+      message: 'Die Haushaltskonfiguration konnte für die Migration nicht gelesen werden.',
+    };
+  }
+  if (original.length > HOUSEHOLD_CONFIG_BODY_MAX) {
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_TOO_LARGE',
+      message: 'Die Haushaltskonfiguration ist größer als 1 MiB.',
+    };
+  }
+
+  let document;
+  try {
+    document = JSON.parse(original.toString('utf8'));
+  } catch {
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_INVALID_JSON',
+      message: 'Die Haushaltskonfiguration enthält kein gültiges JSON.',
+    };
+  }
+
+  const migration = migrateHouseholdConfigDocument(document);
+  if (!migration.ok) return migration;
+  if (migration.status === 'current') {
+    return { ok: true, status: 'current', version: migration.version };
+  }
+
+  const parsed = parseHouseholdConfig(migration.document);
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
+      message: 'Das migrierte Dokument erfüllt den aktuellen Haushaltsvertrag nicht.',
+      issue: parsed.issues[0] ?? null,
+    };
+  }
+  try {
+    projectActiveHouseholdData(compileHouseholdConfig(parsed.value));
+  } catch (error) {
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
+      message: error instanceof Error
+        ? error.message
+        : 'Das migrierte Dokument kann nicht in die produktive Runtime projiziert werden.',
+    };
+  }
+
+  const stamp = migrationTimestamp(now());
+  let backupPath = `${path}.backup-v${migration.fromVersion}-${stamp}`;
+  for (let suffix = 1; existsSync(backupPath); suffix += 1) {
+    backupPath = `${path}.backup-v${migration.fromVersion}-${stamp}-${suffix}`;
+  }
+  const backupTemporary = `${backupPath}.${process.pid}.tmp`;
+  try {
+    writeFileSync(backupTemporary, original, { mode: 0o600, flush: true });
+    chmodSync(backupTemporary, 0o600);
+    renameSync(backupTemporary, backupPath);
+  } catch {
+    try { unlinkSync(backupTemporary); } catch { /* no incomplete backup remains */ }
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_BACKUP_FAILED',
+      message: 'Die Haushaltskonfiguration konnte vor der Migration nicht gesichert werden.',
+    };
+  }
+
+  const temporary = `${path}.${process.pid}.migration.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify(parsed.value, null, 2)}\n`, { mode: 0o600, flush: true });
+    chmodSync(temporary, 0o600);
+    replaceConfig(temporary, path);
+    chmodSync(path, 0o600);
+  } catch {
+    try { unlinkSync(temporary); } catch { /* failed activation leaves the original marker untouched */ }
+    return {
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_WRITE_FAILED',
+      message: 'Die migrierte Haushaltskonfiguration konnte nicht atomar aktiviert werden.',
+      backupPath,
+    };
+  }
+
+  return {
+    ok: true,
+    status: 'migrated',
+    fromVersion: migration.fromVersion,
+    toVersion: migration.toVersion,
+    backupPath,
+  };
+}
+
 export function normalizeHouseholdConfigMode(value) {
   if (value === undefined || value === null) return 'shadow';
   if (value === 'shadow' || value === 'active') return value;
@@ -394,6 +513,7 @@ export function assessHmiReadiness({
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
   householdConfigMode = process.env.HMI_HOUSEHOLD_CONFIG_MODE,
   requiredWritableDirs = REQUIRED_WRITABLE_DIRS,
+  migrationResult = null,
 } = {}) {
   const normalizedMode = normalizeHouseholdConfigMode(householdConfigMode);
   const indexPath = resolve(staticRoot, 'index.html');
@@ -416,6 +536,14 @@ export function assessHmiReadiness({
         `Das Laufzeitverzeichnis ist nicht les- und schreibbar: ${directory}`,
       );
     }
+  }
+
+  if (migrationResult && !migrationResult.ok) {
+    return notReady(
+      migrationResult.code,
+      migrationResult.message,
+      { issue: migrationResult.issue ?? null },
+    );
   }
 
   if (normalizedMode === 'shadow') {
@@ -1824,6 +1952,7 @@ export function createHmiServer(
     configPath = CONFIG_PATH,
     householdConfigPath = HOUSEHOLD_CONFIG_PATH,
     householdConfigMode = process.env.HMI_HOUSEHOLD_CONFIG_MODE,
+    householdConfigMigrationResult = null,
     staticRoot = DIST,
     requiredWritableDirs = REQUIRED_WRITABLE_DIRS,
     notionShoppingPath = NOTION_SHOPPING_PATH,
@@ -1834,6 +1963,11 @@ export function createHmiServer(
   } = {},
 ) {
   const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
+  const migrationResult = householdConfigMigrationResult ?? (
+    normalizedHouseholdConfigMode === 'active'
+      ? migrateHouseholdConfigFile(householdConfigPath)
+      : { ok: true, status: 'shadow' }
+  );
   const configStore = createCentralConfigStore(configPath);
   const householdConfigReader = createHouseholdConfigReader(householdConfigPath);
   const familyStore = familyData || createFamilyDataStore(familyDataPath);
@@ -1845,6 +1979,7 @@ export function createHmiServer(
       householdConfigPath,
       householdConfigMode: normalizedHouseholdConfigMode,
       requiredWritableDirs,
+      migrationResult,
     };
     const readiness = assessHmiReadiness(readinessOptions);
     const setupIsRequired = readiness.payload.status === 'setup_required';
@@ -1855,6 +1990,17 @@ export function createHmiServer(
     const familyDataRoute = (req.url || '').startsWith('/api/reminders');
     if ((req.url || '') === '/api/health') {
       serveHmiHealth(req, res, readinessOptions);
+    } else if (!migrationResult.ok && ((req.url || '').startsWith('/api/')
+        || (req.url || '').startsWith('/hermes')
+        || (req.url || '').startsWith('/ambient-llm')
+        || (req.url || '').startsWith('/shopping-llm')
+        || (req.url || '').startsWith('/notion-bridge'))) {
+      jsonResponse(res, 503, {
+        ok: false,
+        status: 'not_ready',
+        code: readiness.payload.code,
+        message: readiness.payload.message,
+      }, { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedHouseholdConfigMode });
     } else if (setupIsRequired && (req.url || '') === '/api/setup/activate'
         && setupRequestAllowed(req, allowedOrigins)) {
       serveSetupActivation(req, res, {
@@ -1973,13 +2119,20 @@ export function createHmiServer(
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   let server;
   try {
-    const readiness = assessHmiReadiness();
+    const householdConfigMode = normalizeHouseholdConfigMode(process.env.HMI_HOUSEHOLD_CONFIG_MODE);
+    const migrationResult = householdConfigMode === 'active'
+      ? migrateHouseholdConfigFile(HOUSEHOLD_CONFIG_PATH)
+      : { ok: true, status: 'shadow' };
+    const readiness = assessHmiReadiness({ householdConfigMode, migrationResult });
     if (!readiness.ok) {
       const issue = readiness.payload.issue;
       const issueText = issue ? ` ${issue.path}: ${issue.message}` : '';
       throw new Error(`[${readiness.payload.code}] ${readiness.payload.message}${issueText}`);
     }
-    server = createHmiServer();
+    server = createHmiServer(undefined, {
+      householdConfigMode,
+      householdConfigMigrationResult: migrationResult,
+    });
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'HMI-Server konnte nicht starten.');
     process.exit(1);

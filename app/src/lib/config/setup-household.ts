@@ -1,6 +1,7 @@
+import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import type {
   EntityRole,
-  HouseholdConfigV1,
+  HouseholdConfigV2,
   RoomConfig,
   VisibleEntityConfig,
 } from './household-config.ts';
@@ -38,12 +39,12 @@ export interface SetupDiscoverySnapshot {
 }
 
 export interface SetupHouseholdSuggestion {
-  config: HouseholdConfigV1;
+  config: HouseholdConfigV2;
   ignoredEntityIds: string[];
   inferredRooms: boolean;
 }
 
-function cloneHouseholdConfig(config: HouseholdConfigV1): HouseholdConfigV1 {
+function cloneHouseholdConfig(config: HouseholdConfigV2): HouseholdConfigV2 {
   return {
     ...config,
     rooms: config.rooms.map((room) => ({
@@ -54,7 +55,7 @@ function cloneHouseholdConfig(config: HouseholdConfigV1): HouseholdConfigV1 {
 }
 
 export function canMoveSetupEntity(
-  config: HouseholdConfigV1,
+  config: HouseholdConfigV2,
   entityId: string,
   targetRoomId: string,
 ): boolean {
@@ -67,10 +68,10 @@ export function canMoveSetupEntity(
 }
 
 export function moveSetupEntity(
-  config: HouseholdConfigV1,
+  config: HouseholdConfigV2,
   entityId: string,
   targetRoomId: string,
-): HouseholdConfigV1 {
+): HouseholdConfigV2 {
   if (!canMoveSetupEntity(config, entityId, targetRoomId)) return config;
   const next = cloneHouseholdConfig(config);
   const source = next.rooms.find((room) => room.visibleEntities.some((entity) => entity.entityId === entityId));
@@ -86,9 +87,9 @@ export function moveSetupEntity(
 }
 
 export function omitSetupEntity(
-  config: HouseholdConfigV1,
+  config: HouseholdConfigV2,
   entityId: string,
-): HouseholdConfigV1 {
+): HouseholdConfigV2 {
   if (!config.rooms.some((room) => room.visibleEntities.some((entity) => entity.entityId === entityId))) {
     return config;
   }
@@ -213,7 +214,7 @@ export function buildSetupHouseholdSuggestion(
 
   return {
     config: {
-      schemaVersion: 1,
+      schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
       rooms,
       navigation: [
         { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },

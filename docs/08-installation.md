@@ -55,7 +55,7 @@ Compose creates three project-scoped named volumes:
 
 | Container path | Content | Backup requirement |
 |---|---|---|
-| `/config` | Active `household.json` (`schemaVersion: 1`) | Required |
+| `/config` | Active `household.json` (`schemaVersion: 2`) plus migration backups | Required |
 | `/data` | Home Assistant/Jellyfin connection settings, shared household data and generated song catalogue/audio | Required; may contain credentials |
 | `/assets` | User-owned assets reserved for installation-specific media | Required when used |
 
@@ -66,6 +66,42 @@ file atomically with mode `0600`; later image updates do not overwrite it.
 The root filesystem is read-only. The service runs as the unprivileged `node`
 user, drops Linux capabilities, enables `no-new-privileges`, and can write only
 to the three volumes and its temporary in-memory filesystem.
+
+## Automatic configuration migration
+
+On active startup, Hauser reads the schema version before exposing productive
+APIs. A deployed v1 document is migrated deterministically to v2. Before the
+atomic replacement, the exact original bytes are written with mode `0600` next
+to the active file, for example:
+
+```text
+/config/household.json.backup-v1-20260729T094500000Z
+```
+
+The migrated document must pass the current parser and productive runtime
+projection before any backup or replacement is written. Unsupported old versions,
+future versions, invalid migrated data, a failed backup or a failed final rename
+keep the original activation marker unchanged. The production process exits with a
+non-zero status and a stable `HOUSEHOLD_CONFIG_*` log code before opening its
+listener, so the orchestrator cannot route productive traffic to a partially
+migrated installation.
+
+To roll back the document after an upgrade, stop the service and copy the selected
+backup over the active file. The old application image must be restored as well
+when it does not support the newer schema:
+
+```bash
+docker compose stop hauser
+docker compose run --rm --no-deps --entrypoint sh hauser -c \
+  'ls -1 /config/household.json.backup-*'
+docker compose run --rm --no-deps --entrypoint sh hauser -c \
+  'cp /config/household.json.backup-v1-<timestamp> /config/household.json && chmod 600 /config/household.json'
+docker compose start hauser
+```
+
+Replace `<timestamp>` with an actual backup name listed from the protected config
+volume. Do not guess it, and preserve the complete `/config` volume backup before
+a destructive restore.
 
 ## Replace the household configuration manually
 
@@ -105,7 +141,7 @@ is HTTP 200:
   "ok": true,
   "status": "ready",
   "householdConfigMode": "active",
-  "schemaVersion": 1
+  "schemaVersion": 2
 }
 ```
 
@@ -130,6 +166,12 @@ Relevant fail-closed codes are:
 - `HOUSEHOLD_CONFIG_NOT_CONFIGURED`
 - `HOUSEHOLD_CONFIG_INVALID_JSON`
 - `HOUSEHOLD_CONFIG_INVALID`
+- `HOUSEHOLD_CONFIG_VERSION_INVALID`
+- `HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED`
+- `HOUSEHOLD_CONFIG_VERSION_TOO_NEW`
+- `HOUSEHOLD_CONFIG_MIGRATION_INVALID`
+- `HOUSEHOLD_CONFIG_MIGRATION_BACKUP_FAILED`
+- `HOUSEHOLD_CONFIG_MIGRATION_WRITE_FAILED`
 - `RUNTIME_DIRECTORY_NOT_WRITABLE`
 
 The Docker healthcheck calls this endpoint from inside the container; it does

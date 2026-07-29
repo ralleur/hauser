@@ -646,7 +646,7 @@ describe('HMI-Backend-Proxy', () => {
     const root = mkdtempSync(join(tmpdir(), 'hmi-household-config-'));
     tempDirs.push(root);
     const configPath = join(root, 'current-v1.json');
-    const body = '{"schemaVersion":1,"rooms":[]}';
+    const body = '{"schemaVersion":2,"rooms":[]}';
     writeFileSync(configPath, body);
     const allowed = new Set(['http://test-client.local']);
 
@@ -665,7 +665,7 @@ describe('HMI-Backend-Proxy', () => {
   });
 
   it('liefert den serverseitigen Household-Modus als Header und aktiviert nur explizites active', () => {
-    const reader = { read: () => ({ ok: true, body: '{"schemaVersion":1}' }) };
+    const reader = { read: () => ({ ok: true, body: '{"schemaVersion":2}' }) };
 
     expect(normalizeHouseholdConfigMode(undefined)).toBe('shadow');
     expect(normalizeHouseholdConfigMode('shadow')).toBe('shadow');

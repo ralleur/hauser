@@ -46,7 +46,7 @@ describe('neutral household FakeBackend runtime', () => {
     expect(fetchImpl).toHaveBeenCalledWith('/api/household-config', { cache: 'no-store' });
     expect(result.backend).toBeInstanceOf(FakeBackend);
     expect(result.backendType).toBe('fake');
-    expect(result.configId).toBe('household-v1:studio');
+    expect(result.configId).toBe('household-v2:studio');
     expect(result.model.rooms.map(({ id }) => id)).toEqual(['studio', 'patio', 'utility']);
     expect(result.model.navigation.map(({ id }) => id)).toEqual(['start', 'listen']);
   });
@@ -126,7 +126,7 @@ describe('neutral household FakeBackend runtime', () => {
     const backendFactory = vi.fn(() => new FakeBackend(new Map()));
 
     const result = await bootstrapNeutralRuntime(
-      async () => validResponse({ schemaVersion: 1, rooms: [] }),
+      async () => validResponse({ schemaVersion: 2, rooms: [] }),
       0,
       backendFactory,
     );

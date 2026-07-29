@@ -16,7 +16,7 @@ import {
   compileHouseholdConfig,
   HOUSEHOLD_SCHEMA_VERSION,
   type EnergyConfig,
-  type HouseholdConfigV1,
+  type HouseholdConfigV2,
   type HouseholdRuntimeModel,
   type VisibleEntityConfig,
 } from './household-config.ts';
@@ -59,7 +59,7 @@ function projectEnergy(): EnergyConfig {
  * Pure projection of the currently controlling installation constants. It does
  * not import the adapter runtime or command module and never alters a source.
  */
-export function projectLegacyHouseholdConfig(): HouseholdConfigV1 {
+export function projectLegacyHouseholdConfig(): HouseholdConfigV2 {
   const roomIds = new Set(ROOM_SEED.map(({ id }) => id));
   return {
     schemaVersion: HOUSEHOLD_SCHEMA_VERSION,

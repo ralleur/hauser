@@ -1,4 +1,4 @@
-export const HOUSEHOLD_SCHEMA_VERSION = 1 as const;
+export const HOUSEHOLD_SCHEMA_VERSION = 2 as const;
 
 export type ModuleId =
   | 'home'
@@ -85,7 +85,7 @@ export interface GlobalEntitiesConfig {
   };
 }
 
-export interface HouseholdConfigV1 {
+export interface HouseholdConfigV2 {
   schemaVersion: typeof HOUSEHOLD_SCHEMA_VERSION;
   rooms: RoomConfig[];
   navigation: NavigationItemConfig[];
@@ -115,7 +115,7 @@ export interface ConfigIssue {
 }
 
 export type HouseholdConfigParseResult =
-  | { ok: true; value: HouseholdConfigV1 }
+  | { ok: true; value: HouseholdConfigV2 }
   | { ok: false; issues: ConfigIssue[] };
 
 const LOCAL_ID = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
@@ -712,8 +712,8 @@ function commandKey(contract: Pick<CommandContract, 'entityId' | 'domain'>): str
   return `${contract.entityId}\u0000${contract.domain}`;
 }
 
-/** Compiles a validated v1 configuration into a canonical runtime representation. */
-export function compileHouseholdConfig(config: HouseholdConfigV1): HouseholdRuntimeModel {
+/** Compiles a validated v2 configuration into a canonical runtime representation. */
+export function compileHouseholdConfig(config: HouseholdConfigV2): HouseholdRuntimeModel {
   // Room order is installation semantics. Entities inside a room are keyed and
   // canonicalized so object/fixture construction order cannot create noise.
   const rooms = config.rooms.map((room) => ({

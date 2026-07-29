@@ -12,6 +12,7 @@ RUN npm run build && \
     ./node_modules/.bin/tsc \
       --ignoreConfig \
       src/lib/config/household-config.ts \
+      src/lib/config/household-config-migration.ts \
       src/lib/config/household-runtime-data.ts \
       src/lib/config/legacy-household-config.ts \
       src/lib/config/legacy-household-data.ts \

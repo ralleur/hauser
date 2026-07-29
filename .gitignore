@@ -15,3 +15,6 @@ app/public/mdi-icons/
 
 # Paraglide: generated at build time (npm run paraglide:compile)
 app/src/paraglide/
+
+# Automatic household migration rollback copies
+app/config/households/*.backup-v*-*

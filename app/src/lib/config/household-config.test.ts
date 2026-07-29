@@ -6,10 +6,10 @@ import {
   compileHouseholdConfig,
   parseHouseholdConfig,
   type ConfigIssue,
-  type HouseholdConfigV1,
+  type HouseholdConfigV2,
 } from './household-config.ts';
 
-function parseValid(input: unknown): HouseholdConfigV1 {
+function parseValid(input: unknown): HouseholdConfigV2 {
   const result = parseHouseholdConfig(input);
   expect(result.ok).toBe(true);
   if (!result.ok) throw new Error(JSON.stringify(result.issues));
@@ -40,7 +40,7 @@ describe('household config v1', () => {
   });
 
   it('represents unavailable optional global integrations explicitly as null', () => {
-    const setupConfig = structuredClone(neutralStudio) as HouseholdConfigV1;
+    const setupConfig = structuredClone(neutralStudio) as HouseholdConfigV2;
     setupConfig.globalEntities = {
       sun: null,
       vacationMode: null,
@@ -81,7 +81,7 @@ describe('household config v1', () => {
   });
 
   it('rejects unknown schema versions, duplicate IDs and duplicate HA entity IDs', () => {
-    expectIssue({ ...neutralSmall, schemaVersion: 2 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
+    expectIssue({ ...neutralSmall, schemaVersion: 3 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
 
     const duplicateRoom = structuredClone(neutralSmall);
     duplicateRoom.rooms[1].id = duplicateRoom.rooms[0].id;
@@ -174,7 +174,7 @@ describe('household config v1', () => {
   });
 
   it('preserves optional energy groups through validation and compilation', () => {
-    const grouped = structuredClone(neutralSmall) as unknown as HouseholdConfigV1;
+    const grouped = structuredClone(neutralSmall) as unknown as HouseholdConfigV2;
     grouped.energy!.sensors.consumptionPower[0].group = 'Workshop group';
 
     const compiled = compileHouseholdConfig(parseValid(grouped));

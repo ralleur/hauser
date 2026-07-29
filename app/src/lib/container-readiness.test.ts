@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 // @ts-expect-error Native Node test without @types/node.
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 // @ts-expect-error Native Node test without @types/node.
 import { tmpdir } from 'node:os';
 // @ts-expect-error Native Node test without @types/node.
 import { join } from 'node:path';
 // @ts-expect-error The production server intentionally remains native Node ESM.
-import { assessHmiReadiness, createHmiServer, verifySetupHomeAssistant, verifySetupJellyfin } from '../../server.mjs';
+import { assessHmiReadiness, createHmiServer, migrateHouseholdConfigFile, verifySetupHomeAssistant, verifySetupJellyfin } from '../../server.mjs';
 
 const roots: string[] = [];
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 
 function validConfig() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     rooms: [{
       id: 'living',
       name: 'Living room',
@@ -57,6 +57,72 @@ afterEach(async () => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+describe('household config file migration', () => {
+  it('backs up the exact v1 bytes before atomically activating validated v2', () => {
+    const files = fixture();
+    const legacy = { ...validConfig(), schemaVersion: 1 };
+    const original = JSON.stringify(legacy);
+    writeFileSync(files.householdConfigPath, original, { mode: 0o640 });
+
+    const result = migrateHouseholdConfigFile(files.householdConfigPath, {
+      now: () => new Date('2026-07-29T09:45:00.000Z'),
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      status: 'migrated',
+      fromVersion: 1,
+      toVersion: 2,
+      backupPath: `${files.householdConfigPath}.backup-v1-20260729T094500000Z`,
+    });
+    expect(readFileSync(result.backupPath, 'utf8')).toBe(original);
+    expect(statSync(result.backupPath).mode & 0o777).toBe(0o600);
+    expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
+    expect(statSync(files.householdConfigPath).mode & 0o777).toBe(0o600);
+
+    expect(migrateHouseholdConfigFile(files.householdConfigPath)).toEqual({
+      ok: true,
+      status: 'current',
+      version: 2,
+    });
+    expect(readdirSync(files.configDir).filter((name: string) => name.includes('.backup-'))).toHaveLength(1);
+  });
+
+  it('does not back up or replace a v1 document that fails current validation', () => {
+    const files = fixture();
+    const invalid = JSON.stringify({ ...validConfig(), schemaVersion: 1, globalEntities: null });
+    writeFileSync(files.householdConfigPath, invalid);
+
+    expect(migrateHouseholdConfigFile(files.householdConfigPath)).toMatchObject({
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
+      issue: { code: 'TYPE_MISMATCH' },
+    });
+    expect(readFileSync(files.householdConfigPath, 'utf8')).toBe(invalid);
+    expect(readdirSync(files.configDir).filter((name: string) => name.includes('.backup-'))).toEqual([]);
+  });
+
+  it('preserves the original when final activation fails after a successful backup', () => {
+    const files = fixture();
+    const original = JSON.stringify({ ...validConfig(), schemaVersion: 1 });
+    writeFileSync(files.householdConfigPath, original);
+
+    const result = migrateHouseholdConfigFile(files.householdConfigPath, {
+      now: () => new Date('2026-07-29T09:46:00.000Z'),
+      replaceConfig: () => { throw new Error('injected rename failure'); },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_WRITE_FAILED',
+      backupPath: `${files.householdConfigPath}.backup-v1-20260729T094600000Z`,
+    });
+    expect(readFileSync(files.householdConfigPath, 'utf8')).toBe(original);
+    expect(readFileSync(result.backupPath, 'utf8')).toBe(original);
+    expect(readdirSync(files.configDir).some((name: string) => name.endsWith('.migration.tmp'))).toBe(false);
+  });
+});
+
 describe('container readiness contract', () => {
   it('requires the built app, a valid active household config and writable runtime directories', () => {
     const files = fixture();
@@ -72,9 +138,67 @@ describe('container readiness contract', () => {
         ok: true,
         status: 'ready',
         householdConfigMode: 'active',
-        schemaVersion: 1,
+        schemaVersion: 2,
       },
     });
+  });
+
+  it('migrates v1 once at active server startup and exposes ready only after v2 is active', async () => {
+    const files = fixture();
+    const original = JSON.stringify({ ...validConfig(), schemaVersion: 1 });
+    writeFileSync(files.householdConfigPath, original);
+    const server = createHmiServer('', {
+      staticRoot: files.staticRoot,
+      householdConfigPath: files.householdConfigPath,
+      householdConfigMode: 'active',
+      requiredWritableDirs: [files.configDir, files.dataDir, files.assetsDir],
+      configPath: join(files.dataDir, 'config.json'),
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+
+    expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
+    const backups = readdirSync(files.configDir).filter((name: string) => name.includes('.backup-v1-'));
+    expect(backups).toHaveLength(1);
+    expect(readFileSync(join(files.configDir, backups[0]), 'utf8')).toBe(original);
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    const health = await fetch(`http://127.0.0.1:${port}/api/health`);
+    expect(health.status).toBe(200);
+    expect(await health.json()).toMatchObject({ status: 'ready', schemaVersion: 2 });
+  });
+
+  it('keeps invalid migrated input byte-identical and exposes only a not-ready server', async () => {
+    const files = fixture();
+    const original = JSON.stringify({ ...validConfig(), schemaVersion: 1, globalEntities: null });
+    writeFileSync(files.householdConfigPath, original);
+    const server = createHmiServer('', {
+      staticRoot: files.staticRoot,
+      householdConfigPath: files.householdConfigPath,
+      householdConfigMode: 'active',
+      requiredWritableDirs: [files.configDir, files.dataDir, files.assetsDir],
+      configPath: join(files.dataDir, 'config.json'),
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+
+    expect(readFileSync(files.householdConfigPath, 'utf8')).toBe(original);
+    expect(readdirSync(files.configDir).filter((name: string) => name.includes('.backup-'))).toEqual([]);
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    const health = await fetch(`http://127.0.0.1:${port}/api/health`);
+    expect(health.status).toBe(503);
+    expect(await health.json()).toMatchObject({
+      status: 'not_ready',
+      code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
+    });
+    const config = await fetch(`http://127.0.0.1:${port}/api/config`);
+    expect(config.status).toBe(503);
+    expect(await config.json()).toMatchObject({ code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID' });
   });
 
   it('fails closed with a stable code for invalid JSON and invalid schema data', () => {
@@ -90,7 +214,7 @@ describe('container readiness contract', () => {
       payload: { code: 'HOUSEHOLD_CONFIG_INVALID_JSON' },
     });
 
-    writeFileSync(files.householdConfigPath, '{"schemaVersion":1,"rooms":[]}');
+    writeFileSync(files.householdConfigPath, '{"schemaVersion":2,"rooms":[]}');
     expect(assessHmiReadiness({
       staticRoot: files.staticRoot,
       householdConfigPath: files.householdConfigPath,
@@ -211,7 +335,7 @@ describe('container readiness contract', () => {
       }),
     });
     expect(activated.status).toBe(201);
-    expect(await activated.json()).toEqual({ ok: true, status: 'activated', schemaVersion: 1 });
+    expect(await activated.json()).toEqual({ ok: true, status: 'activated', schemaVersion: 2 });
     expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
     expect(statSync(files.householdConfigPath).mode & 0o777).toBe(0o600);
     expect(JSON.parse(readFileSync(centralConfigPath, 'utf8'))).toMatchObject({
@@ -225,7 +349,7 @@ describe('container readiness contract', () => {
     });
 
     const ready = await fetch(`http://127.0.0.1:${port}/api/health`);
-    expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 1 });
+    expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 2 });
   });
 
   it('reconfigures an active installation atomically without deleting the current setup', async () => {
@@ -280,7 +404,7 @@ describe('container readiness contract', () => {
       }),
     });
     expect(activated.status).toBe(200);
-    expect(await activated.json()).toEqual({ ok: true, status: 'reconfigured', schemaVersion: 1 });
+    expect(await activated.json()).toEqual({ ok: true, status: 'reconfigured', schemaVersion: 2 });
     expect(verified).toEqual([{
       haUrl: 'http://new-home-assistant.local:8123',
       haToken: 'new-token',
@@ -375,7 +499,7 @@ describe('container readiness contract', () => {
       headers: { origin: 'https://untrusted.example' },
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true, status: 'ready', schemaVersion: 1 });
+    expect(await response.json()).toMatchObject({ ok: true, status: 'ready', schemaVersion: 2 });
 
     const head = await fetch(`http://127.0.0.1:${port}/api/health`, { method: 'HEAD' });
     expect(head.status).toBe(200);

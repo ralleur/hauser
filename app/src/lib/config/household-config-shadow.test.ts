@@ -157,7 +157,7 @@ describe('household config shadow bootstrap', () => {
     expect(syntax).toMatchObject({ status: 'invalid', kind: 'json' });
 
     const schema = await bootstrapHouseholdConfigShadow({
-      fetcher: async () => jsonResponse(JSON.stringify({ schemaVersion: 1 })),
+      fetcher: async () => jsonResponse(JSON.stringify({ schemaVersion: 2 })),
       legacyModel: legacyHouseholdRuntimeModel,
     });
     expect(schema).toMatchObject({ status: 'invalid', kind: 'schema' });

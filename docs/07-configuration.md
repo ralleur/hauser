@@ -5,7 +5,9 @@ visible Home Assistant entities, navigation, enabled modules, energy sensors,
 media targets and global entity bindings are loaded before the application or
 backend adapters start.
 
-The current contract is `schemaVersion: 1`.
+The current contract is `schemaVersion: 2`. Version 2 keeps the v1 fields unchanged
+and introduces the automatic, backed-up migration lifecycle used for future
+contract changes.
 
 ## Examples
 
@@ -56,7 +58,7 @@ accepts invalid public configuration.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "rooms": [],
   "navigation": [],
   "enabledModules": ["home", "system"],
@@ -117,8 +119,8 @@ screens.
 ## Current pre-beta boundary
 
 The configuration core, source-built container, Compose file, persistent
-`/config`, `/data` and `/assets` volumes and manual backup/restore path are
-implemented. The deterministic setup wizard, automatic migrations, published
-registry image and independent household pilot remain beta milestones. Until
-those exist, this is still a technically oriented pre-beta setup rather than a
-supported public install path.
+`/config`, `/data` and `/assets` volumes, deterministic setup wizard and automatic
+v1-to-v2 migration with rollback backup are implemented. The published registry
+image and independent household pilot remain beta milestones. Until those exist,
+this is still a technically oriented pre-beta setup rather than a supported public
+install path.

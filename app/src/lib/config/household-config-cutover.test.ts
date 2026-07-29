@@ -7,7 +7,7 @@ import neutralStudio from '../../../config/examples/neutral-studio.json';
 import {
   compileHouseholdConfig,
   parseHouseholdConfig,
-  type HouseholdConfigV1,
+  type HouseholdConfigV2,
   type HouseholdRuntimeModel,
 } from './household-config.ts';
 import { legacyHouseholdRuntimeModel } from './legacy-household-config.ts';
@@ -48,8 +48,8 @@ function response(input: unknown, mode: string, status = 200): Response {
   });
 }
 
-function syntheticActiveConfig(): HouseholdConfigV1 {
-  const config = structuredClone(neutralStudio) as HouseholdConfigV1;
+function syntheticActiveConfig(): HouseholdConfigV2 {
+  const config = structuredClone(neutralStudio) as HouseholdConfigV2;
   config.navigation = [
     { id: 'start', name: 'Startseite', order: 0, target: { type: 'module', id: 'home' } },
     { id: 'listen', name: 'Audio', order: 1, target: { type: 'module', id: 'media' } },
@@ -172,7 +172,7 @@ describe('active household runtime projection', () => {
   });
 
   it('fails closed for navigation the productive shell cannot represent and incomplete song targets', () => {
-    const unsupportedNavigation = structuredClone(neutralStudio) as HouseholdConfigV1;
+    const unsupportedNavigation = structuredClone(neutralStudio) as HouseholdConfigV2;
     unsupportedNavigation.navigation.splice(1, 0, {
       id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
     });
@@ -249,7 +249,7 @@ describe('productive household bootstrap cutover', () => {
   });
 
   it('does not import App, runtime or backend for active invalid, unavailable or projection errors', async () => {
-    const projectionError = structuredClone(neutralStudio) as HouseholdConfigV1;
+    const projectionError = structuredClone(neutralStudio) as HouseholdConfigV2;
     projectionError.navigation.splice(1, 0, {
       id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
     });
@@ -338,7 +338,7 @@ describe('productive household bootstrap cutover', () => {
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');
     const config = demoResponse('/api/household-config', 'GET');
     expect(config?.headers.get('x-hmi-household-config-mode')).toBe('active');
-    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 1 });
+    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 2 });
   });
 
   it('projects configured active Phone targets while preserving a valid device-local order', () => {
