@@ -48,15 +48,29 @@ docker compose exec -T hauser node -e '
       if (health.status !== "setup_required") process.exit(1);
     });
 '
-docker compose cp app/config/examples/neutral-small.json hauser:/config/household.json >/dev/null
+node -e '
+  const fs = require("node:fs");
+  const config = JSON.parse(fs.readFileSync("app/config/examples/neutral-small.json", "utf8"));
+  config.schemaVersion = 1;
+  fs.writeFileSync(process.argv[1], `${JSON.stringify(config, null, 2)}\n`, { mode: 0o644 });
+' "$tmp/household-v1.json"
+docker compose cp "$tmp/household-v1.json" hauser:/config/household.json >/dev/null
 docker compose restart hauser >/dev/null
 after_healthy
 docker compose exec -T hauser node -e '
   fetch("http://127.0.0.1:4173/api/health")
     .then((response) => response.json())
     .then((health) => {
-      if (health.status !== "ready" || health.schemaVersion !== 1) process.exit(1);
+      if (health.status !== "ready" || health.schemaVersion !== 2) process.exit(1);
     });
+'
+docker compose exec -T hauser sh -c '
+  set -- /config/household.json.backup-v1-*
+  test "$#" -eq 1
+  test -f "$1"
+  test "$(stat -c "%a" "$1")" = 600
+  test "$(stat -c "%a" /config/household.json)" = 600
+  test "$(stat -c "%U:%G" /config/household.json)" = node:node
 '
 test "$(docker compose exec -T hauser id -u | tr -d '\r')" = "1000"
 if docker compose exec -T hauser sh -c 'touch /opt/hauser/rootfs-must-be-read-only' 2>/dev/null; then
@@ -96,18 +110,25 @@ docker compose exec -T hauser sh -c '
   test ! -e /data/post-backup-marker
 '
 
-# A semantically invalid active config must terminate before listening.
-printf '%s\n' '{"schemaVersion":1,"rooms":[]}' > "$tmp/invalid.json"
-set +e
-invalid_output="$(docker run --rm \
-  --read-only \
-  --tmpfs /tmp:rw,nosuid,nodev,noexec,size=16m \
-  --volume "$tmp/invalid.json:/config/household.json:ro" \
-  "$image" 2>&1)"
-invalid_status=$?
-set -e
-test "$invalid_status" -ne 0
-printf '%s' "$invalid_output" | grep -q 'HOUSEHOLD_CONFIG_INVALID'
+# Semantically invalid current and legacy configs must terminate before listening.
+run_invalid_probe() {
+  local fixture="$1" expected_code="$2" output status
+  set +e
+  output="$(docker run --rm \
+    --read-only \
+    --tmpfs /tmp:rw,nosuid,nodev,noexec,size=16m \
+    --volume "$fixture:/config/household.json:ro" \
+    "$image" 2>&1)"
+  status=$?
+  set -e
+  test "$status" -ne 0
+  printf '%s' "$output" | grep -q "$expected_code"
+}
 
-printf 'project=%s\nimage=%s\nconfig_hash=%s\nsetup_required=PASS\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\n' \
+printf '%s\n' '{"schemaVersion":2,"rooms":[]}' > "$tmp/invalid-v2.json"
+printf '%s\n' '{"schemaVersion":1,"rooms":[]}' > "$tmp/invalid-v1.json"
+run_invalid_probe "$tmp/invalid-v2.json" HOUSEHOLD_CONFIG_INVALID
+run_invalid_probe "$tmp/invalid-v1.json" HOUSEHOLD_CONFIG_MIGRATION_INVALID
+
+printf 'project=%s\nimage=%s\nconfig_hash=%s\nsetup_required=PASS\nmigration_v1_to_v2=PASS\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\ninvalid_migration=PASS\n' \
   "$project" "$image" "$config_hash_after"

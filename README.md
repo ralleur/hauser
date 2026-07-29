@@ -28,9 +28,10 @@ tablet in one specific home. The code is licensed under MIT and is currently
 developed in a private repository that is kept ready for publication. A
 source-built Docker Compose path, external versioned household configuration and
 deterministic setup wizard now exist. The isolated clean-room pilot has passed;
-what is still missing is the final release package and published registry image.
-An external real-home installation remains required during beta stabilisation,
-before the release candidate — see [the roadmap](ROADMAP.md).
+the beta version, changelog, release-note contract and tag-gated CI are prepared.
+What is still missing is the final release-package run and published registry
+image. An external real-home installation remains required during beta
+stabilisation, before the release candidate — see [the roadmap](ROADMAP.md).
 
 The static demo build runs the real interface against simulated devices. It is
 kept release-ready in the repository and will be hosted publicly with the first
@@ -146,7 +147,8 @@ backup, restore, update and rollback contract is documented in
 [`docs/08-installation.md`](docs/08-installation.md).
 
 No pre-beta image is published to a registry. A clean checkout can produce a
-commit-bound local image with `./scripts/build-image.sh`.
+commit-bound local image with `./scripts/build-image.sh`; the release workflow
+publishes only after an explicit version tag whose value matches `package.json`.
 
 ## Running the developer build
 
@@ -226,6 +228,8 @@ hosted demo that will accompany the public beta.
 | [`docs/07-configuration.md`](docs/07-configuration.md) | Versioned household configuration contract and failure modes |
 | [`docs/08-installation.md`](docs/08-installation.md) | Container/Compose installation, persistence, health, backup and rollback |
 | [`docs/09-dev-pilot.md`](docs/09-dev-pilot.md) | Isolated synthetic Home Assistant and repeatable onboarding environment |
+| [`CHANGELOG.md`](CHANGELOG.md) | User-visible release history and known limitations |
+| [`docs/release-notes-template.md`](docs/release-notes-template.md) | Required evidence and identity contract for each release |
 
 The interface speaks German, English, French, Italian, Portuguese and Polish,
 and follows the browser language unless you pick one in the settings. Dates,
@@ -240,7 +244,9 @@ Jellyfin adapters, HA-backed calendar path, optional Paperless bridge,
 companion-backed household data, panel shell and phone shell are implemented.
 The repository, documentation and static demo are maintained as publication-ready,
 but no alpha will be published. The repository becomes public with the first
-installable beta, `v0.4.0-beta.1`, after the independent-installation gate passes.
+installable beta, `v0.4.0-beta.1`, after the isolated clean-room gate and final
+release-package checks pass. External real-home evidence remains mandatory before
+the release candidate.
 See [ROADMAP.md](ROADMAP.md) for the path to v1.
 
 This is a hobby project maintained by one person. The contribution workflow

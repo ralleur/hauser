@@ -28,7 +28,7 @@ RUN npm run build && \
       --noEmitOnError true
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.3.0-pre-beta
+ARG HAUSER_VERSION=0.4.0-beta.1
 LABEL org.opencontainers.image.title="Hauser" \
       org.opencontainers.image.description="Local-first smart home control surface" \
       org.opencontainers.image.source="https://github.com/ralleur/hauser" \

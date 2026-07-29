@@ -198,7 +198,9 @@ HAUSER_IMAGE_TAG=sha-<12-character-commit>
 ```
 
 No pre-beta image is pushed to a public registry. Registry publication starts
-only with the public beta gate.
+only with the public beta gate. The tag-gated workflow requires the Git tag,
+`app/package.json`, `app/package-lock.json`, the Docker image version and dated
+changelog entry to agree before it can publish a multi-architecture image.
 
 ## Backup
 
@@ -256,8 +258,10 @@ without rebuilding:
 4. If the newer version changed persistent data incompatibly, restore the backup
    taken before the update.
 
-There is no automatic schema migration yet. Until migrations exist, update and
-rollback remain an operator-controlled transaction.
+Automatic configuration migration currently covers schema v1 to v2. Image
+update and rollback nevertheless remain an operator-controlled transaction:
+take a backup first, keep the previous immutable image reference, and restore
+both image and data when reverting across an incompatible schema change.
 
 ## Stop and remove
 

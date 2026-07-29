@@ -121,6 +121,7 @@ screens.
 The configuration core, source-built container, Compose file, persistent
 `/config`, `/data` and `/assets` volumes, deterministic setup wizard and automatic
 v1-to-v2 migration with rollback backup are implemented. The published registry
-image and independent household pilot remain beta milestones. Until those exist,
-this is still a technically oriented pre-beta setup rather than a supported public
-install path.
+image remains a `beta.1` milestone. External real-home evidence is required during
+beta stabilisation before the release candidate, not before the first beta. Until
+the registry image exists, this is still a technically oriented pre-beta setup
+rather than a supported public install path.

@@ -1,0 +1,142 @@
+name: Quality and release image
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: quality-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Tests, builds and container contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CI: "true"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install locked dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Verify production dependency audit
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Verify release metadata
+        run: ./scripts/verify-release-metadata.sh
+
+      - name: Run tests
+        working-directory: app
+        run: npm test
+
+      - name: Run typecheck
+        working-directory: app
+        run: npm run check
+
+      - name: Build production application
+        working-directory: app
+        run: npm run build
+
+      - name: Build static demo
+        working-directory: app
+        run: npm run build:demo
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build commit-bound local image
+        run: ./scripts/build-image.sh "ci-${GITHUB_SHA::12}"
+
+      - name: Verify container contract
+        run: ./scripts/verify-container.sh "ci-${GITHUB_SHA::12}"
+
+  release-image:
+    name: Publish immutable GHCR image
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out tagged revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Verify tag and release metadata
+        run: ./scripts/verify-release-metadata.sh "$GITHUB_REF_NAME"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive immutable image metadata
+        id: image
+        shell: bash
+        run: |
+          version="$(node -p 'require("./app/package.json").version')"
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "version=$version"
+            echo "repository=$repository"
+            echo "short_sha=${GITHUB_SHA::12}"
+            echo "source_date_epoch=$(git show -s --format=%ct HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish multi-architecture image
+        id: publish
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          build-args: |
+            SOURCE_DATE_EPOCH=${{ steps.image.outputs.source_date_epoch }}
+            HAUSER_VERSION=${{ steps.image.outputs.version }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.image.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          tags: |
+            ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.repository }}:sha-${{ steps.image.outputs.short_sha }}
+
+      - name: Report immutable manifest
+        shell: bash
+        run: |
+          printf 'image=%s@%s\n' \
+            '${{ steps.image.outputs.repository }}' \
+            '${{ steps.publish.outputs.digest }}'

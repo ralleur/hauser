@@ -88,10 +88,12 @@ configuration core is built and exercised with independent neutral fixtures.
 The source-built container/Compose installation path, persistent volumes,
 readiness contract, backup/restore helpers and deterministic Home Assistant setup
 wizard are built. The isolated development pilot has passed both explicit-Area
-and no-Area onboarding, command/state echo, reconnect and persistence. The next
-technical milestone is the final release package and registry image. A real
-external household remains mandatory during beta stabilisation before RC;
-AI-assisted setup may complement it later but is not a v1 gate.
+and no-Area onboarding, command/state echo, reconnect and persistence. Beta
+versioning, changelog, release-note structure and tag-gated quality/image
+automation are prepared. The next technical milestone is the final release
+package run and immutable registry image. A real external household remains
+mandatory during beta stabilisation before RC; AI-assisted setup may complement
+it later but is not a v1 gate.
 
 ## Internationalisation
 
@@ -119,8 +121,8 @@ configuration, not from the interface.
 
 ## Known gaps
 
-- The container image is built locally from source; no registry image is
-  published before the beta gate.
+- The release workflow is prepared, but no registry image exists until the
+  explicit public-beta tag is created after the final package gate.
 - The clean-room pilot proves the technical setup contract, not yet usability by
   an external person or compatibility with a second real device topology.
 - The full kiosk hardware measurement matrix remains incomplete; the
