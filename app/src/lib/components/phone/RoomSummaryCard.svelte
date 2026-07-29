@@ -36,7 +36,7 @@
   use:longpress={{ onLongPress: () => openRoomEdit(summary.id) }}
   onclick={(event) => onopen(summary, event.currentTarget)}
 >
-  <strong class="phone-room-card-name">{summary.name}</strong>
+  <strong class="phone-room-card-name" title={summary.name}>{summary.name}</strong>
   {#if summary.lightsOn > 0 || summary.windowOpen}
     <span class="phone-room-facts">
       {#if summary.lightsOn > 0}

@@ -1,14 +1,11 @@
 <script lang="ts">
-  import Icon from '../components/Icon.svelte';
   import RoomHero from '../components/RoomHero.svelte';
   import RoomControls from '../components/RoomControls.svelte';
-  import { appState, HVAC_MODES } from '../state/app.svelte.ts';
-  import { mergedLight, mergedClimate, roomTemperature } from '../state/commands.ts';
+  import PanelRoomSelector from '../components/PanelRoomSelector.svelte';
+  import { appState } from '../state/app.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
-  import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
-  import { fmtTemp } from '../format.ts';
 
   import { m } from '../../paraglide/messages.js';
   if (!appState.currentRoom) appState.currentRoom = appState.rooms[0]?.id ?? null;
@@ -42,32 +39,11 @@
     {#each layoutManager.preview.slots as slot, index (slot.id)}
       {@const selected = slotRoom(slot.roomId)}
       <aside class="home-panel" aria-label="Kontrollfläche {index + 1}">
-        <div class="room-select">
-          {#each appState.rooms as room (room.id)}
-            {@const climate = mergedClimate(room.id)}
-            {@const temp = roomTemperature(room.id)}
-            {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
-            {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
-            <button class="room-btn pressable" type="button" data-room={room.id}
-                    class:is-active={selected?.id === room.id}
-                    use:longpress={{ onLongPress: () => openRoomEdit(room.id) }}
-                    onclick={() => selectRoom(slot.id, room.id)}>
-              <div class="room-btn-top">
-                <span class="room-btn-name">{room.name}</span>
-                {#if room.presence}<span class="dot dot-presence" title={m.home_present()}></span>{/if}
-              </div>
-              <div class="room-btn-stats num">
-                {#if temp !== null}
-                  <span class="rb-temp" class:mode-heat={mode?.id === 'heat'} class:mode-cool={mode?.id === 'cool'}>
-                    {#if mode}<Icon name={mode.icon} cls="icon icon-sm" />{/if}{fmtTemp(temp)}°
-                  </span>
-                {/if}
-                <span class="rb-light" class:is-on={lightsOn > 0}><Icon name="i-bulb" cls="icon icon-sm" /></span>
-                {#if room.windowOpen}<Icon name="i-window" cls="icon icon-sm rb-window" />{/if}
-              </div>
-            </button>
-          {/each}
-        </div>
+        <PanelRoomSelector
+          rooms={appState.rooms}
+          selectedId={selected?.id ?? null}
+          onselect={(roomId) => selectRoom(slot.id, roomId)}
+        />
 
         <div class="panel-controls">
           {#if selected}

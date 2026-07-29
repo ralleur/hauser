@@ -12,13 +12,13 @@ import {
   energyRefIds,
   type EnergySensorRef,
 } from './legacy-household-data.ts';
-import {
-  compileHouseholdConfig,
-  HOUSEHOLD_SCHEMA_VERSION,
-  type EnergyConfig,
-  type HouseholdConfigV2,
-  type HouseholdRuntimeModel,
-  type VisibleEntityConfig,
+import { compileHouseholdConfig } from './household-config-compiler.ts';
+import { HOUSEHOLD_SCHEMA_VERSION } from './household-config-schema.ts';
+import type {
+  EnergyConfig,
+  HouseholdConfigV2,
+  HouseholdRuntimeModel,
+  VisibleEntityConfig,
 } from './household-config.ts';
 
 function singleEnergyEntity(ref: EnergySensorRef, source: string): string | null {

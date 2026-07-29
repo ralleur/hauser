@@ -32,9 +32,13 @@ Open <http://localhost:4173>. A fresh config volume starts the restricted setup
 runtime. Enter a Home Assistant URL and long-lived token; Hauser verifies the
 connection from both browser and server, reads the HA area/device/entity
 registries, proposes rooms and relevant entities, validates the result and only
-then activates `/config/household.json`. Before activation, room and entity names
-can be corrected, entities can be omitted, and compatible entities can be moved
-between rooms. Ambiguous singleton roles are not offered as invalid moves.
+then activates `/config/household.json`. Before activation, rooms can be created,
+renamed, reordered and deliberately deleted. Deleting a populated room requires
+moving its compatible entities and room references to another room or explicitly
+omitting them from Hauser. Entity names can be corrected, individual entities can
+be omitted, and compatible entities can be moved between rooms. These edits affect
+Hauser's configuration only — the wizard never creates, renames or deletes Home
+Assistant Areas. Ambiguous singleton roles are not offered as invalid moves.
 
 The default binding is deliberately loopback-only.
 To make Hauser reachable on a trusted home LAN, set exact values in `.env`, for

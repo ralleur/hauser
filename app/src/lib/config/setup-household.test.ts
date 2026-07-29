@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { compileHouseholdConfig, parseHouseholdConfig } from './household-config.ts';
 import { projectActiveHouseholdData } from './household-runtime-data.ts';
 import {
+  addSetupRoom,
   buildSetupHouseholdSuggestion,
+  canRemoveSetupRoom,
   canMoveSetupEntity,
   moveSetupEntity,
+  moveSetupRoom,
   omitSetupEntity,
+  removeSetupRoom,
   type SetupDiscoverySnapshot,
 } from './setup-household.ts';
 
@@ -115,5 +119,74 @@ describe('deterministic setup household suggestion', () => {
 
     expect(canMoveSetupEntity(config, 'climate.living_main', 'hall')).toBe(false);
     expect(moveSetupEntity(config, 'climate.living_main', 'hall')).toBe(config);
+  });
+
+  it('adds rooms with stable unique ids and reorders them without mutating the input', () => {
+    const original = buildSetupHouseholdSuggestion(snapshot()).config;
+    const proxied = new Proxy({
+      ...original,
+      globalEntities: new Proxy(original.globalEntities, {}),
+    }, {});
+    const first = addSetupRoom(proxied, 'Gäste & Hobby');
+    const second = addSetupRoom(first, 'Gäste & Hobby');
+
+    expect(original.rooms).toHaveLength(2);
+    expect(second.rooms.map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: 'hall', name: 'Hall' },
+      { id: 'living_room', name: 'Living Room' },
+      { id: 'gaste_hobby', name: 'Gäste & Hobby' },
+      { id: 'gaste_hobby_2', name: 'Gäste & Hobby' },
+    ]);
+
+    const moved = moveSetupRoom(second, 'gaste_hobby_2', -1);
+    expect(moved.rooms.map(({ id }) => id)).toEqual([
+      'hall', 'living_room', 'gaste_hobby_2', 'gaste_hobby',
+    ]);
+    expect(moveSetupRoom(moved, 'hall', -1)).toBe(moved);
+  });
+
+  it('removes a room only through an explicit reference-safe strategy', () => {
+    const config = buildSetupHouseholdSuggestion(snapshot()).config;
+    config.navigation.push({
+      id: 'hall_shortcut', name: 'Hall', order: 2, target: { type: 'room', id: 'hall' },
+    });
+    config.enabledModules.push('media');
+    config.mediaTargets.push({
+      id: 'hall_speaker', name: 'Hall speaker', entityId: 'media_player.hall', roomId: 'hall',
+    });
+
+    expect(canRemoveSetupRoom(config, 'hall', { type: 'move', targetRoomId: 'living_room' })).toBe(true);
+    const moved = removeSetupRoom(config, 'hall', { type: 'move', targetRoomId: 'living_room' });
+    expect(moved).not.toBe(config);
+    expect(moved.rooms.map(({ id }) => id)).toEqual(['living_room']);
+    expect(moved.rooms[0].visibleEntities.map(({ entityId }) => entityId)).toContain('binary_sensor.hall_door');
+    expect(moved.navigation.find(({ id }) => id === 'hall_shortcut')?.target).toEqual({
+      type: 'room', id: 'living_room',
+    });
+    expect(moved.mediaTargets[0].roomId).toBe('living_room');
+    expect(parseHouseholdConfig(moved).ok).toBe(true);
+
+    const omitted = removeSetupRoom(config, 'hall', { type: 'omit' });
+    expect(omitted.rooms.map(({ id }) => id)).toEqual(['living_room']);
+    expect(omitted.navigation.some(({ id }) => id === 'hall_shortcut')).toBe(false);
+    expect(omitted.mediaTargets[0].roomId).toBeNull();
+    expect(parseHouseholdConfig(omitted).ok).toBe(true);
+
+    expect(removeSetupRoom(moved, 'living_room', { type: 'omit' })).toBe(moved);
+  });
+
+  it('blocks bulk moves that would create ambiguous singleton roles', () => {
+    const config = buildSetupHouseholdSuggestion(snapshot()).config;
+    const secondClimate = structuredClone(
+      config.rooms.find(({ id }) => id === 'living_room')!.visibleEntities
+        .find(({ role }) => role === 'climate'),
+    )!;
+    secondClimate.id = 'hall_climate';
+    secondClimate.entityId = 'climate.hall';
+    config.rooms.find(({ id }) => id === 'hall')!.visibleEntities.push(secondClimate);
+
+    const removal = { type: 'move' as const, targetRoomId: 'living_room' };
+    expect(canRemoveSetupRoom(config, 'hall', removal)).toBe(false);
+    expect(removeSetupRoom(config, 'hall', removal)).toBe(config);
   });
 });

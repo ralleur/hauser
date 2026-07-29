@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { discoverHomeAssistant } from '../config/setup-discovery.ts';
   import {
     JellyfinAuthError,
@@ -9,10 +9,14 @@
   } from '../adapter/jellyfin.ts';
   import { parseHouseholdConfig, type HouseholdConfigV2 } from '../config/household-config.ts';
   import {
+    addSetupRoom,
     buildSetupHouseholdSuggestion,
+    canRemoveSetupRoom,
     canMoveSetupEntity,
     moveSetupEntity,
+    moveSetupRoom,
     omitSetupEntity,
+    removeSetupRoom,
     type SetupHouseholdSuggestion,
   } from '../config/setup-household.ts';
   import {
@@ -40,6 +44,11 @@
   let jellyfinStatus = $state<'idle' | 'testing' | 'ready' | 'error'>('idle');
   let jellyfinMessage = $state('');
   let jellyfinSession = $state<{ accessToken: string; userId: string } | null>(null);
+  let pendingDeleteRoomId = $state<string | null>(null);
+  let deleteDestination = $state('');
+  const pendingDeleteRoom = $derived(
+    suggestion?.config.rooms.find(({ id }) => id === pendingDeleteRoomId) ?? null,
+  );
 
   function invalidateJellyfinSession(): void {
     jellyfinSession = null;
@@ -170,15 +179,58 @@
   function moveEntity(entityId: string, event: Event): void {
     if (!suggestion) return;
     const targetRoomId = (event.currentTarget as HTMLSelectElement).value;
-    suggestion.config = moveSetupEntity(suggestion.config, entityId, targetRoomId);
+    const config = moveSetupEntity(suggestion.config, entityId, targetRoomId);
+    if (config !== suggestion.config) suggestion = { ...suggestion, config };
   }
 
   function omitEntity(entityId: string): void {
     if (!suggestion) return;
     const next = omitSetupEntity(suggestion.config, entityId);
     if (next === suggestion.config) return;
-    suggestion.config = next;
+    suggestion = { ...suggestion, config: next };
     omittedCount += 1;
+  }
+
+  async function addRoom(): Promise<void> {
+    if (!suggestion) return;
+    const config = addSetupRoom(suggestion.config, m.setup_new_room_default());
+    const room = config.rooms.at(-1);
+    suggestion = { ...suggestion, config };
+    await tick();
+    if (room) document.querySelector<HTMLInputElement>(`[data-room-name="${room.id}"]`)?.focus();
+  }
+
+  function moveRoom(roomId: string, direction: -1 | 1): void {
+    if (!suggestion) return;
+    const config = moveSetupRoom(suggestion.config, roomId, direction);
+    if (config !== suggestion.config) suggestion = { ...suggestion, config };
+  }
+
+  function beginDeleteRoom(roomId: string): void {
+    if (!suggestion || suggestion.config.rooms.length <= 1) return;
+    const config = suggestion.config;
+    const compatibleTarget = config.rooms.find((room) => room.id !== roomId
+      && canRemoveSetupRoom(config, roomId, { type: 'move', targetRoomId: room.id }));
+    pendingDeleteRoomId = roomId;
+    deleteDestination = compatibleTarget?.id ?? '__omit__';
+  }
+
+  function cancelDeleteRoom(): void {
+    pendingDeleteRoomId = null;
+    deleteDestination = '';
+  }
+
+  function confirmDeleteRoom(): void {
+    if (!suggestion || !pendingDeleteRoom) return;
+    const removedEntities = pendingDeleteRoom.visibleEntities.length;
+    const removal = deleteDestination === '__omit__'
+      ? { type: 'omit' as const }
+      : { type: 'move' as const, targetRoomId: deleteDestination };
+    const next = removeSetupRoom(suggestion.config, pendingDeleteRoom.id, removal);
+    if (next === suggestion.config) return;
+    suggestion = { ...suggestion, config: next };
+    if (removal.type === 'omit') omittedCount += removedEntities;
+    cancelDeleteRoom();
   }
 
   async function activate(): Promise<void> {
@@ -311,15 +363,51 @@
           {#if suggestion.inferredRooms}<span class="warning">{m.setup_inferred_rooms()}</span>{/if}
         </div>
         <div class="room-list">
-          {#each suggestion.config.rooms as room (room.id)}
+          {#each suggestion.config.rooms as room, roomIndex (room.id)}
             <section class="room-card" aria-labelledby={`room-${room.id}`}>
               <div class="room-heading">
                 <label class="room-title">
                   <span class="sr-only">{m.setup_room_name()}</span>
-                  <input id={`room-${room.id}`} bind:value={room.name} required />
+                  <input id={`room-${room.id}`} data-room-name={room.id} bind:value={room.name} required />
                 </label>
-                <span>{m.setup_entity_count({ count: room.visibleEntities.length })}</span>
+                <span class="room-count">{m.setup_entity_count({ count: room.visibleEntities.length })}</span>
+                <div class="room-actions" aria-label={m.setup_room_order()}>
+                  <button class="icon-action secondary" type="button"
+                    aria-label={m.setup_move_room_up()} title={m.setup_move_room_up()}
+                    disabled={roomIndex === 0 || status === 'activating'}
+                    onclick={() => moveRoom(room.id, -1)}>↑</button>
+                  <button class="icon-action secondary" type="button"
+                    aria-label={m.setup_move_room_down()} title={m.setup_move_room_down()}
+                    disabled={roomIndex === suggestion.config.rooms.length - 1 || status === 'activating'}
+                    onclick={() => moveRoom(room.id, 1)}>↓</button>
+                  <button class="delete-room secondary" type="button"
+                    disabled={suggestion.config.rooms.length <= 1 || status === 'activating'}
+                    title={suggestion.config.rooms.length <= 1 ? m.setup_last_room_hint() : m.setup_delete_room()}
+                    onclick={() => beginDeleteRoom(room.id)}>{m.setup_delete_room()}</button>
+                </div>
               </div>
+              {#if pendingDeleteRoomId === room.id}
+                <div class="room-delete-confirm" role="group" aria-labelledby={`delete-room-${room.id}`}>
+                  <strong id={`delete-room-${room.id}`}>{m.setup_delete_room_title({ name: room.name })}</strong>
+                  <p>{m.setup_delete_room_hint()}</p>
+                  <label>
+                    <span>{m.setup_delete_room_destination()}</span>
+                    <select bind:value={deleteDestination}>
+                      {#each suggestion.config.rooms.filter(({ id }) => id !== room.id) as targetRoom (targetRoom.id)}
+                        <option
+                          value={targetRoom.id}
+                          disabled={!canRemoveSetupRoom(suggestion.config, room.id, { type: 'move', targetRoomId: targetRoom.id })}
+                        >{m.setup_delete_room_move_to({ name: targetRoom.name })}</option>
+                      {/each}
+                      <option value="__omit__">{m.setup_delete_room_omit()}</option>
+                    </select>
+                  </label>
+                  <div class="delete-actions">
+                    <button class="secondary" type="button" onclick={cancelDeleteRoom}>{m.setup_delete_room_cancel()}</button>
+                    <button class="danger-confirm" type="button" onclick={confirmDeleteRoom}>{m.setup_delete_room_confirm()}</button>
+                  </div>
+                </div>
+              {/if}
               {#if room.visibleEntities.length > 0}
                 <div class="entity-list">
                   {#each room.visibleEntities as entity (entity.entityId)}
@@ -350,6 +438,9 @@
             </section>
           {/each}
         </div>
+        <button class="secondary add-room" type="button" onclick={() => void addRoom()} disabled={status === 'activating'}>
+          + {m.setup_add_room()}
+        </button>
         {#if suggestion.ignoredEntityIds.length + omittedCount > 0}
           <p class="ignored">{m.setup_ignored_count({ count: suggestion.ignoredEntityIds.length + omittedCount })}</p>
         {/if}
@@ -469,8 +560,17 @@
   .warning { padding: var(--space-2) var(--space-3); border-radius: var(--radius-full); background: color-mix(in srgb, var(--color-warning) 18%, transparent); color: var(--color-warning); font-size: var(--text-xs); }
   .room-list { display: grid; gap: var(--space-3); margin: var(--space-4) 0; }
   .room-card { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-0); }
-  .room-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); }
+  .room-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); }
   .room-title input { width: 100%; font-weight: var(--font-weight-semibold); }
+  .room-count { color: var(--color-text-secondary); white-space: nowrap; }
+  .room-actions, .delete-actions { display: flex; align-items: center; gap: var(--space-2); }
+  .icon-action { width: var(--touch-preferred); padding: 0; font-size: var(--text-lg); }
+  .delete-room { color: var(--color-error); }
+  .room-delete-confirm { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border)); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-error) 7%, var(--color-surface-1)); }
+  .room-delete-confirm p { margin: 0; color: var(--color-text-secondary); line-height: var(--leading-normal); }
+  .delete-actions { justify-content: flex-end; }
+  .danger-confirm { background: var(--color-error); color: var(--color-text-on-accent); }
+  .add-room { width: 100%; margin-bottom: var(--space-4); }
   .entity-list { display: grid; gap: var(--space-2); }
   .entity-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(calc(var(--space-8) * 2), 0.7fr) auto; align-items: center; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
   .entity-editor label, .entity-editor input, .entity-editor select { width: 100%; }
@@ -485,5 +585,5 @@
   .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .message.success { color: var(--color-success); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .entity-editor, .credential-grid { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; } }
+  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .room-heading, .entity-editor, .credential-grid { grid-template-columns: 1fr; } .room-actions { flex-wrap: wrap; } .entity-editor small { grid-column: 1; } }
 </style>

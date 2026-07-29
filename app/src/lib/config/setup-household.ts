@@ -44,6 +44,10 @@ export interface SetupHouseholdSuggestion {
   inferredRooms: boolean;
 }
 
+export type SetupRoomRemoval =
+  | { type: 'move'; targetRoomId: string }
+  | { type: 'omit' };
+
 function cloneHouseholdConfig(config: HouseholdConfigV2): HouseholdConfigV2 {
   return {
     ...config,
@@ -51,7 +55,104 @@ function cloneHouseholdConfig(config: HouseholdConfigV2): HouseholdConfigV2 {
       ...room,
       visibleEntities: room.visibleEntities.map((entity) => ({ ...entity })),
     })),
+    navigation: config.navigation.map((item) => ({ ...item, target: { ...item.target } })),
+    enabledModules: [...config.enabledModules],
+    energy: config.energy === null ? null : {
+      sensors: {
+        productionPower: config.energy.sensors.productionPower,
+        consumptionPower: config.energy.sensors.consumptionPower.map((source) => ({ ...source })),
+      },
+      kpis: { ...config.energy.kpis },
+    },
+    mediaTargets: config.mediaTargets.map((target) => ({ ...target })),
+    globalEntities: {
+      ...config.globalEntities,
+      laundry: { ...config.globalEntities.laundry },
+    },
   };
+}
+
+export function addSetupRoom(config: HouseholdConfigV2, name: string): HouseholdConfigV2 {
+  const next = cloneHouseholdConfig(config);
+  const normalizedName = name.trim() || 'Room';
+  const usedRoomIds = new Set(next.rooms.map(({ id }) => id));
+  next.rooms.push({
+    id: uniqueSlug(normalizedName, 'room', usedRoomIds),
+    name: normalizedName,
+    visibleEntities: [],
+  });
+  return next;
+}
+
+export function moveSetupRoom(
+  config: HouseholdConfigV2,
+  roomId: string,
+  direction: -1 | 1,
+): HouseholdConfigV2 {
+  const index = config.rooms.findIndex((room) => room.id === roomId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= config.rooms.length) return config;
+  const next = cloneHouseholdConfig(config);
+  [next.rooms[index], next.rooms[target]] = [next.rooms[target], next.rooms[index]];
+  return next;
+}
+
+function compatibleRoomMerge(source: RoomConfig, target: RoomConfig): boolean {
+  const singletonRoles = new Set(target.visibleEntities
+    .filter(({ role }) => role !== 'light')
+    .map(({ role }) => role));
+  for (const entity of source.visibleEntities) {
+    if (entity.role !== 'light' && singletonRoles.has(entity.role)) return false;
+    if (entity.role !== 'light') singletonRoles.add(entity.role);
+  }
+  return true;
+}
+
+export function canRemoveSetupRoom(
+  config: HouseholdConfigV2,
+  roomId: string,
+  removal: SetupRoomRemoval,
+): boolean {
+  if (config.rooms.length <= 1) return false;
+  const source = config.rooms.find((room) => room.id === roomId);
+  if (!source) return false;
+  if (removal.type === 'omit') return true;
+  const target = config.rooms.find((room) => room.id === removal.targetRoomId);
+  return !!target && target.id !== source.id && compatibleRoomMerge(source, target);
+}
+
+export function removeSetupRoom(
+  config: HouseholdConfigV2,
+  roomId: string,
+  removal: SetupRoomRemoval,
+): HouseholdConfigV2 {
+  if (!canRemoveSetupRoom(config, roomId, removal)) return config;
+  const next = cloneHouseholdConfig(config);
+  const source = next.rooms.find((room) => room.id === roomId)!;
+  if (removal.type === 'move') {
+    const target = next.rooms.find((room) => room.id === removal.targetRoomId)!;
+    const usedIds = new Set(target.visibleEntities.map(({ id }) => id));
+    for (const original of source.visibleEntities) {
+      const entity = { ...original, id: uniqueSlug(original.id, original.role, usedIds) };
+      target.visibleEntities.push(entity);
+    }
+    target.visibleEntities.sort((left, right) => left.entityId.localeCompare(right.entityId));
+  }
+  next.rooms = next.rooms.filter((room) => room.id !== roomId);
+  if (removal.type === 'move') {
+    next.navigation = next.navigation.map((item) => item.target.type === 'room' && item.target.id === roomId
+      ? { ...item, target: { type: 'room', id: removal.targetRoomId } }
+      : item);
+    next.mediaTargets = next.mediaTargets.map((target) => target.roomId === roomId
+      ? { ...target, roomId: removal.targetRoomId }
+      : target);
+  } else {
+    next.navigation = next.navigation.filter((item) => !(item.target.type === 'room' && item.target.id === roomId));
+    next.mediaTargets = next.mediaTargets.map((target) => target.roomId === roomId
+      ? { ...target, roomId: null }
+      : target);
+  }
+  return next;
 }
 
 export function canMoveSetupEntity(

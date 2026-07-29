@@ -3,7 +3,6 @@ import { mount } from 'svelte';
 import '../../design-tokens/tokens.css';
 import './styles/climate-controls.css';
 import { applyDemoDeepLink, applyDemoNames, installDemoApi } from './lib/demo/demo-mode.ts';
-import { bootstrapHouseholdConfigRuntime } from './lib/config/household-config-runtime.ts';
 
 // Diese Literale müssen im initialen Modulgraphen liegen: Der Build-Gate misst
 // Phone- und Panel-Shell als direkte, getrennte dynamische Ziele (ADR-020/B-25).
@@ -58,6 +57,7 @@ if (initialHealthStatus === 'setup_required'
     props: { mode: initialHealthStatus === 'setup_required' ? 'first-run' : 'reconfigure' },
   });
 } else {
+  const { bootstrapHouseholdConfigRuntime } = await import('./lib/config/household-config-runtime.ts');
   const householdConfigRuntime = await bootstrapHouseholdConfigRuntime({
     startProductiveApp: async () => {
       // Zentrale Browser-Konfiguration ebenfalls vor State-/Runtime-Singletons laden.
