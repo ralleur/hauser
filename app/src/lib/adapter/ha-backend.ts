@@ -278,9 +278,14 @@ export class HaBackend implements Backend {
       const conn = await createConnection({ auth });
       this.#conn = conn;
       // Library-Reconnect → ConnectionStatus (ADR-018 §2). Die Library
-      // resubscribed die laufende subscribe_entities-Nachricht selbst.
-      conn.addEventListener('ready', () => { this.#raw.clear(); this.#setStatus('connected'); });
-      conn.addEventListener('disconnected', () => this.#setStatus('reconnecting'));
+      // resubscribed die laufende subscribe_entities-Nachricht selbst. Raw-State
+      // beim Disconnect leeren, nicht erst bei `ready`: die Library kann den
+      // initialen Reconnect-Diff vor dem ready-Event liefern.
+      conn.addEventListener('ready', () => this.#setStatus('connected'));
+      conn.addEventListener('disconnected', () => {
+        this.#raw.clear();
+        this.#setStatus('reconnecting');
+      });
       conn.addEventListener('reconnect-error', () => this.#setStatus('reconnecting'));
 
       this.#setStatus('connected');

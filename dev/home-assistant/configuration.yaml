@@ -1,0 +1,116 @@
+default_config:
+
+homeassistant:
+  name: Hauser Dev Household
+  country: DE
+  currency: EUR
+  unit_system: metric
+  time_zone: Europe/Berlin
+  latitude: 50.9384
+  longitude: 6.9599
+  elevation: 53
+
+logger:
+  default: warning
+
+input_boolean:
+  wohnzimmer_deckenlicht_state:
+    name: Wohnzimmer Deckenlicht Zustand
+    initial: false
+  kueche_arbeitslicht_state:
+    name: Küche Arbeitslicht Zustand
+    initial: false
+  schlafzimmer_nachttisch_state:
+    name: Schlafzimmer Nachttisch Zustand
+    initial: false
+
+input_number:
+  wohnzimmer_temperatur_wert:
+    name: Wohnzimmer Temperaturwert
+    min: 15
+    max: 30
+    step: 0.1
+    initial: 21.4
+    unit_of_measurement: °C
+  kueche_temperatur_wert:
+    name: Küche Temperaturwert
+    min: 15
+    max: 30
+    step: 0.1
+    initial: 22.1
+    unit_of_measurement: °C
+  schlafzimmer_temperatur_wert:
+    name: Schlafzimmer Temperaturwert
+    min: 15
+    max: 30
+    step: 0.1
+    initial: 19.2
+    unit_of_measurement: °C
+
+template:
+  - light:
+      - name: Wohnzimmer Deckenlicht
+        unique_id: hauser_dev_wohnzimmer_deckenlicht
+        state: "{{ is_state('input_boolean.wohnzimmer_deckenlicht_state', 'on') }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.wohnzimmer_deckenlicht_state
+        turn_off:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.wohnzimmer_deckenlicht_state
+      - name: Küche Arbeitslicht
+        unique_id: hauser_dev_kueche_arbeitslicht
+        state: "{{ is_state('input_boolean.kueche_arbeitslicht_state', 'on') }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.kueche_arbeitslicht_state
+        turn_off:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.kueche_arbeitslicht_state
+      - name: Schlafzimmer Nachttisch
+        unique_id: hauser_dev_schlafzimmer_nachttisch
+        state: "{{ is_state('input_boolean.schlafzimmer_nachttisch_state', 'on') }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.schlafzimmer_nachttisch_state
+        turn_off:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.schlafzimmer_nachttisch_state
+  - sensor:
+      - name: Wohnzimmer Temperatur
+        unique_id: hauser_dev_wohnzimmer_temperatur
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: °C
+        state: "{{ states('input_number.wohnzimmer_temperatur_wert') }}"
+      - name: Küche Temperatur
+        unique_id: hauser_dev_kueche_temperatur
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: °C
+        state: "{{ states('input_number.kueche_temperatur_wert') }}"
+      - name: Schlafzimmer Temperatur
+        unique_id: hauser_dev_schlafzimmer_temperatur
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: °C
+        state: "{{ states('input_number.schlafzimmer_temperatur_wert') }}"
+  - binary_sensor:
+      - name: Wohnzimmer Fenster
+        unique_id: hauser_dev_wohnzimmer_fenster
+        device_class: window
+        state: false
+      - name: Küche Fenster
+        unique_id: hauser_dev_kueche_fenster
+        device_class: window
+        state: false
+      - name: Schlafzimmer Fenster
+        unique_id: hauser_dev_schlafzimmer_fenster
+        device_class: window
+        state: false

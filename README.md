@@ -26,8 +26,8 @@ product.
 It is a complete, working smart home interface that runs on a wall-mounted
 tablet in one specific home. The code is licensed under MIT and is currently
 developed in a private repository that is kept ready for publication. A
-source-built Docker Compose path and external versioned household configuration
-now exist. What is still missing is the deterministic setup wizard, a published
+source-built Docker Compose path, external versioned household configuration and
+deterministic setup wizard now exist. What is still missing is a published
 registry image and independent second-household evidence. Installation therefore
 remains a technical pre-beta workflow — see [the roadmap](ROADMAP.md).
 
@@ -158,6 +158,17 @@ npm run dev
 That starts against a fake backend with simulated devices, which is the fastest
 way to look around.
 
+For the complete installation and first-run flow, use the isolated development
+pilot instead. It starts a synthetic Home Assistant and a fresh Hauser instance
+with separate containers, credentials and volumes:
+
+```bash
+./scripts/dev-pilot.sh up
+```
+
+See [`docs/09-dev-pilot.md`](docs/09-dev-pilot.md) for onboarding, persistence,
+reset and isolation details.
+
 Run the publication-gate test suite with:
 
 ```bash
@@ -186,8 +197,8 @@ The JSON contract is versioned and validated before the app starts; invalid or
 partial input fails closed instead of falling back to another household. See
 [`docs/07-configuration.md`](docs/07-configuration.md).
 
-There is no setup wizard, kiosk installer or published registry image in this
-private pre-beta development line.
+There is no kiosk installer or published registry image in this private pre-beta
+development line. The Compose first start uses the deterministic setup wizard.
 
 ### Building the demo
 
@@ -213,6 +224,7 @@ hosted demo that will accompany the public beta.
 | [`docs/06-component-catalog.md`](docs/06-component-catalog.md) | Component inventory |
 | [`docs/07-configuration.md`](docs/07-configuration.md) | Versioned household configuration contract and failure modes |
 | [`docs/08-installation.md`](docs/08-installation.md) | Container/Compose installation, persistence, health, backup and rollback |
+| [`docs/09-dev-pilot.md`](docs/09-dev-pilot.md) | Isolated synthetic Home Assistant and repeatable onboarding environment |
 
 The interface speaks German, English, French, Italian, Portuguese and Polish,
 and follows the browser language unless you pick one in the settings. Dates,
