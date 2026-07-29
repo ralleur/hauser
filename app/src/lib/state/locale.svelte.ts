@@ -43,17 +43,25 @@ export function localeLabel(locale: string): string {
 }
 
 /** Wechselt die Sprache, ohne das Dokument neu zu laden. */
-export async function changeLocale(next: AppLocale): Promise<void> {
+export async function changeLocale(
+  next: AppLocale,
+  options: { syncDemoNames?: boolean } = {},
+): Promise<void> {
   if (next === localeState.current) return;
   await setLocale(next, { reload: false });
   localeState.current = next;
+  if (typeof document !== 'undefined') document.documentElement.lang = next;
+
+  // Im First-Run-Wizard existiert der produktive App-State noch nicht. Die
+  // Sprachwahl muss dort persistieren, ohne ihn vor dem Config-Bootstrap zu laden.
+  if (options.syncDemoNames === false) return;
+
   // Demo-Namen hängen an der Sprache, nicht am Katalog — neu setzen.
   const [{ applyDemoNames }, { appState }] = await Promise.all([
     import('../demo/demo-mode.ts'),
     import('./app.svelte.ts'),
   ]);
   applyDemoNames(appState.rooms);
-  if (typeof document !== 'undefined') document.documentElement.lang = next;
 }
 
 /** Einmalig beim Start: `lang` am Dokument spiegeln (Screenreader, Silbentrennung). */
