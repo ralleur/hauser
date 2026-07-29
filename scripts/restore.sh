@@ -22,32 +22,25 @@ if [[ -z "$container" ]]; then
 fi
 
 was_running="$(docker inspect --format '{{.State.Running}}' "$container")"
-tmp="$(mktemp -d)"
 restart_on_error() {
   code=$?
-  rm -rf "$tmp"
   if [[ "$code" -ne 0 && "$was_running" == "true" ]]; then docker compose start hauser >/dev/null || true; fi
   exit "$code"
 }
 trap restart_on_error EXIT
 
-tar -C "$tmp" -xzf "$archive"
-[[ -f "$tmp/config/household.json" ]] || {
+if ! tar -tzf "$archive" | grep -qx 'config/household.json'; then
   printf '%s\n' 'Backup has no config/household.json.' >&2
   exit 2
-}
+fi
 
 docker compose stop hauser >/dev/null
-docker compose run --rm --no-deps \
-  --volume "$tmp:/restore:ro" \
+docker compose run --rm --no-deps -T \
   --entrypoint sh hauser -c '
     find /config /data /assets -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-    cp -a /restore/config/. /config/
-    cp -a /restore/data/. /data/
-    cp -a /restore/assets/. /assets/
-  ' >/dev/null
+    tar -xzf - -C / config data assets
+  ' < "$archive" >/dev/null
 
-rm -rf "$tmp"
 trap - EXIT
 if [[ "$was_running" == "true" ]]; then docker compose start hauser >/dev/null; fi
 printf 'restored=%s\n' "$archive"
