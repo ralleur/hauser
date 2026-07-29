@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 // @ts-expect-error Native Node test without @types/node.
 import { join } from 'node:path';
 // @ts-expect-error The production server intentionally remains native Node ESM.
-import { assessHmiReadiness, createHmiServer, verifySetupHomeAssistant } from '../../server.mjs';
+import { assessHmiReadiness, createHmiServer, verifySetupHomeAssistant, verifySetupJellyfin } from '../../server.mjs';
 
 const roots: string[] = [];
 const servers: Array<{ close: (callback: () => void) => void }> = [];
@@ -177,6 +177,7 @@ describe('container readiness contract', () => {
       paperlessPin: '',
       paperlessToken: '',
       setupConnectionVerifier: async () => ({ ok: true }),
+      setupJellyfinVerifier: async () => ({ ok: true }),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -201,6 +202,12 @@ describe('container readiness contract', () => {
         haUrl: 'http://homeassistant.local:8123/',
         haToken: 'setup-token',
         householdConfig: validConfig(),
+        jellyfin: {
+          enabled: true,
+          url: 'http://jellyfin.local:8096/',
+          accessToken: 'jellyfin-token',
+          userId: 'jellyfin-user',
+        },
       }),
     });
     expect(activated.status).toBe(201);
@@ -211,6 +218,10 @@ describe('container readiness contract', () => {
       'hmi:backend': 'ha',
       'hmi:ha-url': 'http://homeassistant.local:8123',
       'hmi:ha-token': 'setup-token',
+      'hmi:jf-url': 'http://jellyfin.local:8096',
+      'hmi:jf-token': 'jellyfin-token',
+      'hmi:jf-user': 'jellyfin-user',
+      'hmi:library': 'live',
     });
 
     const ready = await fetch(`http://127.0.0.1:${port}/api/health`);
@@ -224,6 +235,10 @@ describe('container readiness contract', () => {
       'hmi:backend': 'ha',
       'hmi:ha-url': 'http://old-home-assistant.local:8123',
       'hmi:ha-token': 'old-token',
+      'hmi:jf-url': 'http://old-jellyfin.local:8096',
+      'hmi:jf-token': 'old-jellyfin-token',
+      'hmi:jf-user': 'old-jellyfin-user',
+      'hmi:library': 'live',
     }, null, 2)}\n`, { mode: 0o600 });
     const verified: Array<{ haUrl: string; haToken: string }> = [];
     const server = createHmiServer('', {
@@ -261,6 +276,7 @@ describe('container readiness contract', () => {
         haUrl: 'http://new-home-assistant.local:8123/',
         haToken: 'new-token',
         householdConfig: replacement,
+        jellyfin: { enabled: false },
       }),
     });
     expect(activated.status).toBe(200);
@@ -274,7 +290,12 @@ describe('container readiness contract', () => {
       'hmi:backend': 'ha',
       'hmi:ha-url': 'http://new-home-assistant.local:8123',
       'hmi:ha-token': 'new-token',
+      'hmi:library': 'fake',
     });
+    const reconfiguredValues = JSON.parse(readFileSync(centralConfigPath, 'utf8'));
+    expect(reconfiguredValues['hmi:jf-url']).toBeUndefined();
+    expect(reconfiguredValues['hmi:jf-token']).toBeUndefined();
+    expect(reconfiguredValues['hmi:jf-user']).toBeUndefined();
   });
 
   it('requires the Hauser server itself to reach and authenticate with Home Assistant', async () => {
@@ -300,6 +321,28 @@ describe('container readiness contract', () => {
       code: 'SETUP_HOME_ASSISTANT_AUTH_FAILED',
       message: 'Home Assistant hat den Token abgelehnt.',
     });
+  });
+
+  it('requires the Hauser server itself to reach the authenticated Jellyfin user', async () => {
+    const requested: Array<{ url: string; token: string | null }> = [];
+    const accepted = await verifySetupJellyfin(
+      'http://jellyfin.local:8096',
+      'jellyfin-token',
+      'jellyfin-user',
+      async (url: string, init: RequestInit) => {
+        requested.push({
+          url,
+          token: new Headers(init.headers).get('x-emby-token'),
+        });
+        return new Response('{}', { status: 200 });
+      },
+    );
+
+    expect(requested).toEqual([{
+      url: 'http://jellyfin.local:8096/Users/jellyfin-user',
+      token: 'jellyfin-token',
+    }]);
+    expect(accepted).toEqual({ ok: true });
   });
 
   it('does not require household config in explicit shadow mode', () => {

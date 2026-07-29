@@ -552,5 +552,21 @@
   "setup_saving": "A guardar alterações …",
   "setup_activating": "A ativar …",
   "setup_save_start": "Guardar e abrir o painel",
-  "setup_confirm_start": "Confirmar e abrir o painel"
+  "setup_confirm_start": "Confirmar e abrir o painel",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Configurar a biblioteca de vídeos",
+  "setup_jellyfin_hint": "O Jellyfin é opcional. Se o ativar, o início de sessão é verificado agora e a biblioteca em direto será carregada no arranque.",
+  "setup_jellyfin_enable": "Usar Jellyfin",
+  "setup_jellyfin_enable_hint": "Quando desativada, a biblioteca permanece intencionalmente no modo de demonstração.",
+  "setup_jellyfin_url": "Endereço do Jellyfin",
+  "setup_jellyfin_username": "Nome de utilizador",
+  "setup_jellyfin_password": "Palavra-passe",
+  "setup_jellyfin_test": "Testar ligação",
+  "setup_jellyfin_testing": "A testar ligação …",
+  "setup_jellyfin_connected": "Início de sessão no Jellyfin verificado.",
+  "setup_jellyfin_existing": "O início de sessão existente no Jellyfin foi carregado e pode ser reutilizado sem alterações.",
+  "setup_jellyfin_required": "Teste o início de sessão no Jellyfin ou desative explicitamente o Jellyfin.",
+  "setup_jellyfin_auth_failed": "O Jellyfin rejeitou o nome de utilizador ou a palavra-passe.",
+  "setup_jellyfin_unreachable": "O Jellyfin está inacessível ou a sessão verificada já não é válida.",
+  "setup_jellyfin_disabled": "O Jellyfin está desativado; a biblioteca iniciará no modo de demonstração."
 }

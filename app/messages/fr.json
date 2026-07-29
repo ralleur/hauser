@@ -552,5 +552,21 @@
   "setup_saving": "Enregistrement des modifications …",
   "setup_activating": "Activation …",
   "setup_save_start": "Enregistrer et ouvrir le tableau de bord",
-  "setup_confirm_start": "Confirmer et ouvrir le tableau de bord"
+  "setup_confirm_start": "Confirmer et ouvrir le tableau de bord",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Configurer la vidéothèque",
+  "setup_jellyfin_hint": "Jellyfin est facultatif. Si vous l’activez, la connexion est vérifiée maintenant et la bibliothèque en direct sera chargée au démarrage.",
+  "setup_jellyfin_enable": "Utiliser Jellyfin",
+  "setup_jellyfin_enable_hint": "Si cette option est désactivée, la bibliothèque reste volontairement en mode démo.",
+  "setup_jellyfin_url": "Adresse Jellyfin",
+  "setup_jellyfin_username": "Nom d’utilisateur",
+  "setup_jellyfin_password": "Mot de passe",
+  "setup_jellyfin_test": "Tester la connexion",
+  "setup_jellyfin_testing": "Test de la connexion …",
+  "setup_jellyfin_connected": "Connexion à Jellyfin vérifiée.",
+  "setup_jellyfin_existing": "La connexion Jellyfin existante est chargée et peut être réutilisée sans modification.",
+  "setup_jellyfin_required": "Testez la connexion Jellyfin ou désactivez explicitement Jellyfin.",
+  "setup_jellyfin_auth_failed": "Jellyfin a refusé le nom d’utilisateur ou le mot de passe.",
+  "setup_jellyfin_unreachable": "Jellyfin est inaccessible ou la session vérifiée n’est plus valide.",
+  "setup_jellyfin_disabled": "Jellyfin est désactivé ; la bibliothèque démarrera en mode démo."
 }

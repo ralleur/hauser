@@ -83,6 +83,21 @@ describe('authenticateByName', () => {
     await expect(c.authenticateByName('x', 'y')).rejects.toBeInstanceOf(JellyfinAuthError);
     expect(c.hasSession()).toBe(false);
   });
+
+  it('kann eine Setup-Anmeldung prüfen, ohne die Session vor der Aktivierung zu persistieren', async () => {
+    const centralWrites = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({}));
+    const { fn } = mockFetch(() =>
+      jsonResponse({ AccessToken: 'setup-token', User: { Id: 'setup-user', Name: 'setup' } }),
+    );
+    const c = new JellyfinClient({ baseUrl: BASE, fetchImpl: fn, deviceId: 'dev', token: null, userId: null });
+
+    const session = await c.authenticateByName('setup', 'secret', { persist: false });
+
+    expect(session).toMatchObject({ AccessToken: 'setup-token', User: { Id: 'setup-user' } });
+    expect(c.hasSession()).toBe(true);
+    expect(centralWrites).not.toHaveBeenCalled();
+    centralWrites.mockRestore();
+  });
 });
 
 describe('Browse-Endpunkte', () => {

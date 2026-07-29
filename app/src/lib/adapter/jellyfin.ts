@@ -141,9 +141,15 @@ export class JellyfinClient {
     this.#onAuth = cb;
   }
 
-  /** User-Login (docs/08): AccessToken + User.Id, beides persistiert. Ein 401
-      wirft JellyfinAuthError (falsche Zugangsdaten), Netz-/Serverfehler Error. */
-  async authenticateByName(username: string, pw: string): Promise<JellyfinSession> {
+  /** User-Login (docs/08): AccessToken + User.Id. Ein 401 wirft
+      JellyfinAuthError (falsche Zugangsdaten), Netz-/Serverfehler Error.
+      Im Setup kann die Session geprüft werden, ohne sie vor der atomaren
+      Aktivierung zentral oder lokal zu persistieren. */
+  async authenticateByName(
+    username: string,
+    pw: string,
+    options: { persist?: boolean } = {},
+  ): Promise<JellyfinSession> {
     const res = await this.#fetch(`${this.#base}/Users/AuthenticateByName`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: this.authHeader() },
@@ -154,8 +160,10 @@ export class JellyfinClient {
     const data = (await res.json()) as JellyfinSession;
     this.#token = data.AccessToken;
     this.#userId = data.User.Id;
-    sharedStorage.setItem(TOKEN_KEY, this.#token);
-    sharedStorage.setItem(USER_KEY, this.#userId);
+    if (options.persist !== false) {
+      sharedStorage.setItem(TOKEN_KEY, this.#token);
+      sharedStorage.setItem(USER_KEY, this.#userId);
+    }
     return data;
   }
 

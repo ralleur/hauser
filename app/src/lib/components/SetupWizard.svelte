@@ -1,6 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { discoverHomeAssistant } from '../config/setup-discovery.ts';
+  import {
+    JellyfinAuthError,
+    JellyfinClient,
+    JELLYFIN_URL_DEFAULT,
+    jellyfin,
+  } from '../adapter/jellyfin.ts';
   import { parseHouseholdConfig, type HouseholdConfigV1 } from '../config/household-config.ts';
   import {
     buildSetupHouseholdSuggestion,
@@ -27,6 +33,61 @@
   let message = $state('');
   let suggestion = $state<SetupHouseholdSuggestion | null>(null);
   let omittedCount = $state(0);
+  let jellyfinEnabled = $state(false);
+  let jellyfinUrl = $state(JELLYFIN_URL_DEFAULT);
+  let jellyfinUsername = $state('');
+  let jellyfinPassword = $state('');
+  let jellyfinStatus = $state<'idle' | 'testing' | 'ready' | 'error'>('idle');
+  let jellyfinMessage = $state('');
+  let jellyfinSession = $state<{ accessToken: string; userId: string } | null>(null);
+
+  function invalidateJellyfinSession(): void {
+    jellyfinSession = null;
+    jellyfinStatus = 'idle';
+    jellyfinMessage = '';
+  }
+
+  function toggleJellyfin(event: Event): void {
+    jellyfinEnabled = (event.currentTarget as HTMLInputElement).checked;
+    if (!jellyfinEnabled) {
+      jellyfinUsername = '';
+      jellyfinPassword = '';
+      invalidateJellyfinSession();
+    }
+  }
+
+  async function testJellyfin(): Promise<void> {
+    if (!jellyfinUrl.trim() || !jellyfinUsername.trim() || !jellyfinPassword) {
+      jellyfinStatus = 'error';
+      jellyfinMessage = m.setup_jellyfin_required();
+      return;
+    }
+    jellyfinStatus = 'testing';
+    jellyfinMessage = '';
+    jellyfinSession = null;
+    try {
+      const client = new JellyfinClient({
+        baseUrl: jellyfinUrl.trim(),
+        deviceId: jellyfin.deviceId,
+        token: null,
+        userId: null,
+      });
+      const session = await client.authenticateByName(
+        jellyfinUsername.trim(),
+        jellyfinPassword,
+        { persist: false },
+      );
+      jellyfinSession = { accessToken: session.AccessToken, userId: session.User.Id };
+      jellyfinPassword = '';
+      jellyfinStatus = 'ready';
+      jellyfinMessage = m.setup_jellyfin_connected();
+    } catch (error) {
+      jellyfinStatus = 'error';
+      jellyfinMessage = error instanceof JellyfinAuthError
+        ? m.setup_jellyfin_auth_failed()
+        : m.setup_jellyfin_unreachable();
+    }
+  }
 
   function returnToDashboard(): void {
     const url = new URL(location.href);
@@ -49,6 +110,18 @@
       const values = shared.values ?? {};
       if (typeof values['hmi:ha-url'] === 'string') haUrl = values['hmi:ha-url'];
       if (typeof values['hmi:ha-token'] === 'string') token = values['hmi:ha-token'];
+      if (typeof values['hmi:jf-url'] === 'string') jellyfinUrl = values['hmi:jf-url'];
+      jellyfinEnabled = values['hmi:library'] === 'live';
+      if (jellyfinEnabled
+          && typeof values['hmi:jf-token'] === 'string'
+          && typeof values['hmi:jf-user'] === 'string') {
+        jellyfinSession = {
+          accessToken: values['hmi:jf-token'],
+          userId: values['hmi:jf-user'],
+        };
+        jellyfinStatus = 'ready';
+        jellyfinMessage = m.setup_jellyfin_existing();
+      }
       suggestion = {
         config: structuredClone(parsed.value) as HouseholdConfigV1,
         ignoredEntityIds: [],
@@ -110,6 +183,11 @@
 
   async function activate(): Promise<void> {
     if (!suggestion) return;
+    if (jellyfinEnabled && !jellyfinSession) {
+      status = 'error';
+      message = m.setup_jellyfin_required();
+      return;
+    }
     const parsed = parseHouseholdConfig(suggestion.config);
     if (!parsed.ok) {
       const issue = parsed.issues[0];
@@ -127,14 +205,35 @@
           haUrl: haUrl.trim(),
           haToken: token,
           householdConfig: suggestion.config,
+          jellyfin: jellyfinEnabled && jellyfinSession
+            ? {
+                enabled: true,
+                url: jellyfinUrl.trim(),
+                accessToken: jellyfinSession.accessToken,
+                userId: jellyfinSession.userId,
+              }
+            : { enabled: false },
         }),
       });
-      const payload = await response.json() as { message?: string; issue?: { path?: string; message?: string } };
+      const payload = await response.json() as {
+        code?: string;
+        message?: string;
+        issue?: { path?: string; message?: string };
+      };
       if (!response.ok) {
+        if (payload.code === 'SETUP_JELLYFIN_AUTH_FAILED') {
+          throw new Error(m.setup_jellyfin_auth_failed());
+        }
+        if (payload.code === 'SETUP_JELLYFIN_UNREACHABLE'
+            || payload.code === 'SETUP_JELLYFIN_HTTP_ERROR') {
+          throw new Error(m.setup_jellyfin_unreachable());
+        }
         const issue = payload.issue?.path ? ` ${payload.issue.path}: ${payload.issue.message ?? ''}` : '';
         throw new Error(`${m.setup_activate_failed()}${issue}`.trim());
       }
       token = '';
+      jellyfinPassword = '';
+      jellyfinSession = null;
       if (reconfigure) returnToDashboard();
       else location.reload();
     } catch (error) {
@@ -254,7 +353,81 @@
         {#if suggestion.ignoredEntityIds.length + omittedCount > 0}
           <p class="ignored">{m.setup_ignored_count({ count: suggestion.ignoredEntityIds.length + omittedCount })}</p>
         {/if}
-        <button class="primary" type="button" onclick={() => void activate()} disabled={status === 'activating'}>
+
+        <section class="service-step" aria-labelledby="setup-jellyfin-title">
+          <p class="eyebrow">{m.setup_step_jellyfin()}</p>
+          <h2 id="setup-jellyfin-title">{m.setup_jellyfin_title()}</h2>
+          <p class="service-hint">{m.setup_jellyfin_hint()}</p>
+          <label class="service-toggle">
+            <input
+              type="checkbox"
+              checked={jellyfinEnabled}
+              onchange={toggleJellyfin}
+              disabled={status === 'activating'}
+            />
+            <span>
+              <strong>{m.setup_jellyfin_enable()}</strong>
+              <small>{m.setup_jellyfin_enable_hint()}</small>
+            </span>
+          </label>
+
+          {#if jellyfinEnabled}
+            <form class="jellyfin-form" onsubmit={(event) => { event.preventDefault(); void testJellyfin(); }}>
+              <label>
+                <span>{m.setup_jellyfin_url()}</span>
+                <input
+                  type="url"
+                  bind:value={jellyfinUrl}
+                  oninput={invalidateJellyfinSession}
+                  autocomplete="url"
+                  spellcheck="false"
+                  required
+                  disabled={jellyfinStatus === 'testing' || status === 'activating'}
+                />
+              </label>
+              <div class="credential-grid">
+                <label>
+                  <span>{m.setup_jellyfin_username()}</span>
+                  <input
+                    type="text"
+                    bind:value={jellyfinUsername}
+                    oninput={invalidateJellyfinSession}
+                    autocomplete="username"
+                    spellcheck="false"
+                    disabled={jellyfinStatus === 'testing' || status === 'activating'}
+                  />
+                </label>
+                <label>
+                  <span>{m.setup_jellyfin_password()}</span>
+                  <input
+                    type="password"
+                    bind:value={jellyfinPassword}
+                    oninput={invalidateJellyfinSession}
+                    autocomplete="current-password"
+                    disabled={jellyfinStatus === 'testing' || status === 'activating'}
+                  />
+                </label>
+              </div>
+              <button
+                class="secondary"
+                type="submit"
+                disabled={jellyfinStatus === 'testing' || status === 'activating' || !jellyfinUsername.trim() || !jellyfinPassword}
+              >{jellyfinStatus === 'testing' ? m.setup_jellyfin_testing() : m.setup_jellyfin_test()}</button>
+            </form>
+            {#if jellyfinMessage}
+              <p class:error={jellyfinStatus === 'error'} class:success={jellyfinStatus === 'ready'} class="message" role={jellyfinStatus === 'error' ? 'alert' : 'status'}>{jellyfinMessage}</p>
+            {/if}
+          {:else}
+            <p class="message" role="status">{m.setup_jellyfin_disabled()}</p>
+          {/if}
+        </section>
+
+        <button
+          class="primary"
+          type="button"
+          onclick={() => void activate()}
+          disabled={status === 'activating' || (jellyfinEnabled && !jellyfinSession)}
+        >
           {status === 'activating'
             ? (reconfigure ? m.setup_saving() : m.setup_activating())
             : (reconfigure ? m.setup_save_start() : m.setup_confirm_start())}
@@ -303,6 +476,14 @@
   .entity-editor label, .entity-editor input, .entity-editor select { width: 100%; }
   .entity-editor small { grid-column: 1 / -1; overflow-wrap: anywhere; }
   .ignored { margin: 0 0 var(--space-4); }
+  .service-step { display: grid; gap: var(--space-4); margin: var(--space-6) 0; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-0); }
+  .service-hint { margin: calc(var(--space-2) * -1) 0 0; color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
+  .service-toggle { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-1); cursor: pointer; }
+  .service-toggle input { width: var(--space-5); min-height: var(--space-5); margin: 0; accent-color: var(--color-accent-warm); }
+  .service-toggle span { display: grid; gap: var(--space-1); }
+  .jellyfin-form { padding-top: var(--space-2); }
+  .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .message.success { color: var(--color-success); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .entity-editor { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; } }
+  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .entity-editor, .credential-grid { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; } }
 </style>

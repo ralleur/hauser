@@ -552,5 +552,21 @@
   "setup_saving": "Speichere Änderungen …",
   "setup_activating": "Aktiviere …",
   "setup_save_start": "Änderungen speichern und Dashboard starten",
-  "setup_confirm_start": "Konfiguration bestätigen und Dashboard starten"
+  "setup_confirm_start": "Konfiguration bestätigen und Dashboard starten",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Videobibliothek einrichten",
+  "setup_jellyfin_hint": "Jellyfin ist optional. Wenn du es aktivierst, wird die Anmeldung jetzt geprüft und die Bibliothek nach dem Start live geladen.",
+  "setup_jellyfin_enable": "Jellyfin verwenden",
+  "setup_jellyfin_enable_hint": "Deaktiviert bleibt die Bibliothek bewusst im Demo-Modus.",
+  "setup_jellyfin_url": "Jellyfin-Adresse",
+  "setup_jellyfin_username": "Benutzername",
+  "setup_jellyfin_password": "Passwort",
+  "setup_jellyfin_test": "Verbindung testen",
+  "setup_jellyfin_testing": "Prüfe Verbindung …",
+  "setup_jellyfin_connected": "Jellyfin-Anmeldung erfolgreich geprüft.",
+  "setup_jellyfin_existing": "Die bestehende Jellyfin-Anmeldung ist geladen und kann unverändert weiterverwendet werden.",
+  "setup_jellyfin_required": "Teste die Jellyfin-Anmeldung oder deaktiviere Jellyfin ausdrücklich.",
+  "setup_jellyfin_auth_failed": "Benutzername oder Passwort wurde von Jellyfin abgelehnt.",
+  "setup_jellyfin_unreachable": "Jellyfin ist nicht erreichbar oder die geprüfte Sitzung ist nicht mehr gültig.",
+  "setup_jellyfin_disabled": "Jellyfin ist deaktiviert; die Bibliothek startet im Demo-Modus."
 }

@@ -773,7 +773,7 @@ function setupRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   return !origin || allowedOrigins.has(origin);
 }
 
-function normalizeSetupHaUrl(value) {
+function normalizeSetupServiceUrl(value) {
   if (typeof value !== 'string' || value.length > 2048) return null;
   try {
     const url = new URL(value.trim());
@@ -783,6 +783,27 @@ function normalizeSetupHaUrl(value) {
   } catch {
     return null;
   }
+}
+
+function normalizeSetupHaUrl(value) {
+  return normalizeSetupServiceUrl(value);
+}
+
+function normalizeSetupJellyfin(payload) {
+  if (!payload || typeof payload.enabled !== 'boolean') return null;
+  if (!payload.enabled) return { enabled: false };
+  const url = normalizeSetupServiceUrl(payload.url);
+  if (!url
+      || typeof payload.accessToken !== 'string' || !payload.accessToken.trim()
+      || Buffer.byteLength(payload.accessToken) > 16 * 1024
+      || typeof payload.userId !== 'string' || !payload.userId.trim()
+      || Buffer.byteLength(payload.userId) > 1024) return null;
+  return {
+    enabled: true,
+    url,
+    accessToken: payload.accessToken.trim(),
+    userId: payload.userId.trim(),
+  };
 }
 
 function setupPayloadError(payload) {
@@ -798,6 +819,13 @@ function setupPayloadError(payload) {
     return {
       code: 'SETUP_INVALID_HOME_ASSISTANT_TOKEN',
       message: 'Der Home-Assistant-Token fehlt oder ist zu groß.',
+    };
+  }
+  const jellyfin = normalizeSetupJellyfin(payload?.jellyfin);
+  if (!jellyfin) {
+    return {
+      code: 'SETUP_INVALID_JELLYFIN_CONFIG',
+      message: 'Jellyfin muss vollständig konfiguriert oder ausdrücklich deaktiviert werden.',
     };
   }
   const parsed = parseHouseholdConfig(payload?.householdConfig);
@@ -820,7 +848,12 @@ function setupPayloadError(payload) {
         : 'Die Haushaltskonfiguration kann nicht aktiviert werden.',
     };
   }
-  return { haUrl, haToken: payload.haToken.trim(), householdConfig: parsed.value };
+  return {
+    haUrl,
+    haToken: payload.haToken.trim(),
+    householdConfig: parsed.value,
+    jellyfin,
+  };
 }
 
 export async function verifySetupHomeAssistant(haUrl, haToken, fetchImpl = fetch) {
@@ -855,10 +888,48 @@ export async function verifySetupHomeAssistant(haUrl, haToken, fetchImpl = fetch
   }
 }
 
+export async function verifySetupJellyfin(url, accessToken, userId, fetchImpl = fetch) {
+  try {
+    const response = await fetchImpl(`${url}/Users/${encodeURIComponent(userId)}`, {
+      method: 'GET',
+      headers: {
+        accept: 'application/json',
+        'x-emby-token': accessToken,
+      },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (response.ok) return { ok: true };
+    if (response.status === 401 || response.status === 403) {
+      return {
+        ok: false,
+        code: 'SETUP_JELLYFIN_AUTH_FAILED',
+        message: 'Jellyfin hat die geprüfte Anmeldung abgelehnt.',
+      };
+    }
+    return {
+      ok: false,
+      code: 'SETUP_JELLYFIN_HTTP_ERROR',
+      message: `Jellyfin antwortet mit HTTP ${response.status}.`,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: 'SETUP_JELLYFIN_UNREACHABLE',
+      message: 'Jellyfin ist vom Hauser-Server aus nicht erreichbar.',
+    };
+  }
+}
+
 function serveSetupActivation(
   req,
   res,
-  { configStore, householdConfigPath, setupConnectionVerifier, reconfigure = false },
+  {
+    configStore,
+    householdConfigPath,
+    setupConnectionVerifier,
+    setupJellyfinVerifier,
+    reconfigure = false,
+  },
 ) {
   let body = '';
   let oversized = false;
@@ -897,8 +968,28 @@ function serveSetupActivation(
       jsonResponse(res, 502, connection);
       return;
     }
+    if (result.jellyfin.enabled) {
+      const jellyfinConnection = await setupJellyfinVerifier(
+        result.jellyfin.url,
+        result.jellyfin.accessToken,
+        result.jellyfin.userId,
+      );
+      if (!jellyfinConnection.ok) {
+        jsonResponse(res, 502, jellyfinConnection);
+        return;
+      }
+    }
     let temporary = null;
     let previousSharedConfig = null;
+    const sharedConfigUpdates = {
+      'hmi:backend': 'ha',
+      'hmi:ha-url': result.haUrl,
+      'hmi:ha-token': result.haToken,
+      'hmi:jf-url': result.jellyfin.enabled ? result.jellyfin.url : null,
+      'hmi:jf-token': result.jellyfin.enabled ? result.jellyfin.accessToken : null,
+      'hmi:jf-user': result.jellyfin.enabled ? result.jellyfin.userId : null,
+      'hmi:library': result.jellyfin.enabled ? 'live' : 'fake',
+    };
     try {
       mkdirSync(dirname(householdConfigPath), { recursive: true, mode: 0o700 });
       temporary = `${householdConfigPath}.${process.pid}.${randomUUID()}.tmp`;
@@ -910,20 +1001,12 @@ function serveSetupActivation(
         // unverändert. Schlägt vorher etwas fehl, wird auch die zentrale
         // Verbindungsconfig auf ihren exakten vorherigen Stand zurückgesetzt.
         previousSharedConfig = configStore.read();
-        configStore.update({
-          'hmi:backend': 'ha',
-          'hmi:ha-url': result.haUrl,
-          'hmi:ha-token': result.haToken,
-        });
+        configStore.update(sharedConfigUpdates);
         renameSync(temporary, householdConfigPath);
         temporary = null;
       } else {
         // Beim First Run bleiben Zugangsdaten vor dem letzten Aktivierungsmarker.
-        configStore.update({
-          'hmi:backend': 'ha',
-          'hmi:ha-url': result.haUrl,
-          'hmi:ha-token': result.haToken,
-        });
+        configStore.update(sharedConfigUpdates);
         renameSync(temporary, householdConfigPath);
         temporary = null;
       }
@@ -942,6 +1025,10 @@ function serveSetupActivation(
             'hmi:backend': previousSharedConfig['hmi:backend'] ?? null,
             'hmi:ha-url': previousSharedConfig['hmi:ha-url'] ?? null,
             'hmi:ha-token': previousSharedConfig['hmi:ha-token'] ?? null,
+            'hmi:jf-url': previousSharedConfig['hmi:jf-url'] ?? null,
+            'hmi:jf-token': previousSharedConfig['hmi:jf-token'] ?? null,
+            'hmi:jf-user': previousSharedConfig['hmi:jf-user'] ?? null,
+            'hmi:library': previousSharedConfig['hmi:library'] ?? null,
           });
         } catch { /* best effort; household config remains unchanged */ }
       }
@@ -1743,6 +1830,7 @@ export function createHmiServer(
     familyDataPath = FAMILY_DATA_PATH,
     familyData = null,
     setupConnectionVerifier = verifySetupHomeAssistant,
+    setupJellyfinVerifier = verifySetupJellyfin,
   } = {},
 ) {
   const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
@@ -1773,6 +1861,7 @@ export function createHmiServer(
         configStore,
         householdConfigPath,
         setupConnectionVerifier,
+        setupJellyfinVerifier,
       });
     } else if (!setupIsRequired && readiness.ok
         && normalizedHouseholdConfigMode === 'active'
@@ -1782,6 +1871,7 @@ export function createHmiServer(
         configStore,
         householdConfigPath,
         setupConnectionVerifier,
+        setupJellyfinVerifier,
         reconfigure: true,
       });
     } else if ((req.url || '') === '/api/setup/activate') {

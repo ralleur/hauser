@@ -552,5 +552,21 @@
   "setup_saving": "Salvataggio delle modifiche …",
   "setup_activating": "Attivazione …",
   "setup_save_start": "Salva e apri la dashboard",
-  "setup_confirm_start": "Conferma e apri la dashboard"
+  "setup_confirm_start": "Conferma e apri la dashboard",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Configura la videoteca",
+  "setup_jellyfin_hint": "Jellyfin è facoltativo. Se lo attivi, l’accesso viene verificato ora e la libreria live verrà caricata all’avvio.",
+  "setup_jellyfin_enable": "Usa Jellyfin",
+  "setup_jellyfin_enable_hint": "Se disattivato, la libreria resta intenzionalmente in modalità demo.",
+  "setup_jellyfin_url": "Indirizzo Jellyfin",
+  "setup_jellyfin_username": "Nome utente",
+  "setup_jellyfin_password": "Password",
+  "setup_jellyfin_test": "Verifica connessione",
+  "setup_jellyfin_testing": "Verifica della connessione …",
+  "setup_jellyfin_connected": "Accesso a Jellyfin verificato.",
+  "setup_jellyfin_existing": "L’accesso Jellyfin esistente è stato caricato e può essere riutilizzato senza modifiche.",
+  "setup_jellyfin_required": "Verifica l’accesso a Jellyfin oppure disattiva Jellyfin esplicitamente.",
+  "setup_jellyfin_auth_failed": "Jellyfin ha rifiutato il nome utente o la password.",
+  "setup_jellyfin_unreachable": "Jellyfin non è raggiungibile oppure la sessione verificata non è più valida.",
+  "setup_jellyfin_disabled": "Jellyfin è disattivato; la libreria verrà avviata in modalità demo."
 }

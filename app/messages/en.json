@@ -552,5 +552,21 @@
   "setup_saving": "Saving changes …",
   "setup_activating": "Activating …",
   "setup_save_start": "Save changes and open dashboard",
-  "setup_confirm_start": "Confirm configuration and open dashboard"
+  "setup_confirm_start": "Confirm configuration and open dashboard",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Set up video library",
+  "setup_jellyfin_hint": "Jellyfin is optional. If enabled, the sign-in is verified now and the live library loads after startup.",
+  "setup_jellyfin_enable": "Use Jellyfin",
+  "setup_jellyfin_enable_hint": "When disabled, the library intentionally remains in demo mode.",
+  "setup_jellyfin_url": "Jellyfin address",
+  "setup_jellyfin_username": "Username",
+  "setup_jellyfin_password": "Password",
+  "setup_jellyfin_test": "Test connection",
+  "setup_jellyfin_testing": "Testing connection …",
+  "setup_jellyfin_connected": "Jellyfin sign-in verified successfully.",
+  "setup_jellyfin_existing": "The existing Jellyfin sign-in is loaded and can be reused unchanged.",
+  "setup_jellyfin_required": "Test the Jellyfin sign-in or explicitly disable Jellyfin.",
+  "setup_jellyfin_auth_failed": "Jellyfin rejected the username or password.",
+  "setup_jellyfin_unreachable": "Jellyfin is unreachable or the verified session is no longer valid.",
+  "setup_jellyfin_disabled": "Jellyfin is disabled; the library will start in demo mode."
 }

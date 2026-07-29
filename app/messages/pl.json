@@ -552,5 +552,21 @@
   "setup_saving": "Zapisywanie zmian …",
   "setup_activating": "Aktywowanie …",
   "setup_save_start": "Zapisz i otwórz pulpit",
-  "setup_confirm_start": "Potwierdź i otwórz pulpit"
+  "setup_confirm_start": "Potwierdź i otwórz pulpit",
+  "setup_step_jellyfin": "3 · Jellyfin",
+  "setup_jellyfin_title": "Skonfiguruj bibliotekę wideo",
+  "setup_jellyfin_hint": "Jellyfin jest opcjonalny. Po włączeniu logowanie zostanie sprawdzone teraz, a biblioteka online załaduje się po uruchomieniu.",
+  "setup_jellyfin_enable": "Używaj Jellyfin",
+  "setup_jellyfin_enable_hint": "Po wyłączeniu biblioteka celowo pozostaje w trybie demonstracyjnym.",
+  "setup_jellyfin_url": "Adres Jellyfin",
+  "setup_jellyfin_username": "Nazwa użytkownika",
+  "setup_jellyfin_password": "Hasło",
+  "setup_jellyfin_test": "Sprawdź połączenie",
+  "setup_jellyfin_testing": "Sprawdzanie połączenia …",
+  "setup_jellyfin_connected": "Logowanie do Jellyfin zostało pomyślnie sprawdzone.",
+  "setup_jellyfin_existing": "Istniejące logowanie do Jellyfin zostało wczytane i może być używane bez zmian.",
+  "setup_jellyfin_required": "Sprawdź logowanie do Jellyfin albo wyraźnie wyłącz Jellyfin.",
+  "setup_jellyfin_auth_failed": "Jellyfin odrzucił nazwę użytkownika lub hasło.",
+  "setup_jellyfin_unreachable": "Jellyfin jest nieosiągalny albo sprawdzona sesja utraciła ważność.",
+  "setup_jellyfin_disabled": "Jellyfin jest wyłączony; biblioteka uruchomi się w trybie demonstracyjnym."
 }
