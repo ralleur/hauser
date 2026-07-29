@@ -91,6 +91,9 @@ docker compose logs --tail=100 hauser
 
 The wizard stores the Home Assistant URL and token in `/data/config.json`, not
 in the image or Git. Manual config replacement does not alter those credentials.
+An active installation can reopen the guided editor from **System → Services →
+Edit setup**. Opening or cancelling does not write anything; only a confirmed,
+validated change atomically replaces `/config/household.json`.
 
 ## Health and startup errors
 

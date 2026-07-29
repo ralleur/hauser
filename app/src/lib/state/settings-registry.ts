@@ -147,6 +147,8 @@ export const SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['url', 'server', 'host', 'ip', 'websocket', 'adresse', 'home assistant'] },
   { id: 'ha-token', section: 'services', get label() { return m.settings_entry_ha_token_label(); },
     keywords: ['home assistant', 'login', 'anmelden', 'auth', 'schlüssel', 'access token'] },
+  { id: 'household-setup', section: 'services', label: 'Einrichtung bearbeiten',
+    keywords: ['home assistant', 'setup', 'einrichtung', 'räume', 'entitäten', 'onboarding', 'konfiguration'] },
   { id: 'jf-url', section: 'services', get label() { return m.settings_entry_jf_url_label(); },
     keywords: ['jellyfin', 'media', 'server', 'url', 'filme', 'serien', 'host', 'adresse'] },
   { id: 'jf-session', section: 'services', get label() { return m.settings_entry_jf_session_label(); },

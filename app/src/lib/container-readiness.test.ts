@@ -217,6 +217,66 @@ describe('container readiness contract', () => {
     expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 1 });
   });
 
+  it('reconfigures an active installation atomically without deleting the current setup', async () => {
+    const files = fixture();
+    const centralConfigPath = join(files.dataDir, 'config.json');
+    writeFileSync(centralConfigPath, `${JSON.stringify({
+      'hmi:backend': 'ha',
+      'hmi:ha-url': 'http://old-home-assistant.local:8123',
+      'hmi:ha-token': 'old-token',
+    }, null, 2)}\n`, { mode: 0o600 });
+    const verified: Array<{ haUrl: string; haToken: string }> = [];
+    const server = createHmiServer('', {
+      staticRoot: files.staticRoot,
+      householdConfigPath: files.householdConfigPath,
+      householdConfigMode: 'active',
+      requiredWritableDirs: [files.configDir, files.dataDir, files.assetsDir],
+      configPath: centralConfigPath,
+      paperlessPin: '',
+      paperlessToken: '',
+      setupConnectionVerifier: async (haUrl: string, haToken: string) => {
+        verified.push({ haUrl, haToken });
+        return { ok: true };
+      },
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const invalid = await fetch(`http://127.0.0.1:${port}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ haUrl: 'file:///tmp/ha', haToken: 'new-token', householdConfig: {} }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
+    expect(JSON.parse(readFileSync(centralConfigPath, 'utf8'))['hmi:ha-token']).toBe('old-token');
+
+    const replacement = validConfig();
+    replacement.rooms[0].name = 'Updated living room';
+    const activated = await fetch(`http://127.0.0.1:${port}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        haUrl: 'http://new-home-assistant.local:8123/',
+        haToken: 'new-token',
+        householdConfig: replacement,
+      }),
+    });
+    expect(activated.status).toBe(200);
+    expect(await activated.json()).toEqual({ ok: true, status: 'reconfigured', schemaVersion: 1 });
+    expect(verified).toEqual([{
+      haUrl: 'http://new-home-assistant.local:8123',
+      haToken: 'new-token',
+    }]);
+    expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(replacement);
+    expect(JSON.parse(readFileSync(centralConfigPath, 'utf8'))).toMatchObject({
+      'hmi:backend': 'ha',
+      'hmi:ha-url': 'http://new-home-assistant.local:8123',
+      'hmi:ha-token': 'new-token',
+    });
+  });
+
   it('requires the Hauser server itself to reach and authenticate with Home Assistant', async () => {
     const requested: Array<{ url: string; authorization: string | null }> = [];
     const rejected = await verifySetupHomeAssistant(

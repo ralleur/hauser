@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { discoverHomeAssistant } from '../config/setup-discovery.ts';
-  import { parseHouseholdConfig } from '../config/household-config.ts';
+  import { parseHouseholdConfig, type HouseholdConfigV1 } from '../config/household-config.ts';
   import {
     buildSetupHouseholdSuggestion,
     canMoveSetupEntity,
@@ -9,12 +10,56 @@
     type SetupHouseholdSuggestion,
   } from '../config/setup-household.ts';
 
+  let { mode = 'first-run' }: { mode?: 'first-run' | 'reconfigure' } = $props();
+  const reconfigure = $derived(mode === 'reconfigure');
   let haUrl = $state('http://homeassistant.local:8123');
   let token = $state('');
-  let status = $state<'idle' | 'connecting' | 'ready' | 'activating' | 'error'>('idle');
+  let status = $state<'idle' | 'loading' | 'connecting' | 'ready' | 'activating' | 'error'>('idle');
   let message = $state('');
   let suggestion = $state<SetupHouseholdSuggestion | null>(null);
   let omittedCount = $state(0);
+
+  function returnToDashboard(): void {
+    const url = new URL(location.href);
+    url.searchParams.delete('setup');
+    location.replace(`${url.pathname}${url.search}${url.hash}`);
+  }
+
+  async function loadCurrentSetup(): Promise<void> {
+    try {
+      const [householdResponse, sharedResponse] = await Promise.all([
+        fetch('/api/household-config', { headers: { Accept: 'application/json' }, cache: 'no-store' }),
+        fetch('/api/config', { headers: { Accept: 'application/json' }, cache: 'no-store' }),
+      ]);
+      if (!householdResponse.ok || !sharedResponse.ok) {
+        throw new Error('Die bestehende Einrichtung konnte nicht geladen werden.');
+      }
+      const parsed = parseHouseholdConfig(await householdResponse.json());
+      if (!parsed.ok) throw new Error('Die aktive Haushaltskonfiguration ist ungültig.');
+      const shared = await sharedResponse.json() as { values?: Record<string, unknown> };
+      const values = shared.values ?? {};
+      if (typeof values['hmi:ha-url'] === 'string') haUrl = values['hmi:ha-url'];
+      if (typeof values['hmi:ha-token'] === 'string') token = values['hmi:ha-token'];
+      suggestion = {
+        config: structuredClone(parsed.value) as HouseholdConfigV1,
+        ignoredEntityIds: [],
+        inferredRooms: false,
+      };
+      status = 'ready';
+      message = 'Die aktive Konfiguration ist geladen. Änderungen werden erst beim Speichern übernommen.';
+    } catch (error) {
+      status = 'error';
+      message = error instanceof Error ? error.message : 'Die bestehende Einrichtung konnte nicht geladen werden.';
+    }
+  }
+
+  onMount(() => {
+    if (reconfigure) {
+      status = 'loading';
+      message = 'Lade bestehende Einrichtung …';
+      void loadCurrentSetup();
+    }
+  });
 
   async function connectAndScan(): Promise<void> {
     if (!haUrl.trim() || !token.trim()) {
@@ -80,7 +125,8 @@
         throw new Error(`${payload.message ?? 'Die Aktivierung ist fehlgeschlagen.'}${issue}`.trim());
       }
       token = '';
-      location.reload();
+      if (reconfigure) returnToDashboard();
+      else location.reload();
     } catch (error) {
       status = 'error';
       message = error instanceof Error ? error.message : 'Die Aktivierung ist fehlgeschlagen.';
@@ -88,25 +134,36 @@
   }
 </script>
 
-<svelte:head><title>Hauser einrichten</title></svelte:head>
+<svelte:head><title>{reconfigure ? 'Hauser-Einrichtung bearbeiten' : 'Hauser einrichten'}</title></svelte:head>
 
 <main class="setup-shell">
   <section class="setup-card" aria-labelledby="setup-title">
-    <p class="eyebrow">Hauser · Ersteinrichtung</p>
-    <h1 id="setup-title">Home Assistant verbinden</h1>
-    <p class="intro">Hauser liest Räume und relevante Entitäten ein und erstellt daraus eine validierte erste Konfiguration. Es werden noch keine Geräte gesteuert.</p>
+    <div class="setup-heading">
+      <div>
+        <p class="eyebrow">Hauser · {reconfigure ? 'Einrichtung' : 'Ersteinrichtung'}</p>
+        <h1 id="setup-title">{reconfigure ? 'Einrichtung bearbeiten' : 'Home Assistant verbinden'}</h1>
+      </div>
+      {#if reconfigure}
+        <button class="secondary" type="button" onclick={returnToDashboard} disabled={status === 'activating'}>Abbrechen</button>
+      {/if}
+    </div>
+    <p class="intro">
+      {reconfigure
+        ? 'Die aktive Konfiguration bleibt unverändert, bis du die Änderungen bestätigst.'
+        : 'Hauser liest Räume und relevante Entitäten ein und erstellt daraus eine validierte erste Konfiguration. Es werden noch keine Geräte gesteuert.'}
+    </p>
 
     <form onsubmit={(event) => { event.preventDefault(); void connectAndScan(); }}>
       <label>
         <span>Home-Assistant-Adresse</span>
-        <input type="url" bind:value={haUrl} autocomplete="url" spellcheck="false" required />
+        <input type="url" bind:value={haUrl} autocomplete="url" spellcheck="false" required disabled={status === 'loading' || status === 'activating'} />
       </label>
       <label>
         <span>Long-Lived Access Token</span>
-        <input type="password" bind:value={token} autocomplete="off" required />
+        <input type="password" bind:value={token} autocomplete="off" required disabled={status === 'loading' || status === 'activating'} />
         <small>In Home Assistant: Profil → Sicherheit → Long-Lived Access Tokens. Der Token wird erst bei der Aktivierung serverseitig in <code>/data</code> gespeichert.</small>
       </label>
-      <button class="primary" type="submit" disabled={status === 'connecting' || status === 'activating'}>
+      <button class="primary" type="submit" disabled={status === 'loading' || status === 'connecting' || status === 'activating'}>
         {status === 'connecting' ? 'Verbinde und scanne …' : 'Verbindung testen und Räume scannen'}
       </button>
     </form>
@@ -168,7 +225,9 @@
           <p class="ignored">{suggestion.ignoredEntityIds.length + omittedCount} nicht eindeutig zuordenbare, deaktivierte oder von dir ausgelassene Entitäten werden nicht übernommen.</p>
         {/if}
         <button class="primary" type="button" onclick={() => void activate()} disabled={status === 'activating'}>
-          {status === 'activating' ? 'Aktiviere …' : 'Konfiguration bestätigen und Dashboard starten'}
+          {status === 'activating'
+            ? (reconfigure ? 'Speichere Änderungen …' : 'Aktiviere …')
+            : (reconfigure ? 'Änderungen speichern und Dashboard starten' : 'Konfiguration bestätigen und Dashboard starten')}
         </button>
       </div>
     {/if}
@@ -178,6 +237,7 @@
 <style>
   .setup-shell { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6); background: var(--color-surface-0); color: var(--color-text-primary); font-family: var(--font-family); }
   .setup-card { width: min(calc(var(--space-8) * 12), 100%); padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface-1); box-shadow: var(--elevation-overlay-shadow); }
+  .setup-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
   .eyebrow { margin: 0 0 var(--space-2); color: var(--color-text-secondary); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
   h1, h2 { margin: 0; font-weight: var(--font-weight-semibold); letter-spacing: var(--tracking-snug); }
   h1 { font-size: var(--text-2xl); }
@@ -208,5 +268,5 @@
   .entity-editor small { grid-column: 1 / -1; overflow-wrap: anywhere; }
   .ignored { margin: 0 0 var(--space-4); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .preview-heading { align-items: flex-start; flex-direction: column; } .entity-editor { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; } }
+  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .entity-editor { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; } }
 </style>

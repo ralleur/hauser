@@ -858,7 +858,7 @@ export async function verifySetupHomeAssistant(haUrl, haToken, fetchImpl = fetch
 function serveSetupActivation(
   req,
   res,
-  { configStore, householdConfigPath, setupConnectionVerifier },
+  { configStore, householdConfigPath, setupConnectionVerifier, reconfigure = false },
 ) {
   let body = '';
   let oversized = false;
@@ -897,29 +897,60 @@ function serveSetupActivation(
       jsonResponse(res, 502, connection);
       return;
     }
+    let temporary = null;
+    let previousSharedConfig = null;
     try {
-      // Zugangsdaten zuerst persistieren. Die Haushaltsdatei ist der letzte,
-      // atomare Aktivierungsmarker; bei einem früheren Fehler bleibt Setup aktiv.
-      configStore.update({
-        'hmi:backend': 'ha',
-        'hmi:ha-url': result.haUrl,
-        'hmi:ha-token': result.haToken,
-      });
       mkdirSync(dirname(householdConfigPath), { recursive: true, mode: 0o700 });
-      const temporary = `${householdConfigPath}.${process.pid}.${randomUUID()}.tmp`;
+      temporary = `${householdConfigPath}.${process.pid}.${randomUUID()}.tmp`;
       writeFileSync(temporary, `${JSON.stringify(result.householdConfig, null, 2)}\n`, { mode: 0o600 });
-      renameSync(temporary, householdConfigPath);
-      chmodSync(householdConfigPath, 0o600);
-      jsonResponse(res, 201, {
+      chmodSync(temporary, 0o600);
+
+      if (reconfigure) {
+        // Die aktive Haushaltsdatei bleibt bis zur letzten atomaren Umbenennung
+        // unverändert. Schlägt vorher etwas fehl, wird auch die zentrale
+        // Verbindungsconfig auf ihren exakten vorherigen Stand zurückgesetzt.
+        previousSharedConfig = configStore.read();
+        configStore.update({
+          'hmi:backend': 'ha',
+          'hmi:ha-url': result.haUrl,
+          'hmi:ha-token': result.haToken,
+        });
+        renameSync(temporary, householdConfigPath);
+        temporary = null;
+      } else {
+        // Beim First Run bleiben Zugangsdaten vor dem letzten Aktivierungsmarker.
+        configStore.update({
+          'hmi:backend': 'ha',
+          'hmi:ha-url': result.haUrl,
+          'hmi:ha-token': result.haToken,
+        });
+        renameSync(temporary, householdConfigPath);
+        temporary = null;
+      }
+      jsonResponse(res, reconfigure ? 200 : 201, {
         ok: true,
-        status: 'activated',
+        status: reconfigure ? 'reconfigured' : 'activated',
         schemaVersion: result.householdConfig.schemaVersion,
       });
     } catch {
+      if (temporary) {
+        try { unlinkSync(temporary); } catch { /* best effort */ }
+      }
+      if (reconfigure && previousSharedConfig) {
+        try {
+          configStore.update({
+            'hmi:backend': previousSharedConfig['hmi:backend'] ?? null,
+            'hmi:ha-url': previousSharedConfig['hmi:ha-url'] ?? null,
+            'hmi:ha-token': previousSharedConfig['hmi:ha-token'] ?? null,
+          });
+        } catch { /* best effort; household config remains unchanged */ }
+      }
       jsonResponse(res, 500, {
         ok: false,
-        code: 'SETUP_ACTIVATION_FAILED',
-        message: 'Die Konfiguration konnte nicht atomar aktiviert werden.',
+        code: reconfigure ? 'SETUP_RECONFIGURATION_FAILED' : 'SETUP_ACTIVATION_FAILED',
+        message: reconfigure
+          ? 'Die bestehende Konfiguration blieb aktiv; die Änderungen konnten nicht gespeichert werden.'
+          : 'Die Konfiguration konnte nicht atomar aktiviert werden.',
       });
     }
   });
@@ -1743,7 +1774,17 @@ export function createHmiServer(
         householdConfigPath,
         setupConnectionVerifier,
       });
-    } else if (setupIsRequired && (req.url || '') === '/api/setup/activate') {
+    } else if (!setupIsRequired && readiness.ok
+        && normalizedHouseholdConfigMode === 'active'
+        && (req.url || '') === '/api/setup/activate'
+        && setupRequestAllowed(req, allowedOrigins)) {
+      serveSetupActivation(req, res, {
+        configStore,
+        householdConfigPath,
+        setupConnectionVerifier,
+        reconfigure: true,
+      });
+    } else if ((req.url || '') === '/api/setup/activate') {
       jsonResponse(res, 403, {
         ok: false,
         code: 'SETUP_REQUEST_FORBIDDEN',

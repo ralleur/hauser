@@ -15,18 +15,20 @@ const shellLoaders = {
 // Vor den Bootstrap-Fetches: die Demo stellt ihre isolierten API-Antworten bereit.
 installDemoApi();
 
-async function setupIsRequired(): Promise<boolean> {
+async function healthStatus(): Promise<'ready' | 'setup_required' | null> {
   try {
     const response = await fetch('/api/health', {
       method: 'GET',
       headers: { accept: 'application/json' },
       cache: 'no-store',
     });
-    if (!response.ok) return false;
+    if (!response.ok) return null;
     const payload = await response.json() as { status?: unknown };
-    return payload.status === 'setup_required';
+    return payload.status === 'ready' || payload.status === 'setup_required'
+      ? payload.status
+      : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -45,10 +47,16 @@ function renderHouseholdConfigError(code: string): void {
 }
 
 let mountedApp: unknown = null;
+const initialHealthStatus = await healthStatus();
+const reconfigureRequested = new URL(location.href).searchParams.get('setup') === 'reconfigure';
 
-if (await setupIsRequired()) {
+if (initialHealthStatus === 'setup_required'
+    || (initialHealthStatus === 'ready' && reconfigureRequested)) {
   const { default: SetupWizard } = await import('./lib/components/SetupWizard.svelte');
-  mountedApp = mount(SetupWizard, { target: document.body });
+  mountedApp = mount(SetupWizard, {
+    target: document.body,
+    props: { mode: initialHealthStatus === 'setup_required' ? 'first-run' : 'reconfigure' },
+  });
 } else {
   const householdConfigRuntime = await bootstrapHouseholdConfigRuntime({
     startProductiveApp: async () => {
