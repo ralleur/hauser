@@ -16,13 +16,18 @@ repository="${HAUSER_IMAGE_REPOSITORY:-hauser}"
 tag="${1:-sha-${short_revision}}"
 image="${repository}:${tag}"
 
+output="type=image,name=${image},rewrite-timestamp=true,unpack=false"
+if [[ "${HAUSER_BUILD_LOAD:-false}" == "true" ]]; then
+  output="type=docker,name=${image}"
+fi
+
 docker buildx build \
   --pull=false \
   --provenance=false \
   --build-arg "SOURCE_DATE_EPOCH=${source_date_epoch}" \
   --build-arg "HAUSER_VERSION=${tag}" \
   --label "org.opencontainers.image.revision=${revision}" \
-  --output "type=image,name=${image},rewrite-timestamp=true,unpack=false" \
+  --output "$output" \
   .
 
 image_id="$(docker image inspect "$image" --format '{{.Id}}')"

@@ -66,6 +66,8 @@ jobs:
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build commit-bound local image
+        env:
+          HAUSER_BUILD_LOAD: "true"
         run: ./scripts/build-image.sh "ci-${GITHUB_SHA::12}"
 
       - name: Verify container contract
