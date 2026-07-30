@@ -466,6 +466,13 @@
   "demo_room_bad": "Salle de bain",
   "demo_room_kueche": "Cuisine",
   "demo_room_flur": "Couloir",
+  "settings_group_home_label": "Maison",
+  "settings_section_rooms_devices_label": "Pièces et appareils",
+
+  "settings_rooms_devices_save": "Enregistrer les modifications",
+  "settings_rooms_devices_scan_label": "Recharger depuis Home Assistant",
+  "settings_rooms_devices_scan_desc": "Remplace le brouillon actuel par les pièces et appareils actuellement détectés dans Home Assistant.",
+  "settings_rooms_devices_scan_action": "Recharger les pièces et appareils",
   "settings_group_connectivity_label": "Connexions",
   "settings_group_ai_label": "Fonctions IA",
   "settings_group_appearance_label": "Apparence",

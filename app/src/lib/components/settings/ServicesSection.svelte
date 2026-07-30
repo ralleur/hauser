@@ -23,11 +23,6 @@
   const conn = $derived(connection());
   const auth = authState();
 
-  function openHouseholdSetup(): void {
-    const url = new URL(location.href);
-    url.searchParams.set('setup', 'reconfigure');
-    location.assign(`${url.pathname}${url.search}${url.hash}`);
-  }
 
   /* Die beiden lokalen Dienste einmal beim Öffnen der Sektion prüfen. */
   $effect(() => { void probeLocalServices(); });
@@ -128,15 +123,6 @@
             onclick={() => requestToken()}>{m.sys_renew()}</button>
   </div>
 
-  <div class="settings-row" data-setting-id="household-setup">
-    <span class="settings-row-icon"><Icon name="i-wrench" cls="icon icon-md" /></span>
-    <div class="settings-row-text">
-      <span class="settings-row-label">Einrichtung bearbeiten</span>
-      <span class="settings-row-sub">Räume, Entitäten und Home-Assistant-Verbindung im geführten Setup prüfen</span>
-    </div>
-    <button class="secondary-btn pressable" type="button" disabled={settingsValues.demoMode}
-            onclick={openHouseholdSetup}>Öffnen</button>
-  </div>
 </div>
 
 <h3 class="caps-label settings-group-label">{m.sys_group_services_media()}</h3>

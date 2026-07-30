@@ -18,11 +18,12 @@ Status vocabulary:
 
 ## Where the project is today
 
-Hauser is currently developed in a private pre-beta repository. The design
-system, Home Assistant and Jellyfin integrations, landscape panel, compact phone
-shell and everyday household screens are implemented. The repository is kept
-publication-ready throughout development, but no alpha release will be
-published. The first public release is the installable beta.
+Hauser is an installable technical-beta candidate. The design system, Home
+Assistant and Jellyfin integrations, deterministic setup wizard, landscape
+panel, compact phone shell and everyday household screens are implemented. The
+source-built Compose path and isolated clean-room onboarding gate are green. No
+alpha was published; the first public release will be `v0.4.0-beta.1` after the
+final package and published-artifact checks.
 
 ---
 
@@ -87,13 +88,19 @@ adding every feature in the backlog. The versioned external household
 configuration core is built and exercised with independent neutral fixtures.
 The source-built container/Compose installation path, persistent volumes,
 readiness contract, backup/restore helpers and deterministic Home Assistant setup
-wizard are built. The isolated development pilot has passed both explicit-Area
-and no-Area onboarding, command/state echo, reconnect and persistence. Beta
-versioning, changelog, release-note structure and tag-gated quality/image
-automation are prepared. The next technical milestone is the final release
-package run and immutable registry image. A real external household remains
-mandatory during beta stabilisation before RC; AI-assisted setup may complement
-it later but is not a v1 gate.
+wizard are built. Room creation, renaming, ordering and controlled deletion are
+available inside the product, and panel/phone layouts have been exercised from
+zero to twelve rooms. The isolated development pilot has passed both
+explicit-Area and no-Area onboarding, command/state echo, reconnect and
+persistence. Beta versioning, changelog, release-note structure and tag-gated
+quality/image automation are prepared. The next technical milestone is the final
+release package run and immutable registry image. A real external household
+remains mandatory during beta stabilisation before RC; AI-assisted setup may
+complement it later but is not a v1 gate.
+
+A code-modifying AI agent that commits, pushes and redeploys the application is
+deliberately **not part of the portable product**. It remains an operator-owned
+development workflow rather than a capability of the read-only Docker runtime.
 
 ## Internationalisation
 
@@ -125,6 +132,9 @@ configuration, not from the interface.
   explicit public-beta tag is created after the final package gate.
 - The clean-room pilot proves the technical setup contract, not yet usability by
   an external person or compatibility with a second real device topology.
+- Public installation reports and the first complete external contribution cycle
+  have not happened yet; both are goals of the beta rather than claims made at
+  launch.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional

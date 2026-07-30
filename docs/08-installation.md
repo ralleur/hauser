@@ -1,9 +1,10 @@
 # Installation and operation
 
-Hauser is still in private pre-beta development. The container path described
-here is built from a local checkout; there is no published registry image or
-support promise yet. Its purpose is to make installation, persistence and
-recovery reproducible before the public beta gate.
+Hauser is preparing its first public technical beta. The release package is
+configured for `ghcr.io/ralleur/hauser:v0.4.0-beta.1`; that image exists only
+after the matching tag passes the release workflow. An explicit source-build
+overlay remains available for inspecting an unpublished candidate. Neither path
+comes with a support promise.
 
 ## Tested platform
 
@@ -14,8 +15,8 @@ a tested support matrix.
 
 Prerequisites:
 
-- Docker Engine with Docker Compose v2 (`docker compose`) and Buildx;
-- enough access to build an image from the checkout;
+- Docker Engine with Docker Compose v2 (`docker compose`);
+- network access to GHCR, or Buildx when deliberately building from source;
 - a browser that can reach the published port;
 - later, a reachable Home Assistant instance and a dedicated long-lived token.
 
@@ -23,9 +24,17 @@ Prerequisites:
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
+```
+
+Before the first beta image is published, or when deliberately building the
+checked-out source instead of pulling a release, use the explicit override:
+
+```bash
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
 Open <http://localhost:4173>. A fresh config volume starts the restricted setup
@@ -201,8 +210,8 @@ in `.env` before starting it:
 HAUSER_IMAGE_TAG=sha-<12-character-commit>
 ```
 
-No pre-beta image is pushed to a public registry. Registry publication starts
-only with the public beta gate. The tag-gated workflow requires the Git tag,
+Registry publication starts only with the public beta gate. The tag-gated
+workflow requires the Git tag,
 `app/package.json`, `app/package-lock.json`, the Docker image version and dated
 changelog entry to agree before it can publish a multi-architecture image.
 
@@ -235,26 +244,29 @@ and restarts only if the service had been running before the restore.
 
 ## Update
 
-For a source-built pre-beta checkout:
+For a published beta, set the intended version in `.env`, then pull before
+recreating the service:
 
 ```bash
 ./scripts/backup.sh backups/before-update.tar.gz
 git pull --ff-only
-docker compose build --pull=false
+docker compose pull
 docker compose up -d
 docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The pinned base-image digest and `package-lock.json` prevent mutable dependency
-resolution during that build. A source update can still intentionally change
-either pin. Use `./scripts/build-image.sh` instead of `docker compose build` when
-the exact commit-bound image identity matters.
+For a source build, use `docker compose -f compose.yaml -f compose.build.yaml
+build --pull=false` and start with the same two-file Compose command. The pinned
+base-image digest and `package-lock.json` prevent mutable dependency resolution
+during that build. A source update can still intentionally change either pin.
+Use `./scripts/build-image.sh` when the exact commit-bound local image identity
+matters.
 
 ## Rollback
 
-Keep the previous commit-tagged image locally. To roll the application back
-without rebuilding:
+Keep the previous immutable release reference or commit-tagged local image. To
+roll the application back without rebuilding:
 
 1. Put its previous `sha-...` tag in `.env`.
 2. Run `docker compose up -d --no-build`.

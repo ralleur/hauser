@@ -2,6 +2,8 @@
 node_modules/
 dist/
 dist-demo/
+dist-pages-demo/
+.pages/
 .env
 .env.*
 !.env.example

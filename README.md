@@ -7,7 +7,7 @@
 One design system, one interaction language, and a hard rule that the screen
 never waits for the network.
 
-[Architecture](docs/00-architecture.md) · [Design system](docs/01-design-system.md) · [Roadmap](ROADMAP.md)
+[Live demo](https://ralleur.github.io/hauser/demo/) · [Architecture](docs/00-architecture.md) · [Design system](docs/01-design-system.md) · [Roadmap](ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 
 </div>
 
@@ -18,24 +18,33 @@ room, quiet until touched, and a direct path into the relevant household view.
 
 ---
 
-## Read this first
+## Beta status
 
-Hauser is a **private pre-beta reference implementation**, not a released
-product.
+Hauser is an **installable, self-hosted smart home interface preparing its first
+public technical beta**. It is an MIT-licensed hobby project, not a commercial
+service and not a promise of support.
 
-It is a complete, working smart home interface that runs on a wall-mounted
-tablet in one specific home. The code is licensed under MIT and is currently
-developed in a private repository that is kept ready for publication. A
-source-built Docker Compose path, external versioned household configuration and
-deterministic setup wizard now exist. The isolated clean-room pilot has passed;
-the beta version, changelog, release-note contract and tag-gated CI are prepared.
-What is still missing is the final release-package run and published registry
-image. An external real-home installation remains required during beta
-stabilisation, before the release candidate — see [the roadmap](ROADMAP.md).
+The portable product deliberately excludes the author's private code-modifying
+AI agent. That workflow depends on a trusted development checkout, commit/push
+rights and host deployment tooling; granting a read-only Docker installation
+those capabilities would violate the product's security and persistence model.
+This boundary does not apply to bounded, non-code-modifying AI functions.
 
-The static demo build runs the real interface against simulated devices. It is
-kept release-ready in the repository and will be hosted publicly with the first
-installable beta.
+The current branch contains a source-built Docker Compose installation,
+versioned external household configuration, a deterministic setup wizard,
+automatic configuration migration, persistent volumes, backup/restore and a
+documented rollback path. The isolated clean-room pilot has completed setup,
+control/state echo, reconnect and persistence without source changes.
+
+`v0.4.0-beta.1` has not been tagged and no registry image has been published
+yet. The remaining launch work is the final release-package run and verification
+of the exact published artifacts. A real installation by an external person in
+a second household remains mandatory during beta stabilisation, before the
+release candidate — see [the roadmap](ROADMAP.md).
+
+The static demo runs the real interface against simulated devices and will be
+hosted with the public beta. It never connects to a visitor's Home Assistant or
+to the maintainer's private services.
 
 ---
 
@@ -129,16 +138,26 @@ shipped to the browser. The core —
 rooms, lights, climate, calendar, media and energy — runs without the companion.
 The public demo has no Notion dependency.
 
-## Running it with Docker Compose
+## Install with Docker Compose
 
-The current primary installation path builds a pinned local image and starts it
-with persistent config, data and asset volumes:
+The release Compose file pulls the versioned public image and starts it with
+persistent config, data and asset volumes:
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
+```
+
+The image `ghcr.io/ralleur/hauser:v0.4.0-beta.1` becomes available when the
+matching public beta tag passes the release workflow. Before that publication,
+or when deliberately building from a checkout, use the explicit source-build
+overlay:
+
+```bash
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
 Open <http://localhost:4173>. The default bind is loopback-only; LAN exposure
@@ -146,9 +165,23 @@ must be enabled deliberately in `.env`. The complete installation, health,
 backup, restore, update and rollback contract is documented in
 [`docs/08-installation.md`](docs/08-installation.md).
 
-No pre-beta image is published to a registry. A clean checkout can produce a
-commit-bound local image with `./scripts/build-image.sh`; the release workflow
-publishes only after an explicit version tag whose value matches `package.json`.
+On first start, the setup wizard guides you through:
+
+1. choosing the interface language;
+2. testing the Home Assistant URL and long-lived access token;
+3. discovering Areas and relevant entities;
+4. reviewing, renaming and ordering Hauser rooms and assigning devices;
+5. enabling or skipping Jellyfin;
+6. validating and atomically activating the configuration.
+
+No source edit is required. Later changes are available directly under
+**System → Home → Rooms & devices**. Home Assistant Areas are only read as input;
+Hauser does not rename or delete them.
+
+A clean checkout can also produce a commit-bound local image with
+`./scripts/build-image.sh`; set its reported repository and tag in `.env` before
+starting Compose. The release workflow publishes only after an explicit version
+tag whose value matches `package.json`.
 
 ## Running the developer build
 
@@ -179,29 +212,17 @@ cd app
 npm test
 ```
 
-### Against your own Home Assistant
+### Advanced configuration
 
-1. Copy one of the neutral examples from [`app/config/examples/`](app/config/examples/)
-   and map its rooms, visible entities, navigation, modules, energy sensors and
-   media targets to your Home Assistant instance.
-2. Build the app with `npm run build` from `app/`.
-3. Start the companion server with the external config in active mode:
+The wizard writes a human-readable, versioned household configuration. Advanced
+users can inspect the neutral examples in [`app/config/examples/`](app/config/examples/)
+and the full contract in [`docs/07-configuration.md`](docs/07-configuration.md).
+Invalid or partial input fails closed instead of silently loading another
+household. Manual editing is optional, not part of the normal install path.
 
-   ```bash
-   HMI_HOUSEHOLD_CONFIG_PATH="$PWD/config/examples/neutral-small.json" \
-   HMI_HOUSEHOLD_CONFIG_MODE=active \
-   node server.mjs
-   ```
-
-4. Open `http://localhost:4173` and configure the Home Assistant URL and
-   long-lived access token in System settings.
-
-The JSON contract is versioned and validated before the app starts; invalid or
-partial input fails closed instead of falling back to another household. See
-[`docs/07-configuration.md`](docs/07-configuration.md).
-
-There is no kiosk installer or published registry image in this private pre-beta
-development line. The Compose first start uses the deterministic setup wizard.
+The release package uses a versioned GHCR image. The source-built Compose
+overlay remains available for development and for examining an unpublished
+candidate; it is not the normal public installation path.
 
 ### Building the demo
 
@@ -239,19 +260,18 @@ All repository documentation intended for users and contributors is in English.
 
 ## Status and expectations
 
-Hauser is in private pre-beta development. The design system, Home Assistant and
-Jellyfin adapters, HA-backed calendar path, optional Paperless bridge,
-companion-backed household data, panel shell and phone shell are implemented.
-The repository, documentation and static demo are maintained as publication-ready,
-but no alpha will be published. The repository becomes public with the first
-installable beta, `v0.4.0-beta.1`, after the isolated clean-room gate and final
-release-package checks pass. External real-home evidence remains mandatory before
-the release candidate.
-See [ROADMAP.md](ROADMAP.md) for the path to v1.
+Hauser is beta-stage software. The design system, Home Assistant and Jellyfin
+adapters, deterministic onboarding, HA-backed calendar path, optional Paperless
+bridge, companion-backed household data, panel shell and phone shell are
+implemented. The repository, documentation and static demo are maintained as a
+single release candidate, but the first public beta does not exist until the
+tagged image and source release have been published and smoke-tested.
 
-This is a hobby project maintained by one person. The contribution workflow
-becomes active when the repository is made public for beta; response times will
-remain unpredictable. See [CONTRIBUTING.md](CONTRIBUTING.md).
+This is a hobby project maintained by one person. There is no SLA and response
+times remain unpredictable, but focused bug fixes, installation evidence,
+documentation, translations, accessibility improvements and small pull requests
+are explicitly welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[ROADMAP.md](ROADMAP.md).
 
 ## License
 

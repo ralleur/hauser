@@ -466,6 +466,13 @@
   "demo_room_bad": "Bathroom",
   "demo_room_kueche": "Kitchen",
   "demo_room_flur": "Hallway",
+  "settings_group_home_label": "Home",
+  "settings_section_rooms_devices_label": "Rooms & devices",
+
+  "settings_rooms_devices_save": "Save changes",
+  "settings_rooms_devices_scan_label": "Reload from Home Assistant",
+  "settings_rooms_devices_scan_desc": "Replaces the current draft with the rooms and devices currently detected in Home Assistant.",
+  "settings_rooms_devices_scan_action": "Reload rooms and devices",
   "settings_group_connectivity_label": "Connections",
   "settings_group_ai_label": "AI features",
   "settings_group_appearance_label": "Appearance",

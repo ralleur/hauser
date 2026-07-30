@@ -1,0 +1,48 @@
+name: Documentation or translation
+description: Report unclear documentation, a broken instruction or a language correction.
+title: "[Docs]: "
+labels:
+  - documentation
+  - translation
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution type
+      options:
+        - Installation or operations documentation
+        - Product documentation
+        - English wording
+        - German translation
+        - French translation
+        - Italian translation
+        - Portuguese translation
+        - Polish translation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: File, page or message key
+      placeholder: docs/08-installation.md, README section, or settings_setup_title
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or incorrect?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed wording or correction
+      description: Include context, not only a single translated word.
+  - type: checkboxes
+    id: placeholders
+    attributes:
+      label: Translation safety
+      options:
+        - label: I preserved all message placeholders and formatting markers, or this is not a catalogue change.
+          required: true

@@ -1,0 +1,86 @@
+name: Bug report
+description: Report reproducible behaviour that does not match Hauser's documented contract.
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Remove tokens, private hostnames, entity IDs that reveal personal information, and household data before submitting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed credentials and private household data from this report.
+          required: true
+        - label: This is a bug in an advertised path, not a general support request.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Hauser version or commit
+      description: Release tag, image tag/digest, or commit SHA.
+      placeholder: v0.4.0-beta.1 or 0123456789ab
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation path
+      options:
+        - Docker Compose from source
+        - Published container image
+        - Local developer build
+        - Static demo
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, CPU architecture, Docker/Compose version, browser and device where relevant.
+      placeholder: Ubuntu 24.04, linux/amd64, Docker 27, Chrome 128
+    validations:
+      required: true
+  - type: input
+    id: home_assistant
+    attributes:
+      label: Home Assistant version
+      description: Use "not applicable" if the bug does not involve Home Assistant.
+      placeholder: 2026.7.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start ...
+        2. Open ...
+        3. Select ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs, screenshots or recordings
+      description: Paste only the smallest useful excerpt. Do not include tokens, private URLs or personal household data.
+      render: shell

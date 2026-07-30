@@ -1,64 +1,135 @@
-# Contributing
+# Contributing to Hauser
 
-Thanks for looking. A few honest words before you invest time.
+Thanks for considering a contribution. Hauser is an installable technical beta
+built and maintained as a personal open-source project. The goal of the beta is
+not to collect every possible feature; it is to make installation, onboarding,
+operation and the advertised core experience work reliably in more homes.
 
-## What this project is
+There is no SLA and response times can vary. That said, focused contributions
+are explicitly welcome and will be reviewed as maintainer capacity allows.
 
-Hauser is a reference implementation: a design system, a documented current
-architecture, and a working smart home interface built for one specific home. It
-is published so others can read it, run it, and take ideas from it — not as a
-product with a roadmap driven by user requests.
+## Good ways to contribute during the beta
 
-It is maintained by one person in their spare time. **Response times are
-unpredictable and may be measured in weeks.** That is not indifference; it is
-capacity. If that does not work for you, forking is genuinely a good option and
-the license exists to make it easy.
+The most useful contributions currently are:
 
-## What is welcome
+- **Installation reports** from real Linux, Docker Engine, `linux/amd64` and
+  `linux/arm64` environments.
+- **Home Assistant topology findings** involving Areas, entity names,
+  capabilities, reconnects or optional integrations.
+- **Small bug fixes** for setup, migration, persistence, recovery and advertised
+  controls.
+- **Documentation improvements** that remove ambiguity from installation,
+  onboarding, backup, restore or rollback.
+- **Translation reviews** for French, Italian, Portuguese and Polish by native
+  speakers.
+- **Accessibility fixes** for keyboard navigation, focus, contrast and reduced
+  motion.
+- **Tests and release tooling** that make failures reproducible.
 
-- **Bug reports** with enough detail to reproduce.
-- **Questions about how something works.** If the docs did not answer it, that
-  is useful signal by itself.
-- **Small, focused pull requests** — a fix, a clarification, a rough edge
-  smoothed over.
-- **Ports and adaptations.** If you build something on top of this, I would
-  genuinely like to see it.
+Use the issue chooser to open a bug report, installation report,
+documentation/translation report or contribution proposal. Issues may be written
+in English or German.
 
-## What is unlikely to be merged
+## Before writing code
 
-- Large refactors or architecture changes. The current boundaries are documented
-  in `docs/00-architecture.md`; open an issue before changing them.
-- New integrations with services I cannot test against.
-- Build tooling swaps, dependency additions for their own sake, or changes that
-  add abstraction for hypothetical future needs.
-- Anything that regresses the performance budget in
-  `docs/03-performance-budget.md`. That budget is the point of the project.
+A small, self-contained fix can go straight to a pull request. Open a
+contribution proposal first when the change involves any of these:
 
-## Before you open a pull request
+- a new integration or framework;
+- an architecture or configuration-contract change;
+- a broad UX redesign;
+- new persistent data or a migration;
+- a dependency with runtime impact;
+- work spanning several product areas.
+
+This avoids investing in a direction that does not fit the current beta scope.
+Look for issues labelled [`good first issue`](https://github.com/ralleur/hauser/labels/good%20first%20issue)
+or [`help wanted`](https://github.com/ralleur/hauser/labels/help%20wanted) if you
+want a pre-scoped starting point.
+
+## Local setup
+
+Requirements:
+
+- Node.js 24
+- npm
+- Docker Engine with Compose only when changing installation/container paths
 
 ```bash
-cd app
-npm install
-npm run check     # svelte-check / TypeScript
-npm run build     # must succeed
+git clone https://github.com/ralleur/hauser.git
+cd hauser/app
+npm ci
+npm test
+npm run check
+npm run build
 ```
 
-Keep the diff focused. Match the surrounding style rather than introducing your
-own. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
+Run `npm run build:demo` as well when changing user-visible UI, fixtures, routing
+or public presentation. The pull-request workflow repeats tests, typecheck,
+production/demo builds, dependency audit and the container contract. Maintainers
+can run the complete local package gate, including both bundles, public-boundary
+checks and the disposable container lifecycle, with:
 
-## Language
+```bash
+./scripts/verify-public-package.sh
+```
 
-The interface ships in six languages; the message catalogues live in
-`app/messages/`. Public documentation and contributor-facing prose are in
-English. Existing inline code comments may still be German. Issues may be
-opened in either German or English.
+For a full installation rather than frontend development, follow
+[`docs/08-installation.md`](docs/08-installation.md). The isolated synthetic Home
+Assistant environment is documented in [`docs/09-dev-pilot.md`](docs/09-dev-pilot.md).
 
-## Licensing of contributions
+## Pull-request expectations
 
-There is no CLA. By opening a pull request you agree that your contribution is
-licensed under the MIT license in [LICENSE](LICENSE), and any images you
-contribute under the terms in [ASSETS-LICENSE.md](ASSETS-LICENSE.md).
+Keep pull requests small enough to understand and verify. A good PR includes:
 
-## Conduct
+1. the user-visible problem or reason for the change;
+2. a focused implementation without unrelated refactoring;
+3. the exact commands that were run and their result;
+4. tests for changed behaviour where a stable automated seam exists;
+5. screenshots or a short recording for visible UI changes;
+6. migration, rollback or security notes when those contracts are affected.
+
+Match the surrounding style and use the existing design tokens. Do not add raw
+colour, spacing, radius or motion values when a token exists. Commit messages
+follow [Conventional Commits](https://www.conventionalcommits.org/).
+
+## Project boundaries
+
+Changes are unlikely to be accepted when they:
+
+- replace the current framework or architecture without a proven release blocker;
+- add an integration that cannot be tested or safely degraded;
+- weaken fail-closed configuration, credential or privacy boundaries;
+- regress the interaction or performance budgets;
+- add abstraction only for hypothetical future work;
+- turn the beta stabilisation phase into an unbounded feature stream.
+
+The active boundaries are documented in
+[`docs/00-architecture.md`](docs/00-architecture.md),
+[`docs/02-interaction-contract.md`](docs/02-interaction-contract.md) and
+[`docs/03-performance-budget.md`](docs/03-performance-budget.md).
+
+## Language and translations
+
+The interface ships in German, English, French, Italian, Portuguese and Polish.
+Message catalogues live in `app/messages/`. Public documentation and
+contributor-facing prose are in English; existing inline code comments may still
+be German.
+
+For a translation correction, preserve message placeholders and run the normal
+checks. A native-language review is more valuable than mechanically rewriting an
+entire catalogue.
+
+## Security and privacy
+
+Do not put real access tokens, private hostnames, household data or unredacted
+logs in an issue or pull request. Report vulnerabilities privately as described
+in [`SECURITY.md`](SECURITY.md).
+
+## Licensing and conduct
+
+There is no CLA. By opening a pull request, you agree that code contributions are
+licensed under the [MIT license](LICENSE) and contributed images under
+[ASSETS-LICENSE.md](ASSETS-LICENSE.md).
 
 Be decent to people. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

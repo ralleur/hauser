@@ -343,6 +343,21 @@ describe('HMI-Backend-Proxy', () => {
     expect(await response.json()).toEqual({ error: 'Hermes-Integration ist nicht konfiguriert' });
   });
 
+  it('entfernt den Hermes-Endpunkt vollständig, wenn AI-Customizing im Produkt deaktiviert ist', async () => {
+    const server = createHmiServer('server-secret', {
+      aiCustomizingEnabled: false,
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const response = await fetch(`http://127.0.0.1:${port}/hermes/health`);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Route nicht gefunden' });
+  });
+
   it('weist fremde Browser-Origins und unbekannte Methoden ab', () => {
     const allowed = new Set(['http://localhost:4173']);
     expect(proxyRequestAllowed({ method: 'GET', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);

@@ -1,0 +1,103 @@
+name: Installation report
+description: Share a successful or blocked real installation so the beta can build an evidence-based platform matrix.
+title: "[Install]: "
+labels:
+  - installation
+  - platform
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Installation reports are valuable even when no code change is attached. Please redact URLs, tokens, entity IDs and household data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, private hostnames and personal household data.
+          required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Successful installation
+        - Installed with workarounds
+        - Blocked during setup
+        - Failed after setup
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Hauser version or commit
+      placeholder: v0.4.0-beta.1, image digest, or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Host platform
+      description: OS, CPU architecture, Docker Engine and Compose versions.
+      placeholder: Debian 13, linux/arm64, Docker 27.5, Compose 2.32
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Client device and browser
+      placeholder: Pixel Tablet, Android 16, Chrome 128
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version and topology
+      description: Include whether Areas were populated and approximate room/entity counts, without private names.
+      placeholder: HA 2026.7, 8 Areas, about 120 entities
+    validations:
+      required: true
+  - type: dropdown
+    id: discovery
+    attributes:
+      label: Room discovery path
+      options:
+        - Existing Home Assistant Areas
+        - No-Area name heuristic
+        - Mixed Areas and unassigned entities
+    validations:
+      required: true
+  - type: dropdown
+    id: jellyfin
+    attributes:
+      label: Jellyfin
+      options:
+        - Enabled and tested
+        - Explicitly disabled
+        - Setup attempted but failed
+        - Not applicable
+    validations:
+      required: true
+  - type: input
+    id: time
+    attributes:
+      label: Time to first controllable light
+      description: Rough duration from starting the documented install to the first successful light command.
+      placeholder: About 15 minutes
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked
+      description: Mention setup, room display, light control/state echo, reconnect and persistence after restart where tested.
+    validations:
+      required: true
+  - type: textarea
+    id: friction
+    attributes:
+      label: Friction, workarounds or failures
+      description: Include the exact documentation step where you got stuck.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Commands, log excerpts or screenshots with credentials and private data removed.

@@ -466,6 +466,13 @@
   "demo_room_bad": "Casa de banho",
   "demo_room_kueche": "Cozinha",
   "demo_room_flur": "Corredor",
+  "settings_group_home_label": "Casa",
+  "settings_section_rooms_devices_label": "Divisões e dispositivos",
+
+  "settings_rooms_devices_save": "Guardar alterações",
+  "settings_rooms_devices_scan_label": "Recarregar do Home Assistant",
+  "settings_rooms_devices_scan_desc": "Substitui o rascunho atual pelas divisões e dispositivos atualmente detetados no Home Assistant.",
+  "settings_rooms_devices_scan_action": "Recarregar divisões e dispositivos",
   "settings_group_connectivity_label": "Ligações",
   "settings_group_ai_label": "Funções de IA",
   "settings_group_appearance_label": "Aparência",

@@ -615,17 +615,19 @@
   background: var(--color-surface-0);
 }
 .settings-nav {
-  gap: var(--space-5);
+  gap: 0;
 }
 .settings-nav-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
+.settings-nav-section + .settings-nav-section { border-top: 1px solid var(--color-border); }
 .settings-nav-group,
 .settings-nav-group:first-child {
   margin: 0;
-  padding: 0 var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  background: color-mix(in srgb, var(--color-surface-0) 35%, transparent);
 }
 .settings-nav-card {
   overflow: hidden;
@@ -639,7 +641,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-none);
 }
-.settings-nav-btn + .settings-nav-btn {
+.settings-nav-section .settings-nav-btn + .settings-nav-btn {
   border-top: 1px solid var(--color-border);
 }
 .settings-nav-btn:hover {

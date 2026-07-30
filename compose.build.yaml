@@ -1,0 +1,9 @@
+services:
+  hauser:
+    image: "hauser-source:${HAUSER_SOURCE_TAG:-local}"
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        HAUSER_VERSION: "${HAUSER_SOURCE_TAG:-local}"

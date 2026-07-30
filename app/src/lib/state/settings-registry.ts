@@ -1,4 +1,5 @@
 import { m } from '../../paraglide/messages.js';
+import { AI_CUSTOMIZING_ENABLED } from '../config/product-capabilities.ts';
 /* ============================================
    Einstellungs-Registry — die eine Quelle für Gruppen, Sektionen (Sidebar) und
    durchsuchbare Einträge (Chrome-Settings-artige Suche). Pure Daten +
@@ -9,6 +10,7 @@ import { m } from '../../paraglide/messages.js';
    ist reine Gliederung — navigiert wird immer auf Sektionsebene.
 
    Leitfragen der Gruppen:
+     home         → Wie ist mein Zuhause in Hauser strukturiert?
      connectivity → Was hängt dran und funktioniert es?
      ai           → Was nutzt die KI und was kostet das?
      appearance   → Wie sieht es aus und verhält sich?
@@ -17,6 +19,7 @@ import { m } from '../../paraglide/messages.js';
    ============================================ */
 
 export type SettingsGroupId =
+  | 'home'
   | 'connectivity'
   | 'ai'
   | 'appearance'
@@ -24,6 +27,8 @@ export type SettingsGroupId =
   | 'system';
 
 export type SettingsSectionId =
+  /* Zuhause */
+  | 'rooms-devices'
   /* Verbindungen */
   | 'services'
   | 'operating-mode'
@@ -67,6 +72,7 @@ export interface SettingsEntry {
 }
 
 export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
+  { id: 'home', get label() { return m.settings_group_home_label(); } },
   { id: 'connectivity', get label() { return m.settings_group_connectivity_label(); } },
   { id: 'ai', get label() { return m.settings_group_ai_label(); } },
   { id: 'appearance', get label() { return m.settings_group_appearance_label(); } },
@@ -75,6 +81,11 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
 ];
 
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
+  {
+    id: 'rooms-devices', group: 'home',
+    get label() { return m.settings_section_rooms_devices_label(); }, icon: 'i-home', tint: 'warm',
+    get description() { return m.settings_section_rooms_devices_label(); },
+  },
   {
     id: 'services', group: 'connectivity',
     get label() { return m.settings_section_services_label(); }, icon: 'i-lan-connect', tint: 'success',
@@ -139,7 +150,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 
 /* Einträge behalten ihre Ids — Deep-Links über openSetting() bleiben gültig,
    auch wenn sich die Sektionszuordnung ändert. */
-export const SETTINGS_ENTRIES: readonly SettingsEntry[] = [
+const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
+  /* ── Zuhause · Räume & Geräte ── */
+  { id: 'household-setup', section: 'rooms-devices', label: 'Räume verwalten',
+    keywords: ['räume', 'raum', 'zimmer', 'geräte', 'sortieren', 'umbenennen', 'löschen'] },
+
   /* ── Verbindungen · Dienste (eine Integrationskarte je Dienst) ── */
   { id: 'connection-status', section: 'services', get label() { return m.settings_entry_connection_status_label(); },
     keywords: ['home assistant', 'websocket', 'online', 'offline', 'getrennt', 'verbunden', 'integration', 'dienst'] },
@@ -147,8 +162,7 @@ export const SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['url', 'server', 'host', 'ip', 'websocket', 'adresse', 'home assistant'] },
   { id: 'ha-token', section: 'services', get label() { return m.settings_entry_ha_token_label(); },
     keywords: ['home assistant', 'login', 'anmelden', 'auth', 'schlüssel', 'access token'] },
-  { id: 'household-setup', section: 'services', label: 'Einrichtung bearbeiten',
-    keywords: ['home assistant', 'setup', 'einrichtung', 'räume', 'entitäten', 'onboarding', 'konfiguration'] },
+
   { id: 'jf-url', section: 'services', get label() { return m.settings_entry_jf_url_label(); },
     keywords: ['jellyfin', 'media', 'server', 'url', 'filme', 'serien', 'host', 'adresse'] },
   { id: 'jf-session', section: 'services', get label() { return m.settings_entry_jf_session_label(); },
@@ -169,18 +183,29 @@ export const SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['live', 'demo', 'fake', 'mock', 'automatisch', 'testdaten', 'bibliothek', 'jellyfin'] },
 
   /* ── KI · Zugang & Modelle ── */
-  { id: 'ai-access-status', section: 'ai-access', get label() { return m.settings_entry_ai_access_status_label(); },
-    keywords: ['api', 'key', 'schlüssel', 'zugang', 'hermes', 'verbindung', 'kosten', 'konfiguriert'] },
+  ...(AI_CUSTOMIZING_ENABLED ? [{
+    id: 'ai-access-status', section: 'ai-access' as const,
+    get label() { return m.settings_entry_ai_access_status_label(); },
+    keywords: ['api', 'key', 'schlüssel', 'zugang', 'hermes', 'verbindung', 'kosten', 'konfiguriert'],
+  }] : []),
   { id: 'ai-models', section: 'ai-access', get label() { return m.settings_entry_ai_models_label(); },
     keywords: ['modell', 'model', 'gpt', 'luna', 'codex', 'llm', 'welches'] },
-  { id: 'ai-debug', section: 'ai-access', get label() { return m.settings_entry_ai_debug_label(); },
-    keywords: ['debug', 'diagnose', 'werkzeugschritte', 'rohtext', 'fehler', 'details'] },
+  ...(AI_CUSTOMIZING_ENABLED ? [{
+    id: 'ai-debug', section: 'ai-access' as const,
+    get label() { return m.settings_entry_ai_debug_label(); },
+    keywords: ['debug', 'diagnose', 'werkzeugschritte', 'rohtext', 'fehler', 'details'],
+  }] : []),
 
   /* ── KI · Funktionen (alles, was einen KI-Zugang voraussetzt) ── */
-  { id: 'ai-chat', section: 'ai-features', get label() { return m.settings_entry_ai_chat_label(); },
-    keywords: ['ki', 'ai', 'chat', 'agent', 'feature', 'anpassen', 'customizing', 'hermes', 'wunsch'] },
-  { id: 'ai-history', section: 'ai-features', get label() { return m.settings_entry_ai_history_label(); },
-    keywords: ['verlauf', 'sessions', 'historie', 'zurückrollen', 'rückgängig', 'rollback', 'features'] },
+  ...(AI_CUSTOMIZING_ENABLED ? [{
+    id: 'ai-chat', section: 'ai-features' as const,
+    get label() { return m.settings_entry_ai_chat_label(); },
+    keywords: ['ki', 'ai', 'chat', 'agent', 'feature', 'anpassen', 'customizing', 'hermes', 'wunsch'],
+  }, {
+    id: 'ai-history', section: 'ai-features' as const,
+    get label() { return m.settings_entry_ai_history_label(); },
+    keywords: ['verlauf', 'sessions', 'historie', 'zurückrollen', 'rückgängig', 'rollback', 'features'],
+  }] : []),
   { id: 'ambient-hero-text', section: 'ai-features', get label() { return m.settings_entry_ambient_hero_text_label(); },
     keywords: ['llm', 'ki', 'ai', 'gpt', 'luna', 'codex', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
   { id: 'ai-song-lyrics', section: 'ai-features', get label() { return m.settings_entry_ai_song_lyrics_label(); },
@@ -230,6 +255,8 @@ export const SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   { id: 'reload-app', section: 'maintenance', get label() { return m.settings_entry_reload_app_label(); },
     keywords: ['neustart', 'refresh', 'reload', 'browser', 'kiosk'] },
 ];
+
+export const SETTINGS_ENTRIES: readonly SettingsEntry[] = ALL_SETTINGS_ENTRIES;
 
 export interface SettingsMatch {
   entry: SettingsEntry;

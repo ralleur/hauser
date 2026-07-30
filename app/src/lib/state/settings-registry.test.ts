@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AI_CUSTOMIZING_ENABLED } from '../config/product-capabilities.ts';
 import {
   SETTINGS_ENTRIES,
   SETTINGS_GROUPS,
@@ -52,9 +53,15 @@ describe('fachliche Gliederung', () => {
     expect(settingsSection('services').group).toBe('connectivity');
   });
 
-  it('führt jede Funktion mit KI-Zugang unter KI-Funktionen', () => {
-    for (const id of ['ai-chat', 'ai-history', 'ambient-hero-text', 'ai-song-lyrics']) {
+  it('führt öffentliche KI-Funktionen unter KI-Funktionen und Customizing nur im privaten Produkt', () => {
+    for (const id of ['ambient-hero-text', 'ai-song-lyrics']) {
       expect(settingsEntry(id)?.section).toBe('ai-features');
+    }
+    for (const id of ['ai-access-status', 'ai-debug', 'ai-chat', 'ai-history']) {
+      expect(settingsEntry(id) !== undefined).toBe(AI_CUSTOMIZING_ENABLED);
+      if (id === 'ai-chat' || id === 'ai-history') {
+        expect(settingsEntry(id)?.section === 'ai-features').toBe(AI_CUSTOMIZING_ENABLED);
+      }
     }
     expect(settingsSection('ai-features').group).toBe('ai');
     /* Der Zugang steht vor den Funktionen, die ihn voraussetzen. */
@@ -65,6 +72,12 @@ describe('fachliche Gliederung', () => {
   it('hält Live/Demo an einer einzigen Stelle zusammen', () => {
     expect(settingsEntry('demo-mode')?.section).toBe('operating-mode');
     expect(settingsEntry('library-mode')?.section).toBe('operating-mode');
+  });
+
+  it('führt die Haushaltsstruktur sichtbar unter Zuhause statt unter Dienste', () => {
+    expect(settingsEntry('household-setup')?.section).toBe('rooms-devices');
+    expect(settingsSection('rooms-devices').group).toBe('home');
+    expect(searchSettings('räume verwalten')[0]?.entry.id).toBe('household-setup');
   });
 
   it('trennt Inhaltsauswahl von der Kontoeinrichtung', () => {

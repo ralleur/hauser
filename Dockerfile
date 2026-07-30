@@ -38,6 +38,7 @@ LABEL org.opencontainers.image.title="Hauser" \
 ENV NODE_ENV=production \
     HMI_HOST=0.0.0.0 \
     HMI_PORT=4173 \
+    HMI_AI_CUSTOMIZING_ENABLED=0 \
     HMI_HOUSEHOLD_CONFIG_PATH=/config/household.json \
     HMI_HOUSEHOLD_CONFIG_MODE=active \
     HMI_CONFIG_PATH=/data/config.json \

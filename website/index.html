@@ -28,9 +28,9 @@
     </p>
     <div class="actions">
       <a class="btn btn-primary" href="#status">See the beta path</a>
-      <a class="btn" href="#home">Explore the interface</a>
+      <a class="btn" href="demo/">Explore the live demo</a>
     </div>
-    <p class="hero-note">Private pre-beta · MIT licensed · public release at the installable beta</p>
+    <p class="hero-note">Technical beta candidate · self-hosted · MIT licensed</p>
   </div>
 
   <div class="showcase-wide">
@@ -58,8 +58,8 @@
       of design tokens, a documented interaction contract, and a performance
       budget that is treated as a requirement rather than an aspiration. The
       reasoning behind every structural choice is written down in the
-      architecture decision records, including the ones that turned out to be
-      wrong.
+      current architecture documentation, including the boundaries and trade-offs
+      that keep the product coherent.
     </p>
 
     <div class="stats">
@@ -235,9 +235,9 @@
       <div class="card reveal">
         <h3>Controls where you are</h3>
         <p>
-          Selecting a room brings its controls up over the current screen rather
-          than navigating away. There is no back button, because there is
-          nowhere to go back to.
+          One or two compact control surfaces can keep independent room contexts
+          while the full room illustration stays visible. Daily control does not
+          turn the home screen into an administration grid.
         </p>
       </div>
       <div class="card reveal">
@@ -262,10 +262,11 @@
         </p>
       </div>
       <div class="card reveal">
-        <h3>Kiosk appliance</h3>
+        <h3>Setup without source edits</h3>
         <p>
-          Installed as a PWA in kiosk mode, the tablet stops looking like
-          Android and becomes the thing on the wall.
+          Docker Compose starts a guided setup for Home Assistant, rooms and
+          optional Jellyfin. The resulting configuration is versioned, validated
+          and stored outside the application image.
         </p>
       </div>
     </div>
@@ -300,8 +301,9 @@
     <p class="eyebrow">Before you get excited</p>
     <h2 style="max-width:18ch">What this is, and what it isn't.</h2>
     <p class="lead" style="margin-top:26px">
-      This is a personal project built for one specific home, published because
-      the thinking behind it might be useful to you. It is not a product.
+      Hauser is an installable product in technical beta, built and maintained as
+      a personal open-source project. It is not a commercial service and it does
+      not come with a support promise.
     </p>
 
     <div class="honest-grid">
@@ -310,28 +312,30 @@
         <ul class="honest-list honest-yes">
           <li>A complete, working interface you can run and read</li>
           <li>A documented design system with tokens and a component catalog</li>
-          <li>Architecture decision records explaining every structural choice</li>
+          <li>Current architecture documentation and explicit system boundaries</li>
           <li>An interaction contract and a written performance budget</li>
+          <li>A guided Home Assistant setup with versioned external configuration</li>
           <li>MIT licensed — fork it, ship it, sell it, no permission needed</li>
         </ul>
       </div>
       <div class="honest-col">
         <h3>What you don't</h3>
         <ul class="honest-list honest-no">
-          <li>No setup wizard — rooms and entity IDs are defined in source</li>
-          <li>No support, and no promise of a reply</li>
-          <li>Tested on exactly one tablet, in exactly one home</li>
+          <li>No SLA, guaranteed support or promised response time</li>
+          <li>No claim of broad device and Home Assistant compatibility yet</li>
+          <li>No external real-home installation evidence until the beta provides it</li>
+          <li>No published registry image until the first beta tag passes its gate</li>
           <li>Not hardened for exposure to the public internet</li>
         </ul>
       </div>
     </div>
 
     <p class="body-text" style="margin-top:44px">
-      Adapting Hauser to your own home means editing a TypeScript file that
-      describes your rooms, lights and sensors. That is entirely doable if you
-      are comfortable reading code, and genuinely annoying if you are not.
-      Making it installable without that step is the largest piece of planned
-      work.
+      The normal path is Docker Compose followed by the setup wizard. It scans
+      Home Assistant, proposes rooms and devices, lets you correct the result and
+      activates a validated configuration atomically. The clean-room gate proves
+      that technical path; the beta still has to prove it with external people,
+      different homes and release-to-release upgrades.
     </p>
   </div>
 </section>
@@ -390,8 +394,8 @@
           </tr>
           <tr>
             <td>Onboarding</td>
-            <td>Entity discovery and room mapping without editing code</td>
-            <td><span class="tag tag-planned">Planned</span></td>
+            <td>HA connection test, entity discovery, room editing and optional Jellyfin</td>
+            <td><span class="tag tag-built">Built</span></td>
           </tr>
           <tr>
             <td>Languages</td>
@@ -411,15 +415,14 @@
 <!-- ── Abschluss ─────────────────────────────────────────────────────── -->
 <section id="demo-link">
   <div class="wrap section-narrow" style="text-align:center;margin-inline:auto">
-    <h2>The public demo launches with the beta.</h2>
+    <h2>Try the public demo.</h2>
     <p class="lead" style="margin:26px auto 0">
-      The static demo already runs the real interface against simulated devices,
-      but it stays private until the independent-installation gate passes. No
-      alpha release will be published.
+      The real interface runs here against simulated devices, with no Home
+      Assistant, Jellyfin or private household data behind it.
     </p>
     <div class="actions" style="justify-content:center">
       <a class="btn btn-primary" href="#status">Read the beta criteria</a>
-      <a class="btn" href="#home">Explore the interface</a>
+      <a class="btn" href="demo/">Explore the live demo</a>
     </div>
   </div>
 </section>
@@ -432,6 +435,7 @@
       <a href="https://github.com/ralleur/hauser/blob/main/docs/00-architecture.md">Architecture</a>
       <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">Design system</a>
       <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">Roadmap</a>
+      <a href="https://github.com/ralleur/hauser/blob/main/CONTRIBUTING.md">Contribute</a>
       <a href="https://github.com/ralleur/hauser/blob/main/LICENSE">License</a>
     </div>
     <p>

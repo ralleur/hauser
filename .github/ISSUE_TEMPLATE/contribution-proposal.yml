@@ -1,0 +1,53 @@
+name: Contribution proposal
+description: Discuss a scoped contribution before investing in a broad change.
+title: "[Proposal]: "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for new integrations, architecture/configuration changes, broad UX work, persistent data or runtime dependencies. Small bug fixes can go directly to a focused pull request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the concrete current problem, not only the desired implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: What would change from a user's perspective?
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Explicit non-goals
+      description: What will this contribution deliberately not do?
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Technical approach
+      description: Name affected contracts, integrations or persistent data. Keep this concise.
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: Which automated checks and real runtime path can prove the change?
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Project boundaries
+      options:
+        - label: I reviewed the current architecture, interaction and performance documentation.
+          required: true
+        - label: I understand that beta stability work takes priority over new features.
+          required: true

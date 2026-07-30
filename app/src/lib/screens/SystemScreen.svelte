@@ -17,6 +17,7 @@
     openSetting,
   } from '../state/settings.svelte.ts';
 
+  import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
   import ServicesSection from '../components/settings/ServicesSection.svelte';
   import OperatingModeSection from '../components/settings/OperatingModeSection.svelte';
   import AiAccessSection from '../components/settings/AiAccessSection.svelte';
@@ -43,6 +44,7 @@
      Der Record-Typ erzwingt, dass jede Sektion der Registry eine Ansicht hat
      — eine neue Sektion ohne Komponente fällt beim Typecheck auf. */
   const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
+    'rooms-devices': RoomsDevicesSection,
     'services': ServicesSection,
     'operating-mode': OperatingModeSection,
     'ai-access': AiAccessSection,
@@ -123,10 +125,10 @@
       </nav>
     {:else}
       <nav class="settings-nav" aria-label={m.sys_sections()}>
-        {#each sidebar as { group, sections } (group.id)}
-          <section class="settings-nav-section" aria-labelledby="settings-nav-{group.id}">
-            <h2 id="settings-nav-{group.id}" class="caps-label settings-nav-group">{group.label}</h2>
-            <div class="settings-nav-card">
+        <div class="settings-nav-card">
+          {#each sidebar as { group, sections } (group.id)}
+            <section class="settings-nav-section" aria-labelledby="settings-nav-{group.id}">
+              <h2 id="settings-nav-{group.id}" class="caps-label settings-nav-group">{group.label}</h2>
               {#each sections as s (s.id)}
                 <button class="settings-nav-btn pressable" type="button"
                         class:is-active={settingsUi.section === s.id}
@@ -140,9 +142,9 @@
                   <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
                 </button>
               {/each}
-            </div>
-          </section>
-        {/each}
+            </section>
+          {/each}
+        </div>
       </nav>
     {/if}
   </aside>
@@ -155,10 +157,9 @@
             <Icon name="i-back" cls="icon icon-md" />
           </button>
         {/if}
-        <span class="settings-icon-tile is-lg tint-{section.tint}"><Icon name={section.icon} cls="icon icon-lg" /></span>
         <div>
           <h2>{section.label}</h2>
-          <p>{section.description}</p>
+          {#if section.description !== section.label}<p>{section.description}</p>{/if}
         </div>
       </header>
 

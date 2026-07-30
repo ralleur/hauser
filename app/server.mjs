@@ -25,6 +25,7 @@ const HOST = process.env.HMI_HOST || '0.0.0.0';
 const PORT = Number(process.env.HMI_PORT || 4173);
 const HERMES_HOST = process.env.HMI_HERMES_HOST || '127.0.0.1';
 const HERMES_PORT = Number(process.env.HMI_HERMES_PORT || 8642);
+const AI_CUSTOMIZING_ENABLED = process.env.HMI_AI_CUSTOMIZING_ENABLED !== '0';
 const AMBIENT_HOST = process.env.HMI_AMBIENT_HOST || '127.0.0.1';
 const AMBIENT_PORT = Number(process.env.HMI_AMBIENT_PORT || 18088);
 const NOTION_BRIDGE_HOST = process.env.HMI_NOTION_BRIDGE_HOST || '127.0.0.1';
@@ -1180,6 +1181,7 @@ export function staticPathFor(url, staticRoot = DIST) {
 }
 
 function readHermesKey() {
+  if (!AI_CUSTOMIZING_ENABLED) return '';
   if (process.platform !== 'darwin') return '';
   try {
     const key = execFileSync('/usr/bin/security', [
@@ -1936,6 +1938,7 @@ export function createHmiServer(
   {
     upstreamHost = HERMES_HOST,
     upstreamPort = HERMES_PORT,
+    aiCustomizingEnabled = AI_CUSTOMIZING_ENABLED,
     ambientHost = AMBIENT_HOST,
     ambientPort = AMBIENT_PORT,
     notionBridgeHost = NOTION_BRIDGE_HOST,
@@ -1983,13 +1986,15 @@ export function createHmiServer(
     };
     const readiness = assessHmiReadiness(readinessOptions);
     const setupIsRequired = readiness.payload.status === 'setup_required';
-    const targetPath = proxyTargetPath(req.url || '/');
+    const targetPath = aiCustomizingEnabled ? proxyTargetPath(req.url || '/') : null;
     const notionTargetPath = notionBridgeTargetPath(req.url || '/');
 
     const songTarget = songTargetPath(req.url || '/');
     const familyDataRoute = (req.url || '').startsWith('/api/reminders');
     if ((req.url || '') === '/api/health') {
       serveHmiHealth(req, res, readinessOptions);
+    } else if (!aiCustomizingEnabled && (req.url || '').startsWith('/hermes')) {
+      jsonResponse(res, 404, { error: 'Route nicht gefunden' });
     } else if (!migrationResult.ok && ((req.url || '').startsWith('/api/')
         || (req.url || '').startsWith('/hermes')
         || (req.url || '').startsWith('/ambient-llm')

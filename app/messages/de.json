@@ -466,6 +466,13 @@
   "demo_room_bad": "Bad",
   "demo_room_kueche": "Küche",
   "demo_room_flur": "Flur",
+  "settings_group_home_label": "Zuhause",
+  "settings_section_rooms_devices_label": "Räume & Geräte",
+
+  "settings_rooms_devices_save": "Änderungen speichern",
+  "settings_rooms_devices_scan_label": "Aus Home Assistant neu einlesen",
+  "settings_rooms_devices_scan_desc": "Ersetzt den aktuellen Entwurf durch die derzeit in Home Assistant erkannten Räume und Geräte.",
+  "settings_rooms_devices_scan_action": "Räume und Geräte neu einlesen",
   "settings_group_connectivity_label": "Verbindungen",
   "settings_group_ai_label": "KI-Funktionen",
   "settings_group_appearance_label": "Darstellung",

@@ -28,7 +28,13 @@
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
-  let { mode = 'first-run' }: { mode?: 'first-run' | 'reconfigure' } = $props();
+  let {
+    mode = 'first-run',
+    embedded = false,
+  }: {
+    mode?: 'first-run' | 'reconfigure';
+    embedded?: boolean;
+  } = $props();
   initLocale();
   const reconfigure = $derived(mode === 'reconfigure');
   let haUrl = $state('http://homeassistant.local:8123');
@@ -44,6 +50,7 @@
   let jellyfinStatus = $state<'idle' | 'testing' | 'ready' | 'error'>('idle');
   let jellyfinMessage = $state('');
   let jellyfinSession = $state<{ accessToken: string; userId: string } | null>(null);
+  let expandedRoomId = $state<string | null>(null);
   let pendingDeleteRoomId = $state<string | null>(null);
   let deleteDestination = $state('');
   const pendingDeleteRoom = $derived(
@@ -137,7 +144,7 @@
         inferredRooms: false,
       };
       status = 'ready';
-      message = m.setup_loaded();
+      message = embedded ? '' : m.setup_loaded();
     } catch (error) {
       status = 'error';
       message = error instanceof Error ? error.message : m.setup_load_failed();
@@ -158,6 +165,8 @@
       message = m.setup_credentials_required();
       return;
     }
+    const previousSuggestion = suggestion;
+    const previousOmittedCount = omittedCount;
     status = 'connecting';
     message = '';
     suggestion = null;
@@ -171,6 +180,8 @@
         entities: suggestion.config.rooms.reduce((sum, room) => sum + room.visibleEntities.length, 0),
       });
     } catch (error) {
+      suggestion = previousSuggestion;
+      omittedCount = previousOmittedCount;
       status = 'error';
       message = m.setup_connect_failed();
     }
@@ -196,6 +207,7 @@
     const config = addSetupRoom(suggestion.config, m.setup_new_room_default());
     const room = config.rooms.at(-1);
     suggestion = { ...suggestion, config };
+    expandedRoomId = room?.id ?? expandedRoomId;
     await tick();
     if (room) document.querySelector<HTMLInputElement>(`[data-room-name="${room.id}"]`)?.focus();
   }
@@ -212,6 +224,7 @@
     const compatibleTarget = config.rooms.find((room) => room.id !== roomId
       && canRemoveSetupRoom(config, roomId, { type: 'move', targetRoomId: room.id }));
     pendingDeleteRoomId = roomId;
+    expandedRoomId = roomId;
     deleteDestination = compatibleTarget?.id ?? '__omit__';
   }
 
@@ -226,9 +239,11 @@
     const removal = deleteDestination === '__omit__'
       ? { type: 'omit' as const }
       : { type: 'move' as const, targetRoomId: deleteDestination };
-    const next = removeSetupRoom(suggestion.config, pendingDeleteRoom.id, removal);
+    const deletedRoomId = pendingDeleteRoom.id;
+    const next = removeSetupRoom(suggestion.config, deletedRoomId, removal);
     if (next === suggestion.config) return;
     suggestion = { ...suggestion, config: next };
+    if (expandedRoomId === deletedRoomId) expandedRoomId = next.rooms[0]?.id ?? null;
     if (removal.type === 'omit') omittedCount += removedEntities;
     cancelDeleteRoom();
   }
@@ -295,11 +310,11 @@
   }
 </script>
 
-<svelte:head><title>{reconfigure ? m.setup_head_title_reconfigure() : m.setup_head_title_first()}</title></svelte:head>
+<svelte:head><title>{embedded ? 'Smart Home HMI' : (reconfigure ? m.setup_head_title_reconfigure() : m.setup_head_title_first())}</title></svelte:head>
 
 {#key localeState.current}
-<main class="setup-shell">
-  <section class="setup-card" aria-labelledby="setup-title">
+<main class:embedded class="setup-shell">
+  <section class:embedded class="setup-card" aria-labelledby={embedded ? undefined : 'setup-title'}>
     {#if !reconfigure}
       <section class="language-step" aria-labelledby="setup-language-title">
         <p class="eyebrow">{m.setup_step_language()}</p>
@@ -319,6 +334,7 @@
         </div>
       </section>
     {/if}
+    {#if !embedded}
     <div class="setup-heading">
       <div>
         <p class="eyebrow">{reconfigure ? m.setup_eyebrow_reconfigure() : m.setup_step_home_assistant()}</p>
@@ -348,6 +364,7 @@
         {status === 'connecting' ? m.setup_connecting() : m.setup_connect_scan()}
       </button>
     </form>
+    {/if}
 
     {#if message}
       <p class:error={status === 'error'} class="message" role={status === 'error' ? 'alert' : 'status'}>{message}</p>
@@ -355,17 +372,31 @@
 
     {#if suggestion}
       <div class="preview">
-        <div class="preview-heading">
-          <div>
-            <p class="eyebrow">{m.setup_preview()}</p>
-            <h2>{m.setup_found_rooms()}</h2>
+        {#if !embedded}
+          <div class="preview-heading">
+            <div>
+              <p class="eyebrow">{m.setup_preview()}</p>
+              <h2>{m.setup_found_rooms()}</h2>
+            </div>
+            {#if suggestion.inferredRooms}<span class="warning">{m.setup_inferred_rooms()}</span>{/if}
           </div>
-          {#if suggestion.inferredRooms}<span class="warning">{m.setup_inferred_rooms()}</span>{/if}
-        </div>
+        {:else if suggestion.inferredRooms}
+          <span class="warning">{m.setup_inferred_rooms()}</span>
+        {/if}
         <div class="room-list">
           {#each suggestion.config.rooms as room, roomIndex (room.id)}
-            <section class="room-card" aria-labelledby={`room-${room.id}`}>
+            <section class:expanded={expandedRoomId === room.id} class="room-card" aria-labelledby={`room-${room.id}`}>
               <div class="room-heading">
+                <button
+                  class="room-expand"
+                  type="button"
+                  aria-label={room.name}
+                  aria-expanded={expandedRoomId === room.id}
+                  onclick={() => (expandedRoomId = expandedRoomId === room.id ? null : room.id)}
+                >
+                  <span class="room-index num">{roomIndex + 1}</span>
+                  <span class="room-chevron" aria-hidden="true">›</span>
+                </button>
                 <label class="room-title">
                   <span class="sr-only">{m.setup_room_name()}</span>
                   <input id={`room-${room.id}`} data-room-name={room.id} bind:value={room.name} required />
@@ -386,54 +417,58 @@
                     onclick={() => beginDeleteRoom(room.id)}>{m.setup_delete_room()}</button>
                 </div>
               </div>
-              {#if pendingDeleteRoomId === room.id}
-                <div class="room-delete-confirm" role="group" aria-labelledby={`delete-room-${room.id}`}>
-                  <strong id={`delete-room-${room.id}`}>{m.setup_delete_room_title({ name: room.name })}</strong>
-                  <p>{m.setup_delete_room_hint()}</p>
-                  <label>
-                    <span>{m.setup_delete_room_destination()}</span>
-                    <select bind:value={deleteDestination}>
-                      {#each suggestion.config.rooms.filter(({ id }) => id !== room.id) as targetRoom (targetRoom.id)}
-                        <option
-                          value={targetRoom.id}
-                          disabled={!canRemoveSetupRoom(suggestion.config, room.id, { type: 'move', targetRoomId: targetRoom.id })}
-                        >{m.setup_delete_room_move_to({ name: targetRoom.name })}</option>
-                      {/each}
-                      <option value="__omit__">{m.setup_delete_room_omit()}</option>
-                    </select>
-                  </label>
-                  <div class="delete-actions">
-                    <button class="secondary" type="button" onclick={cancelDeleteRoom}>{m.setup_delete_room_cancel()}</button>
-                    <button class="danger-confirm" type="button" onclick={confirmDeleteRoom}>{m.setup_delete_room_confirm()}</button>
-                  </div>
-                </div>
-              {/if}
-              {#if room.visibleEntities.length > 0}
-                <div class="entity-list">
-                  {#each room.visibleEntities as entity (entity.entityId)}
-                    <div class="entity-editor">
+              {#if expandedRoomId === room.id}
+                <div class="room-details">
+                  {#if pendingDeleteRoomId === room.id}
+                    <div class="room-delete-confirm" role="group" aria-labelledby={`delete-room-${room.id}`}>
+                      <strong id={`delete-room-${room.id}`}>{m.setup_delete_room_title({ name: room.name })}</strong>
+                      <p>{m.setup_delete_room_hint()}</p>
                       <label>
-                        <span class="sr-only">{m.setup_entity_name({ entityId: entity.entityId })}</span>
-                        <input class="entity-name" bind:value={entity.name} required />
-                      </label>
-                      <label>
-                        <span class="sr-only">{m.setup_entity_room({ name: entity.name })}</span>
-                        <select value={room.id} onchange={(event) => moveEntity(entity.entityId, event)}>
-                          {#each suggestion.config.rooms as targetRoom (targetRoom.id)}
+                        <span>{m.setup_delete_room_destination()}</span>
+                        <select bind:value={deleteDestination}>
+                          {#each suggestion.config.rooms.filter(({ id }) => id !== room.id) as targetRoom (targetRoom.id)}
                             <option
                               value={targetRoom.id}
-                              disabled={!canMoveSetupEntity(suggestion.config, entity.entityId, targetRoom.id)}
-                            >{targetRoom.name}</option>
+                              disabled={!canRemoveSetupRoom(suggestion.config, room.id, { type: 'move', targetRoomId: targetRoom.id })}
+                            >{m.setup_delete_room_move_to({ name: targetRoom.name })}</option>
                           {/each}
+                          <option value="__omit__">{m.setup_delete_room_omit()}</option>
                         </select>
                       </label>
-                      <button class="secondary" type="button" onclick={() => omitEntity(entity.entityId)}>{m.setup_omit()}</button>
-                      <small>{entity.entityId} · {entity.role}</small>
+                      <div class="delete-actions">
+                        <button class="secondary" type="button" onclick={cancelDeleteRoom}>{m.setup_delete_room_cancel()}</button>
+                        <button class="danger-confirm" type="button" onclick={confirmDeleteRoom}>{m.setup_delete_room_confirm()}</button>
+                      </div>
                     </div>
-                  {/each}
+                  {/if}
+                  {#if room.visibleEntities.length > 0}
+                    <div class="entity-list">
+                      {#each room.visibleEntities as entity (entity.entityId)}
+                        <div class="entity-editor">
+                          <label>
+                            <span class="sr-only">{m.setup_entity_name({ entityId: entity.entityId })}</span>
+                            <input class="entity-name" bind:value={entity.name} required />
+                          </label>
+                          <small>{entity.entityId} · {entity.role}</small>
+                          <label>
+                            <span class="sr-only">{m.setup_entity_room({ name: entity.name })}</span>
+                            <select value={room.id} onchange={(event) => moveEntity(entity.entityId, event)}>
+                              {#each suggestion.config.rooms as targetRoom (targetRoom.id)}
+                                <option
+                                  value={targetRoom.id}
+                                  disabled={!canMoveSetupEntity(suggestion.config, entity.entityId, targetRoom.id)}
+                                >{targetRoom.name}</option>
+                              {/each}
+                            </select>
+                          </label>
+                          <button class="secondary" type="button" onclick={() => omitEntity(entity.entityId)}>{m.setup_omit()}</button>
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <small class="room-empty">{m.setup_none_proposed()}</small>
+                  {/if}
                 </div>
-              {:else}
-                <small>{m.setup_none_proposed()}</small>
               {/if}
             </section>
           {/each}
@@ -445,6 +480,7 @@
           <p class="ignored">{m.setup_ignored_count({ count: suggestion.ignoredEntityIds.length + omittedCount })}</p>
         {/if}
 
+        {#if !embedded}
         <section class="service-step" aria-labelledby="setup-jellyfin-title">
           <p class="eyebrow">{m.setup_step_jellyfin()}</p>
           <h2 id="setup-jellyfin-title">{m.setup_jellyfin_title()}</h2>
@@ -512,6 +548,7 @@
             <p class="message" role="status">{m.setup_jellyfin_disabled()}</p>
           {/if}
         </section>
+        {/if}
 
         <button
           class="primary"
@@ -521,8 +558,21 @@
         >
           {status === 'activating'
             ? (reconfigure ? m.setup_saving() : m.setup_activating())
-            : (reconfigure ? m.setup_save_start() : m.setup_confirm_start())}
+            : (embedded ? m.settings_rooms_devices_save() : (reconfigure ? m.setup_save_start() : m.setup_confirm_start()))}
         </button>
+
+        {#if embedded}
+          <section class="rescan-step" aria-labelledby="rescan-title">
+            <h2 id="rescan-title">{m.settings_rooms_devices_scan_label()}</h2>
+            <p>{m.settings_rooms_devices_scan_desc()}</p>
+            <button
+              class="secondary"
+              type="button"
+              disabled={status === 'loading' || status === 'connecting' || status === 'activating'}
+              onclick={() => void connectAndScan()}
+            >{status === 'connecting' ? m.setup_connecting() : m.settings_rooms_devices_scan_action()}</button>
+          </section>
+        {/if}
       </div>
     {/if}
   </section>
@@ -532,6 +582,9 @@
 <style>
   .setup-shell { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6); background: var(--color-surface-0); color: var(--color-text-primary); font-family: var(--font-family); }
   .setup-card { width: min(calc(var(--space-8) * 12), 100%); padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface-1); box-shadow: var(--elevation-overlay-shadow); }
+  .setup-shell.embedded { min-height: 0; display: block; padding: 0; background: transparent; }
+  .setup-card.embedded { width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .setup-card.embedded .preview { margin-top: 0; padding-top: 0; border-top: 0; }
   .language-step { margin-bottom: var(--space-7); padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); }
   .language-step > p:not(.eyebrow) { margin: var(--space-2) 0 var(--space-4); color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
   .language-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
@@ -558,23 +611,35 @@
   .preview { margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
   .preview-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
   .warning { padding: var(--space-2) var(--space-3); border-radius: var(--radius-full); background: color-mix(in srgb, var(--color-warning) 18%, transparent); color: var(--color-warning); font-size: var(--text-xs); }
-  .room-list { display: grid; gap: var(--space-3); margin: var(--space-4) 0; }
-  .room-card { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-0); }
-  .room-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); }
-  .room-title input { width: 100%; font-weight: var(--font-weight-semibold); }
+  .room-list { overflow: hidden; margin: var(--space-4) 0; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface-1); }
+  .room-card { background: var(--color-surface-1); }
+  .room-card + .room-card { border-top: 1px solid var(--color-border); }
+  .room-card.expanded { background: var(--color-surface-2); }
+  .room-heading { display: grid; grid-template-columns: var(--touch-min) minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); min-height: calc(var(--touch-min) + var(--space-3)); padding: var(--space-2) var(--space-3); }
+  .room-expand { position: relative; display: grid; place-items: center; width: var(--touch-min); min-height: var(--touch-min); padding: 0; border-radius: var(--radius-md); background: var(--color-surface-3); color: var(--color-text-primary); }
+  .room-index { font-size: var(--text-sm); }
+  .room-chevron { position: absolute; right: calc(var(--space-1) * -1); color: var(--color-text-tertiary); font-size: var(--text-lg); transform: rotate(0deg); transition: transform var(--duration-fast) var(--ease-out); }
+  .room-expand[aria-expanded='true'] .room-chevron { transform: rotate(90deg); }
+  .room-title input { width: 100%; min-height: var(--touch-min); padding-inline: var(--space-2); border-color: transparent; background: transparent; font-weight: var(--font-weight-semibold); }
+  .room-title input:hover { border-color: var(--color-border); }
   .room-count { color: var(--color-text-secondary); white-space: nowrap; }
   .room-actions, .delete-actions { display: flex; align-items: center; gap: var(--space-2); }
-  .icon-action { width: var(--touch-preferred); padding: 0; font-size: var(--text-lg); }
+  .room-actions button { min-height: var(--touch-min); }
+  .icon-action { width: var(--touch-min); padding: 0; font-size: var(--text-base); }
   .delete-room { color: var(--color-error); }
+  .room-details { padding: 0 var(--space-4) var(--space-3) calc(var(--touch-min) + var(--space-6)); border-top: 1px solid var(--color-border); }
   .room-delete-confirm { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border)); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-error) 7%, var(--color-surface-1)); }
   .room-delete-confirm p { margin: 0; color: var(--color-text-secondary); line-height: var(--leading-normal); }
   .delete-actions { justify-content: flex-end; }
   .danger-confirm { background: var(--color-error); color: var(--color-text-on-accent); }
   .add-room { width: 100%; margin-bottom: var(--space-4); }
-  .entity-list { display: grid; gap: var(--space-2); }
-  .entity-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(calc(var(--space-8) * 2), 0.7fr) auto; align-items: center; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
+  .entity-list { display: grid; }
+  .entity-editor { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(calc(var(--space-8) * 2), .65fr) auto; align-items: center; gap: var(--space-3); min-height: calc(var(--touch-min) + var(--space-3)); border-bottom: 1px solid var(--color-border); }
+  .entity-editor:last-child { border-bottom: 0; }
   .entity-editor label, .entity-editor input, .entity-editor select { width: 100%; }
-  .entity-editor small { grid-column: 1 / -1; overflow-wrap: anywhere; }
+  .entity-editor input, .entity-editor select, .entity-editor button { min-height: var(--touch-min); }
+  .entity-editor small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .room-empty { display: block; padding: var(--space-4) 0 var(--space-1); }
   .ignored { margin: 0 0 var(--space-4); }
   .service-step { display: grid; gap: var(--space-4); margin: var(--space-6) 0; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-0); }
   .service-hint { margin: calc(var(--space-2) * -1) 0 0; color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
@@ -584,6 +649,10 @@
   .jellyfin-form { padding-top: var(--space-2); }
   .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .message.success { color: var(--color-success); }
+  .rescan-step { display: grid; gap: var(--space-3); margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
+  .rescan-step p { margin: 0; color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
+  .rescan-step button { justify-self: start; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .room-heading, .entity-editor, .credential-grid { grid-template-columns: 1fr; } .room-actions { flex-wrap: wrap; } .entity-editor small { grid-column: 1; } }
+  @media (max-width: 900px) { .entity-editor { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; padding: var(--space-2) 0; } .entity-editor small { grid-column: 1 / -1; grid-row: 2; } }
+  @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .room-heading { grid-template-columns: var(--touch-min) minmax(0, 1fr) auto; } .room-count { display: none; } .room-actions { grid-column: 2 / -1; flex-wrap: wrap; } .room-details { padding-left: var(--space-4); } .entity-editor, .credential-grid { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; grid-row: auto; } }
 </style>

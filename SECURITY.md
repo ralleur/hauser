@@ -2,8 +2,8 @@
 
 ## Scope and expectations
 
-Hauser is a personal hobby project, published as a reference implementation. It
-carries **no service level agreement, no guaranteed response time, and no
+Hauser is a self-hosted technical beta maintained as a personal hobby project.
+It carries **no service level agreement, no guaranteed response time, and no
 security support commitment**. Please calibrate your expectations accordingly
 before deploying it anywhere that matters.
 

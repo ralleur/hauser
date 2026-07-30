@@ -466,6 +466,13 @@
   "demo_room_bad": "Łazienka",
   "demo_room_kueche": "Kuchnia",
   "demo_room_flur": "Przedpokój",
+  "settings_group_home_label": "Dom",
+  "settings_section_rooms_devices_label": "Pomieszczenia i urządzenia",
+
+  "settings_rooms_devices_save": "Zapisz zmiany",
+  "settings_rooms_devices_scan_label": "Wczytaj ponownie z Home Assistant",
+  "settings_rooms_devices_scan_desc": "Zastępuje bieżącą wersję roboczą pomieszczeniami i urządzeniami aktualnie wykrytymi w Home Assistant.",
+  "settings_rooms_devices_scan_action": "Wczytaj pomieszczenia i urządzenia",
   "settings_group_connectivity_label": "Połączenia",
   "settings_group_ai_label": "Funkcje AI",
   "settings_group_appearance_label": "Wygląd",
