@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AI_CUSTOMIZING_ENABLED } from '../config/product-capabilities.ts';
+import { isKnownIcon } from './icon-catalog.ts';
 import {
   SETTINGS_ENTRIES,
   SETTINGS_GROUPS,
@@ -20,6 +21,10 @@ describe('settings registry', () => {
   it('jede Sektion verweist auf eine existierende Gruppe', () => {
     const ids = new Set(SETTINGS_GROUPS.map((g) => g.id));
     for (const section of SETTINGS_SECTIONS) expect(ids.has(section.group)).toBe(true);
+  });
+
+  it('jede Sektion verwendet ein vorhandenes lokales MDI-Icon', () => {
+    for (const section of SETTINGS_SECTIONS) expect(isKnownIcon(section.icon)).toBe(true);
   });
 
   it('Eintrags-Ids sind eindeutig (Sprungziel der Suche)', () => {

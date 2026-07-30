@@ -128,7 +128,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   },
   {
     id: 'shopping', group: 'content',
-    get label() { return m.settings_section_shopping_label(); }, icon: 'i-shopping-cart', tint: 'success',
+    get label() { return m.settings_section_shopping_label(); }, icon: 'i-cart', tint: 'success',
     get description() { return m.settings_section_shopping_desc(); },
   },
   {

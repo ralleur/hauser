@@ -85,6 +85,11 @@ function demoShopping() {
 const demoSongs = () => ({ songs: [] });
 
 export function demoResponse(path: string, method: string): Response | null {
+  if (path === '/api/health') {
+    return method === 'GET'
+      ? json({ ok: true, status: 'ready', schemaVersion: 2 }, 200, { 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'GET', 'cache-control': 'no-store' });
+  }
   if (path === '/api/household-config-mode') {
     return method === 'GET'
       ? json({ mode: 'active' }, 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
@@ -110,6 +115,11 @@ export function demoResponse(path: string, method: string): Response | null {
   }
   if (path.startsWith('/api/reminders')) {
     return method === 'GET' ? json(demoReminders()) : json({ ok: true });
+  }
+  if (path === '/notion-shopping.json') {
+    return method === 'GET'
+      ? json(demoShopping(), 200, { 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'GET', 'cache-control': 'no-store' });
   }
   if (path.startsWith('/api/shopping')) {
     return method === 'GET' ? json(demoShopping()) : json({ ok: true });

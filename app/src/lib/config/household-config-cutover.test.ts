@@ -339,6 +339,13 @@ describe('productive household bootstrap cutover', () => {
     const config = demoResponse('/api/household-config', 'GET');
     expect(config?.headers.get('x-hmi-household-config-mode')).toBe('active');
     await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 2 });
+    const health = demoResponse('/api/health', 'GET');
+    expect(health?.headers.get('cache-control')).toBe('no-store');
+    await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 2 });
+    expect(demoResponse('/api/health', 'POST')?.status).toBe(405);
+    const shopping = demoResponse('/notion-shopping.json', 'GET');
+    expect(shopping?.headers.get('cache-control')).toBe('no-store');
+    await expect(shopping?.json()).resolves.toMatchObject({ source_name: 'Demo' });
   });
 
   it('projects configured active Phone targets while preserving a valid device-local order', () => {
