@@ -30,6 +30,46 @@ if ! grep -Eq "^## \[${version//./\\.}\] - (Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2
   exit 1
 fi
 
+if grep -Eq "^## \[${version//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
+  python3 - <<'PY'
+from pathlib import Path
+
+files = [
+    Path('CHANGELOG.md'),
+    Path('README.md'),
+    Path('ROADMAP.md'),
+    Path('docs/07-configuration.md'),
+    Path('docs/08-installation.md'),
+    Path('docs/09-dev-pilot.md'),
+    Path('website/index.html'),
+]
+stale = [
+    'has not been tagged',
+    'no registry image has been published',
+    'No registry image, public repository, Git tag or GitHub release exists',
+    'No published registry image until',
+    'first public beta does not exist',
+    'preparing its first public technical beta',
+    'installable technical-beta candidate',
+    'first public release will be',
+    'unpublished candidate',
+    'public pre-beta path',
+    'technically oriented pre-beta',
+    'before the public beta',
+    'before public beta',
+]
+findings = []
+for path in files:
+    text = path.read_text()
+    for phrase in stale:
+        if phrase.lower() in text.lower():
+            findings.append(f'{path}: {phrase}')
+if findings:
+    raise SystemExit('Stale pre-release claims remain:\n' + '\n'.join(findings))
+print('release_day_claims=match')
+PY
+fi
+
 test -s docs/release-notes-template.md
 
 expected_tag="${1:-}"

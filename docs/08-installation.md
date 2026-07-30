@@ -1,10 +1,10 @@
 # Installation and operation
 
-Hauser is preparing its first public technical beta. The release package is
-configured for `ghcr.io/ralleur/hauser:v0.4.0-beta.1`; that image exists only
-after the matching tag passes the release workflow. An explicit source-build
-overlay remains available for inspecting an unpublished candidate. Neither path
-comes with a support promise.
+Hauser `v0.4.0-beta.1` is the first public technical beta. The release package
+uses `ghcr.io/ralleur/hauser:v0.4.0-beta.1`, published only after the matching
+tag passes the release workflow. An explicit source-build overlay remains
+available for development and source-level verification. Neither path comes with
+a support promise.
 
 ## Tested platform
 
@@ -30,8 +30,8 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-Before the first beta image is published, or when deliberately building the
-checked-out source instead of pulling a release, use the explicit override:
+When deliberately building the checked-out source instead of pulling a release,
+use the explicit override:
 
 ```bash
 docker compose -f compose.yaml -f compose.build.yaml up -d --build
@@ -210,8 +210,8 @@ in `.env` before starting it:
 HAUSER_IMAGE_TAG=sha-<12-character-commit>
 ```
 
-Registry publication starts only with the public beta gate. The tag-gated
-workflow requires the Git tag,
+Registry publication is controlled by the tag-gated release workflow. It
+requires the Git tag,
 `app/package.json`, `app/package-lock.json`, the Docker image version and dated
 changelog entry to agree before it can publish a multi-architecture image.
 

@@ -20,9 +20,9 @@ room, quiet until touched, and a direct path into the relevant household view.
 
 ## Beta status
 
-Hauser is an **installable, self-hosted smart home interface preparing its first
-public technical beta**. It is an MIT-licensed hobby project, not a commercial
-service and not a promise of support.
+Hauser is an **installable, self-hosted smart home interface in its first public
+technical beta**. It is an MIT-licensed hobby project, not a commercial service
+and not a promise of support.
 
 The portable product deliberately excludes the author's private code-modifying
 AI agent. That workflow depends on a trusted development checkout, commit/push
@@ -36,15 +36,14 @@ automatic configuration migration, persistent volumes, backup/restore and a
 documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
-`v0.4.0-beta.1` has not been tagged and no registry image has been published
-yet. The remaining launch work is the final release-package run and verification
-of the exact published artifacts. A real installation by an external person in
-a second household remains mandatory during beta stabilisation, before the
-release candidate — see [the roadmap](ROADMAP.md).
+`v0.4.0-beta.1` is the first public release. Its versioned GHCR image is the
+normal installation path. A real installation by an external person in a second
+household remains mandatory during beta stabilisation, before the release
+candidate — see [the roadmap](ROADMAP.md).
 
-The static demo runs the real interface against simulated devices and will be
-hosted with the public beta. It never connects to a visitor's Home Assistant or
-to the maintainer's private services.
+The hosted static demo runs the real interface against simulated devices. It
+never connects to a visitor's Home Assistant or to the maintainer's private
+services.
 
 ---
 
@@ -151,10 +150,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.4.0-beta.1` becomes available when the
-matching public beta tag passes the release workflow. Before that publication,
-or when deliberately building from a checkout, use the explicit source-build
-overlay:
+The image `ghcr.io/ralleur/hauser:v0.4.0-beta.1` is published only after the
+matching public beta tag passes the release workflow. When deliberately building
+from a checkout instead, use the explicit source-build overlay:
 
 ```bash
 docker compose -f compose.yaml -f compose.build.yaml up -d --build
@@ -221,8 +219,8 @@ Invalid or partial input fails closed instead of silently loading another
 household. Manual editing is optional, not part of the normal install path.
 
 The release package uses a versioned GHCR image. The source-built Compose
-overlay remains available for development and for examining an unpublished
-candidate; it is not the normal public installation path.
+overlay remains available for development and source-level verification; it is
+not the normal public installation path.
 
 ### Building the demo
 
@@ -232,8 +230,8 @@ npm run build:demo
 ```
 
 Produces a fully static bundle in `app/dist-demo/` with a simulated backend, no
-companion server, and a permanent "demo" badge. This is the candidate for the
-hosted demo that will accompany the public beta.
+companion server, and a permanent "demo" badge. The hosted demo publishes the
+same artifact type below the repository's Pages base path.
 
 ## Documentation
 
@@ -263,9 +261,8 @@ All repository documentation intended for users and contributors is in English.
 Hauser is beta-stage software. The design system, Home Assistant and Jellyfin
 adapters, deterministic onboarding, HA-backed calendar path, optional Paperless
 bridge, companion-backed household data, panel shell and phone shell are
-implemented. The repository, documentation and static demo are maintained as a
-single release candidate, but the first public beta does not exist until the
-tagged image and source release have been published and smoke-tested.
+implemented. `v0.4.0-beta.1` is the first public beta; the repository,
+documentation, image and static demo are maintained as one release line.
 
 This is a hobby project maintained by one person. There is no SLA and response
 times remain unpredictable, but focused bug fixes, installation evidence,

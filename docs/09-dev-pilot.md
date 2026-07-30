@@ -1,7 +1,7 @@
 # Isolated development pilot
 
-This stack is the non-production proving ground for installation and onboarding
-before the public beta. It runs a synthetic Home Assistant household and a fresh
+This stack is the non-production proving ground for installation, onboarding and
+future release changes. It runs a synthetic Home Assistant household and a fresh
 Hauser installation beside existing services without sharing containers,
 networks, configuration, credentials or persistent volumes.
 
@@ -114,7 +114,7 @@ docker volume rm \
 Use `docker volume ls --filter label=com.docker.compose.project=hauser-dev` to
 inspect the exact owned volumes before any manual deletion.
 
-## Checks before public beta
+## Clean-room checks
 
 Record each clean-room pass against this minimum:
 

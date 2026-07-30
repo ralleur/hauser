@@ -48,9 +48,9 @@ See [`08-installation.md`](08-installation.md) for the export/edit/import flow.
 - `active` — validate and project the external configuration before starting the
   application;
 - `shadow` — keep the legacy reference model active while comparing the external
-  candidate for migration diagnostics.
+  comparison model for migration diagnostics.
 
-The public pre-beta path uses `active`. `shadow` remains a migration and rollback
+The public beta path uses `active`. `shadow` remains a migration and rollback
 tool for the original reference installation; it is not a fallback that silently
 accepts invalid public configuration.
 
@@ -116,12 +116,11 @@ consistent:
 Missing optional modules are omitted rather than rendered as broken empty
 screens.
 
-## Current pre-beta boundary
+## Current beta boundary
 
 The configuration core, source-built container, Compose file, persistent
 `/config`, `/data` and `/assets` volumes, deterministic setup wizard and automatic
-v1-to-v2 migration with rollback backup are implemented. The published registry
-image remains a `beta.1` milestone. External real-home evidence is required during
-beta stabilisation before the release candidate, not before the first beta. Until
-the registry image exists, this is still a technically oriented pre-beta setup
-rather than a supported public install path.
+v1-to-v2 migration with rollback backup are implemented. The versioned registry
+image is the normal public installation path. External real-home evidence remains
+required during beta stabilisation before the release candidate; the first beta
+does not claim broad compatibility or a support promise.

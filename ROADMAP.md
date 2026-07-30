@@ -18,12 +18,11 @@ Status vocabulary:
 
 ## Where the project is today
 
-Hauser is an installable technical-beta candidate. The design system, Home
+Hauser is an installable public technical beta. The design system, Home
 Assistant and Jellyfin integrations, deterministic setup wizard, landscape
 panel, compact phone shell and everyday household screens are implemented. The
-source-built Compose path and isolated clean-room onboarding gate are green. No
-alpha was published; the first public release will be `v0.4.0-beta.1` after the
-final package and published-artifact checks.
+versioned Compose path and isolated clean-room onboarding gate are green. No
+alpha was published; `v0.4.0-beta.1` is the first public release.
 
 ---
 
@@ -93,9 +92,9 @@ available inside the product, and panel/phone layouts have been exercised from
 zero to twelve rooms. The isolated development pilot has passed both
 explicit-Area and no-Area onboarding, command/state echo, reconnect and
 persistence. Beta versioning, changelog, release-note structure and tag-gated
-quality/image automation are prepared. The next technical milestone is the final
-release package run and immutable registry image. A real external household
-remains mandatory during beta stabilisation before RC; AI-assisted setup may
+quality/image automation are active. The next technical milestone is beta
+stabilisation through external installation, upgrade and rollback evidence. A
+real external household remains mandatory before RC; AI-assisted setup may
 complement it later but is not a v1 gate.
 
 A code-modifying AI agent that commits, pushes and redeploys the application is
@@ -128,10 +127,10 @@ configuration, not from the interface.
 
 ## Known gaps
 
-- The release workflow is prepared, but no registry image exists until the
-  explicit public-beta tag is created after the final package gate.
 - The clean-room pilot proves the technical setup contract, not yet usability by
   an external person or compatibility with a second real device topology.
+- The release automation builds `linux/amd64`, but an installation on an external
+  amd64 host has not yet been reported.
 - Public installation reports and the first complete external contribution cycle
   have not happened yet; both are goals of the beta rather than claims made at
   launch.

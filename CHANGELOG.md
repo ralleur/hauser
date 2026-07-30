@@ -3,9 +3,9 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
-## [0.4.0-beta.1] - Unreleased
+## [0.4.0-beta.1] - 2026-07-30
 
-This will be the first public release. It remains a self-hosted hobby-project
+This is the first public release. It remains a self-hosted hobby-project
 beta without a support or compatibility promise beyond the documented paths.
 
 ### Added
@@ -36,8 +36,6 @@ beta without a support or compatibility promise beyond the documented paths.
 
 ### Known limitations
 
-- No registry image, public repository, Git tag or GitHub release exists until
-  the final beta publication step is explicitly authorised and completed.
 - The clean-room pilot was operated by the maintainer and does not prove
   external-user usability or compatibility with a second real device topology.
 - The documented tested container path is Docker Desktop on Apple Silicon;
