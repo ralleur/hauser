@@ -114,6 +114,7 @@ export const COLOR_TEMP_MAX = 6500;
 
 export const appState = $state({
   theme: 'dark' as 'dark' | 'light',
+  heroSun: undefined as { day: boolean } | undefined,
   currentRoom: null as string | null,
   // Statische Projektion des Seeds (ADR-017): steuerbare Felder bewusst weg —
   // die kommen aus dem EntityStore über die gemergte Sicht.

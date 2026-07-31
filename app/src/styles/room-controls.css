@@ -7,6 +7,17 @@
   gap: var(--space-5);
 }
 
+/* Im Home-Steuerungspanel wirkten bisher Flex-Gap und globaler Section-Margin
+   gleichzeitig (48 px). Ein einzelner 16-px-Rhythmus trennt Szenen, Geräte,
+   Kamera und Thermostat weiterhin klar, ohne die schmale Fläche zu verschenken. */
+.panel-controls .room-controls {
+  gap: var(--space-4);
+}
+
+.panel-controls .room-controls > .detail-section {
+  margin-bottom: 0;
+}
+
 .camera-feed {
   margin: 0;
   overflow: hidden;

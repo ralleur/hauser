@@ -35,6 +35,19 @@
   line-height: var(--leading-tight);
 }
 
+/* Hauser-Lockup in der Sidebar: Signet (currentColor) + Wortmarke */
+.settings-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+}
+.settings-brand-mark {
+  width: 1.25em;
+  height: 1.25em;
+  flex-shrink: 0;
+}
+
 /* Suchfeld (Chrome-Settings-Muster) — Fokus-Ring wie .icon-search */
 .settings-search {
   display: flex;

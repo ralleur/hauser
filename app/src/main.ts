@@ -1,8 +1,29 @@
-import { mount } from 'svelte';
+import { mount, unmount } from 'svelte';
 // design-tokens/ bleibt Single Source of Truth — importiert, nicht kopiert (ADR-003/013)
 import '../../design-tokens/tokens.css';
 import './styles/climate-controls.css';
 import { applyDemoDeepLink, applyDemoNames, installDemoApi } from './lib/demo/demo-mode.ts';
+
+const STARTUP_LABELS: Record<string, string> = {
+  'hmi:app-start': 'App-Start',
+  'hmi:svelte-mount': 'Svelte-Mount',
+  'hmi:first-render': 'Erste Darstellung',
+  'hmi:interactive': 'Erste Interaktion möglich',
+};
+
+function markStartup(name: string): void {
+  if (!import.meta.env.DEV) return;
+  if (performance.getEntriesByName(name, 'mark').length === 0) performance.mark(name);
+  const mark = performance.getEntriesByName(name, 'mark').at(-1);
+  const start = performance.getEntriesByName('hmi:app-start', 'mark').at(-1)?.startTime ?? 0;
+  if (!mark) return;
+  console.debug(`[startup] ${STARTUP_LABELS[name]}: ${(mark.startTime - start).toFixed(1)} ms`);
+  if (name !== 'hmi:app-start') {
+    performance.measure(`hmi:app-start->${name}`, 'hmi:app-start', name);
+  }
+}
+
+markStartup('hmi:app-start');
 
 // Diese Literale müssen im initialen Modulgraphen liegen: Der Build-Gate misst
 // Phone- und Panel-Shell als direkte, getrennte dynamische Ziele (ADR-020/B-25).
@@ -10,16 +31,20 @@ const shellLoaders = {
   phone: () => import('./lib/shells/PhoneAppShell.svelte'),
   panel: () => import('./lib/shells/PanelAppShell.svelte'),
 };
+type ShellModule = Awaited<ReturnType<(typeof shellLoaders)[keyof typeof shellLoaders]>>;
 
 // Vor den Bootstrap-Fetches: die Demo stellt ihre isolierten API-Antworten bereit.
 installDemoApi();
 
 async function healthStatus(): Promise<'ready' | 'setup_required' | null> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 1_000);
   try {
     const response = await fetch('/api/health', {
       method: 'GET',
       headers: { accept: 'application/json' },
       cache: 'no-store',
+      signal: controller.signal,
     });
     if (!response.ok) return null;
     const payload = await response.json() as { status?: unknown };
@@ -28,74 +53,107 @@ async function healthStatus(): Promise<'ready' | 'setup_required' | null> {
       : null;
   } catch {
     return null;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
-function renderHouseholdConfigError(code: string): void {
-  const main = document.createElement('main');
-  main.setAttribute('role', 'alert');
-  main.setAttribute('aria-live', 'assertive');
-  const heading = document.createElement('h1');
-  heading.textContent = 'Konfiguration nicht verfügbar';
-  const message = document.createElement('p');
-  message.textContent = 'Die Smart-Home-Oberfläche wurde aus Sicherheitsgründen nicht gestartet.';
-  const reference = document.createElement('p');
-  reference.textContent = `Fehlercode: ${code}`;
-  main.append(heading, message, reference);
-  document.body.replaceChildren(main);
+function afterFirstPaint(task: () => void): void {
+  requestAnimationFrame(() => requestAnimationFrame(() => window.setTimeout(task, 0)));
 }
 
-let mountedApp: unknown = null;
-const initialHealthStatus = await healthStatus();
+async function mountSetup(mode: 'first-run' | 'reconfigure'): Promise<unknown> {
+  const { default: SetupWizard } = await import('./lib/components/SetupWizard.svelte');
+  const app = mount(SetupWizard, { target: document.body, props: { mode } });
+  markStartup('hmi:svelte-mount');
+  if (import.meta.env.DEV) {
+    requestAnimationFrame(() => {
+      markStartup('hmi:first-render');
+      markStartup('hmi:interactive');
+    });
+  }
+  return app;
+}
+
+let mountedApp: Record<string, any> | null = null;
 const reconfigureRequested = new URL(location.href).searchParams.get('setup') === 'reconfigure';
 
-if (initialHealthStatus === 'setup_required'
-    || (initialHealthStatus === 'ready' && reconfigureRequested)) {
-  const { default: SetupWizard } = await import('./lib/components/SetupWizard.svelte');
-  mountedApp = mount(SetupWizard, {
-    target: document.body,
-    props: { mode: initialHealthStatus === 'setup_required' ? 'first-run' : 'reconfigure' },
-  });
+if (reconfigureRequested) {
+  mountedApp = await mountSetup('reconfigure') as Record<string, any>;
 } else {
-  const { bootstrapHouseholdConfigRuntime } = await import('./lib/config/household-config-runtime.ts');
-  const householdConfigRuntime = await bootstrapHouseholdConfigRuntime({
-    startProductiveApp: async () => {
-      // Zentrale Browser-Konfiguration ebenfalls vor State-/Runtime-Singletons laden.
-      const { bootstrapSharedConfig } = await import('./lib/state/shared-config.ts');
-      await bootstrapSharedConfig();
-      const [{ standalone }, { default: App }] = await Promise.all([
-        import('./lib/state/standalone.svelte.ts'),
-        import('./App.svelte'),
-      ]);
+  const householdRuntime = await import('./lib/config/household-config-runtime.ts');
 
-      document.documentElement.setAttribute('data-standalone', String(standalone.active));
+  let initialShell!: ShellModule;
+  const startLocalShell = async () => {
+    const { mountMinimalShell } = await import('./lib/shells/minimal-shell-loader.ts');
+    const app = await mountMinimalShell(document.body);
+    markStartup('hmi:svelte-mount');
+    if (import.meta.env.DEV) {
+      requestAnimationFrame(() => {
+        markStartup('hmi:first-render');
+        if (document.querySelector('[data-shell="minimal"] button:not([disabled])')) {
+          markStartup('hmi:interactive');
+        }
+      });
+    }
+    return app;
+  };
 
-      /* Demo-Deep-Link (#library, #energy …) vor dem Mount: der Startscreen soll
-         ohne Übergang direkt stehen, damit die Landing Page gezielt verlinken kann. */
-      const [{ nav }, { appState }] = await Promise.all([
-        import('./lib/state/nav.svelte.ts'),
-        import('./lib/state/app.svelte.ts'),
-      ]);
-      applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
+  const startAuthorizedApp = async () => {
+    // Erst die validierte Projektion darf produktive State-/Shell-Module laden.
+    // App.svelte initialisiert Theme und DeviceManager genau einmal und startet
+    // den Backendpfad weiterhin erst post-paint in onMount.
+    const [
+      appModule,
+      { standalone },
+      uiModeModule,
+      { nav },
+      { appState },
+    ] = await Promise.all([
+      import('./App.svelte'),
+      import('./lib/state/standalone.svelte.ts'),
+      import('./lib/state/ui-mode.svelte.ts'),
+      import('./lib/state/nav.svelte.ts'),
+      import('./lib/state/app.svelte.ts'),
+    ]);
+    uiModeModule.initUiMode();
+    initialShell = await shellLoaders[uiModeModule.uiMode.effective]();
+    document.documentElement.setAttribute('data-standalone', String(standalone.active));
+    applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
+    applyDemoNames(appState.rooms);
 
-      const app = mount(App, { target: document.body, props: { shellLoaders } });
+    if (mountedApp) await unmount(mountedApp);
+    return mountedApp = mount(appModule.default, {
+      target: document.body,
+      props: { shellLoaders, initialShell },
+    });
+  };
 
-      // Registrierung erst nach dem ersten Render. Ein wartendes Update wird nur im
-      // Ambient-Zustand oder bei verdeckter App aktiviert (ADR-016/B-15C1).
-      void import('./lib/state/pwa-lifecycle.ts').then(({ startPwaLifecycle }) => startPwaLifecycle());
+  const firstPaint = await householdRuntime.bootstrapHouseholdConfigFirstPaint({
+    startLocalShell,
+    startAuthorizedApp,
+    healthStatus,
+    scheduleValidation: afterFirstPaint,
+  });
+  mountedApp = firstPaint.app;
 
-      /* Nach dem Mount: initDeviceManager() baut die Räume beim Start aus Seed und
-         gespeicherter Konfiguration neu auf und würde frühere Namen überschreiben. */
-      applyDemoNames(appState.rooms);
-      return app;
-    },
+  afterFirstPaint(() => {
+    void import('./lib/state/pwa-lifecycle.ts')
+      .then(({ startPwaLifecycle }) => startPwaLifecycle());
   });
 
-  if (householdConfigRuntime.status === 'error') {
-    renderHouseholdConfigError(householdConfigRuntime.code);
-  } else {
-    mountedApp = householdConfigRuntime.app;
-  }
+  void firstPaint.validation.then(async (result) => {
+    if (result.status === 'setup_required') {
+      if (mountedApp) await unmount(mountedApp);
+      mountedApp = await mountSetup('first-run') as Record<string, any>;
+    } else if (result.status === 'reload_required') {
+      // Modul-Singletons wurden bereits für den First Paint erzeugt. Ein Reload
+      // ist der kleinste sichere Cutover auf den ersetzten/gelöschten Snapshot.
+      location.reload();
+    } else if (result.status === 'blocked') {
+      (await import('./lib/shells/minimal-shell-cache.ts')).publishMinimalShellConfigStatus(result.code);
+    }
+  });
 }
 
 export default mountedApp;

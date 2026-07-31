@@ -1,22 +1,33 @@
 <script lang="ts">
   /* ── Darstellung · Erscheinungsbild ── */
   import Icon from '../Icon.svelte';
-  import { setThemeMode, themeMode, themeOverrideUntil } from '../../state/theme.svelte.ts';
+  import { appearanceMode, setAppearanceMode } from '../../state/theme.svelte.ts';
+  import type { AppearanceMode } from '../../state/appearance-mode.ts';
   import { AVAILABLE_LOCALES, changeLocale, localeLabel, localeState } from '../../state/locale.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
-  const mode = $derived(themeMode());
+  const mode = $derived(appearanceMode());
+  const APPEARANCE_MODES: AppearanceMode[] = [
+    'auto', 'interface-light', 'interface-dark', 'fixed-light', 'fixed-dark',
+  ];
 
-  const THEME_MODES = [
-    { id: 'auto', label: m.sys_automatic(), icon: 'i-brightness-auto' },
-    { id: 'light', label: m.sys_light(), icon: 'i-white-balance-sunny' },
-    { id: 'dark', label: m.sys_dark(), icon: 'i-weather-night' },
-  ] as const;
+  function labelForMode(value: AppearanceMode): string {
+    if (value === 'auto') return m.appearance_mode_auto();
+    if (value === 'interface-light') return m.appearance_mode_interface_light();
+    if (value === 'interface-dark') return m.appearance_mode_interface_dark();
+    if (value === 'fixed-light') return m.appearance_mode_fixed_day();
+    return m.appearance_mode_fixed_evening();
+  }
 
-  function fmtUntil(ts: number): string {
-    const d = new Date(ts);
-    const time = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    return `${d.getDate() !== new Date().getDate() ? 'morgen ' : ''}${time} Uhr`;
+  function iconForMode(value: AppearanceMode): string {
+    if (value === 'auto') return 'i-brightness-auto';
+    return value === 'interface-light' || value === 'fixed-light'
+      ? 'i-white-balance-sunny'
+      : 'i-weather-night';
+  }
+
+  function isFixed(value: AppearanceMode): boolean {
+    return value === 'fixed-light' || value === 'fixed-dark';
   }
 </script>
 
@@ -26,13 +37,17 @@
       <span class="settings-row-label">{m.appearance_title()}</span>
       <span class="settings-row-sub">{m.appearance_hint()}</span>
     </div>
-    <div class="settings-seg" role="radiogroup" aria-label={m.appearance_title()}>
-      {#each THEME_MODES as themeOption (themeOption.id)}
+    <div class="settings-seg appearance-mode-seg" role="radiogroup" aria-label={m.appearance_title()}>
+      {#each APPEARANCE_MODES as appearanceOption (appearanceOption)}
         <button class="settings-seg-btn pressable" type="button" role="radio"
-                aria-checked={mode === themeOption.id}
-                class:is-active={mode === themeOption.id}
-                onclick={() => setThemeMode(themeOption.id)}>
-          <Icon name={themeOption.icon} cls="icon icon-sm" />{themeOption.label}
+                aria-checked={mode === appearanceOption}
+                class:is-active={mode === appearanceOption}
+                onclick={() => setAppearanceMode(appearanceOption)}>
+          <Icon name={iconForMode(appearanceOption)} cls="icon icon-sm" />
+          {#if isFixed(appearanceOption)}
+            <Icon name="i-lock" cls="icon icon-sm" />
+          {/if}
+          {labelForMode(appearanceOption)}
         </button>
       {/each}
     </div>
@@ -53,6 +68,3 @@
     </div>
   </div>
 </div>
-{#if mode !== 'auto'}
-  <p class="settings-note">{m.appearance_manual_note({ until: fmtUntil(themeOverrideUntil()) })}</p>
-{/if}

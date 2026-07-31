@@ -19,6 +19,22 @@ export interface PhoneRoomSummary {
   climateAvailable: boolean;
 }
 
+export type PhoneHeroVariant = 'light' | 'dark';
+
+const PHONE_HERO_ROOM = /^(?:wohnzimmer|kueche|bad|schlafzimmer|kinderzimmer|flur)$/;
+
+/** Phone Home needs one sun-driven variant per visible card, never the panel's
+ * lights-off/collage matrix. Unknown configured rooms keep their surface color. */
+export function phoneHeroUrl(
+  baseUrl: string,
+  roomId: string,
+  variant: PhoneHeroVariant,
+): string | null {
+  if (!PHONE_HERO_ROOM.test(roomId)) return null;
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${base}hero/${roomId}-${variant}.avif`;
+}
+
 function safely<T>(read: () => T, fallback: T): T {
   try {
     return read();

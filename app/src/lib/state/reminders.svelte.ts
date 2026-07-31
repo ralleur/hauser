@@ -30,14 +30,20 @@ interface HmiTask {
   source: string;
 }
 
-async function fetchHmiTasks(): Promise<HmiTask[]> {
+type HmiTaskFetchResult =
+  | { ok: true; items: HmiTask[] }
+  | { ok: false };
+
+async function fetchHmiTasks(): Promise<HmiTaskFetchResult> {
   try {
     const resp = await fetch('/api/reminders', { cache: 'no-store' });
-    if (!resp.ok) return [];
+    if (!resp.ok) return { ok: false };
     const data: HmiTaskFile = await resp.json();
-    return data.items ?? [];
+    return Array.isArray(data.items)
+      ? { ok: true, items: data.items }
+      : { ok: false };
   } catch {
-    return [];
+    return { ok: false };
   }
 }
 
@@ -177,8 +183,17 @@ export async function loadAvailableReminderLists(): Promise<void> {
 async function refresh(): Promise<void> {
   reminders.loading = true;
   try {
+    const selectedIds = selectedReminderListIds();
     const allSources = await runtime.listReminderSources();
-    const sources = selectReminderLists(allSources, selectedReminderListIds());
+    if (
+      !allSources.length
+      && runtime.connectionStatus !== 'connected'
+      && (reminders.sources.length > 0 || reminders.items.length > 0)
+    ) {
+      reminders.error = 'Erinnerungen konnten offline nicht aktualisiert werden.';
+      return;
+    }
+    const sources = selectReminderLists(allSources, selectedIds);
 
     /* ── HA-Quellen ── */
     const haItems: Reminder[] = [];
@@ -192,7 +207,11 @@ async function refresh(): Promise<void> {
 
     /* ── Zentrale HMI-Quelle (always-on, kein Opt-in) ── */
     const hmiTasks = await fetchHmiTasks();
-    const hmiItems = hmiTasks.map(hmiTaskToReminder);
+    if (!hmiTasks.ok) {
+      reminders.error = 'Erinnerungen konnten nicht vollständig aktualisiert werden.';
+      return;
+    }
+    const hmiItems = hmiTasks.items.map(hmiTaskToReminder);
 
     /* ── Merged ── */
     reminders.sources = sources;
@@ -240,7 +259,7 @@ function restoreCache(): void {
 }
 
 function saveCache(): void {
-  if (typeof localStorage === 'undefined' || !reminders.sources.length) return;
+  if (typeof localStorage === 'undefined') return;
   try {
     const value: ReminderCache = {
       sources: reminders.sources,
@@ -249,9 +268,4 @@ function saveCache(): void {
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(value));
   } catch { /* Storage blockiert/voll: Live-Daten funktionieren weiter. */ }
-}
-
-function clearCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
 }

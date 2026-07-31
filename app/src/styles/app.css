@@ -4,13 +4,13 @@
    Animationen NUR transform + opacity (docs/01, docs/03)
    ============================================ */
 
-/* ── ADR-011: Inter Variable, self-hosted, kein FOUT ── */
+/* ── ADR-011: Inter Variable, self-hosted, ohne blockierende FOIT-Phase ── */
 @font-face {
   font-family: 'Inter Variable';
   src: url('/fonts/InterVariable-subset.woff2') format('woff2');
   font-weight: 400 700;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }
 
 /* ── ADR-012: Instrument Serif, nur für die Ambient-Begrüßung ── */
@@ -19,7 +19,7 @@
   src: url('/fonts/InstrumentSerif-subset.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
 }
 
 /* Tabular Numbers für alle Datenwerte — Werte dürfen beim Update nicht wackeln */
@@ -121,6 +121,36 @@ button {
   height: var(--touch-min);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
+}
+.theme-toggle {
+  display: flex;
+  width: auto;
+  min-width: var(--touch-min);
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+}
+.theme-toggle-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.theme-toggle-lock {
+  position: absolute;
+  right: calc(-1 * var(--space-1));
+  bottom: calc(-1 * var(--space-1));
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--color-accent-warm);
+}
+.theme-toggle-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.appearance-mode-seg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-8) * 2), 1fr));
 }
 
 .lock-control {
@@ -308,6 +338,11 @@ body.theme-fade * {
     background-color var(--duration-enter) var(--ease-out),
     border-color var(--duration-enter) var(--ease-out),
     color var(--duration-enter) var(--ease-out) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-fade,
+  body.theme-fade * { transition: none !important; }
 }
 
 /* ── Tab-Bar ── */

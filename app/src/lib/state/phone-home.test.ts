@@ -7,6 +7,7 @@ import roomControls from '../components/RoomControls.svelte?raw';
 import type { Room } from './app.svelte.ts';
 import {
   accessibleRoomSummary,
+  phoneHeroUrl,
   projectPhoneRooms,
   reconcilePhoneRoomLayer,
   validPhoneRoom,
@@ -34,6 +35,12 @@ function readers(overrides: Partial<PhoneHomeReaders> = {}): PhoneHomeReaders {
 }
 
 describe('phone home room projection', () => {
+  it('builds the visible day/night card asset and preserves the unknown-room fallback', () => {
+    expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).toBe('/hero/wohnzimmer-light.avif');
+    expect(phoneHeroUrl('/app', 'bad', 'dark')).toBe('/app/hero/bad-dark.avif');
+    expect(phoneHeroUrl('/', 'garage', 'light')).toBeNull();
+  });
+
   it('preserves room order and projects merged temperature/light/security values', () => {
     expect(projectPhoneRooms(rooms, readers())).toEqual([
       {
@@ -86,6 +93,15 @@ describe('phone home source, command and modal boundaries', () => {
     }
   });
 
+  it('selects one Phone-Home hero variant without importing the panel hero catalog', () => {
+    expect(phoneHome).toMatch(/const heroVariant = \$derived/);
+    expect(phoneHome).toContain('appState.heroSun');
+    expect(phoneHome).not.toContain('runtime.merged(SUN_ENTITY)');
+    expect(phoneHome).toMatch(/<RoomSummaryCard[^>]*\{heroVariant\}/);
+    expect(roomCard).not.toContain('room-hero-assets.ts');
+    expect(roomCard).toMatch(/phoneHeroUrl\([^)]*heroVariant\)/);
+  });
+
   it('reuses the tablet room controls 1:1 and never calls a backend directly', () => {
     // Eine Erfahrung aus einem Guss: das Sheet rendert dieselbe RoomControls-
     // Komponente wie die Tablet-Seitenleiste (inkl. Long-Press-Overlays),
@@ -94,8 +110,8 @@ describe('phone home source, command and modal boundaries', () => {
     expect(roomControls).toMatch(/import '\.\.\/\.\.\/styles\/room-controls\.css'/);
     expect(roomSheet).not.toMatch(/toggleLight|setBrightness|stepTarget|setHvac|applyScene/);
     expect(roomSheet).not.toMatch(/callService|sendCommand|runtime\.dispatch|home-assistant/);
-    expect(phoneShell).toMatch(/<DeviceDetail\s*\/>/);
-    expect(phoneShell).toMatch(/<SceneEdit\s*\/>/);
+    expect(roomSheet).toMatch(/import\('\.\.\/DeviceDetail\.svelte'\)[\s\S]*<DeviceDetail\s*\/>/);
+    expect(roomSheet).toMatch(/import\('\.\.\/SceneEdit\.svelte'\)[\s\S]*<SceneEdit\s*\/>/);
     expect(phoneShell).toMatch(/<RoomEdit\s*\/>/);
     // Long-Press auf der Raum-Kachel öffnet denselben Raum-Geräte-Editor
     // wie der Long-Press auf die Raum-Kachel der Tablet-Ansicht.
@@ -122,9 +138,21 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneShell).not.toMatch(/inert=\{modalBlocking\}/);
   });
 
-  it('closes the stacked tablet overlays together with the room layer', () => {
-    expect(phoneShell).toMatch(/closingLayer === 'room'[\s\S]*closeDeviceDetail\(true\)/);
-    expect(phoneShell).toMatch(/closingLayer === 'room'[\s\S]*closeSceneEdit\(true\)/);
+  it('closes the stacked tablet overlays with the lazy room-control closure', () => {
+    expect(roomSheet).toMatch(/onDestroy\(\(\) => \{[\s\S]*closeDeviceDetail\(true\)/);
+    expect(roomSheet).toMatch(/onDestroy\(\(\) => \{[\s\S]*closeSceneEdit\(true\)/);
+    expect(phoneShell).not.toContain('scene-manager.svelte.ts');
+    expect(phoneShell).not.toContain('deviceDetail');
+  });
+
+  it('recovers failed room and nested overlay chunks with retry and close actions', () => {
+    expect(phoneShell).toMatch(/loadPhoneFeature\('room',[\s\S]*\{:catch\}[\s\S]*retryPhoneFeature[\s\S]*closeLayer\('close'\)/);
+    expect(roomSheet).toMatch(/loadNestedLayer\('device',[\s\S]*\{:catch\}/);
+    expect(roomSheet).toMatch(/loadNestedLayer\('scene',[\s\S]*\{:catch\}/);
+    expect(roomSheet).toMatch(/retryNestedLayer\(id\)/);
+    expect(roomSheet).toMatch(/closeNestedLayer\(id\)/);
+    expect(roomSheet).toMatch(/closeDeviceDetail\(true\)/);
+    expect(roomSheet).toMatch(/closeSceneEdit\(true\)/);
   });
 
   it('reconciles mount and dynamic room removal through one bounded controller lifecycle', () => {

@@ -169,6 +169,93 @@ function countOccurrences(source, marker) {
   return count;
 }
 
+const PRE_MOUNT_METADATA_PATH = 'hmi-performance-budget.json';
+const PRE_MOUNT_MARKER_PREFIX = 'hmi-premount:required';
+const PRE_MOUNT_MARKER_PATTERN = /hmi-premount:required:src\/[A-Za-z0-9_./-]+/g;
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasExactKeys(record, expectedKeys) {
+  const actual = Object.keys(record).sort();
+  const expected = [...expectedKeys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function validMetadataChunkPath(value) {
+  return typeof value === 'string'
+    && !value.includes('\\')
+    && value.endsWith('.js')
+    && localReference(value) === value;
+}
+
+function validMetadataCssPath(value) {
+  return typeof value === 'string'
+    && !value.includes('\\')
+    && value.endsWith('.css')
+    && localReference(value) === value;
+}
+
+function parsePreMountMetadata(source) {
+  let metadata;
+  try {
+    metadata = JSON.parse(source);
+  } catch {
+    return null;
+  }
+  if (!isRecord(metadata)
+    || !hasExactKeys(metadata, ['schemaVersion', 'requiredPreMountEntries', 'chunkCss'])
+    || metadata.schemaVersion !== 2
+    || !Array.isArray(metadata.requiredPreMountEntries)
+    || metadata.requiredPreMountEntries.length === 0
+    || !Array.isArray(metadata.chunkCss)
+    || metadata.chunkCss.length === 0) {
+    return null;
+  }
+
+  const sourceModules = new Set();
+  const markers = new Set();
+  const facades = new Set();
+  for (const entry of metadata.requiredPreMountEntries) {
+    if (!isRecord(entry)
+      || !hasExactKeys(entry, ['sourceModule', 'marker', 'facade', 'markerChunk'])
+      || typeof entry.sourceModule !== 'string'
+      || !entry.sourceModule.startsWith('src/')
+      || entry.sourceModule.includes('\\')
+      || localReference(entry.sourceModule) !== entry.sourceModule
+      || entry.marker !== `${PRE_MOUNT_MARKER_PREFIX}:${entry.sourceModule}`
+      || !validMetadataChunkPath(entry.facade)
+      || !validMetadataChunkPath(entry.markerChunk)
+      || sourceModules.has(entry.sourceModule)
+      || markers.has(entry.marker)
+      || facades.has(entry.facade)) {
+      return null;
+    }
+    sourceModules.add(entry.sourceModule);
+    markers.add(entry.marker);
+    facades.add(entry.facade);
+  }
+
+  const chunks = new Set();
+  for (const entry of metadata.chunkCss) {
+    if (!isRecord(entry)
+      || !hasExactKeys(entry, ['chunk', 'files'])
+      || !validMetadataChunkPath(entry.chunk)
+      || !Array.isArray(entry.files)
+      || entry.files.some((file) => !validMetadataCssPath(file))
+      || new Set(entry.files).size !== entry.files.length
+      || chunks.has(entry.chunk)) {
+      return null;
+    }
+    chunks.add(entry.chunk);
+  }
+  return {
+    requiredPreMountEntries: metadata.requiredPreMountEntries,
+    chunkCss: metadata.chunkCss,
+  };
+}
+
 function isInside(realRoot, candidate) {
   const relative = path.relative(realRoot, candidate);
   return relative === '' || (
@@ -201,17 +288,22 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     return report;
   }
 
-  const readAsset = async (relativePath) => {
+  const readAsset = async (relativePath, {
+    missingCode = 'ASSET_MISSING',
+    missingMessage = 'A referenced build asset is missing or unreadable.',
+    outsideCode = 'ASSET_OUTSIDE_DIST',
+    outsideMessage = 'A referenced build asset resolves outside the dist root.',
+  } = {}) => {
     if (measured.has(relativePath)) return measured.get(relativePath).contents;
     let resolvedPath;
     try {
       resolvedPath = await realpath(path.join(realDistDir, ...relativePath.split('/')));
     } catch {
-      addError('ASSET_MISSING', 'A referenced build asset is missing or unreadable.', relativePath);
+      addError(missingCode, missingMessage, relativePath);
       return null;
     }
     if (!isInside(realDistDir, resolvedPath)) {
-      addError('ASSET_OUTSIDE_DIST', 'A referenced build asset resolves outside the dist root.', relativePath);
+      addError(outsideCode, outsideMessage, relativePath);
       return null;
     }
     try {
@@ -219,7 +311,7 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
       measured.set(relativePath, { contents, measurement: fileMeasurement(relativePath, contents) });
       return contents;
     } catch {
-      addError('ASSET_MISSING', 'A referenced build asset is missing or unreadable.', relativePath);
+      addError(missingCode, missingMessage, relativePath);
       return null;
     }
   };
@@ -325,6 +417,7 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
   }
 
   const moduleGraph = new Map();
+  const dynamicGraph = new Map();
   const shellMarkerHits = { phone: [], panel: [] };
   for (const relativePath of new Set([...initial, ...dynamic])) {
     const contents = measured.get(relativePath)?.contents;
@@ -332,6 +425,9 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     const edges = assetEdges.get(relativePath);
     if (!edges) continue;
     moduleGraph.set(relativePath, edges.staticImports
+      .map((specifier) => localReference(specifier, relativePath))
+      .filter(Boolean));
+    dynamicGraph.set(relativePath, edges.dynamicImports
       .map((specifier) => localReference(specifier, relativePath))
       .filter(Boolean));
     const source = contents.toString('utf8');
@@ -365,6 +461,109 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     }
     return closure;
   };
+
+  const graphReliable = errors.length === 0;
+  let requiredPreMountEntries = [];
+  let chunkCss = new Map();
+  let preMountEntriesValid = false;
+  const metadataContents = await readAsset(PRE_MOUNT_METADATA_PATH, {
+    missingCode: 'PRE_MOUNT_METADATA_INVALID',
+    missingMessage: 'The structured pre-mount metadata is missing or unreadable.',
+    outsideCode: 'PRE_MOUNT_METADATA_INVALID',
+    outsideMessage: 'The structured pre-mount metadata resolves outside the dist root.',
+  });
+  if (metadataContents) {
+    const parsedMetadata = parsePreMountMetadata(metadataContents.toString('utf8'));
+    if (!parsedMetadata) {
+      addError(
+        'PRE_MOUNT_METADATA_INVALID',
+        'The structured pre-mount metadata has an unsupported or malformed schema.',
+        PRE_MOUNT_METADATA_PATH,
+      );
+    } else {
+      requiredPreMountEntries = parsedMetadata.requiredPreMountEntries;
+      chunkCss = new Map(parsedMetadata.chunkCss.map((entry) => [entry.chunk, entry.files]));
+    }
+  }
+
+  if (requiredPreMountEntries.length > 0 && graphReliable) {
+    const markerSearchPaths = new Set([
+      ...[...initial, ...dynamic].filter((relativePath) => relativePath.endsWith('.js')),
+      ...requiredPreMountEntries.map((entry) => entry.markerChunk),
+    ]);
+    await Promise.all([...markerSearchPaths].map((relativePath) => readAsset(relativePath)));
+
+    const markerHits = [];
+    let markerTokenCount = 0;
+    for (const relativePath of markerSearchPaths) {
+      const contents = measured.get(relativePath)?.contents;
+      if (!contents) continue;
+      const source = contents.toString('utf8');
+      markerTokenCount += countOccurrences(source, PRE_MOUNT_MARKER_PREFIX);
+      for (const marker of source.match(PRE_MOUNT_MARKER_PATTERN) ?? []) {
+        markerHits.push({ marker, path: relativePath });
+      }
+    }
+
+    const declaredMarkers = new Set(requiredPreMountEntries.map((entry) => entry.marker));
+    const markersValid = markerTokenCount === requiredPreMountEntries.length
+      && markerHits.length === requiredPreMountEntries.length
+      && markerHits.every((hit) => declaredMarkers.has(hit.marker))
+      && requiredPreMountEntries.every((entry) => {
+        const hits = markerHits.filter((hit) => hit.marker === entry.marker);
+        return hits.length === 1 && hits[0].path === entry.markerChunk;
+      });
+    if (!markersValid) {
+      addError(
+        'PRE_MOUNT_MARKER_INVALID',
+        'Every declared pre-mount source module must have exactly one matching marker in its declared build chunk, without duplicate or decoy markers.',
+      );
+    }
+
+    const declaredFacades = new Set(requiredPreMountEntries.map((entry) => entry.facade));
+    const reachableFacades = new Set(
+      [...directDynamicTargets].filter((target) => declaredFacades.has(target)),
+    );
+    const facadeQueue = [...reachableFacades];
+    while (facadeQueue.length > 0) {
+      const facade = facadeQueue.shift();
+      for (const sourceChunk of staticClosure(facade)) {
+        for (const target of dynamicGraph.get(sourceChunk) ?? []) {
+          if (!declaredFacades.has(target) || reachableFacades.has(target)) continue;
+          reachableFacades.add(target);
+          facadeQueue.push(target);
+        }
+      }
+    }
+
+    const entriesReachable = reachableFacades.size === requiredPreMountEntries.length
+      && requiredPreMountEntries.every((entry) => (
+        !initial.has(entry.facade)
+        && dynamic.has(entry.facade)
+        && reachableFacades.has(entry.facade)
+        && moduleGraph.has(entry.facade)
+        && moduleGraph.has(entry.markerChunk)
+        && staticClosure(entry.facade).has(entry.markerChunk)
+      ));
+    if (!entriesReachable) {
+      addError(
+        'PRE_MOUNT_ENTRY_INVALID',
+        'Every pre-mount marker chunk must be statically reachable from its declared facade, and every facade must be a declared root or nested literal-dynamic target in that pre-mount graph.',
+      );
+    }
+
+    const graphChunks = new Set(
+      [...initial, ...dynamic].filter((relativePath) => relativePath.endsWith('.js')),
+    );
+    const chunkCssValid = [...graphChunks].every((relativePath) => chunkCss.has(relativePath));
+    if (!chunkCssValid) {
+      addError(
+        'PRE_MOUNT_CSS_INVALID',
+        'The build metadata must describe the CSS files for every reachable JavaScript chunk exactly once.',
+      );
+    }
+    preMountEntriesValid = markersValid && entriesReachable && chunkCssValid;
+  }
 
   const cssPaths = [];
   for (const specifier of references.css) {
@@ -405,15 +604,36 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     };
     report.shells.phone = describeShell(shellEntries.phone[0]);
     report.shells.panel = describeShell(shellEntries.panel[0]);
-    const combinedFiles = measurementsFor(new Set([
+  }
+  if (shellEntriesValid && preMountEntriesValid) {
+    const combinedPaths = new Set([
       ...initial,
+      ...requiredPreMountEntries.flatMap((entry) => [...staticClosure(entry.facade)]),
       ...staticClosure(shellEntries.phone[0]),
-    ]));
+    ]);
+    const combinedFiles = measurementsFor(combinedPaths);
     const combinedTotal = totals(combinedFiles);
+    const combinedCssPaths = new Set(cssPaths);
+    for (const relativePath of combinedPaths) {
+      for (const cssPath of chunkCss.get(relativePath) ?? []) combinedCssPaths.add(cssPath);
+    }
+    await Promise.all([...combinedCssPaths].map((relativePath) => readAsset(relativePath, {
+      missingCode: 'PRE_MOUNT_CSS_INVALID',
+      missingMessage: 'A CSS file declared for the combined startup is missing or unreadable.',
+      outsideCode: 'PRE_MOUNT_CSS_INVALID',
+      outsideMessage: 'A CSS file declared for the combined startup resolves outside the dist root.',
+    })));
+    const combinedCssFiles = measurementsFor(combinedCssPaths);
+    const combinedCssTotal = totals(combinedCssFiles);
     report.shells.combinedPhoneStartup = {
       files: combinedFiles,
       total: combinedTotal,
       budget: budgetResult(budgets.initialJsGzipBytes, combinedTotal.gzipBytes),
+      css: {
+        files: combinedCssFiles,
+        total: combinedCssTotal,
+        budget: budgetResult(budgets.initialCssGzipBytes, combinedCssTotal.gzipBytes),
+      },
     };
   }
 
@@ -433,6 +653,7 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     : report.initial.javascript.budget.passed
       && report.initial.css.budget.passed
       && (report.shells.combinedPhoneStartup?.budget.passed ?? true)
+      && (report.shells.combinedPhoneStartup?.css.budget.passed ?? true)
       ? 'PASS'
       : 'FAIL';
   return report;

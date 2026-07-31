@@ -38,3 +38,4 @@
 - [ ] New UI text is present in all six message catalogues, where applicable.
 - [ ] Existing design tokens are used instead of raw visual values.
 - [ ] Documentation and known limitations match the implemented behaviour.
+- [ ] New images, fonts, icons or media are covered by `ASSETS-LICENSE.md`, `TRADEMARKS.md` or `NOTICE` as appropriate.

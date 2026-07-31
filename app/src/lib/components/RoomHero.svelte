@@ -8,9 +8,7 @@
      Compositor-only, kein Layout/Paint, kein Live-`backdrop-filter`. Das neue
      Bild wird per `Image.decode()` fertig dekodiert, BEVOR es eingeblendet wird,
      damit der Crossfade nicht auf einen Decode-Hitch trifft. ── */
-  import { appState, SUN_ENTITY } from '../state/app.svelte.ts';
-  import { runtime } from '../adapter/runtime.svelte.ts';
-  import type { SunValue } from '../adapter/types.ts';
+  import { appState } from '../state/app.svelte.ts';
   import type { LightValue } from '../adapter/types.ts';
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
@@ -18,11 +16,8 @@
 
   const base = import.meta.env.BASE_URL;
 
-  // B-01A: Der aktive Raum fährt die Bühne; die Bildvariante folgt sun.sun
-  // (Tag → light, Abend/Nacht → dark). appState.theme ist nur Fallback, solange
-  // noch kein sun-State angekommen ist — ein manueller UI-Theme-Toggle soll das
-  // Raummotiv nicht auf Tag/Nacht umschalten.
-  const sun = $derived(SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined);
+  // Der Theme-Controller projiziert Sonnenautomatik beziehungsweise fixierten
+  // Tag/Abend einmalig in appState.heroSun; Panel und Phone lesen denselben Wert.
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const placements = $derived(roomLightPlacements(room?.id));
   const assignedLights = $derived((room?.lights ?? []).filter((light) => placements[light.entityId]));
@@ -31,11 +26,11 @@
     return { device, placement: placements[device.entityId], value };
   }));
   const allAssignedLightsOff = $derived(assignedLights.length > 0 && renderedLights.every(({ value }) => value?.on !== true));
-  const showImmersion = $derived(sun?.day === false && !allAssignedLightsOff);
+  const showImmersion = $derived(appState.heroSun?.day === false && !allAssignedLightsOff);
   const targetUrl = $derived(heroAssetUrl({
     baseUrl: base,
     roomId: appState.currentRoom,
-    sun,
+    sun: appState.heroSun,
     fallbackTheme: appState.theme,
     allAssignedLightsOff,
   }));

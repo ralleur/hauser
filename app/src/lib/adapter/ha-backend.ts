@@ -22,7 +22,7 @@ import {
   ERR_INVALID_AUTH,
   type Connection,
 } from 'home-assistant-js-websocket';
-import type { Backend, ConnectionStatus } from './types.ts';
+import type { AuthRequiredReason, Backend, ConnectionStatus } from './types.ts';
 import { applyEntitiesDiff, haToValue, type RawEntity, type EntitiesDiff } from './ha-entities.ts';
 import { catalogItemFromHaState } from './capabilities.ts';
 import type { EntityCatalogItem } from '../state/device-config.ts';
@@ -32,14 +32,34 @@ import type { Reminder, ReminderSource } from '../state/reminders.ts';
 import { reminderListMessage } from '../state/reminders.ts';
 import { sharedStorage } from '../state/shared-config.ts';
 
+function markHaStartup(name: 'hmi:ha-connected' | 'hmi:fresh-data', label: string): void {
+  if (!import.meta.env.DEV || typeof performance === 'undefined') return;
+  if (performance.getEntriesByName(name, 'mark').length > 0) return;
+  performance.mark(name);
+  const startMark = performance.getEntriesByName('hmi:app-start', 'mark').at(-1);
+  const mark = performance.getEntriesByName(name, 'mark').at(-1);
+  if (!mark || !startMark) return;
+  console.debug(`[startup] ${label}: ${(mark.startTime - startMark.startTime).toFixed(1)} ms`);
+  performance.measure(`hmi:app-start->${name}`, 'hmi:app-start', name);
+}
+
 const TOKEN_KEY = 'hmi:ha-token';
 const CACHE_KEY = 'hmi:ha-cache';
 
 type Unsub = () => Promise<void>;
+type RetryController = { beforeStart(): void; schedule(): void; reset(): void };
+type RetryFactory = (retry: () => void) => RetryController;
+
+let createRetryController: RetryFactory | null = null;
+
+/** Wird vom bereits post-paint geladenen Runtime-Hintergrund installiert. */
+export function installHaRetryFactory(factory: RetryFactory): void {
+  createRetryController = factory;
+}
 
 export interface HaBackendOptions {
-  /** HA-Basis-URL, z. B. `http://homeassistant.local:8123` (Auth leitet die ws-URL ab). */
-  url: string;
+  /** HA-Basis-URL oder spät gelesener Resolver, z. B. nach Shared-Config-Sync. */
+  url: string | (() => string);
   /** Volle Menge der gemappten, steuerbaren entity_ids (ADR-006-Startset). */
   entityIds: readonly string[];
   /** Konfig-Seed als Fallback, wenn kein localStorage-Cache existiert. */
@@ -51,33 +71,40 @@ export function entityRegistryRenameMessage(entityId: string, name: string) {
 }
 
 export class HaBackend implements Backend {
-  #url: string;
+  #resolveUrl: () => string;
   #entityIds: string[];
   #seed: Map<string, unknown>;
 
-  #onUpdate: ((entityId: string, value: unknown) => void) | null = null;
+  #onUpdate: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   #connCb: ((status: ConnectionStatus) => void) | null = null;
-  #onAuth: (() => void) | null = null;
+  #onAuth: ((reason: AuthRequiredReason) => void) | null = null;
   #onCmdErr: ((entityId: string) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
 
   #status: ConnectionStatus = 'connecting';
   #conn: Connection | null = null;
   #unsub: Unsub | null = null;
+  #startInFlight = false;
+  #receivedFreshData = false;
+  #retry: RetryController | null = null;
 
   #raw = new Map<string, RawEntity>();
   #last = new Map<string, unknown>();
 
   constructor(opts: HaBackendOptions) {
-    this.#url = opts.url;
+    const url = opts.url;
+    this.#resolveUrl = typeof url === 'function' ? url : () => url;
     this.#entityIds = [...opts.entityIds];
     this.#seed = opts.seed ?? new Map();
-    void this.#start();
   }
 
   /* ── Backend-Interface ── */
 
-  subscribe(onUpdate: (entityId: string, value: unknown) => void): void {
+  start(): void {
+    void this.#start();
+  }
+
+  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void {
     this.#onUpdate = onUpdate;
     // Sofort-Render aus dem Cache (bzw. Seed) — kein Leerzustand/Spinner (docs/04).
     const cache = this.#loadCache();
@@ -85,7 +112,7 @@ export class HaBackend implements Backend {
       const v = cache.get(id) ?? this.#seed.get(id);
       if (v !== undefined) {
         this.#last.set(id, v);
-        onUpdate(id, v);
+        onUpdate(id, v, cache.has(id));
       }
     }
   }
@@ -180,7 +207,7 @@ export class HaBackend implements Backend {
 
     let res: Response;
     try {
-      res = await fetch(`${this.#url}/api/config/config_entries/flow`, {
+      res = await fetch(`${this.#resolveUrl()}/api/config/config_entries/flow`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ handler: 'caldav', show_advanced_options: false }),
@@ -197,7 +224,7 @@ export class HaBackend implements Backend {
     if (!res.ok) return { ok: false, message: `Einrichtung fehlgeschlagen (HTTP ${res.status}).` };
     const flow = (await res.json()) as { flow_id: string };
 
-    const stepRes = await fetch(`${this.#url}/api/config/config_entries/flow/${flow.flow_id}`, {
+    const stepRes = await fetch(`${this.#resolveUrl()}/api/config/config_entries/flow/${flow.flow_id}`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -240,7 +267,7 @@ export class HaBackend implements Backend {
 
   /* ── Auth-Anbindung für den Login-Screen (state/auth) ── */
 
-  onAuthError(cb: () => void): void {
+  onAuthError(cb: (reason: AuthRequiredReason) => void): void {
     this.#onAuth = cb;
   }
 
@@ -250,6 +277,7 @@ export class HaBackend implements Backend {
 
   setToken(token: string): void {
     try { sharedStorage.setItem(TOKEN_KEY, token.trim()); } catch { /* ignore */ }
+    this.#resetRetry();
     void this.#start();
   }
 
@@ -266,43 +294,76 @@ export class HaBackend implements Backend {
   /* ── Verbindungsaufbau + Auth ── */
 
   async #start(): Promise<void> {
+    if (this.#startInFlight || this.#conn) return;
+    this.#retry?.beforeStart();
+    this.#startInFlight = true;
     const token = readToken();
     if (!token) {
+      this.#resetRetry();
       this.#setStatus('disconnected');
-      this.#onAuth?.();
+      this.#onAuth?.('missing-token');
+      this.#startInFlight = false;
       return;
     }
     this.#setStatus('connecting');
     try {
-      const auth = createLongLivedTokenAuth(this.#url, token);
+      const auth = createLongLivedTokenAuth(this.#resolveUrl(), token);
       const conn = await createConnection({ auth });
       this.#conn = conn;
       // Library-Reconnect → ConnectionStatus (ADR-018 §2). Die Library
       // resubscribed die laufende subscribe_entities-Nachricht selbst. Raw-State
       // beim Disconnect leeren, nicht erst bei `ready`: die Library kann den
       // initialen Reconnect-Diff vor dem ready-Event liefern.
-      conn.addEventListener('ready', () => this.#setStatus('connected'));
+      conn.addEventListener('ready', () => {
+        if (this.#conn === conn && this.#unsub) this.#setStatus('connected');
+      });
       conn.addEventListener('disconnected', () => {
+        if (this.#conn !== conn) return;
         this.#raw.clear();
         this.#setStatus('reconnecting');
       });
-      conn.addEventListener('reconnect-error', () => this.#setStatus('reconnecting'));
+      conn.addEventListener('reconnect-error', () => {
+        if (this.#conn === conn) this.#setStatus('reconnecting');
+      });
 
-      this.#setStatus('connected');
       await this.#resubscribe();
-      await this.#refreshCatalog();
+      this.#setStatus('connected');
+      this.#resetRetry();
+      void this.#refreshCatalog();
     } catch (err) {
+      const failedConnection = this.#conn;
+      this.#conn = null;
+      if (this.#unsub) {
+        await this.#unsub().catch(() => {});
+        this.#unsub = null;
+      }
+      failedConnection?.close();
       if (err === ERR_INVALID_AUTH) {
         // Token abgelaufen/ungültig → verwerfen, Login zeigen (docs/04).
+        this.#resetRetry();
         try { sharedStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
         this.#setStatus('disconnected');
-        this.#onAuth?.();
+        this.#onAuth?.('invalid-auth');
       } else {
         // Host nicht erreichbar o. Ä.: Banner, letzter Cache bleibt sichtbar.
         this.#setStatus('disconnected');
         console.warn('[HaBackend] Verbindungsaufbau fehlgeschlagen:', err);
+        this.#scheduleRetry();
       }
+    } finally {
+      this.#startInFlight = false;
     }
+  }
+
+  #scheduleRetry(): void {
+    if (this.#conn) return;
+    this.#retry ??= createRetryController?.(() => { void this.#start(); }) ?? null;
+    this.#retry?.schedule();
+  }
+
+  #resetRetry(): void {
+    this.#retry?.reset();
+    this.#retry = null;
   }
 
   async #resubscribe(): Promise<void> {
@@ -335,6 +396,10 @@ export class HaBackend implements Backend {
       this.#last.set(id, value);
       this.#onUpdate?.(id, value);
     }
+    if (!this.#receivedFreshData && changed.length > 0) {
+      this.#receivedFreshData = true;
+      markHaStartup('hmi:fresh-data', 'Aktuelle Daten eingetroffen');
+    }
     this.#saveCache();
   }
 
@@ -360,6 +425,7 @@ export class HaBackend implements Backend {
     if (status === this.#status) return;
     this.#status = status;
     this.#connCb?.(status);
+    if (status === 'connected') markHaStartup('hmi:ha-connected', 'Home Assistant verbunden');
   }
 }
 

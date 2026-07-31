@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { runtime, HA_URL } from '../adapter/runtime.svelte.ts';
+  import { runtime, configuredHaUrl } from '../adapter/runtime.svelte.ts';
   import type { CameraValue } from '../adapter/types.ts';
 
   let { entityId, label }: { entityId: string; label: string } = $props();
@@ -10,7 +10,7 @@
     const picture = camera?.entityPicture;
     if (!camera?.available || !picture) return null;
     const streamPath = picture.replace('/api/camera_proxy/', '/api/camera_proxy_stream/');
-    return new URL(streamPath, `${HA_URL}/`).toString();
+    return new URL(streamPath, `${configuredHaUrl()}/`).toString();
   });
 
   $effect(() => {

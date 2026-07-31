@@ -272,8 +272,14 @@ are explicitly welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 ## License
 
-Code under the [MIT license](LICENSE). Room illustrations and background artwork
-are AI-generated and licensed [CC BY 4.0](ASSETS-LICENSE.md). Fonts and
-third-party components are listed in [NOTICE](NOTICE).
+Source code, tests, scripts, configuration examples, design tokens and technical
+documentation are licensed under the [MIT license](LICENSE). Original room
+illustrations, background artwork and public screenshots are licensed
+[CC BY 4.0](ASSETS-LICENSE.md).
+
+The Hauser name, logos, brand marks, official application icons and favicon are
+not licensed under MIT or CC BY. See the [brand and trademark policy](TRADEMARKS.md).
+Fonts, Material Design Icons and other third-party components remain under their
+own terms and are listed in [NOTICE](NOTICE).
 
 Not affiliated with Home Assistant or Jellyfin.

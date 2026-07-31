@@ -8,6 +8,10 @@ export const immersionLight = $state({
   config: loadImmersionLightConfig(),
 });
 
+export function rehydrateImmersionLight(): void {
+  immersionLight.config = loadImmersionLightConfig();
+}
+
 export function roomLightPlacements(roomId: string | null | undefined): Record<string, ImmersionLightPlacement> {
   return roomId ? immersionLight.config.rooms[roomId] ?? {} : {};
 }

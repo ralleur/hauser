@@ -11,6 +11,7 @@
    subscribeEntities-Collections. Das WS-Protokoll wird NICHT selbst
    implementiert. */
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+export type AuthRequiredReason = 'missing-token' | 'invalid-auth';
 
 export interface ConnectionLayer {
   readonly status: ConnectionStatus;
@@ -83,9 +84,12 @@ export type ReconcileOutcome =
    werden gepusht, Commands als Service-Calls abgesetzt. Runtime und UI kennen
    nur dieses Interface, nie die konkrete Verbindung. */
 export interface Backend {
+  /** Startet externe Verbindungen erst nach dem ersten Paint. Backends ohne
+      externen Start (FakeBackend) lassen den Hook weg. */
+  start?(): void;
   /** Push-Kanal: der EntityStore abonniert hier alle State-Updates
       (subscribe_entities bzw. Fake-Echo). Liefert initial den Seed-State. */
-  subscribe(onUpdate: (entityId: string, value: unknown) => void): void;
+  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void;
   /** call_service (docs/04): der optimistische UI-Update ist bereits passiert. */
   callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void;
   /** Verbindungszustand (ADR-017 Addendum, Schicht 1): FakeBackend treibt ihn

@@ -19,6 +19,12 @@ let applied = $state<LayoutConfig>(initial);
 let draft = $state<LayoutConfig>(cloneLayoutConfig(initial));
 let open = $state(false);
 
+export function rehydrateLayoutManager(): void {
+  applied = loadLayoutConfig();
+  draft = cloneLayoutConfig(applied);
+  open = false;
+}
+
 export const layoutManager = {
   get applied() { return applied; },
   get preview() { return open ? draft : applied; },

@@ -11,7 +11,7 @@
   import Icon from '../Icon.svelte';
   import { connection } from '../../state/connection.svelte.ts';
   import { authState, requestToken } from '../../state/auth.svelte.ts';
-  import { HA_URL, HA_URL_DEFAULT } from '../../adapter/runtime.svelte.ts';
+  import { configuredHaUrl, HA_URL_DEFAULT } from '../../adapter/runtime.svelte.ts';
   import { jellyfin, JELLYFIN_URL_DEFAULT } from '../../adapter/jellyfin.ts';
   import { jellyfinLogin, isLoggingIn, libraryError, usingLiveLibrary } from '../../state/library.svelte.ts';
   import { settingsUi, settingsValues, setHaUrl, setJellyfinUrl, icloudSetup, setupICloudCalendar } from '../../state/settings.svelte.ts';
@@ -97,7 +97,7 @@
     <span class="dot {conn.dot}"></span>
     <div class="settings-row-text">
       <span class="settings-row-label">Home Assistant</span>
-      <span class="settings-row-sub">{settingsValues.demoMode ? m.sys_demo_mode_note() : HA_URL}</span>
+      <span class="settings-row-sub">{settingsValues.demoMode ? m.sys_demo_mode_note() : configuredHaUrl()}</span>
     </div>
     <span class="settings-row-value">{conn.label}</span>
   </div>

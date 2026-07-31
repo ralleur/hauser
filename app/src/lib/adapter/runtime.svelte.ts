@@ -28,23 +28,53 @@ export class AdapterRuntime {
   #queue: Command[] = [];
   #flushScheduled = false;
   #timers = new Map<string, ReturnType<typeof setTimeout>>();
-  #backend: Backend;
+  #backend!: Backend;
+  #visible: string[] | null = null;
+  #catalogSubscriber: ((items: unknown[]) => void) | null = null;
   #equals: (a: unknown, b: unknown) => boolean;
   #connection = $state<ConnectionStatus>('connected');
 
   // Subset-Match (ADR-017 Addendum): Teil-Patches (Media) und volle Werte
   // (Licht/Klima) reconcilen durch dieselbe Logik.
   constructor(backend: Backend, equals = subsetMatch) {
-    this.#backend = backend;
     this.#equals = equals;
+    this.#bindBackend(backend);
+  }
+
+  /** Darf nur im Bootstrap vor start() genutzt werden: nach dem zentralen
+      Config-Sync kann der provisorische Cache-Backendtyp ohne zweiten Runtime-
+      Singleton ersetzt werden. */
+  setBackend(backend: Backend): void {
+    if (backend === this.#backend) return;
+    this.#bindBackend(backend);
+  }
+
+  #bindBackend(backend: Backend): void {
+    this.#backend = backend;
     // Subscription füllt den Store und treibt die Reconciliation (docs/02)
-    backend.subscribe((id, value) => this.#onUpdate(id, value));
+    backend.subscribe((id, value, stale = false) => {
+      if (backend === this.#backend) this.#onUpdate(id, value, stale);
+    });
     // Verbindungszustand aus dem Seam (ADR-017 Addendum): reaktiv für Banner,
     // Status-Dot und Command-Sperre.
-    backend.onConnectionChange((status) => { this.#connection = status; });
+    backend.onConnectionChange((status) => {
+      if (backend === this.#backend) this.#connection = status;
+    });
     // Service-Error (docs/02, Funktionsumfang 6): der Command wurde abgelehnt —
     // Intent sofort verwerfen statt 5 s aufs Timeout zu warten.
-    backend.onCommandError?.((id) => this.#onCommandFailed(id));
+    backend.onCommandError?.((id) => {
+      if (backend === this.#backend) this.#onCommandFailed(id);
+    });
+    if (this.#visible !== null) backend.setVisible?.(this.#visible);
+    this.#bindCatalog(backend);
+  }
+
+  #bindCatalog(backend: Backend): void {
+    const subscriber = this.#catalogSubscriber;
+    if (!subscriber) return;
+    backend.subscribeCatalog?.((items) => {
+      if (backend === this.#backend) subscriber(items);
+    });
   }
 
   /* Verbindungszustand (docs/02): die UI liest ihn über state/connection. */
@@ -52,14 +82,22 @@ export class AdapterRuntime {
     return this.#connection;
   }
 
+  /** Externe Verbindungen bewusst erst nach dem ersten Paint starten. Der
+      lokale Entity-Cache wurde bereits synchron im Konstruktor eingespielt. */
+  start(): void {
+    this.#backend.start?.();
+  }
+
   /* Selektives Abo (ADR-006): reicht die sichtbaren entity_ids an das Backend
      durch. FakeBackend ignoriert das (No-op), HaBackend resubscribed. */
   setVisible(entityIds: readonly string[]): void {
-    this.#backend.setVisible?.(entityIds);
+    this.#visible = [...entityIds];
+    this.#backend.setVisible?.(this.#visible);
   }
 
   subscribeCatalog(cb: (items: unknown[]) => void): void {
-    this.#backend.subscribeCatalog?.(cb);
+    this.#catalogSubscriber = cb;
+    this.#bindCatalog(this.#backend);
   }
 
   async renameEntity(entityId: string, name: string): Promise<void> {
@@ -146,8 +184,8 @@ export class AdapterRuntime {
     });
   }
 
-  #onUpdate(entityId: string, value: unknown): void {
-    this.store.set(entityId, value);
+  #onUpdate(entityId: string, value: unknown, stale = false): void {
+    this.store.set(entityId, value, stale);
     const { outcome } = reconcile([...this.#intents.values()], { entityId, value }, this.#equals);
     if (outcome === 'external') return; // fremde Änderung: nur übernehmen
     // confirmed | contradicted → Intent auflösen; bei Widerspruch springt die
@@ -190,7 +228,7 @@ export class AdapterRuntime {
 /* ── Singleton (ADR-018: HaBackend live, FakeBackend per Flag) ──
    Seed = reale entity_ids + Fallback-Startwerte (buildEntitySeed/buildMediaSeed).
    Schichttausch nur hier: FakeBackend ↔ HaBackend hinter demselben Interface. */
-const seed = new Map<string, unknown>([
+export const seed = new Map<string, unknown>([
   ...buildEntitySeed(ROOM_SEED),
   ...FAKE_DISCOVERY_CATALOG.map((item) => [item.entityId, { on: false }] as const),
   ...buildMediaSeed(MEDIA_SEED),
@@ -221,11 +259,14 @@ export function defaultHaUrl(protocol: string = typeof location === 'undefined' 
 export const HA_URL_DEFAULT: string =
   (import.meta.env?.VITE_HA_URL as string | undefined) ?? defaultHaUrl();
 
-function readHaUrlOverride(): string | null {
-  try { return localStorage.getItem(HA_URL_KEY); } catch { return null; }
+export function configuredHaUrl(storage?: Pick<Storage, 'getItem'>): string {
+  try {
+    const source = storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
+    return source?.getItem(HA_URL_KEY) ?? HA_URL_DEFAULT;
+  } catch {
+    return HA_URL_DEFAULT;
+  }
 }
-
-export const HA_URL: string = readHaUrlOverride() ?? HA_URL_DEFAULT;
 
 /* FakeBackend für Tests/Dev: ohne `window` (Vitest), per Env `VITE_BACKEND=fake`
    oder localStorage-Flag `hmi:backend=fake` (ADR-018 §7). Sonst echtes HA. */
@@ -236,11 +277,28 @@ function useFake(): boolean {
   return false;
 }
 
-export const backend: Backend = useFake()
+export let backend: Backend = useFake()
   ? new FakeBackend(seed)
-  : new HaBackend({ url: HA_URL, entityIds: HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds, seed });
+  : new HaBackend({
+      // Erst in start() nach dem Shared-Config-Sync auflösen; der Modulimport
+      // darf noch mit dem lokalen letzten Stand die Shell erzeugen.
+      url: () => configuredHaUrl(),
+      entityIds: HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds,
+      seed: seed,
+    });
 
 export const runtime = new AdapterRuntime(backend);
+
+/** Zentraler Config-Sync darf den beim Cache-Render provisorisch gewählten Typ
+ * genau einmal vor runtime.start() korrigieren. */
+export function setBackend(next: Backend): void {
+  backend = next;
+  runtime.setBackend(next);
+  if (typeof window !== 'undefined') {
+    const w = window as unknown as { __hmi?: Record<string, unknown> };
+    if (w.__hmi) w.__hmi.backend = next;
+  }
+}
 
 // Dev-Handle für den Smoke-Test im Preview-Browser:
 //   FakeBackend: window.__hmi.backend.force(id, 'contradict'|'drop') / goOffline() / goOnline()

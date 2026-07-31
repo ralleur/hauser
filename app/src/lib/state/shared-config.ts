@@ -1,27 +1,11 @@
-export const SHARED_CONFIG_KEYS = [
-  'hmi:backend',
-  'hmi:ha-url',
-  'hmi:ha-token',
-  'hmi:jf-url',
-  'hmi:jf-token',
-  'hmi:jf-user',
-  'hmi:library',
-  'hmi:lock-button',
-  'hmi:device-config:v1',
-  'hmi:scene-config:v1',
-  'hmi:home-layout:v1',
-  'hmi:light-icon-overrides:v1',
-  'hmi:immersion-light:v1',
-  'hmi:calendar-selected',
-  'hmi:reminders-selected',
-  'hmi:shopping-config:v1',
-] as const;
+const SHARED_CONFIG_OUTBOX_KEY = 'hmi:shared-config-outbox:v1';
 
-export type SharedConfigKey = (typeof SHARED_CONFIG_KEYS)[number];
-type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-type FetchLike = typeof fetch;
+export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-const keys = new Set<string>(SHARED_CONFIG_KEYS);
+let activeStorage: StorageLike | null = null;
+let journal = '';
+let requestDrain: (() => void) | null = null;
+let acceptsSharedKey: ((key: string) => boolean) | null = null;
 
 function browserStorage(): StorageLike | null {
   try {
@@ -31,68 +15,96 @@ function browserStorage(): StorageLike | null {
   }
 }
 
-function persist(updates: Record<string, string | null>, fetcher: FetchLike = fetch): void {
-  void fetcher('/api/config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ updates }),
-  }).catch(() => {});
+function storageGet(storage: StorageLike, key: string): string | null {
+  try { return storage.getItem(key); } catch { return null; }
+}
+
+function storageSet(storage: StorageLike, key: string, value: string): void {
+  try { storage.setItem(key, value); } catch { /* In-memory-Journal bleibt aktiv. */ }
+}
+
+function storageRemove(storage: StorageLike, key: string): void {
+  try { storage.removeItem(key); } catch { /* In-memory-Journal bleibt aktiv. */ }
+}
+
+function activateStorage(storage: StorageLike): void {
+  if (activeStorage === storage) return;
+  activeStorage = storage;
+  journal = storageGet(storage, SHARED_CONFIG_OUTBOX_KEY) ?? '';
+  requestDrain = null;
+  acceptsSharedKey = null;
+}
+
+/** Öffnet das synchrone Journal mit geschlossener Netzwerk-Barriere. */
+export function beginSharedConfigOutbox(storage: StorageLike | null): void {
+  if (storage) activateStorage(storage);
+  requestDrain = null;
+}
+
+export function readSharedConfigOutbox(storage: StorageLike): string | null {
+  return activeStorage === storage ? journal : null;
+}
+
+export function connectSharedConfigOutbox(
+  storage: StorageLike,
+  drain: () => void,
+  acceptsKey: (key: string) => boolean,
+): void {
+  if (activeStorage === storage) {
+    requestDrain = drain;
+    acceptsSharedKey = acceptsKey;
+  }
+}
+
+/** Hängt vor jedem Netzwerkzugriff genau ein durable Event an. */
+export function recordSharedConfigUpdate(
+  storage: StorageLike,
+  key: string,
+  value: string | null,
+): void {
+  activateStorage(storage);
+  if (acceptsSharedKey && !acceptsSharedKey(key)) return;
+  journal += `${journal ? '\n' : ''}${JSON.stringify([key, value])}`;
+  storageSet(storage, SHARED_CONFIG_OUTBOX_KEY, journal);
+  requestDrain?.();
+}
+
+export function acknowledgeSharedConfigOutbox(
+  storage: StorageLike,
+  snapshot: string,
+): void {
+  if (activeStorage !== storage) return;
+  if (journal === snapshot) journal = '';
+  else if (journal.startsWith(`${snapshot}\n`)) journal = journal.slice(snapshot.length + 1);
+  else return;
+  if (journal) storageSet(storage, SHARED_CONFIG_OUTBOX_KEY, journal);
+  else storageRemove(storage, SHARED_CONFIG_OUTBOX_KEY);
+}
+
+export function clearSharedConfigOutbox(storage: StorageLike): void {
+  if (activeStorage !== storage) return;
+  journal = '';
+  storageRemove(storage, SHARED_CONFIG_OUTBOX_KEY);
 }
 
 /**
  * Synchroner Storage-Seam für bestehende App-Stores: lokal sofort wirksam,
- * zentral best-effort persistiert. bootstrapSharedConfig sorgt beim nächsten
- * Start dafür, dass der Serverstand vor allen App-Singletons geladen ist.
+ * mit durable Outbox vor jedem zentralen Best-effort-Write. Parsing, Recovery,
+ * GET und PUT liegen vollständig im post-paint geladenen Bootstrap-Modul.
  */
 export const sharedStorage: StorageLike = {
   getItem(key: string): string | null {
-    try { return browserStorage()?.getItem(key) ?? null; } catch { return null; }
+    const storage = browserStorage();
+    return storage ? storageGet(storage, key) : null;
   },
   setItem(key: string, value: string): void {
-    try { browserStorage()?.setItem(key, value); } catch { /* zentraler Write bleibt aktiv */ }
-    if (keys.has(key)) persist({ [key]: value });
+    const storage = browserStorage();
+    if (storage) storageSet(storage, key, value);
+    if (storage) recordSharedConfigUpdate(storage, key, value);
   },
   removeItem(key: string): void {
-    try { browserStorage()?.removeItem(key); } catch { /* zentraler Write bleibt aktiv */ }
-    if (keys.has(key)) persist({ [key]: null });
+    const storage = browserStorage();
+    if (storage) storageRemove(storage, key);
+    if (storage) recordSharedConfigUpdate(storage, key, null);
   },
 };
-
-/**
- * Lädt die zentrale Konfiguration vor dem Import der App. Fehlt ein Wert auf
- * dem Server, wird ein vorhandener Browserwert einmalig migriert. Existiert ein
- * Serverwert, überschreibt er den Browserstand eindeutig.
- */
-export async function bootstrapSharedConfig(
-  fetcher: FetchLike = fetch,
-  storage: StorageLike | null = browserStorage(),
-): Promise<void> {
-  if (!storage) return;
-  try {
-    const response = await fetcher('/api/config', { headers: { Accept: 'application/json' } });
-    if (!response.ok) return;
-    const payload = await response.json() as { values?: Record<string, unknown> };
-    const values = payload.values && typeof payload.values === 'object' ? payload.values : {};
-    const migration: Record<string, string> = {};
-
-    for (const key of SHARED_CONFIG_KEYS) {
-      const central = values[key];
-      if (typeof central === 'string') {
-        storage.setItem(key, central);
-      } else {
-        const local = storage.getItem(key);
-        if (local !== null) migration[key] = local;
-      }
-    }
-
-    if (Object.keys(migration).length) {
-      await fetcher('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates: migration }),
-      });
-    }
-  } catch {
-    // Server/Storage nicht erreichbar: bestehender lokaler Stand bleibt nutzbar.
-  }
-}

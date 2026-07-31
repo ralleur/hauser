@@ -93,7 +93,18 @@
      immer auf Sektionsebene, also ein Klick pro Ziel. ── -->
 <div class="settings" class:is-phone={phone} data-testid="settings">
   <aside class="settings-sidebar" class:is-phone-hidden={phone && phoneSectionOpen} aria-label="Einstellungs-Bereiche">
-    <h1 class="settings-title" bind:this={titleAnchor} tabindex="-1">System</h1>
+    <!-- Hauser-Lockup statt Text-Überschrift: Signet folgt via currentColor dem
+         Theme (dark: hell, light: dunkel), der Lichtpunkt bleibt gold. -->
+    <h1 class="settings-title settings-brand" bind:this={titleAnchor} tabindex="-1" aria-label="Hauser — System">
+      <svg class="settings-brand-mark" viewBox="0 0 512 512" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round">
+          <path d="M168 96 V416" />
+          <path d="M168 300 C168 222 344 222 344 300 V416" />
+        </g>
+        <circle cx="344" cy="140" r="44" fill="var(--color-accent-warm)" />
+      </svg>
+      <span class="settings-brand-word">hauser</span>
+    </h1>
 
     <div class="settings-search">
       <Icon name="i-magnify" cls="icon icon-sm" />

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import phoneEnergy from '../components/phone/PhoneEnergy.svelte?raw';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
+
 import type { EnergyView } from './energy.svelte.ts';
 import type { LoadBreakdown } from './energy-load.ts';
 import { projectPhoneEnergy } from './phone-energy.ts';
@@ -99,10 +100,12 @@ describe('phone energy projection', () => {
 
 describe('phone energy shell, source and accessibility boundaries', () => {
   it('mounts PhoneEnergy only at the canonical more/energy target and preserves sibling branches and fallback', () => {
-    expect(phoneShell).toMatch(/target\.area === 'more' && target\.subtarget === 'energy'[\s\S]*import\('\.\.\/components\/phone\/PhoneEnergy\.svelte'\)[\s\S]*<PhoneEnergy bind:titleAnchor \/>/);
+    expect(phoneShell).toContain("energy: () => import('../components/phone/PhoneEnergy.svelte')");
     expect(phoneShell).not.toMatch(/^\s*import PhoneEnergy/m);
-    expect(phoneShell).toMatch(/target\.subtarget === 'shopping'[\s\S]*<PhoneShopping/);
-    expect(phoneShell).toMatch(/target\.subtarget === 'reminders'[\s\S]*<PhoneReminders/);
+    expect(phoneShell).toContain("shopping: () => import('../components/phone/PhoneShopping.svelte')");
+    expect(phoneShell).toContain("reminders: () => import('../components/phone/PhoneReminders.svelte')");
+    expect(phoneShell).toMatch(/target\.area !== 'more'[\s\S]*return target\.subtarget/);
+    expect(phoneShell).toMatch(/activePhoneScreenId[\s\S]*<PhoneScreenComponent/);
     expect(phoneShell).toContain('m.phone_view_preparing()');
   });
 

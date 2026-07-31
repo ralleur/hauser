@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Hauser Signet</title>
+  <desc id="desc">Dunkles h als runder Strich, goldener Lichtpunkt über dem rechten Bein.</desc>
+  <g fill="none" stroke="#141920" stroke-width="64" stroke-linecap="round">
+    <path d="M168 96 V416"/>
+    <path d="M168 300 C168 222 344 222 344 300 V416"/>
+  </g>
+  <circle cx="344" cy="140" r="44" fill="#f5a81c"/>
+</svg>

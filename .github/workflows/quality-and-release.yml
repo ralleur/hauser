@@ -46,6 +46,9 @@ jobs:
       - name: Verify release metadata
         run: ./scripts/verify-release-metadata.sh
 
+      - name: Verify license boundary
+        run: ./scripts/verify-license-boundary.sh
+
       - name: Run tests
         working-directory: app
         run: npm test

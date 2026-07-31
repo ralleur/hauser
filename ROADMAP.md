@@ -10,6 +10,7 @@ Status vocabulary:
 |---|---|
 | **Live** | Running daily on the author's wall panel |
 | **Built** | Implemented and working, less thoroughly exercised |
+| **Next** | Prioritised for the next beta feature slice |
 | **Planned** | Intended, designed, not built |
 | **Maybe** | Idea with merit, no decision |
 | **Not planned** | Deliberately out of scope |
@@ -36,8 +37,10 @@ alpha was published; `v0.4.0-beta.1` is the first public release.
 | Optimistic UI with reconciliation and command queue | **Live** |
 | Home Assistant WebSocket integration, reconnect handling | **Live** |
 | Day/night theming driven by `sun.sun` | **Live** |
+| Five-state home appearance cycle: auto, UI-only light/dark, fixed day/evening | **Live** |
 | Device management in the UI — add, hide, assign to room, reorder | **Live** |
 | Phone shell alongside the tablet panel shell | **Live** |
+| OpenAI-assisted, HMI-style room image wizard | **Next** |
 | Swipe navigation between screens | **Planned** |
 | Drag-and-drop reordering of home tiles | **Planned** |
 | Dynamic tile heights and a combined tile | **Maybe** |
@@ -65,10 +68,61 @@ alpha was published; `v0.4.0-beta.1` is the first public release.
 | Item | Status |
 |---|---|
 | Calendar, notes, reminders, shopping list | **Built** |
-| Laundry notifications | **Built** |
+| Laundry notifications from preconfigured Home Assistant status helpers | **Built** |
+| Guided, portable Home Assistant laundry setup | **Next** |
 | Generic notification core beyond laundry | **Planned** |
 | Document access via Paperless-ngx, PIN protected | **Built** |
 | Aggregated daily events from multiple calendar sources | **Planned** |
+
+### Near-term beta priority: portable laundry notifications
+
+The current implementation displays deduplicated washer and dryer `running` and
+`done` notifications, but another household must still prepare compatible Home
+Assistant helpers and bind their entity IDs manually. The next beta feature slice
+will move that setup into **System → Notifications → Laundry**.
+
+Users will be able to select existing Home Assistant status entities. A guided
+Home Assistant blueprint path will follow for households that only have power
+sensors: choose the sensor, review thresholds and hold times, preview the HA
+objects to be created, then confirm explicitly. Cycle detection stays in Home
+Assistant so it keeps working while every Hauser screen is offline. Multi-device
+dismissal, quiet hours, browser push and additional notification channels remain
+later work.
+
+### Near-term beta priority: personal HMI-style room images
+
+Users with a configured OpenAI login or API key will be able to open a bounded
+wizard under **System → AI → AI functions**, upload a real room photo and turn it
+into a room background that matches Hauser's illustration style. Hauser will
+probe image-generation capability rather than assume that every OpenAI or Codex
+login includes it.
+
+The flow follows a clear before/after comparison: upload and crop, review the
+privacy and cost notice, generate variants, choose one, then assign it to an
+existing room. Assignment can also be changed later under **System → Home → Rooms
+& devices → Room → Room image**. The resulting day, night/lights-on and
+night/lights-off set is stored in the persistent user-asset volume and referenced
+by versioned household configuration; image updates never overwrite it.
+
+Credentials stay server-side. Source metadata is stripped, temporary uploads are
+deleted by default, room recognition remains a suggestion requiring confirmation,
+and the image model receives no Home Assistant, repository, terminal or deployment
+tools. This is intentionally separate from the maintainer's private code-modifying
+AI workflow.
+
+### Live beta polish: five-state home appearance cycle
+
+The Home appearance button rotates through five explicit states: **Auto** (the default, shown with
+the same A icon as Settings), **light interface with automatic backgrounds**,
+**dark interface with automatic backgrounds**, **light interface with the day
+background fixed**, and **dark interface with the evening background fixed**.
+The next tap returns to Auto.
+
+Interface and room-background policy are stored separately. Manual choices remain
+active until changed instead of silently expiring after 24 hours. The Home
+button and **Appearance** settings expose the same five-state source of truth;
+fixed-background states receive an additional non-colour indicator so the two
+light and two dark modes remain distinguishable.
 
 ---
 
@@ -129,6 +183,12 @@ configuration, not from the interface.
 
 - The clean-room pilot proves the technical setup contract, not yet usability by
   an external person or compatibility with a second real device topology.
+- Laundry notifications currently require manually prepared Home Assistant
+  status helpers and a manual entity binding; the guided portable setup above is
+  the next beta feature slice.
+- Personal room-image generation and assignment are not built yet; they are a
+  prioritised optional beta feature and require the user's own image-capable
+  OpenAI access.
 - The release automation builds `linux/amd64`, but an installation on an external
   amd64 host has not yet been reported.
 - Public installation reports and the first complete external contribution cycle

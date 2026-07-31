@@ -1,42 +1,44 @@
 /* ============================================
-   Day/Night-Automatik (ADR-018, docs/07 Screen 9) — folgt der realen
-   `sun.sun`-Entität: über dem Horizont → Light, darunter → Dark, jeweils mit
-   Crossfade (≤300 ms). Ein manueller Tap auf den Theme-Toggle setzt einen
-   24-h-Vorrang; danach fällt die Anzeige automatisch auf die sun.sun-Automatik
-   zurück. Portiert aus prototype (data-theme am <html>, theme-fade am <body>,
-   theme-color-Meta) — aber jetzt sensor-, nicht simulationsgetrieben.
+   B-01C: getrennte Interface- und Hero-Policy. Auto folgt `sun.sun`, die beiden
+   Interface-Modi fixieren nur die UI, die beiden kombinierten Modi zusätzlich
+   den Tag- beziehungsweise Abend-Hero. Manuelle Modi bleiben gerätelokal aktiv,
+   bis der Nutzer bewusst weiterrotiert oder Auto auswählt.
    ============================================ */
 
 import { appState, SUN_ENTITY } from './app.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import type { SunValue } from '../adapter/types.ts';
+import {
+  appearanceHeroPolicy,
+  appearanceTheme,
+  nextAppearanceMode,
+  resolveStoredAppearance,
+  type AppearanceMode,
+  type HeroBackgroundPolicy,
+  type Theme,
+} from './appearance-mode.ts';
 
-type Theme = 'dark' | 'light';
+const APPEARANCE_KEY = 'hmi:appearance-mode';
+const LEGACY_OVERRIDE_KEY = 'hmi:theme-override';
 
-const OVERRIDE_MS = 24 * 60 * 60 * 1000; // manueller Vorrang: 24 h (docs/07 Screen 9)
-const OVERRIDE_KEY = 'hmi:theme-override';
+const appearance = $state<{ mode: AppearanceMode }>({ mode: loadAppearanceMode() });
 
-/* Manueller Vorrang: `until` = Ablauf-Timestamp (0 = kein Override), `theme` =
-   die manuell gewählte Anzeige. Reaktiv, damit die sun-Automatik ihn liest. */
-const override = $state<{ until: number; theme: Theme }>(loadOverride());
-
-let overrideTimer: ReturnType<typeof setTimeout> | null = null;
-
-function loadOverride(): { until: number; theme: Theme } {
+function loadAppearanceMode(): AppearanceMode {
+  if (typeof localStorage === 'undefined') return 'auto';
   try {
-    const raw = localStorage.getItem(OVERRIDE_KEY);
-    if (raw) {
-      const o = JSON.parse(raw) as { until: number; theme: Theme };
-      if (typeof o.until === 'number' && o.until > Date.now()) return o;
-    }
-  } catch { /* ignore */ }
-  return { until: 0, theme: 'dark' };
+    return resolveStoredAppearance(
+      localStorage.getItem(APPEARANCE_KEY),
+      localStorage.getItem(LEGACY_OVERRIDE_KEY),
+    );
+  } catch { return 'auto'; }
 }
 
-function saveOverride(): void {
+function saveAppearanceMode(): void {
+  if (typeof localStorage === 'undefined') return;
   try {
-    if (override.until > Date.now()) localStorage.setItem(OVERRIDE_KEY, JSON.stringify(override));
-    else localStorage.removeItem(OVERRIDE_KEY);
+    if (appearance.mode === 'auto') localStorage.removeItem(APPEARANCE_KEY);
+    else localStorage.setItem(APPEARANCE_KEY, appearance.mode);
+    localStorage.removeItem(LEGACY_OVERRIDE_KEY);
   } catch { /* best-effort */ }
 }
 
@@ -57,79 +59,38 @@ function setTheme(theme: Theme, animate: boolean): void {
   applyThemeDom(theme, animate);
 }
 
-/* sun.sun → Theme, sofern kein Override aktiv ist. Prüft zuerst den Ablauf. */
-function syncFromSun(animate: boolean): void {
-  if (override.until && Date.now() >= override.until) clearOverride();
-  if (override.until) return; // manueller Vorrang aktiv
-  if (!SUN_ENTITY) return;
-  const sun = runtime.merged(SUN_ENTITY) as SunValue | undefined;
-  if (!sun) return; // noch kein sun.sun-State (Cache/Seed füllt das initial)
-  setTheme(sun.day ? 'light' : 'dark', animate);
+function syncInterfaceTheme(animate: boolean): void {
+  const sun = SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined;
+  const heroPolicy = appearanceHeroPolicy(appearance.mode);
+  appState.heroSun = heroPolicy === 'auto' ? sun : { day: heroPolicy === 'day' };
+  setTheme(appearanceTheme(appearance.mode, sun?.day, appState.theme), animate);
 }
 
-function clearOverride(): void {
-  override.until = 0;
-  saveOverride();
-  if (overrideTimer) { clearTimeout(overrideTimer); overrideTimer = null; }
+export function cycleAppearanceMode(): void {
+  setAppearanceMode(nextAppearanceMode(appearance.mode));
 }
 
-/* Timer auf den exakten Override-Ablauf — sun.sun feuert nur zu Sonnenauf-/
-   -untergang, deshalb kann der Effekt allein den Ablauf verpassen. */
-function armOverrideExpiry(): void {
-  if (overrideTimer) clearTimeout(overrideTimer);
-  const ms = override.until - Date.now();
-  if (ms <= 0) return;
-  overrideTimer = setTimeout(() => { clearOverride(); syncFromSun(true); }, ms);
+export function setAppearanceMode(mode: AppearanceMode): void {
+  appearance.mode = mode;
+  saveAppearanceMode();
+  syncInterfaceTheme(true);
 }
 
-/* Manueller Umschalter (StatusBar): flippt die Anzeige und hält sie 24 h gegen
-   die Automatik. Erneuter Tap verlängert den Vorrang auf frische 24 h. */
-export function toggleTheme(): void {
-  setThemeMode(appState.theme === 'dark' ? 'light' : 'dark');
+export function appearanceMode(): AppearanceMode {
+  return appearance.mode;
 }
 
-/* Explizite Modus-Wahl (Einstellungen): 'auto' hebt den manuellen Vorrang auf
-   und folgt sofort wieder sun.sun; 'light'/'dark' setzen den 24-h-Vorrang. */
-export function setThemeMode(mode: 'auto' | Theme): void {
-  if (mode === 'auto') {
-    clearOverride();
-    syncFromSun(true);
-    return;
-  }
-  setTheme(mode, true);
-  override.until = Date.now() + OVERRIDE_MS;
-  override.theme = mode;
-  saveOverride();
-  armOverrideExpiry();
-}
-
-/* Aktueller Modus für die Einstellungs-UI ('auto', solange kein Vorrang läuft). */
-export function themeMode(): 'auto' | Theme {
-  return override.until > Date.now() ? override.theme : 'auto';
-}
-
-/* Ablauf-Zeitpunkt des manuellen Vorrangs (0 = keiner) — für den Hinweistext. */
-export function themeOverrideUntil(): number {
-  return override.until;
-}
-
-/* true, solange der manuelle Vorrang läuft (für Tooltip/aria in der UI). */
-export function themeOverrideActive(): boolean {
-  return override.until > Date.now();
+export function heroBackgroundPolicy(): HeroBackgroundPolicy {
+  return appearanceHeroPolicy(appearance.mode);
 }
 
 /* Einmalig aus App.svelte: initialer DOM-Sync + reaktive sun.sun-Kopplung.
    `$effect.root` hält den Effekt über die App-Lebensdauer (kein Cleanup nötig). */
 export function initTheme(): void {
-  // Startanzeige: aktiver Override gewinnt, sonst der zuletzt bekannte sun-State.
-  if (themeOverrideActive()) {
-    setTheme(override.theme, false);
-    armOverrideExpiry();
-  } else {
-    clearOverride();
-    setTheme(appState.theme, false);
-  }
+  // Schreibt eine mögliche aktive Altwertmigration und entfernt den Legacy-Key.
+  saveAppearanceMode();
+  syncInterfaceTheme(false);
   $effect.root(() => {
-    $effect(() => { syncFromSun(true); });
+    $effect(() => { syncInterfaceTheme(true); });
   });
 }

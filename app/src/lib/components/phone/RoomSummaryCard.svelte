@@ -1,28 +1,26 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
-  import { runtime } from '../../adapter/runtime.svelte.ts';
-  import type { SunValue } from '../../adapter/types.ts';
-  import { appState, SUN_ENTITY } from '../../state/app.svelte.ts';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
-  import { accessibleRoomSummary, type PhoneRoomSummary } from '../../state/phone-home.ts';
-  import { heroAssetUrl, normalizeHeroRoom } from '../room-hero-assets.ts';
+  import {
+    accessibleRoomSummary,
+    phoneHeroUrl,
+    type PhoneHeroVariant,
+    type PhoneRoomSummary,
+  } from '../../state/phone-home.ts';
 
   let {
     summary,
     active = false,
+    heroVariant,
     onopen,
   }: {
     summary: PhoneRoomSummary;
     active?: boolean;
+    heroVariant: PhoneHeroVariant;
     onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
   } = $props();
 
-  // Kachelhintergrund = dasselbe Hero-Motiv wie die Tablet-Bühne (Tag/Nacht
-  // folgt sun.sun, via room-hero-assets). Räume ohne Hero-Asset bleiben Flächenfarbe.
-  const sun = $derived(SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined);
-  const heroUrl = $derived(normalizeHeroRoom(summary.id) === summary.id
-    ? heroAssetUrl({ baseUrl: import.meta.env.BASE_URL, roomId: summary.id, sun, fallbackTheme: appState.theme })
-    : null);
+  const heroUrl = $derived(phoneHeroUrl(import.meta.env.BASE_URL, summary.id, heroVariant));
 </script>
 
 <button

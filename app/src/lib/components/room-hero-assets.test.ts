@@ -26,7 +26,7 @@ describe('room hero asset selection', () => {
     })).toBe('/hero/wohnzimmer-light.avif');
   });
 
-  it('does not let a manual UI theme override change the sun-driven hero variant', () => {
+  it('does not let an interface-only mode change the sun-driven hero variant', () => {
     expect(heroAssetUrl({ baseUrl: '/app/', roomId: 'bad', sun: { day: false }, fallbackTheme: 'light' }))
       .toBe('/app/hero/bad-dark.avif');
     expect(heroAssetUrl({ baseUrl: '/app/', roomId: 'bad', sun: { day: true }, fallbackTheme: 'dark' }))

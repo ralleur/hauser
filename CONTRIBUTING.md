@@ -128,8 +128,21 @@ in [`SECURITY.md`](SECURITY.md).
 
 ## Licensing and conduct
 
-There is no CLA. By opening a pull request, you agree that code contributions are
-licensed under the [MIT license](LICENSE) and contributed images under
-[ASSETS-LICENSE.md](ASSETS-LICENSE.md).
+There is no CLA. By opening a pull request, you agree that contributions to
+source code, tests, scripts, configuration examples, design tokens and technical
+documentation are licensed under the [MIT license](LICENSE). Original visual
+assets added to the paths listed in [ASSETS-LICENSE.md](ASSETS-LICENSE.md) are
+contributed under CC BY 4.0.
+
+The Hauser name and official branding are governed by
+[TRADEMARKS.md](TRADEMARKS.md). Do not add or replace logos, app icons, brand
+marks or the favicon without prior maintainer agreement. New third-party assets
+must permit redistribution and include their exact license and attribution in
+`NOTICE` or alongside the asset.
+
+CI runs `./scripts/verify-license-boundary.sh`. New visual asset paths fail this
+check until they are deliberately classified as CC BY artwork, reserved project
+branding or third-party material. This prevents newly added files from silently
+falling into the wrong license class.
 
 Be decent to people. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

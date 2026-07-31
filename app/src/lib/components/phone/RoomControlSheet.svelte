@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
   import type { Room } from '../../state/app.svelte.ts';
+  import { closeDeviceDetail, deviceDetail } from '../../state/overlay.svelte.ts';
+  import { closeSceneEdit, sceneEdit } from '../../state/scene-manager.svelte.ts';
+  import { createRetryableLazyLoader } from '../../state/lazy-loader.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
 
   let {
@@ -16,6 +19,25 @@
 
   let dialog: HTMLElement;
   let title: HTMLHeadingElement;
+  type NestedLayerId = 'device' | 'scene';
+  const nestedLayerLoader = createRetryableLazyLoader({
+    device: () => import('../DeviceDetail.svelte'),
+    scene: () => import('../SceneEdit.svelte'),
+  });
+  let nestedLayerRetries = $state<Record<NestedLayerId, number>>({ device: 0, scene: 0 });
+
+  function loadNestedLayer(id: NestedLayerId, _retryVersion: number) {
+    return nestedLayerLoader.load(id);
+  }
+
+  function retryNestedLayer(id: NestedLayerId): void {
+    nestedLayerRetries[id] += 1;
+  }
+
+  function closeNestedLayer(id: NestedLayerId): void {
+    if (id === 'device') closeDeviceDetail(true);
+    else closeSceneEdit(true);
+  }
 
   function prefersReducedMotion(): boolean {
     try {
@@ -89,7 +111,29 @@
   }
 
   onMount(() => title.focus({ preventScroll: true }));
+  onDestroy(() => {
+    // Diese Overlays können nur aus den lazy geladenen Raum-Controls geöffnet
+    // werden. Ihre Zustände bleiben deshalb in derselben optionalen Closure und
+    // werden beim Schließen des Room-Sheets gemeinsam aufgeräumt.
+    closeDeviceDetail(true);
+    closeSceneEdit(true);
+  });
 </script>
+
+{#snippet nestedLayerLoadState(id: NestedLayerId, failed: boolean)}
+  <div class="light-detail is-open">
+    <div class="overlay-scrim" role="presentation"></div>
+    <div class="light-detail-panel overlay-panel" role="dialog" aria-modal="true" aria-label="Bereich laden">
+      {#if failed}
+        <p role="alert">Bereich konnte nicht geladen werden.</p>
+        <button class="secondary-btn pressable" type="button" onclick={() => retryNestedLayer(id)}>Erneut versuchen</button>
+        <button class="secondary-btn pressable" type="button" onclick={() => closeNestedLayer(id)}>Schließen</button>
+      {:else}
+        <p role="status" aria-live="polite">Bereich wird geladen …</p>
+      {/if}
+    </div>
+  </div>
+{/snippet}
 
 <div class="room-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
   <div class="room-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="room-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
@@ -111,3 +155,24 @@
     </div>
   </div>
 </div>
+
+{#if deviceDetail.mode !== 'hidden'}
+  {#await loadNestedLayer('device', nestedLayerRetries.device)}
+    {@render nestedLayerLoadState('device', false)}
+  {:then loaded}
+    {@const DeviceDetail = loaded.default}
+    <DeviceDetail />
+  {:catch}
+    {@render nestedLayerLoadState('device', true)}
+  {/await}
+{/if}
+{#if sceneEdit.mode !== 'hidden'}
+  {#await loadNestedLayer('scene', nestedLayerRetries.scene)}
+    {@render nestedLayerLoadState('scene', false)}
+  {:then loaded}
+    {@const SceneEdit = loaded.default}
+    <SceneEdit />
+  {:catch}
+    {@render nestedLayerLoadState('scene', true)}
+  {/await}
+{/if}

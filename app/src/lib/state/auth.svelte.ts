@@ -7,8 +7,9 @@
 
 import { backend } from '../adapter/runtime.svelte.ts';
 import { HaBackend } from '../adapter/ha-backend.ts';
+import type { AuthRequiredReason } from '../adapter/types.ts';
 
-const ha = backend instanceof HaBackend ? backend : null;
+let ha = backend instanceof HaBackend ? backend : null;
 
 const state = $state({
   usingHa: ha !== null,
@@ -16,11 +17,27 @@ const state = $state({
   invalid: false,
 });
 
+function onAuthError(reason: AuthRequiredReason): void {
+  state.needsToken = true;
+  state.invalid = reason === 'invalid-auth';
+}
+
 // Auth-Fehler (Token abgelaufen/ungültig) → Login erneut zeigen (docs/04).
-ha?.onAuthError(() => { state.needsToken = true; state.invalid = true; });
+ha?.onAuthError(onAuthError);
 
 export function authState() {
   return state;
+}
+
+/** Nach dem zentralen Config-Sync erneut aus dem Backend-Storage lesen. So kann
+ * die Shell sofort rendern, ohne dass ein Millisekunden später geladener Token
+ * sie dauerhaft im vorläufigen Login-Zustand festhält. */
+export function syncAuthState(): void {
+  ha = backend instanceof HaBackend ? backend : null;
+  ha?.onAuthError(onAuthError);
+  state.usingHa = ha !== null;
+  state.needsToken = ha ? !ha.hasToken() : false;
+  if (!state.needsToken) state.invalid = false;
 }
 
 /* Einstellungen → „Zugangstoken erneuern": zeigt den Login-Screen erneut.

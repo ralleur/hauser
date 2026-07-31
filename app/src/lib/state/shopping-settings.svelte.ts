@@ -13,6 +13,12 @@ import type { ShoppingSection } from './shopping.ts';
 
 export const shoppingConfig = $state(loadShoppingConfig());
 
+export function rehydrateShoppingConfig(): void {
+  const loaded = loadShoppingConfig();
+  shoppingConfig.version = loaded.version;
+  shoppingConfig.stores = loaded.stores;
+}
+
 export const shoppingSort = $state({
   active: false,
   loading: false,

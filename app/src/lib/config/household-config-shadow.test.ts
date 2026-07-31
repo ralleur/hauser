@@ -14,7 +14,11 @@ import {
   legacyHouseholdRuntimeModel,
   projectLegacyHouseholdConfig,
 } from './legacy-household-config.ts';
-import { bootstrapHouseholdConfigShadow } from './household-config-shadow.ts';
+import {
+  bootstrapHouseholdConfigShadow,
+  HOUSEHOLD_CONFIG_CACHE_KEY,
+  readCachedHouseholdConfigCandidate,
+} from './household-config-shadow.ts';
 
 function compileValid(input: unknown): HouseholdRuntimeModel {
   const parsed = parseHouseholdConfig(input);
@@ -28,6 +32,15 @@ function jsonResponse(body: string, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => { values.set(key, value); },
+    removeItem: (key: string) => { values.delete(key); },
+  };
 }
 
 function configuredIds(model: HouseholdRuntimeModel): Set<string> {
@@ -122,6 +135,28 @@ describe('household config production parity', () => {
 });
 
 describe('household config shadow bootstrap', () => {
+  it('persists and synchronously restores the last validated config without a network request', async () => {
+    const storage = memoryStorage();
+    await bootstrapHouseholdConfigShadow({
+      fetcher: async () => jsonResponse(JSON.stringify(currentHousehold)),
+      legacyModel: legacyHouseholdRuntimeModel,
+      storage,
+    });
+
+    const cached = readCachedHouseholdConfigCandidate({
+      storage,
+      legacyModel: legacyHouseholdRuntimeModel,
+    });
+    expect(cached).toMatchObject({ mode: 'shadow', shadow: { status: 'match' } });
+    expect(cached?.model?.subscriptionEntityIds).toEqual(legacyHouseholdRuntimeModel.subscriptionEntityIds);
+  });
+
+  it('drops a malformed local config snapshot instead of starting from it', () => {
+    const storage = memoryStorage({ [HOUSEHOLD_CONFIG_CACHE_KEY]: '{not-json' });
+    expect(readCachedHouseholdConfigCandidate({ storage })).toBeNull();
+    expect(storage.getItem(HOUSEHOLD_CONFIG_CACHE_KEY)).toBeNull();
+  });
+
   it('returns match without changing the injected legacy model', async () => {
     const before = JSON.stringify(legacyHouseholdRuntimeModel);
     const result = await bootstrapHouseholdConfigShadow({

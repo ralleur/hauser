@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import phoneCalendar from '../components/phone/PhoneCalendar.svelte?raw';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
+
 import type { CalendarEvent } from './calendar.ts';
 import { projectPhoneAgenda } from './phone-calendar.ts';
 
@@ -234,7 +235,9 @@ describe('phone calendar shell and accessibility boundaries', () => {
   });
 
   it('mounts the agenda only for the canonical calendar target and preserves fallback targets', () => {
-    expect(phoneShell).toMatch(/target\.area === 'calendar'[\s\S]*import\('\.\.\/components\/phone\/PhoneCalendar\.svelte'\)[\s\S]*<PhoneCalendar/);
+    expect(phoneShell).toContain("calendar: () => import('../components/phone/PhoneCalendar.svelte')");
+    expect(phoneShell).toMatch(/target\.area === 'calendar'[\s\S]*return 'calendar'/);
+    expect(phoneShell).toMatch(/activePhoneScreenId[\s\S]*<PhoneScreenComponent/);
     expect(phoneShell).not.toMatch(/^\s*import PhoneCalendar/m);
     expect(phoneShell).toMatch(/<PhoneHomeFeed/);
     expect(phoneShell).toMatch(/m\.phone_view_preparing\(\)/);

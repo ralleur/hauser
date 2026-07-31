@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EMPTY_IMMERSION_LIGHT_CONFIG,
   IMMERSION_LIGHT_CONFIG_KEY,
@@ -6,6 +6,9 @@ import {
   parseImmersionLightConfig,
   saveImmersionLightConfig,
 } from './immersion-light.ts';
+import { immersionLight, rehydrateImmersionLight } from './immersion-light.svelte.ts';
+
+afterEach(() => vi.unstubAllGlobals());
 
 class MemoryStorage {
   data = new Map<string, string>();
@@ -14,6 +17,27 @@ class MemoryStorage {
 }
 
 describe('immersion light config', () => {
+  it('rehydriert die vor Bootstrap erzeugte Immersion-Konfiguration aus dem neuen Storage-Stand', () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    const oldConfig = {
+      version: 1 as const,
+      rooms: { kueche: { 'light.old': { x: 0.2, y: 0.3, radius: 0.1 } } },
+    };
+    const centralConfig = {
+      version: 1 as const,
+      rooms: { wohnzimmer: { 'light.central': { x: 0.7, y: 0.4, radius: 0.2 } } },
+    };
+    storage.setItem(IMMERSION_LIGHT_CONFIG_KEY, JSON.stringify(oldConfig));
+    rehydrateImmersionLight();
+    expect(immersionLight.config).toEqual(oldConfig);
+
+    storage.setItem(IMMERSION_LIGHT_CONFIG_KEY, JSON.stringify(centralConfig));
+    rehydrateImmersionLight();
+
+    expect(immersionLight.config).toEqual(centralConfig);
+  });
+
   it('round-trips valid room placements', () => {
     const storage = new MemoryStorage();
     const config = {

@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
+
 import bottomNav from '../components/phone/PhoneBottomNav.svelte?raw';
 import moreSheet from '../components/phone/MoreSheet.svelte?raw';
 import phoneNavIcon from '../components/phone/PhoneNavIcon.svelte?raw';
@@ -524,7 +525,7 @@ describe('phone layer focus helpers', () => {
 describe('phone source and accessibility boundaries', () => {
   it('renders the navigation and sheet without forbidden feature or panel imports', () => {
     expect(phoneShell).toMatch(/<PhoneBottomNav/);
-    expect(phoneShell).toMatch(/<MoreSheet/);
+    expect(phoneShell).toMatch(/<MoreSheetComponent/);
     expect(phoneShell).toMatch(/shellLifecycle\.register/);
     expect(phoneShell).not.toMatch(/hero-layout\.css/);
     expect(mainEntry).toMatch(/import '\.\/styles\/climate-controls\.css'/);
@@ -546,6 +547,17 @@ describe('phone source and accessibility boundaries', () => {
         expect(source).not.toContain(forbidden);
       }
     }
+  });
+
+  it('shows retry recovery for feature CSS and every productive phone await seam', () => {
+    expect(phoneShell).toMatch(/featureStylesFailed/);
+    expect(phoneShell).toMatch(/retryFeatureStyles/);
+    expect(phoneShell).toContain("styles: () => import('../../styles/app.css')");
+    expect(phoneShell).toMatch(/phoneScreenFailed[\s\S]*retryPhoneScreen/);
+    expect(phoneShell).toMatch(/createLatestPhoneLoader\(PHONE_SCREEN_LOADERS\)/);
+    expect(phoneShell).not.toMatch(/from ['"]\.\.\/state\/lazy-loader\.ts['"]/);
+    expect(phoneShell).toMatch(/loadPhoneFeature\('room-edit',[\s\S]*\{:catch\}[\s\S]*closeRoomEdit/);
+    expect((phoneShell.match(/\{:catch\}/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders three ordered targets plus fixed More and puts every remaining target in the sheet', () => {

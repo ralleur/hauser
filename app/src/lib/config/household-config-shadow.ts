@@ -9,6 +9,7 @@ import {
 import { legacyHouseholdRuntimeModel } from './legacy-household-config.ts';
 
 export type HouseholdConfigMode = 'shadow' | 'active';
+export type HouseholdConfigCacheDisposition = 'retain' | 'replace' | 'clear';
 export type HouseholdConfigShadowResult =
   | { status: 'match'; differences: [] }
   | { status: 'mismatch'; differences: RuntimeDifference[] }
@@ -25,17 +26,98 @@ export interface HouseholdConfigCandidate {
   mode: HouseholdConfigMode | 'unknown';
   shadow: HouseholdConfigShadowResult;
   model?: HouseholdRuntimeModel;
+  /** Effective persisted transition. `replace`/`clear` are returned only when
+   * the storage mutation succeeded; unavailable storage degrades to `retain`. */
+  cacheDisposition: HouseholdConfigCacheDisposition;
 }
 
 export interface HouseholdConfigShadowDependencies {
   fetcher?: typeof fetch;
   legacyModel?: HouseholdRuntimeModel;
+  storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   scheduleTimeout?: (callback: () => void, timeoutMs: number) => () => void;
   timeoutMs?: number;
 }
 
 export const HOUSEHOLD_CONFIG_SHADOW_TIMEOUT_MS = 1_000;
+export const HOUSEHOLD_CONFIG_CACHE_KEY = 'hmi:household-config-cache:v1';
 const TIMED_OUT = Symbol('household-config-shadow-timeout');
+
+type HouseholdConfigStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+function browserStorage(): HouseholdConfigStorage | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function writeHouseholdConfigCache(
+  storage: HouseholdConfigStorage | null,
+  mode: HouseholdConfigMode,
+  config: unknown,
+): boolean {
+  if (!storage) return false;
+  try {
+    storage.setItem(HOUSEHOLD_CONFIG_CACHE_KEY, JSON.stringify({
+      version: 1,
+      mode,
+      config,
+      savedAt: Date.now(),
+    }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clearHouseholdConfigCache(
+  storage: HouseholdConfigStorage | null = browserStorage(),
+): boolean {
+  if (!storage) return false;
+  try {
+    storage.removeItem(HOUSEHOLD_CONFIG_CACHE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Liest ausschließlich einen zuvor validierten Snapshot. Beschädigte oder
+ * veraltete Cache-Formate werden verworfen, nie als Runtime-Modell übernommen. */
+export function readCachedHouseholdConfigCandidate(
+  {
+    storage = browserStorage(),
+    legacyModel = legacyHouseholdRuntimeModel,
+  }: Pick<HouseholdConfigShadowDependencies, 'storage' | 'legacyModel'> = {},
+): HouseholdConfigCandidate | null {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(HOUSEHOLD_CONFIG_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as Record<string, unknown>;
+    const mode = normalizeHouseholdConfigModeHeader(
+      typeof cached.mode === 'string' ? cached.mode : null,
+    );
+    if (cached.version !== 1 || !mode) throw new Error('unsupported cache');
+    const parsed = parseHouseholdConfig(cached.config);
+    if (!parsed.ok) throw new Error('invalid cached config');
+    const model = compileHouseholdConfig(parsed.value);
+    const comparison = compareRuntimeModels(legacyModel, model);
+    return {
+      mode,
+      model,
+      cacheDisposition: 'retain',
+      shadow: comparison.equal
+        ? { status: 'match', differences: [] }
+        : { status: 'mismatch', differences: comparison.differences },
+    };
+  } catch {
+    try { storage.removeItem(HOUSEHOLD_CONFIG_CACHE_KEY); } catch { /* ignore */ }
+    return null;
+  }
+}
 
 function defaultScheduleTimeout(callback: () => void, timeoutMs: number): () => void {
   const handle = setTimeout(callback, timeoutMs);
@@ -47,9 +129,13 @@ export function normalizeHouseholdConfigModeHeader(value: string | null): Househ
   return normalized === 'active' || normalized === 'shadow' ? normalized : null;
 }
 
-function modeUnavailable(message: string): HouseholdConfigCandidate {
+function modeUnavailable(
+  message: string,
+  cacheDisposition: Extract<HouseholdConfigCacheDisposition, 'retain' | 'clear'>,
+): HouseholdConfigCandidate {
   return {
     mode: 'unknown',
+    cacheDisposition,
     shadow: {
       status: 'unavailable',
       code: 'HOUSEHOLD_CONFIG_MODE_UNAVAILABLE',
@@ -93,6 +179,7 @@ async function loadHouseholdConfigCandidateInternal(
   {
     fetcher = fetch,
     legacyModel = legacyHouseholdRuntimeModel,
+    storage = browserStorage(),
     scheduleTimeout = defaultScheduleTimeout,
     timeoutMs = HOUSEHOLD_CONFIG_SHADOW_TIMEOUT_MS,
   }: HouseholdConfigShadowDependencies = {},
@@ -120,15 +207,27 @@ async function loadHouseholdConfigCandidateInternal(
         cache: 'no-store',
         signal: modeController.signal,
       }), modeTimeout]);
-      if (fetchedMode === TIMED_OUT) return modeUnavailable('Household config mode request timed out.');
-      if (!fetchedMode.ok) return modeUnavailable(`Household config mode request failed with HTTP ${fetchedMode.status}.`);
+      if (fetchedMode === TIMED_OUT) {
+        return modeUnavailable('Household config mode request timed out.', 'retain');
+      }
+      if (!fetchedMode.ok) {
+        return modeUnavailable(
+          `Household config mode request failed with HTTP ${fetchedMode.status}.`,
+          'clear',
+        );
+      }
       const resolvedMode = normalizeHouseholdConfigModeHeader(
         fetchedMode.headers.get('x-hmi-household-config-mode'),
       );
-      if (!resolvedMode) return modeUnavailable('Household config mode response was missing or invalid.');
+      if (!resolvedMode) {
+        return modeUnavailable('Household config mode response was missing or invalid.', 'clear');
+      }
       mode = resolvedMode;
     } catch (error) {
-      return modeUnavailable(error instanceof Error ? error.message : 'Household config mode request failed.');
+      return modeUnavailable(
+        error instanceof Error ? error.message : 'Household config mode request failed.',
+        'retain',
+      );
     } finally {
       cancelModeTimeout();
     }
@@ -152,13 +251,24 @@ async function loadHouseholdConfigCandidateInternal(
       signal: controller.signal,
     }), timeout]);
     if (fetched === TIMED_OUT) {
-      return { mode, shadow: timeoutResult() };
+      return {
+        mode,
+        cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
+        shadow: timeoutResult(),
+      };
     }
     response = fetched;
   } catch (error) {
-    if (controller.signal.aborted) return { mode, shadow: timeoutResult() };
+    if (controller.signal.aborted) {
+      return {
+        mode,
+        cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
+        shadow: timeoutResult(),
+      };
+    }
     return {
       mode,
+      cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
       shadow: {
         status: 'unavailable',
         message: error instanceof Error ? error.message : 'Household config request failed.',
@@ -171,19 +281,30 @@ async function loadHouseholdConfigCandidateInternal(
   );
   if (!confirmedMode && responseMode !== mode) {
     cancelTimeout();
-    return modeUnavailable('Household config mode changed or was missing during bootstrap.');
+    return modeUnavailable('Household config mode changed or was missing during bootstrap.', 'clear');
   }
   let text: string;
   try {
     const responseText = await Promise.race([response.text(), timeout]);
     if (responseText === TIMED_OUT) {
-      return { mode, shadow: timeoutResult(response.status) };
+      return {
+        mode,
+        cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
+        shadow: timeoutResult(response.status),
+      };
     }
     text = responseText;
   } catch (error) {
-    if (controller.signal.aborted) return { mode, shadow: timeoutResult(response.status) };
+    if (controller.signal.aborted) {
+      return {
+        mode,
+        cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
+        shadow: timeoutResult(response.status),
+      };
+    }
     return {
       mode,
+      cacheDisposition: mode === 'shadow' ? 'clear' : 'retain',
       shadow: {
         status: 'unavailable',
         httpStatus: response.status,
@@ -198,7 +319,11 @@ async function loadHouseholdConfigCandidateInternal(
     if (!response.ok) {
       let payload: unknown = null;
       try { payload = JSON.parse(text) as unknown; } catch { /* Error body may be plain text. */ }
-      return { mode, shadow: unavailableFromResponse(response.status, payload) };
+      return {
+        mode,
+        cacheDisposition: 'clear',
+        shadow: unavailableFromResponse(response.status, payload),
+      };
     }
 
     let input: unknown;
@@ -207,6 +332,7 @@ async function loadHouseholdConfigCandidateInternal(
     } catch (error) {
       return {
         mode,
+        cacheDisposition: 'clear',
         shadow: {
           status: 'invalid',
           kind: 'json',
@@ -216,13 +342,23 @@ async function loadHouseholdConfigCandidateInternal(
     }
 
     const parsed = parseHouseholdConfig(input);
-    if (!parsed.ok) return { mode, shadow: { status: 'invalid', kind: 'schema', issues: parsed.issues } };
+    if (!parsed.ok) {
+      return {
+        mode,
+        cacheDisposition: 'clear',
+        shadow: { status: 'invalid', kind: 'schema', issues: parsed.issues },
+      };
+    }
 
     const model = compileHouseholdConfig(parsed.value);
     const comparison = compareRuntimeModels(legacyModel, model);
+    const cacheDisposition = writeHouseholdConfigCache(storage, mode, parsed.value)
+      ? 'replace'
+      : 'retain';
     return {
       mode,
       model,
+      cacheDisposition,
       shadow: comparison.equal
         ? { status: 'match', differences: [] }
         : { status: 'mismatch', differences: comparison.differences },
@@ -230,6 +366,7 @@ async function loadHouseholdConfigCandidateInternal(
   } catch {
     return {
       mode,
+      cacheDisposition: 'clear',
       shadow: {
         status: 'unavailable',
         code: 'HOUSEHOLD_CONFIG_SHADOW_UNEXPECTED',
@@ -244,13 +381,20 @@ async function loadHouseholdConfigCandidateInternal(
 export async function loadHouseholdConfigCandidate(
   dependencies: HouseholdConfigShadowDependencies = {},
 ): Promise<HouseholdConfigCandidate> {
-  return loadHouseholdConfigCandidateInternal(dependencies);
+  const candidate = await loadHouseholdConfigCandidateInternal(dependencies);
+  if (candidate.cacheDisposition === 'clear'
+    && !clearHouseholdConfigCache(dependencies.storage)) {
+    return { ...candidate, cacheDisposition: 'retain' };
+  }
+  return candidate;
 }
 
 export async function bootstrapHouseholdConfigShadow(
   dependencies: HouseholdConfigShadowDependencies = {},
 ): Promise<HouseholdConfigShadowResult> {
-  return (await loadHouseholdConfigCandidateInternal(dependencies, 'shadow')).shadow;
+  const candidate = await loadHouseholdConfigCandidateInternal(dependencies, 'shadow');
+  if (candidate.cacheDisposition === 'clear') clearHouseholdConfigCache(dependencies.storage);
+  return candidate.shadow;
 }
 
 export function publishHouseholdConfigShadowResult(result: HouseholdConfigShadowResult): void {

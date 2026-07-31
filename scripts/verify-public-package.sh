@@ -27,6 +27,7 @@ printf 'candidate_revision=%s\ncandidate_version=%s\nworking_tree_dirty=%s\n' \
   "$revision" "$version" "$dirty"
 
 ./scripts/verify-release-metadata.sh
+./scripts/verify-license-boundary.sh
 git diff --check
 
 python3 - <<'PY'
@@ -52,7 +53,14 @@ for path in (Path('Dockerfile'), Path('compose.yaml'), Path('compose.dev.yaml'))
     if 'HMI_AI_CUSTOMIZING_ENABLED' not in path.read_text():
         raise SystemExit(f'{path} does not pin the public AI-customizing boundary.')
 
-markdown = [Path('README.md'), Path('ROADMAP.md'), Path('CONTRIBUTING.md'), Path('SECURITY.md')]
+markdown = [
+    Path('README.md'),
+    Path('ROADMAP.md'),
+    Path('CONTRIBUTING.md'),
+    Path('SECURITY.md'),
+    Path('ASSETS-LICENSE.md'),
+    Path('TRADEMARKS.md'),
+]
 markdown.extend(sorted(Path('docs').glob('*.md')))
 missing = []
 for path in markdown:

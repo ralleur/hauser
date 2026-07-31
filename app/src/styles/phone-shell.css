@@ -15,6 +15,27 @@
   background: var(--color-surface-0);
 }
 
+/* Phone Home owns its small synchronous control reset and icon mask. The full
+   panel/feature stylesheet is loaded only after navigation or an overlay opens. */
+.phone-shell :where(button) {
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.phone-home-feed .icon { flex: none; }
+.phone-home-feed .icon-md { width: var(--icon-md); height: var(--icon-md); }
+.phone-home-feed .tabler-icon-mask {
+  display: inline-block;
+  background: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+.phone-home-feed .pressable.is-pressed { transform: scale(0.97); }
+
 @media (display-mode: standalone) {
   .phone-shell {
     --phone-viewport-height: 100lvh;

@@ -3,9 +3,10 @@
   import RoomSummaryCard from './RoomSummaryCard.svelte';
   import { centralClimate } from '../../state/climate-central.svelte.ts';
   import { fmtTemp } from '../../format.ts';
-  import type { PhoneRoomSummary } from '../../state/phone-home.ts';
+  import { appState } from '../../state/app.svelte.ts';
+  import type { PhoneHeroVariant, PhoneRoomSummary } from '../../state/phone-home.ts';
   import { shouldConfirmHomeOff, toggleVacationMode, turnOffHomeExceptBedroom, vacationModeActive } from '../../state/commands.ts';
-  import { settingsValues } from '../../state/settings.svelte.ts';
+  import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
 
   import { m } from '../../../paraglide/messages.js';
   let {
@@ -24,11 +25,28 @@
 
   const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
   const vacationActive = $derived(vacationModeActive());
+  const heroVariant = $derived<PhoneHeroVariant>(
+    appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
+  );
+  const settingsLoader = createPhoneSettingsLoader();
 
-  function onHomeOff(): void {
-    if (shouldConfirmHomeOff(new Date(), settingsValues.offConfirmBefore)
+  function finishHomeOff(confirmBefore: string | null): void {
+    if (shouldConfirmHomeOff(new Date(), confirmBefore)
       && !window.confirm('Wirklich alle Lichter und den Fernseher außerhalb des Schlafzimmers ausschalten?')) return;
     turnOffHomeExceptBedroom();
+  }
+
+  function onHomeOff(): void {
+    void settingsLoader.load('settings', ({ settingsValues }) => {
+      finishHomeOff(settingsValues.offConfirmBefore);
+    }).catch(() => {
+      // Kann die optionale Einstellungs-Closure nicht geladen werden, bleibt die
+      // destruktive Aktion fail-safe bestätigt. Der nächste Tap startet einen
+      // echten neuen Ladeversuch; eine Rejection wird nicht dauerhaft gecacht.
+      if (window.confirm('Einstellungen konnten nicht geladen werden. Zuhause trotzdem ausschalten?')) {
+        turnOffHomeExceptBedroom();
+      }
+    });
   }
 </script>
 
@@ -47,7 +65,7 @@
       <p class="phone-empty-state">{m.phone_no_rooms()}</p>
     {:else}
       {#each rooms as room (room.id)}
-        <RoomSummaryCard summary={room} active={currentRoom === room.id} {onopen} />
+        <RoomSummaryCard summary={room} active={currentRoom === room.id} {heroVariant} {onopen} />
       {/each}
     {/if}
   </section>

@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DONE_RETENTION_MS, projectPhoneShoppingSections, projectShoppingSections, totalOpenItems, type ShoppingSection } from './shopping.ts';
 import { reminderPerson, reminderDisplayTitle } from './reminders.ts';
+import { SHOPPING_CONFIG_KEY } from './shopping-config.ts';
+import { rehydrateShoppingConfig, shoppingConfig } from './shopping-settings.svelte.ts';
+
+afterEach(() => vi.unstubAllGlobals());
+
+class MemoryStorage {
+  data = new Map<string, string>();
+  getItem(key: string) { return this.data.get(key) ?? null; }
+  setItem(key: string, value: string) { this.data.set(key, value); }
+  removeItem(key: string) { this.data.delete(key); }
+}
 
 const sections: ShoppingSection[] = [
   { id: 'rewe', title: 'Rewe', items: [
@@ -13,6 +24,29 @@ const sections: ShoppingSection[] = [
 ];
 
 describe('projectShoppingSections', () => {
+  it('rehydriert die vor Bootstrap erzeugte Shopping-Konfiguration aus dem neuen Storage-Stand', () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    storage.setItem(SHOPPING_CONFIG_KEY, JSON.stringify({
+      version: 1,
+      stores: [{ id: 'altmarkt', label: 'Altmarkt', categories: [] }],
+    }));
+    rehydrateShoppingConfig();
+    expect(shoppingConfig.stores.map(({ id, label }) => ({ id, label }))).toEqual([
+      { id: 'altmarkt', label: 'Altmarkt' },
+    ]);
+
+    storage.setItem(SHOPPING_CONFIG_KEY, JSON.stringify({
+      version: 1,
+      stores: [{ id: 'zentralmarkt', label: 'Zentralmarkt', categories: ['frische'] }],
+    }));
+    rehydrateShoppingConfig();
+
+    expect(shoppingConfig.stores.map(({ id, label }) => ({ id, label }))).toEqual([
+      { id: 'zentralmarkt', label: 'Zentralmarkt' },
+    ]);
+  });
+
   it('filtert abgehakte und leere Items, sortiert in Laden-Reihenfolge', () => {
     const projected = projectShoppingSections(sections);
     expect(projected.map((s) => s.id)).toEqual(['rewe', 'dm']); // Aldi leer → weg

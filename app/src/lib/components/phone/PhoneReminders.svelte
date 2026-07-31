@@ -113,6 +113,10 @@
 
   {#if addError}<p class="notes-add-error" role="alert">{addError}</p>{/if}
 
+  {#if reminders.error}
+    <p class="phone-calendar-status is-error" role="status">Letzte bekannte Erinnerungen</p>
+  {/if}
+
   {#each PERSON_ORDER as person (person)}
     {@const row = personRows[person]}
     <section class="rem-section">

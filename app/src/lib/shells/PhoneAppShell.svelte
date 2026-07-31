@@ -3,14 +3,12 @@
 </script>
 
 <script lang="ts">
-  import '../../styles/app.css';
   import '../../styles/phone-shell.css';
   import '../../styles/demo.css';
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, type Component } from 'svelte';
   import type { TransitionConfig } from 'svelte/transition';
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
-  import MoreSheet from '../components/phone/MoreSheet.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomTemperature } from '../state/commands.ts';
   import { connection } from '../state/connection.svelte.ts';
@@ -23,8 +21,7 @@
   } from '../state/phone-home.ts';
   import { endTransition, nav, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
   import { navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
-  import { closeDeviceDetail, deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
-  import { closeSceneEdit, sceneEdit } from '../state/scene-manager.svelte.ts';
+  import { closeRoomEdit, roomEdit } from '../state/overlay.svelte.ts';
   import {
     createPhoneModalLifecycle,
     createPhoneLayerController,
@@ -35,11 +32,13 @@
     type MediaRootTarget,
     type PhoneLayerController,
   } from '../state/phone-navigation.svelte.ts';
+  import { createLatestPhoneLoader, createPhoneLayerLoader, createPhoneSystemLoader } from '../state/phone-lazy-loader.ts';
   import { shellLifecycle } from '../state/shell-lifecycle-instance.ts';
 
   import { m } from '../../paraglide/messages.js';
   const conn = $derived(connection());
   const target = $derived(projectPhoneTarget(nav.screen));
+  const systemActive = $derived(target.area === 'more' && target.subtarget === 'system');
   const activeTarget = $derived(navTargetForScreen(nav.screen));
   const activeMain = $derived(phoneNavOrder.order.slice(0, 3).includes(activeTarget) ? activeTarget : 'more');
   const targetName = $derived(
@@ -55,6 +54,93 @@
     climate: mergedClimate,
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
+  type PhoneFeatureId = 'calendar' | 'media' | 'library-detail' | 'library' | 'energy'
+    | 'shopping' | 'reminders' | 'songs' | 'ablage' | 'room' | 'room-edit';
+  type PhoneScreenFeatureId = Exclude<PhoneFeatureId, 'room' | 'room-edit'>;
+  type PhoneFeatureModule = { default: Component<any> };
+  const PHONE_SCREEN_LOADERS: Record<PhoneScreenFeatureId, () => Promise<PhoneFeatureModule>> = {
+    calendar: () => import('../components/phone/PhoneCalendar.svelte'),
+    media: () => import('../screens/MediaScreen.svelte'),
+    'library-detail': () => import('../screens/LibraryDetailScreen.svelte'),
+    library: () => import('../screens/LibraryScreen.svelte'),
+    energy: () => import('../components/phone/PhoneEnergy.svelte'),
+    shopping: () => import('../components/phone/PhoneShopping.svelte'),
+    reminders: () => import('../components/phone/PhoneReminders.svelte'),
+    songs: () => import('../screens/SongsScreen.svelte'),
+    ablage: () => import('../components/AblageScreen.svelte'),
+  };
+  const phoneScreenLoader = createLatestPhoneLoader(PHONE_SCREEN_LOADERS);
+  const phoneFeatureLoader = createLatestPhoneLoader<'room' | 'room-edit', PhoneFeatureModule>({
+    room: () => import('../components/phone/RoomControlSheet.svelte'),
+    'room-edit': () => import('../components/RoomEdit.svelte'),
+  });
+  const featureStyleLoader = createLatestPhoneLoader({
+    styles: () => import('../../styles/app.css'),
+  });
+  const phoneLayerLoader = createPhoneLayerLoader();
+  const phoneSystemLoader = createPhoneSystemLoader();
+  let MoreSheetComponent = $state<Component<any> | null>(null);
+  let SystemScreenComponent = $state<Component<any> | null>(null);
+  let moreLoadFailed = $state(false);
+  let systemLoadFailed = $state(false);
+  let systemLoading = $state(false);
+  let featureStylesReady = $state(false);
+  let featureStylesFailed = $state(false);
+  let phoneFeatureRetries = $state({} as Partial<Record<PhoneFeatureId, number>>);
+  let PhoneScreenComponent = $state<Component<any> | null>(null);
+  let phoneScreenFailed = $state(false);
+  const activePhoneScreenId = $derived.by<PhoneScreenFeatureId | null>(() => {
+    if (target.area === 'calendar') return 'calendar';
+    if (target.area === 'media') {
+      if (target.subtarget === 'audio') return 'media';
+      return nav.screen === 'library-detail' ? 'library-detail' : 'library';
+    }
+    if (target.area !== 'more' || target.subtarget === 'system') return null;
+    return target.subtarget;
+  });
+
+  function ensureFeatureStyles(): void {
+    if (featureStylesReady || featureStylesFailed) return;
+    void featureStyleLoader.load('styles', () => {
+      featureStylesReady = true;
+    }).catch(() => {
+      featureStylesFailed = true;
+    });
+  }
+
+  function retryFeatureStyles(): void {
+    featureStylesFailed = false;
+    ensureFeatureStyles();
+  }
+
+  function loadPhoneFeature(
+    id: 'room' | 'room-edit',
+    _retryVersion: number,
+  ): Promise<PhoneFeatureModule> {
+    return phoneFeatureLoader.loadValue(id);
+  }
+
+  function retryPhoneFeature(id: PhoneFeatureId): void {
+    phoneFeatureRetries[id] = (phoneFeatureRetries[id] ?? 0) + 1;
+  }
+
+  function requestPhoneScreen(id: PhoneScreenFeatureId): void {
+    phoneScreenFailed = false;
+    void phoneScreenLoader.load(id, (loaded) => {
+      PhoneScreenComponent = loaded.default;
+    }).catch(() => {
+      if (activePhoneScreenId === id) phoneScreenFailed = true;
+    });
+  }
+
+  function retryPhoneScreen(): void {
+    if (activePhoneScreenId) requestPhoneScreen(activePhoneScreenId);
+  }
+
+  function retryMoreResources(): void {
+    if (featureStylesFailed) retryFeatureStyles();
+    if (moreLoadFailed) ensureMoreSheet();
+  }
 
   function phoneScreenTransition(_node: Element): TransitionConfig {
     const reduced = typeof window !== 'undefined'
@@ -91,8 +177,54 @@
     void tick().then(() => restorePhoneFocus(trigger, titleAnchor ?? null));
   });
 
+  function ensureMoreSheet(): void {
+    moreLoadFailed = false;
+    void phoneLayerLoader.load('more', (loaded) => {
+      MoreSheetComponent = loaded.default;
+    }).catch(() => {
+      if (moreOpen) moreLoadFailed = true;
+    });
+  }
+
+  function ensureSystemScreen(): void {
+    if (SystemScreenComponent || systemLoading) return;
+    systemLoadFailed = false;
+    systemLoading = true;
+    void phoneSystemLoader.load('system', (loaded) => {
+      SystemScreenComponent = loaded.default;
+    }).catch(() => {
+      if (systemActive) systemLoadFailed = true;
+    }).finally(() => {
+      systemLoading = false;
+    });
+  }
+
+  $effect(() => {
+    if (!systemActive) {
+      phoneSystemLoader.cancel();
+      systemLoadFailed = false;
+      return;
+    }
+    if (!SystemScreenComponent && !systemLoadFailed && !systemLoading) ensureSystemScreen();
+  });
+
+  $effect(() => {
+    const id = activePhoneScreenId;
+    const stylesReady = featureStylesReady;
+    phoneScreenLoader.cancel();
+    PhoneScreenComponent = null;
+    phoneScreenFailed = false;
+    if (id && stylesReady) requestPhoneScreen(id);
+  });
+
   $effect(() => {
     lastMediaTarget = rememberMediaTarget(lastMediaTarget, nav.screen);
+  });
+
+  $effect(() => {
+    if (target.area !== 'home' || activeLayer !== null || roomEdit.mode !== 'hidden') {
+      ensureFeatureStyles();
+    }
   });
 
   $effect(() => {
@@ -121,6 +253,7 @@
     if (open) {
       clearTimeout(modalReleaseTimer);
       activeLayer = requestedLayer;
+      if (requestedLayer === 'more' && !MoreSheetComponent) ensureMoreSheet();
       modalLifecycle.open();
       modalBlocking = true;
       restoreFocusAfterOutro = false;
@@ -129,11 +262,9 @@
     }
     const closingLayer = activeLayer;
     activeLayer = null;
-    if (closingLayer === 'room') {
-      // Schließt das Sheet (z. B. per Back-Geste), räumen auch die darüber
-      // gestapelten Tablet-Overlays sofort mit auf.
-      closeDeviceDetail(true);
-      closeSceneEdit(true);
+    if (closingLayer === 'more') {
+      phoneLayerLoader.cancel();
+      moreLoadFailed = false;
     }
     if (closingLayer === 'room' && focusTrigger === null) restoreFocusToTitle = true;
     if (closingLayer === 'room' && reason !== 'unmount') appState.currentRoom = null;
@@ -210,11 +341,50 @@
     return () => {
       unregister();
       clearTimeout(modalReleaseTimer);
+      phoneLayerLoader.cancel();
+      phoneSystemLoader.cancel();
       layer?.destroy();
       layer = null;
     };
   });
 </script>
+
+{#snippet phoneScreenState()}
+  {#if PhoneScreenComponent}
+    <PhoneScreenComponent phone bind:titleAnchor />
+  {:else}
+    <main class="phone-skeleton" aria-labelledby="phone-target-title">
+      <section>
+        <p class="phone-skeleton-label">Phone</p>
+        <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{targetName}</h1>
+        {#if phoneScreenFailed}
+          <p role="alert">{m.shell_load_failed()}</p>
+          <button class="secondary-btn pressable" type="button" onclick={retryPhoneScreen}>Erneut versuchen</button>
+        {:else}
+          <p role="status" aria-live="polite">{m.shell_loading()}</p>
+        {/if}
+      </section>
+    </main>
+  {/if}
+{/snippet}
+
+{#snippet phoneLayerLoading(kind: 'more' | 'room', label: string)}
+  <div class={`${kind}-sheet-scrim`} role="presentation">
+    <div class={`${kind}-sheet`} role="dialog" aria-modal="true" aria-label={label}>
+      <p role="status" aria-live="polite">{m.shell_loading()}</p>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet phoneLayerError(kind: 'more' | 'room', label: string, retry: () => void, close: () => void)}
+  <div class={`${kind}-sheet-scrim`} role="presentation">
+    <div class={`${kind}-sheet`} role="dialog" aria-modal="true" aria-label={label}>
+      <p role="alert">{m.shell_load_failed()}</p>
+      <button class="secondary-btn pressable" type="button" onclick={retry}>Erneut versuchen</button>
+      <button class="secondary-btn pressable" type="button" onclick={close}>Schließen</button>
+    </div>
+  </div>
+{/snippet}
 
 <div class="phone-shell" data-shell="phone" class:is-disconnected={conn.disconnected} class:has-connection-banner={conn.banner !== null}>
   <div class="phone-conn-banner" class:is-visible={conn.banner !== null} role="status" aria-live="polite">
@@ -225,72 +395,48 @@
       <div class="phone-screen-transition" transition:phoneScreenTransition onoutroend={endTransition}>
         {#if target.area === 'home'}
           <PhoneHomeFeed rooms={roomSummaries} currentRoom={roomOpen ? appState.currentRoom : null} online={conn.online} onopen={openRoom} bind:titleAnchor />
-        {:else if target.area === 'calendar'}
-          {#await import('../components/phone/PhoneCalendar.svelte') then loaded}
-            {@const PhoneCalendar = loaded.default}
-            <PhoneCalendar bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'media'}
-          <div class="phone-media-area">
-            {#if nav.screen !== 'library-detail'}
-              <nav class="phone-media-switcher" aria-label="Medienbereich">
-                {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => showScreen('media')}>Audio</button>{/if}
-                {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => showScreen('library')}>Bibliothek</button>{/if}
-              </nav>
-            {/if}
-            {#if target.subtarget === 'audio'}
-              {#await import('../screens/MediaScreen.svelte') then loaded}
-                {@const MediaScreen = loaded.default}
-                <MediaScreen phone bind:titleAnchor />
-              {/await}
-            {:else if nav.screen === 'library-detail'}
-              {#await import('../screens/LibraryDetailScreen.svelte') then loaded}
-                {@const LibraryDetailScreen = loaded.default}
-                <LibraryDetailScreen phone bind:titleAnchor />
-              {/await}
-            {:else}
-              {#await import('../screens/LibraryScreen.svelte') then loaded}
-                {@const LibraryScreen = loaded.default}
-                <LibraryScreen phone bind:titleAnchor />
-              {/await}
-            {/if}
-          </div>
-        {:else if target.area === 'more' && target.subtarget === 'energy'}
-          {#await import('../components/phone/PhoneEnergy.svelte') then loaded}
-            {@const PhoneEnergy = loaded.default}
-            <PhoneEnergy bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'more' && target.subtarget === 'shopping'}
-          {#await import('../components/phone/PhoneShopping.svelte') then loaded}
-            {@const PhoneShopping = loaded.default}
-            <PhoneShopping bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'more' && target.subtarget === 'reminders'}
-          {#await import('../components/phone/PhoneReminders.svelte') then loaded}
-            {@const PhoneReminders = loaded.default}
-            <PhoneReminders bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'more' && target.subtarget === 'songs'}
-          {#await import('../screens/SongsScreen.svelte') then loaded}
-            {@const SongsScreen = loaded.default}
-            <SongsScreen phone bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'more' && target.subtarget === 'ablage'}
-          {#await import('../components/AblageScreen.svelte') then loaded}
-            {@const AblageScreen = loaded.default}
-            <AblageScreen phone bind:titleAnchor />
-          {/await}
-        {:else if target.area === 'more' && target.subtarget === 'system'}
-          {#await import('../screens/SystemScreen.svelte') then loaded}
-            {@const SystemScreen = loaded.default}
-            <SystemScreen phone bind:titleAnchor />
-          {/await}
+        {:else if featureStylesReady && activePhoneScreenId}
+          {#if target.area === 'media'}
+            <div class="phone-media-area">
+              {#if nav.screen !== 'library-detail'}
+                <nav class="phone-media-switcher" aria-label="Medienbereich">
+                  {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => showScreen('media')}>Audio</button>{/if}
+                  {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => showScreen('library')}>Bibliothek</button>{/if}
+                </nav>
+              {/if}
+              {@render phoneScreenState()}
+            </div>
+          {:else}
+            {@render phoneScreenState()}
+          {/if}
+        {:else if featureStylesReady && target.area === 'more' && target.subtarget === 'system'}
+          {#if SystemScreenComponent}
+            <SystemScreenComponent phone bind:titleAnchor />
+          {:else}
+            <main class="phone-skeleton" aria-labelledby="phone-target-title">
+              <section>
+                <p class="phone-skeleton-label">Phone</p>
+                <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">System</h1>
+                {#if systemLoadFailed}
+                  <p role="alert">{m.shell_load_failed()}</p>
+                  <button class="secondary-btn pressable" type="button" onclick={ensureSystemScreen}>Erneut versuchen</button>
+                {:else}
+                  <p role="status" aria-live="polite">{m.shell_loading()}</p>
+                {/if}
+              </section>
+            </main>
+          {/if}
         {:else}
           <main class="phone-skeleton" aria-labelledby="phone-target-title">
             <section>
               <p class="phone-skeleton-label">Phone</p>
               <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{targetName}</h1>
-              <p>{m.phone_view_preparing()}</p>
+              {#if featureStylesFailed}
+                <p role="alert">{m.shell_load_failed()}</p>
+                <button class="secondary-btn pressable" type="button" onclick={retryFeatureStyles}>Erneut versuchen</button>
+              {:else}
+                <p role="status" aria-live="polite">{m.phone_view_preparing()}</p>
+              {/if}
             </section>
           </main>
         {/if}
@@ -301,30 +447,50 @@
     <PhoneBottomNav active={activeMain} {moreOpen} onselect={selectMain} bind:moreButton />
   </div>
   {#if moreOpen}
-    <MoreSheet current={nav.screen} onclose={closeLayer} onselect={selectMore} onouteroutroend={handleOuterOutroEnd} />
+    {#if featureStylesReady && MoreSheetComponent}
+      <MoreSheetComponent current={nav.screen} onclose={closeLayer} onselect={selectMore} onouteroutroend={handleOuterOutroEnd} />
+    {:else}
+      {#if featureStylesFailed || moreLoadFailed}
+        {@render phoneLayerError('more', 'Mehr', retryMoreResources, () => closeLayer('close'))}
+      {:else}
+        {@render phoneLayerLoading('more', 'Mehr')}
+      {/if}
+    {/if}
   {/if}
   {#if roomOpen && selectedRoom}
-    {#await import('../components/phone/RoomControlSheet.svelte') then loaded}
-      {@const RoomControlSheet = loaded.default}
-      <RoomControlSheet room={selectedRoom} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} />
-    {/await}
-  {/if}
-  {#if deviceDetail.mode !== 'hidden'}
-    {#await import('../components/DeviceDetail.svelte') then loaded}
-      {@const DeviceDetail = loaded.default}
-      <DeviceDetail />
-    {/await}
-  {/if}
-  {#if sceneEdit.mode !== 'hidden'}
-    {#await import('../components/SceneEdit.svelte') then loaded}
-      {@const SceneEdit = loaded.default}
-      <SceneEdit />
-    {/await}
+    {#if featureStylesReady}
+      {#await loadPhoneFeature('room', phoneFeatureRetries.room ?? 0)}
+        {@render phoneLayerLoading('room', 'Raumsteuerung')}
+      {:then loaded}
+        {@const RoomControlSheet = loaded.default}
+        <RoomControlSheet room={selectedRoom} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} />
+      {:catch}
+        {@render phoneLayerError('room', 'Raumsteuerung', () => retryPhoneFeature('room'), () => closeLayer('close'))}
+      {/await}
+    {:else}
+      {#if featureStylesFailed}
+        {@render phoneLayerError('room', 'Raumsteuerung', retryFeatureStyles, () => closeLayer('close'))}
+      {:else}
+        {@render phoneLayerLoading('room', 'Raumsteuerung')}
+      {/if}
+    {/if}
   {/if}
   {#if roomEdit.mode !== 'hidden'}
-    {#await import('../components/RoomEdit.svelte') then loaded}
-      {@const RoomEdit = loaded.default}
-      <RoomEdit />
-    {/await}
+    {#if featureStylesReady}
+      {#await loadPhoneFeature('room-edit', phoneFeatureRetries['room-edit'] ?? 0)}
+        {@render phoneLayerLoading('room', 'Raum bearbeiten')}
+      {:then loaded}
+        {@const RoomEdit = loaded.default}
+        <RoomEdit />
+      {:catch}
+        {@render phoneLayerError('room', 'Raum bearbeiten', () => retryPhoneFeature('room-edit'), () => closeRoomEdit(true))}
+      {/await}
+    {:else}
+      {#if featureStylesFailed}
+        {@render phoneLayerError('room', 'Raum bearbeiten', retryFeatureStyles, () => closeRoomEdit(true))}
+      {:else}
+        {@render phoneLayerLoading('room', 'Raum bearbeiten')}
+      {/if}
+    {/if}
   {/if}
 </div>

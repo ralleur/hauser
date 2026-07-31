@@ -22,17 +22,16 @@ export interface HeroAssetInput {
 }
 
 /**
- * B-01A: Raum-Hintergründe folgen der realen Tageszeit (`sun.sun`), nicht dem
- * manuell gesetzten UI-Theme. Der manuelle Theme-Toggle darf also die Lesbarkeit
- * der UI ändern, aber nicht das Motiv von Tag auf Abend/Nacht zwingen.
+ * B-01C: Raum-Hintergründe folgen dem realen beziehungsweise vom
+ * Erscheinungsmodus projizierten Tageszustand, nicht dem UI-Theme.
  *
  * Mit den gelieferten Assets ist die Matrix bewusst klein:
  * - `light` = Tag
- * - `dark`  = Abend/Dämmerung/Nacht
+ * - `dark`  = Abend/Dämmerung/Nacht mit Licht
+ * - `dark-off` = Abend/Dämmerung/Nacht ohne zugewiesenes Raumlicht
  *
- * Falls `sun.sun` noch nicht verfügbar ist, fällt die Auswahl auf das aktuelle
- * UI-Theme zurück. Unbekannte Räume fallen auf die Collage `all` zurück, damit
- * kein kaputtes Hintergrundbild gerendert wird.
+ * Falls noch kein Tageszustand verfügbar ist, fällt die Auswahl auf das aktuelle
+ * UI-Theme zurück. Unbekannte Räume fallen auf die Collage `all` zurück.
  */
 export function selectHeroVariant(
   sun: SunValue | undefined,
