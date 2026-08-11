@@ -3,6 +3,33 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.4.0-beta.2] - 2026-08-11
+
+### Added
+
+- Experimental Home Assistant App packaging in the public repository, including
+  direct-port metadata, persistent `/data` mapping, cold-backup behavior,
+  App Store branding and one-click/fallback installation guidance.
+- A dependency-free local App contract verifier and a commit-pinned Home
+  Assistant App linter in the quality workflow.
+
+### Changed
+
+- Browser requests with a syntactically valid Origin are accepted when that
+  Origin exactly matches the effective direct HTTP request host and port. Exact
+  `HMI_ALLOWED_ORIGINS` entries remain supported for TLS reverse proxies.
+- Release automation publishes both `0.4.0-beta.2` and `v0.4.0-beta.2` from the
+  same multi-architecture build manifest.
+- Docker/Compose remains supported and now defaults to `v0.4.0-beta.2`.
+
+### Known limitations
+
+- The Home Assistant App package was structurally validated before publication;
+  the focused real Home Assistant OS post-publish smoke remains outstanding.
+- Direct App access intentionally does not use Ingress or a Supervisor token.
+
+`v0.4.0-beta.1` and its published artifacts remain unchanged.
+
 ## [0.4.0-beta.1] - 2026-08-10
 
 This is Hauser's first public technical beta. It remains a self-hosted hobby

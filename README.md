@@ -55,7 +55,11 @@ Jellyfin or household services, and it needs no installation. Try room
 navigation, light controls, climate state, the phone-sized layout and the other
 included screens directly in the browser.
 
-## Core features in `v0.4.0-beta.1`
+## Release scope for `v0.4.0-beta.2`
+
+`0.4.0-beta.2` is the current public beta. Its Home Assistant App package and
+the `0.4.0-beta.2` / `v0.4.0-beta.2` multi-architecture image tags are published
+from the same release build.
 
 - **Room-first dashboard:** illustrated rooms, climate, lights, presence and
   window state in one consistent control surface.
@@ -81,11 +85,37 @@ beta work.
 
 ## Installation
 
-The primary release artifact is the versioned multi-architecture image
-`ghcr.io/ralleur/hauser:v0.4.0-beta.1`.
+### Recommended — Home Assistant OS (`0.4.0-beta.2`)
+
+This App path is experimental. The package is published for a focused real-HAOS
+smoke; it does not yet imply a broad compatibility or support promise.
+
+[![Open your Home Assistant instance and add the Hauser App repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser)
+
+The button adds `https://github.com/ralleur/hauser` as a Custom App Repository.
+Then install **Hauser**, start it and choose **Open Web UI**.
+
+Manual fallback:
+
+1. open **Settings → Apps → App Store → Repositories**;
+2. add `https://github.com/ralleur/hauser`;
+3. select **Hauser** and choose **Install**;
+4. choose **Start**, then **Open Web UI**.
+
+Hauser uses its existing setup wizard and Home Assistant URL/Long-Lived Access
+Token model. This first App package deliberately uses the direct LAN port rather
+than Ingress. Keep that port on a trusted home network.
+
+Home Assistant Apps are available only on Home Assistant OS and other App-capable
+installations. **Home Assistant Container continues to use Docker/Compose.**
+
+### Docker/Compose
+
+The current self-hosted release is
+`ghcr.io/ralleur/hauser:v0.4.0-beta.2`.
 
 ```bash
-git clone --branch v0.4.0-beta.1 https://github.com/ralleur/hauser.git
+git clone --branch v0.4.0-beta.2 https://github.com/ralleur/hauser.git
 cd hauser
 cp .env.example .env
 docker compose pull
@@ -95,8 +125,10 @@ docker compose exec hauser node container/healthcheck.mjs
 ```
 
 Open <http://localhost:4173>. The default bind is loopback-only. To expose Hauser
-on a trusted home LAN, set the exact bind address and allowed browser origins in
-`.env`; do not expose the service directly to the public internet.
+on a trusted home LAN, set the exact bind address in `.env`; direct same-origin
+browser writes work with the effective HTTP host and port. TLS reverse proxies
+remain supported through an exact `HMI_ALLOWED_ORIGINS` entry. Do not expose the
+service directly to the public internet.
 
 For a deliberate source build instead of the release image:
 
@@ -105,7 +137,8 @@ docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
 The complete installation, persistence, update, backup, restore and rollback
-contract is in [`docs/08-installation.md`](docs/08-installation.md).
+contract is in [`docs/08-installation.md`](docs/08-installation.md). Home Assistant
+App-specific operation is documented in [`hauser/DOCS.md`](hauser/DOCS.md).
 
 ## Setup
 
@@ -126,12 +159,14 @@ under **System → Home → Rooms & devices**.
 
 ## Requirements
 
-- Docker Engine with Docker Compose v2;
+- Home Assistant OS/App support for the recommended App path, or Docker Engine
+  with Docker Compose v2 for the regular container path;
 - network access to GHCR, or Buildx for a source build;
 - a modern browser that can reach the published Hauser port;
 - a reachable Home Assistant instance and a dedicated Long-Lived Access Token;
-- correct same-origin configuration through `HMI_ALLOWED_ORIGINS` when using a LAN
-  hostname, reverse proxy or non-default port.
+- an exact `HMI_ALLOWED_ORIGINS` entry when a TLS reverse proxy terminates in
+  front of Hauser (direct HTTP access is accepted only when Origin, host and port
+  match exactly).
 
 The qualified beta path is Linux containers through Docker Desktop on Apple
 Silicon. The release workflow also publishes `linux/amd64`, but broader host and
@@ -139,6 +174,10 @@ Home Assistant topology compatibility is not yet a tested support matrix.
 
 ## Known beta limitations
 
+- `0.4.0-beta.2` is published as an experimental Home Assistant App and
+  Docker/Compose release.
+- The Home Assistant App path was structurally validated before publication; the
+  focused real-HAOS post-publish smoke is the remaining launch gate.
 - The clean-room install was operated by the maintainer. It proves the technical
   path, not yet usability by an unrelated installer or compatibility with a
   second real household.
@@ -169,6 +208,7 @@ also welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before starting broader wor
 | Guide | Purpose |
 |---|---|
 | [`docs/08-installation.md`](docs/08-installation.md) | Install, LAN exposure, health, persistence, backup, restore and rollback |
+| [`hauser/DOCS.md`](hauser/DOCS.md) | Home Assistant App setup, direct-port operation and current validation boundary |
 | [`docs/08-installation.md#setup-and-entity-troubleshooting`](docs/08-installation.md#setup-and-entity-troubleshooting) | Rejected tokens, unreachable HA, proxy/origin errors and removed entities |
 | [`docs/07-configuration.md`](docs/07-configuration.md) | Versioned household configuration and fail-closed validation |
 | [`docs/09-dev-pilot.md`](docs/09-dev-pilot.md) | Isolated synthetic Home Assistant for development and onboarding tests |

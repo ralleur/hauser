@@ -26,6 +26,11 @@ household screens are implemented. The versioned Compose path and isolated
 clean-room onboarding gate are green. No alpha was published;
 `v0.4.0-beta.1` is the first public release.
 
+A thin Home Assistant App package for `0.4.0-beta.2` is published after structural
+and local validation. It reuses the versioned multi-architecture image and the
+existing direct-port setup path; Docker/Compose remains supported. The focused
+real Home Assistant OS post-publish smoke remains the community-launch gate.
+
 ---
 
 ## Product philosophy
