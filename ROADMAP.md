@@ -28,6 +28,28 @@ clean-room onboarding gate are green. No alpha was published;
 
 ---
 
+## Product philosophy
+
+A smart home has two different interface jobs:
+
+1. **Operator cockpit.** Dense status, diagnostics, configuration and technical
+   detail for the person who builds and maintains the system.
+2. **Household surface.** A calm, recognisable and intuitive interface for the
+   people who live with the system without needing to understand it.
+
+Hauser is deliberately built around the household surface. Home Assistant
+remains the deeper operator cockpit; Hauser exposes management and detail views
+only where they improve everyday use. Its permanent overview is not expected to
+show every available entity or measurement.
+
+Visual space, room artwork and restrained information density are therefore
+functional choices rather than decoration. New information belongs on a primary
+surface only when it is relevant at a glance or immediately actionable.
+Operator-only detail should stay behind a deliberate interaction or in Home
+Assistant itself.
+
+---
+
 ## Core interface
 
 | Item | Status |
@@ -127,20 +149,20 @@ light and two dark modes remain distinguishable.
 
 ---
 
-## Path from private development to v1
+## Path to v1
 
-| Stage | Target | Exit evidence |
-|---|---|---|
-| Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
-| Installable public beta | `v0.4.0-beta.1` | Published and verified: public repository, tag, GitHub Release, versioned GHCR image and Pages demo trace to the qualified candidate |
-| Beta stabilisation | `v0.4.x-beta.N` | An external real-home installation plus a release-to-release upgrade, backup/restore and rollback pass before RC |
-| Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
-| Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
+| Stage | Target | State | Exit evidence |
+|---|---|---|---|
+| Private public-ready development | `v0.3.x` internal | **Complete** | Anonymised repository, publication-facing documentation, test suite and static demo build stayed green; no alpha was published |
+| Installable public beta | `v0.4.0-beta.1` | **Released** | Public repository, tag, GitHub Release, versioned GHCR image and Pages demo trace to the qualified candidate |
+| Beta stabilisation | `v0.4.x-beta.N` | **Current** | An external real-home installation plus a release-to-release upgrade, backup/restore and rollback pass before RC |
+| Release candidate | `v0.9.0-rc.1` | **Future** | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
+| Stable | `v1.0.0` | **Future** | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
 The critical path is configuration, installation and upgrade evidence — not
 adding every feature in the backlog. The versioned external household
 configuration core is built and exercised with independent neutral fixtures.
-The source-built container/Compose installation path, persistent volumes,
+The versioned container/Compose installation path, persistent volumes,
 readiness contract, backup/restore helpers and deterministic Home Assistant setup
 wizard are built. Room creation, renaming, ordering and controlled deletion are
 available inside the product, and panel/phone layouts have been exercised from

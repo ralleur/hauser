@@ -22,6 +22,17 @@ obvious to everyone in the home—not a wall of unrelated cards.
 It runs as a landscape wall-panel interface and as a compact phone layout. Home
 Assistant remains the automation engine and source of device truth.
 
+That split is deliberate. A smart home needs an **operator cockpit** for the
+person who builds it—dense diagnostics, configuration and technical detail—and a
+**household surface** for the people who simply live with it. Trying to make one
+permanent overview serve both jobs usually makes it worse at both.
+
+Hauser focuses on the household surface. It trades maximum information density
+for visual hierarchy, recognisable rooms and controls that invite use. Empty
+space is functional here, not wasted capacity. Home Assistant remains the deeper
+operator interface, while technical detail in Hauser stays behind deliberate
+interactions instead of filling every everyday screen.
+
 ## What does it look like?
 
 [![Hauser room dashboard in English, showing room navigation, lighting controls, climate state and the illustrated living room.](website/media/hero-home.webp)](https://ralleur.github.io/hauser/demo/)
@@ -140,6 +151,18 @@ Home Assistant topology compatibility is not yet a tested support matrix.
 - French, Italian, Portuguese and Polish have not been reviewed by native
   speakers.
 - Hauser is a hobby project with no SLA or support promise.
+
+## Help test the beta
+
+The main missing evidence is an installation by someone unrelated to the
+maintainer in a different real Home Assistant household. If you can run the
+tagged Compose release on a clean Linux host, follow the structured
+[`linux/amd64` installation task](https://github.com/ralleur/hauser/issues/5) and
+report what worked, what did not and where the documentation caused friction.
+
+Focused bug fixes, installation documentation, accessibility improvements and
+native reviews of the French, Italian, Portuguese or Polish translations are
+also welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before starting broader work.
 
 ## Documentation and troubleshooting
 
