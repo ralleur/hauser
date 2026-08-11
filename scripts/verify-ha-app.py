@@ -39,7 +39,7 @@ if not (SOURCE_ROOT / "app/package.json").is_file():
     private_root = ROOT.parents[2] if len(ROOT.parents) >= 3 else ROOT
     if ROOT.name == "files" and ROOT.parent.name == "public-export" and (private_root / "app/package.json").is_file():
         SOURCE_ROOT = private_root
-VERSION = "0.4.0-beta.2"
+VERSION = "0.4.0-beta.3"
 IMAGE = "ghcr.io/ralleur/hauser"
 ONE_CLICK = (
     "https://my.home-assistant.io/redirect/supervisor_add_addon_repository/"
@@ -409,6 +409,7 @@ required_files = [
     APP_DIR / "CHANGELOG.md",
     APP_DIR / "icon.png",
     APP_DIR / "logo.png",
+    ROOT / "container/start.mjs",
 ]
 missing = [str(path.relative_to(ROOT)) for path in required_files if not path.is_file() or path.stat().st_size == 0]
 if missing:
@@ -465,9 +466,18 @@ if f"ARG HAUSER_VERSION={VERSION}" not in dockerfile:
 if 'HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3' not in dockerfile \
         or 'CMD ["node", "container/healthcheck.mjs"]' not in dockerfile:
     fail("Dockerfile must retain the OCI healthcheck command")
+if 'CMD ["node", "container/start.mjs"]' not in dockerfile or re.search(r"^USER\s+node$", dockerfile, re.MULTILINE):
+    fail("Dockerfile must start through the HAOS ownership wrapper before dropping privileges")
 healthcheck = (ROOT / "container/healthcheck.mjs").read_text(encoding="utf-8")
 if "`http://${host}:${port}/api/health`" not in healthcheck:
     fail("OCI healthcheck must probe /api/health")
+start_wrapper = (ROOT / "container/start.mjs").read_text(encoding="utf-8")
+for fragment in ("const APP_DATA_DIR = '/data'", "chownTree(APP_DATA_DIR)", "process.setgroups([])", "process.setgid(NODE_GID)", "process.setuid(NODE_UID)", "spawn(process.execPath, ['server.mjs']"):
+    if fragment not in start_wrapper:
+        fail(f"HAOS ownership wrapper lacks required fragment: {fragment}")
+compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+if not re.search(r"^\s{4}user:\s+node$", compose, re.MULTILINE):
+    fail("Docker/Compose must continue to run explicitly as the node user")
 
 workflow = (ROOT / ".github/workflows/quality-and-release.yml").read_text(encoding="utf-8")
 validated_image_tags = validate_release_workflow(workflow)
@@ -503,12 +513,12 @@ if logo_size[0] <= logo_size[1] or min(logo_size) < 64:
 for changelog in (ROOT / "CHANGELOG.md", APP_DIR / "CHANGELOG.md"):
     changelog_text = changelog.read_text(encoding="utf-8")
     if not re.search(
-        r"^## (?:\[0\.4\.0-beta\.2\]|0\.4\.0-beta\.2) - "
+        r"^## (?:\[0\.4\.0-beta\.3\]|0\.4\.0-beta\.3) - "
         r"(?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})$",
         changelog_text,
         flags=re.MULTILINE,
     ):
-        fail(f"{changelog.relative_to(ROOT)} lacks a valid beta.2 entry")
+        fail(f"{changelog.relative_to(ROOT)} lacks a valid beta.3 entry")
 
 print("ha_app_contract=PASS")
 print(f"version_chain={VERSION}")

@@ -55,10 +55,10 @@ Jellyfin or household services, and it needs no installation. Try room
 navigation, light controls, climate state, the phone-sized layout and the other
 included screens directly in the browser.
 
-## Release scope for `v0.4.0-beta.2`
+## Release scope for `v0.4.0-beta.3`
 
-`0.4.0-beta.2` is the current public beta. Its Home Assistant App package and
-the `0.4.0-beta.2` / `v0.4.0-beta.2` multi-architecture image tags are published
+`0.4.0-beta.3` is the current public beta. Its Home Assistant App package and
+the `0.4.0-beta.3` / `v0.4.0-beta.3` multi-architecture image tags are published
 from the same release build.
 
 - **Room-first dashboard:** illustrated rooms, climate, lights, presence and
@@ -85,7 +85,7 @@ beta work.
 
 ## Installation
 
-### Recommended — Home Assistant OS (`0.4.0-beta.2`)
+### Recommended — Home Assistant OS (`0.4.0-beta.3`)
 
 This App path is experimental. The package is published for a focused real-HAOS
 smoke; it does not yet imply a broad compatibility or support promise.
@@ -112,10 +112,10 @@ installations. **Home Assistant Container continues to use Docker/Compose.**
 ### Docker/Compose
 
 The current self-hosted release is
-`ghcr.io/ralleur/hauser:v0.4.0-beta.2`.
+`ghcr.io/ralleur/hauser:v0.4.0-beta.3`.
 
 ```bash
-git clone --branch v0.4.0-beta.2 https://github.com/ralleur/hauser.git
+git clone --branch v0.4.0-beta.3 https://github.com/ralleur/hauser.git
 cd hauser
 cp .env.example .env
 docker compose pull
@@ -174,8 +174,11 @@ Home Assistant topology compatibility is not yet a tested support matrix.
 
 ## Known beta limitations
 
-- `0.4.0-beta.2` is published as an experimental Home Assistant App and
+- `0.4.0-beta.3` is published as an experimental Home Assistant App and
   Docker/Compose release.
+- `0.4.0-beta.2` remains immutable; its real HAOS start failed because `/data`
+  was not writable by the image user. `beta.3` contains only the runtime ownership
+  fix required by that observed failure.
 - The Home Assistant App path was structurally validated before publication; the
   focused real-HAOS post-publish smoke is the remaining launch gate.
 - The clean-room install was operated by the maintainer. It proves the technical

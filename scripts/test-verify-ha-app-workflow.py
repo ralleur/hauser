@@ -33,7 +33,9 @@ PUBLIC_FIXTURE_PATHS = (
     Path("hauser/icon.png"),
     Path("hauser/logo.png"),
     Path("Dockerfile"),
+    Path("compose.yaml"),
     Path("container/healthcheck.mjs"),
+    Path("container/start.mjs"),
     WORKFLOW,
     Path("README.md"),
     Path("TRADEMARKS.md"),
@@ -97,7 +99,7 @@ class ReleaseWorkflowValidationTests(unittest.TestCase):
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 0, output)
         self.assertIn("ha_app_contract=PASS", output)
-        self.assertIn("image_tags=0.4.0-beta.2,v0.4.0-beta.2", output)
+        self.assertIn("image_tags=0.4.0-beta.3,v0.4.0-beta.3", output)
 
     def test_second_tag_only_in_comment_is_rejected(self) -> None:
         def mutate(workflow: str) -> str:

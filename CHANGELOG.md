@@ -3,6 +3,20 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.4.0-beta.3] - 2026-08-11
+
+### Fixed
+
+- Home Assistant OS now starts Hauser through a minimal runtime wrapper that
+  assigns the App-owned `/data` tree to UID/GID 1000 and immediately drops root
+  privileges before importing the unchanged server.
+- Docker/Compose continues to run explicitly as the unprivileged `node` user.
+
+### Known limitations
+
+- The focused real Home Assistant OS smoke resumes from the previously failed
+  start step after publication of this immutable follow-up beta.
+
 ## [0.4.0-beta.2] - 2026-08-11
 
 ### Added
@@ -24,8 +38,9 @@ Semantic Versioning for its public release line.
 
 ### Known limitations
 
-- The Home Assistant App package was structurally validated before publication;
-  the focused real Home Assistant OS post-publish smoke remains outstanding.
+- The real HAOS installation succeeded, but App start failed because the
+  Supervisor-mounted `/data` directory was not writable by UID 1000. This release
+  remains immutable; `0.4.0-beta.3` carries the narrow ownership fix.
 - Direct App access intentionally does not use Ingress or a Supervisor token.
 
 `v0.4.0-beta.1` and its published artifacts remain unchanged.

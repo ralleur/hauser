@@ -1,7 +1,7 @@
 # Installation and operation
 
-The currently installable release is `v0.4.0-beta.2`, using
-`ghcr.io/ralleur/hauser:v0.4.0-beta.2`. Its Home Assistant App package and both
+The currently installable release is `v0.4.0-beta.3`, using
+`ghcr.io/ralleur/hauser:v0.4.0-beta.3`. Its Home Assistant App package and both
 release image tags are published for the focused real-HAOS smoke. An explicit
 source-build overlay remains available for development and source-level
 verification. No path comes with a support promise.
@@ -22,11 +22,11 @@ Prerequisites:
 
 ## First start
 
-The pull-based commands below are for the published `v0.4.0-beta.2` checkout and
+The pull-based commands below are for the published `v0.4.0-beta.3` checkout and
 its immutable image.
 
 ```bash
-git clone --branch v0.4.0-beta.2 https://github.com/ralleur/hauser.git
+git clone --branch v0.4.0-beta.3 https://github.com/ralleur/hauser.git
 cd hauser
 cp .env.example .env
 docker compose pull
@@ -291,7 +291,7 @@ and restarts only if the service had been running before the restore.
 
 ## Update
 
-For the currently published `v0.4.0-beta.2`, keep that exact version in `.env`
+For the currently published `v0.4.0-beta.3`, keep that exact version in `.env`
 and pull before recreating the service:
 
 ```bash

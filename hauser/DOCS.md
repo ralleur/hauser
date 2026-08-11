@@ -2,7 +2,7 @@
 
 ## Install
 
-> **Experimental beta:** `0.4.0-beta.2` is published for a focused real Home
+> **Experimental beta:** `0.4.0-beta.3` is published for a focused real Home
 > Assistant OS smoke. It is not yet a broad compatibility or support promise.
 
 1. In Home Assistant, open **Settings → Apps → App Store → Repositories**.
@@ -66,5 +66,5 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.2` is the current published App and Docker/Compose beta; the focused
+- `0.4.0-beta.3` is the current published App and Docker/Compose beta; the focused
   real-HAOS post-publish smoke remains the community-launch gate.

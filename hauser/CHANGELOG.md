@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.3 - 2026-08-11
+
+### Fixed
+
+- Home Assistant OS now prepares the App-owned `/data` directory before Hauser
+  drops to its unprivileged runtime user.
+
 ## 0.4.0-beta.2 - 2026-08-11
 
 ### Added
