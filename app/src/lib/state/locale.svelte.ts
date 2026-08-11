@@ -58,7 +58,7 @@ export async function changeLocale(
 
   // Demo-Namen hängen an der Sprache, nicht am Katalog — neu setzen.
   const [{ applyDemoNames }, { appState }] = await Promise.all([
-    import('../demo/demo-mode.ts'),
+    import('../demo/demo-names.ts'),
     import('./app.svelte.ts'),
   ]);
   applyDemoNames(appState.rooms);

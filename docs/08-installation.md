@@ -1,10 +1,9 @@
 # Installation and operation
 
-Hauser `v0.4.0-beta.1` is the first public technical beta. The release package
-uses `ghcr.io/ralleur/hauser:v0.4.0-beta.1`, published only after the matching
-tag passes the release workflow. An explicit source-build overlay remains
-available for development and source-level verification. Neither path comes with
-a support promise.
+Hauser `v0.4.0-beta.1` is the first public technical beta. The normal install
+path uses `ghcr.io/ralleur/hauser:v0.4.0-beta.1`; an explicit source-build overlay
+remains available for development and source-level verification. Neither path
+comes with a support promise.
 
 ## Tested platform
 
@@ -21,6 +20,8 @@ Prerequisites:
 - later, a reachable Home Assistant instance and a dedicated long-lived token.
 
 ## First start
+
+The pull-based commands below use the immutable image published for this release.
 
 ```bash
 cp .env.example .env
@@ -61,6 +62,48 @@ HMI_ALLOWED_ORIGINS=http://localhost:4173,http://hauser-host.local:4173
 
 Do not expose this directly to the public internet. Put authentication and TLS
 in front of it if traffic crosses an untrusted network.
+
+## Setup and entity troubleshooting
+
+### Token rejected
+
+Home Assistant HTTP 401 or 403 means that HA rejected the token. Create or
+replace a dedicated, valid Long-Lived Access Token in the Home Assistant profile
+and retry setup. Never log the token or copy it into Git, an issue or support
+text.
+
+### HA unreachable from the Hauser container/server
+
+Setup checks Home Assistant reachability from the browser during discovery and
+from the Hauser server/container during activation; both paths must succeed.
+Inside the container, `localhost` names the Hauser container, not automatically
+the Home Assistant host. Check the configured URL, DNS or host address, port,
+container network and firewall, and TLS. Do not work around the failure by
+disabling TLS verification or authentication.
+
+### Unexpected HTTP/proxy response
+
+Home Assistant or an upstream reverse proxy responded, but not successfully.
+Check the Home Assistant base URL, proxy routing and returned HTTP status; treat
+401 and 403 as the token problem above. Do not copy a raw response or secret
+headers into public error or support text.
+
+### Origin rejected
+
+`HMI_ALLOWED_ORIGINS` must contain the exact browser origins in
+`scheme://host[:port]` format, separated by commas. Do not use paths or bare
+hostnames. After changing `.env`, recreate the service with
+`docker compose up -d --force-recreate hauser`. Do not bypass origin enforcement
+with `*` or by disabling the check.
+
+### Configured entity removed or unavailable
+
+Hauser keeps the last known value only as context, marks the entity unavailable
+and blocks actions for it. Open **System/Settings → Home → Rooms & devices** and
+use the secondary **Reload from Home Assistant** / **Reload rooms and devices**
+path at the bottom. Review the resulting assignments, then use **Save changes**
+to validate and activate them. Do not keep trying to toggle or otherwise control
+the unavailable entity.
 
 ## What the stack persists
 

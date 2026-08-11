@@ -15,7 +15,7 @@ import { computeLoadBreakdown, type LoadBreakdown } from './energy-load.ts';
 import type { SensorValue } from '../adapter/types.ts';
 
 function readSensor(eid: string | null): SensorValue | null {
-  if (!eid) return null;
+  if (!eid || !runtime.isEntityAvailable(eid)) return null;
   return (runtime.merged(eid) as SensorValue | undefined) ?? null;
 }
 

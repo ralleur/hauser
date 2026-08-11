@@ -32,12 +32,12 @@ function demoReminders() {
     version: 1,
     updatedAt: nowIso(),
     items: [
-      { id: 'demo-1', title: 'Alex - Fahrradlicht reparieren', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-2', title: 'Sam - Ersatzfilter bestellen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-3', title: 'Beide - Termin Autowerkstatt ausmachen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-4', title: 'Alex - Pflanzen umtopfen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-5', title: 'Sam - Fenstergriff nachziehen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-6', title: 'Beide - Keller aufräumen', completed: true, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-1', title: 'Alex - Repair bike light', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-2', title: 'Sam - Order replacement filter', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-3', title: 'Both - Book car service', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-4', title: 'Alex - Repot plants', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-5', title: 'Sam - Tighten window handle', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      { id: 'demo-6', title: 'Both - Tidy storage room', completed: true, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
     ],
   };
 }
@@ -53,26 +53,26 @@ function demoShopping() {
         id: 'aldi',
         title: 'Aldi',
         items: [
-          { id: 'demo-a1', title: 'Hafermilch', checked: false },
-          { id: 'demo-a2', title: 'Tomaten', checked: false },
-          { id: 'demo-a3', title: 'Brot', checked: true, checkedAt: nowIso() },
+          { id: 'demo-a1', title: 'Oat milk', checked: false },
+          { id: 'demo-a2', title: 'Tomatoes', checked: false },
+          { id: 'demo-a3', title: 'Bread', checked: true, checkedAt: nowIso() },
         ],
       },
       {
         id: 'rewe',
         title: 'Rewe',
         items: [
-          { id: 'demo-r1', title: 'Kaffeebohnen', checked: false },
+          { id: 'demo-r1', title: 'Coffee beans', checked: false },
           { id: 'demo-r2', title: 'Parmesan', checked: false },
-          { id: 'demo-r3', title: 'Olivenöl', checked: false },
+          { id: 'demo-r3', title: 'Olive oil', checked: false },
         ],
       },
       {
         id: 'dm',
         title: 'dm',
         items: [
-          { id: 'demo-d1', title: 'Zahnpasta', checked: false },
-          { id: 'demo-d2', title: 'Waschmittel', checked: false },
+          { id: 'demo-d1', title: 'Toothpaste', checked: false },
+          { id: 'demo-d2', title: 'Laundry detergent', checked: false },
         ],
       },
     ],
@@ -105,10 +105,10 @@ export function demoResponse(path: string, method: string): Response | null {
      Fallback-Pfad ausgelöst statt eine LLM-Antwort vorzutäuschen. Ohne diese
      Abkürzung liefe der Aufruf in wiederholte 404er. */
   if (path.startsWith('/ambient-llm')) {
-    return json({ error: 'Kein LLM-Dienst in der Demo.' }, 503);
+    return json({ error: 'No LLM service is connected in the demo.' }, 503);
   }
   if (path.startsWith('/api/ablage')) {
-    return json({ error: 'Die Ablage ist in der Demo nicht verfügbar.' }, 403);
+    return json({ error: 'Document access is not available in the public demo.' }, 403);
   }
   if (path.startsWith('/api/config')) {
     return method === 'GET' ? json({ values: {} }) : json({ ok: true });
@@ -218,26 +218,6 @@ function addDemoBadge(): void {
   if (typeof document === 'undefined' || document.querySelector('.demo-badge')) return;
   const badge = document.createElement('div');
   badge.className = 'demo-badge';
-  badge.textContent = 'Demo · simulierte Daten';
+  badge.textContent = 'Demo · simulated data';
   document.body.append(badge);
-}
-
-/* Der Raum-Seed trägt die Raumnamen des Haushalts, für den diese HMI gebaut
-   wurde. In der öffentlichen Demo wäre „Wohnzimmer" neben italienischer
-   Navigation verwirrend — deshalb tragen die Räume dort Namen in der aktiven
-   Sprache. In Produktion bleibt der Seed unangetastet.
-
-   Lampen und Szenen bleiben bewusst außen vor: ihre Namen kommen aus Home
-   Assistant beziehungsweise aus der Szenen-Konfiguration, wo sie jemand
-   bewusst vergeben hat. Das sind Nutzerdaten, keine Oberflächentexte. */
-export function applyDemoNames(rooms: { id: string; name: string }[]): void {
-  if (!IS_DEMO) return;
-
-  const room: Record<string, () => string> = {
-    wohnzimmer: m.demo_room_wohnzimmer, kinderzimmer: m.demo_room_kinderzimmer,
-    schlafzimmer: m.demo_room_schlafzimmer, bad: m.demo_room_bad,
-    kueche: m.demo_room_kueche, flur: m.demo_room_flur,
-  };
-
-  for (const r of rooms) if (room[r.id]) r.name = room[r.id]();
 }

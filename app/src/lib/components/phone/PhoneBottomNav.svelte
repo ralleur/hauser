@@ -1,6 +1,7 @@
 <script lang="ts">
   import { phoneNavOrder, navTargetLabel, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
+  import { m } from '../../../paraglide/messages.js';
 
   let {
     active,
@@ -25,7 +26,7 @@
   {#if phoneNavOrder.order.length > 3}
     <button bind:this={moreButton} class="phone-nav-target pressable" class:is-active={active === 'more'} type="button" aria-current={active === 'more' ? 'page' : undefined} aria-haspopup="dialog" aria-expanded={moreOpen} onclick={(event) => onselect('more', event.currentTarget)}>
       <PhoneNavIcon id="more" />
-      <span>Mehr</span>
+      <span>{m.nav_more()}</span>
     </button>
   {/if}
 </nav>

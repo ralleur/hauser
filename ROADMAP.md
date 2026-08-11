@@ -19,11 +19,12 @@ Status vocabulary:
 
 ## Where the project is today
 
-Hauser is an installable public technical beta. The design system, Home
-Assistant and Jellyfin integrations, deterministic setup wizard, landscape
-panel, compact phone shell and everyday household screens are implemented. The
-versioned Compose path and isolated clean-room onboarding gate are green. No
-alpha was published; `v0.4.0-beta.1` is the first public release.
+Hauser's first public technical beta is available. The design system, Home
+Assistant and Jellyfin integrations,
+deterministic setup wizard, landscape panel, compact phone shell and everyday
+household screens are implemented. The versioned Compose path and isolated
+clean-room onboarding gate are green. No alpha was published;
+`v0.4.0-beta.1` is the first public release.
 
 ---
 
@@ -131,7 +132,7 @@ light and two dark modes remain distinguishable.
 | Stage | Target | Exit evidence |
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
-| Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
+| Installable public beta | `v0.4.0-beta.1` | Published and verified: public repository, tag, GitHub Release, versioned GHCR image and Pages demo trace to the qualified candidate |
 | Beta stabilisation | `v0.4.x-beta.N` | An external real-home installation plus a release-to-release upgrade, backup/restore and rollback pass before RC |
 | Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
@@ -146,10 +147,10 @@ available inside the product, and panel/phone layouts have been exercised from
 zero to twelve rooms. The isolated development pilot has passed both
 explicit-Area and no-Area onboarding, command/state echo, reconnect and
 persistence. Beta versioning, changelog, release-note structure and tag-gated
-quality/image automation are active. The next technical milestone is beta
-stabilisation through external installation, upgrade and rollback evidence. A
-real external household remains mandatory before RC; AI-assisted setup may
-complement it later but is not a v1 gate.
+quality/image automation are active. Beta stabilisation now requires external
+installation, upgrade and rollback evidence. A real external household
+remains mandatory before RC; AI-assisted setup may complement it later but is
+not a v1 gate.
 
 A code-modifying AI agent that commits, pushes and redeploys the application is
 deliberately **not part of the portable product**. It remains an operator-owned

@@ -32,6 +32,8 @@ export interface EntityState<V = unknown> {
   updatedAt: number;
   /** true, wenn der Wert aus dem Cache stammt und noch nicht live bestätigt ist */
   stale: boolean;
+  /** false, wenn HA die konfigurierte Entität explizit als fehlend/unavailable meldet */
+  available?: boolean;
 }
 
 export interface EntityStoreLayer {
@@ -89,7 +91,7 @@ export interface Backend {
   start?(): void;
   /** Push-Kanal: der EntityStore abonniert hier alle State-Updates
       (subscribe_entities bzw. Fake-Echo). Liefert initial den Seed-State. */
-  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void;
+  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean, available?: boolean) => void): void;
   /** call_service (docs/04): der optimistische UI-Update ist bereits passiert. */
   callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void;
   /** Verbindungszustand (ADR-017 Addendum, Schicht 1): FakeBackend treibt ihn

@@ -122,7 +122,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHome).toMatch(/onclick=\{toggleVacationMode\}/);
     expect(phoneHome).toMatch(/disabled=\{!online\}/);
     expect(phoneHome).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
-    expect(phoneHome).toContain("vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'");
+    expect(phoneHome).toContain('vacationActive ? m.phone_vacation_disable() : m.phone_vacation_enable()');
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {

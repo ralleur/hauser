@@ -3,10 +3,10 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
-## [0.4.0-beta.1] - 2026-07-30
+## [0.4.0-beta.1] - 2026-08-10
 
-This is the first public release. It remains a self-hosted hobby-project
-beta without a support or compatibility promise beyond the documented paths.
+This is Hauser's first public technical beta. It remains a self-hosted hobby
+project without a support or compatibility promise beyond the documented paths.
 
 ### Added
 
@@ -22,6 +22,10 @@ beta without a support or compatibility promise beyond the documented paths.
   volumes, including explicit-Area and no-Area onboarding paths.
 - Six interface languages: German, English, French, Italian, Portuguese and
   Polish.
+- Public Pages demo with representative simulated devices and no dependency on
+  the maintainer's Home Assistant or household services.
+- English first-visit README with current candidate screenshots, a prominent
+  demo link and the release installation/setup path.
 - Tag-gated quality and container-image workflow. A matching version tag can
   publish immutable `linux/amd64` and `linux/arm64` images to GHCR only after the
   full quality job passes.
@@ -30,6 +34,12 @@ beta without a support or compatibility promise beyond the documented paths.
 
 - The Home Assistant adapter now recovers entity state correctly after a lost
   and restored connection.
+- Setup activation distinguishes a rejected Home Assistant token from Home
+  Assistant being unreachable from the Hauser server/container and from an
+  unsuccessful Home Assistant or proxy HTTP response.
+- Configured Home Assistant entities that are missing or reported unavailable
+  retain their last known value only as context, are marked unavailable and
+  cannot be controlled.
 - Release evidence is split honestly: the isolated clean-room pilot proves the
   technical beta contract; an external real-home installation remains mandatory
   during beta stabilisation before the release candidate.

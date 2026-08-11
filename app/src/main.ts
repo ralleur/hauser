@@ -2,7 +2,7 @@ import { mount, unmount } from 'svelte';
 // design-tokens/ bleibt Single Source of Truth — importiert, nicht kopiert (ADR-003/013)
 import '../../design-tokens/tokens.css';
 import './styles/climate-controls.css';
-import { applyDemoDeepLink, applyDemoNames, installDemoApi } from './lib/demo/demo-mode.ts';
+import { applyDemoDeepLink, installDemoApi } from './lib/demo/demo-mode.ts';
 
 const STARTUP_LABELS: Record<string, string> = {
   'hmi:app-start': 'App-Start',
@@ -120,7 +120,10 @@ if (reconfigureRequested) {
     initialShell = await shellLoaders[uiModeModule.uiMode.effective]();
     document.documentElement.setAttribute('data-standalone', String(standalone.active));
     applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
-    applyDemoNames(appState.rooms);
+    if (import.meta.env.VITE_DEMO === '1') {
+      const { applyDemoNames } = await import('./lib/demo/demo-names.ts');
+      applyDemoNames(appState.rooms);
+    }
 
     if (mountedApp) await unmount(mountedApp);
     return mountedApp = mount(appModule.default, {

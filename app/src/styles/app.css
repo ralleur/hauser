@@ -722,6 +722,11 @@ body.theme-fade * {
               background-color var(--duration-normal) var(--ease-out),
               border-color var(--duration-normal) var(--ease-out);
 }
+.light-tile.is-unavailable {
+  border-style: dashed;
+  opacity: 0.5;
+  cursor: default;
+}
 .light-tile:focus-visible {
   outline: 2px solid var(--color-accent-warm);
   outline-offset: 2px;
@@ -808,6 +813,26 @@ body.theme-fade * {
 .light-detail-panel {
   width: min(100%, 460px);
   outline: none;
+}
+.light-detail-panel.is-unavailable {
+  border-style: dashed;
+}
+.light-detail-panel.is-unavailable .ld-body {
+  opacity: 0.5;
+}
+
+.entity-unavailable-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-snug);
+}
+.entity-unavailable-hint strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .ld-header {

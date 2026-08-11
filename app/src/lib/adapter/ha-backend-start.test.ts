@@ -20,7 +20,9 @@ class MemoryStorage {
   removeItem(key: string) { this.values.delete(key); }
 }
 
-function connection(subscribeMessage: () => Promise<() => Promise<void>>) {
+type DiffSubscriber = (diff: unknown) => void;
+
+function connection(subscribeMessage: (onUpdate: DiffSubscriber) => Promise<() => Promise<void>>) {
   return {
     addEventListener: vi.fn(),
     subscribeMessage: vi.fn(subscribeMessage),
@@ -271,5 +273,112 @@ describe('HaBackend deferred startup', () => {
     expect(invalidReasons).toEqual(['invalid-auth']);
     expect(localStorage.getItem('hmi:ha-token')).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('marks configured entities missing from the first subscription snapshot unavailable despite seed data', async () => {
+    const connected = connection(async () => async () => {});
+    websocket.createConnection.mockResolvedValueOnce(connected);
+    const backend = new HaBackend({
+      url: 'http://ha:8123',
+      entityIds: ['light.present', 'light.missing'],
+      seed: new Map([
+        ['light.present', { on: false, brightness: 10 }],
+        ['light.missing', { on: true, brightness: 55 }],
+      ]),
+    });
+    const update = vi.fn();
+    backend.subscribe(update);
+
+    backend.start();
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
+    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
+    onDiff({ a: { 'light.present': { s: 'on', a: { brightness: 255 } } } });
+
+    expect(update).toHaveBeenCalledWith(
+      'light.missing',
+      { on: true, brightness: 55 },
+      false,
+      false,
+    );
+  });
+
+  it('preserves the last-known value across removal and restores availability with the returning live value', async () => {
+    const connected = connection(async () => async () => {});
+    websocket.createConnection.mockResolvedValueOnce(connected);
+    const backend = new HaBackend({ url: 'http://ha:8123', entityIds: ['light.demo'] });
+    const update = vi.fn();
+    backend.subscribe(update);
+
+    backend.start();
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
+    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
+    onDiff({ a: { 'light.demo': { s: 'on', a: { brightness: 128 } } } });
+    const liveValue = { on: true, brightness: 50 };
+    expect(update).toHaveBeenLastCalledWith('light.demo', liveValue, false, true);
+
+    onDiff({ r: ['light.demo'] });
+    expect(update).toHaveBeenLastCalledWith('light.demo', liveValue, false, false);
+
+    onDiff({ a: { 'light.demo': { s: 'off', a: { brightness: 64 } } } });
+    expect(update).toHaveBeenLastCalledWith(
+      'light.demo',
+      { on: false, brightness: 25 },
+      false,
+      true,
+    );
+  });
+
+  it('treats HA state unavailable as entity availability and recovers on a normal state', async () => {
+    const connected = connection(async () => async () => {});
+    websocket.createConnection.mockResolvedValueOnce(connected);
+    const seedValue = { on: true, brightness: 80 };
+    const backend = new HaBackend({
+      url: 'http://ha:8123',
+      entityIds: ['light.demo'],
+      seed: new Map([['light.demo', seedValue]]),
+    });
+    const update = vi.fn();
+    backend.subscribe(update);
+
+    backend.start();
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
+    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
+    onDiff({ a: { 'light.demo': { s: 'unavailable', a: {} } } });
+    expect(update).toHaveBeenLastCalledWith('light.demo', seedValue, false, false);
+
+    onDiff({ c: { 'light.demo': { '+': { s: 'on', a: { brightness: 191 } } } } });
+    expect(update).toHaveBeenLastCalledWith(
+      'light.demo',
+      { on: true, brightness: 75 },
+      false,
+      true,
+    );
+  });
+
+  it('isolates subscription generations so old raw states cannot hide a missing entity', async () => {
+    const connected = connection(async () => async () => {});
+    websocket.createConnection.mockResolvedValueOnce(connected);
+    const seedValue = { on: false, brightness: 30 };
+    const backend = new HaBackend({
+      url: 'http://ha:8123',
+      entityIds: ['light.old'],
+      seed: new Map([['light.new', seedValue]]),
+    });
+    const update = vi.fn();
+    backend.subscribe(update);
+
+    backend.start();
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
+    const oldGeneration = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
+    oldGeneration({ a: { 'light.old': { s: 'on', a: { brightness: 255 } } } });
+
+    backend.setVisible(['light.new']);
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledTimes(2));
+    const newGeneration = connected.subscribeMessage.mock.calls[1][0] as DiffSubscriber;
+    newGeneration({ a: {} });
+    expect(update).toHaveBeenLastCalledWith('light.new', seedValue, false, false);
+
+    oldGeneration({ a: { 'light.new': { s: 'on', a: { brightness: 255 } } } });
+    expect(update).toHaveBeenLastCalledWith('light.new', seedValue, false, false);
   });
 });

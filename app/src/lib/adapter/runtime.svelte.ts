@@ -52,8 +52,8 @@ export class AdapterRuntime {
   #bindBackend(backend: Backend): void {
     this.#backend = backend;
     // Subscription füllt den Store und treibt die Reconciliation (docs/02)
-    backend.subscribe((id, value, stale = false) => {
-      if (backend === this.#backend) this.#onUpdate(id, value, stale);
+    backend.subscribe((id, value, stale, available) => {
+      if (backend === this.#backend) this.#onUpdate(id, value, stale, available);
     });
     // Verbindungszustand aus dem Seam (ADR-017 Addendum): reaktiv für Banner,
     // Status-Dot und Command-Sperre.
@@ -102,6 +102,7 @@ export class AdapterRuntime {
 
   async renameEntity(entityId: string, name: string): Promise<void> {
     if (this.#connection !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    if (!this.isEntityAvailable(entityId)) throw new Error('Die Entität ist nicht verfügbar.');
     if (!this.#backend.renameEntity) throw new Error('Das aktive Backend unterstützt keine gemeinsamen Gerätenamen.');
     await this.#backend.renameEntity(entityId, name);
   }
@@ -131,6 +132,12 @@ export class AdapterRuntime {
     return intent ? mergePatch(server, intent.value) : server;
   }
 
+  /** Read-only Availability-Seam: fehlender Store-State und Legacy-Updates
+      bleiben standardmäßig verfügbar; nur ein explizites false sperrt. */
+  isEntityAvailable(entityId: string): boolean {
+    return this.store.get(entityId)?.available ?? true;
+  }
+
   /* „pending"-Dot am Control, sobald der Command ins Timeout läuft (docs/02) */
   intentStatus(entityId: string): IntentStatus | null {
     return this.#intents.get(entityId)?.status ?? null;
@@ -148,6 +155,7 @@ export class AdapterRuntime {
      Sende-Dedup, reconciled aber nichts. */
   send(cmd: Command): void {
     if (this.#connection !== 'connected') return; // offline (docs/02)
+    if (!this.isEntityAvailable(cmd.entityId)) return;
     this.#queue = enqueue(this.#queue, cmd);
     this.#scheduleFlush();
   }
@@ -159,6 +167,7 @@ export class AdapterRuntime {
     // Offline (docs/02): keine Commands möglich — kein optimistischer Intent, der
     // nie bestätigt würde. Die UI deaktiviert die Controls zusätzlich sichtbar.
     if (this.#connection !== 'connected') return;
+    if (!this.isEntityAvailable(cmd.entityId)) return;
     this.#intents.set(cmd.entityId, {
       entityId: cmd.entityId, value: optimistic, sentAt: Date.now(), status: 'inflight',
     });
@@ -180,12 +189,24 @@ export class AdapterRuntime {
       this.#flushScheduled = false;
       const batch = this.#queue;
       this.#queue = [];
-      for (const cmd of batch) this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, cmd.data);
+      for (const cmd of batch) {
+        if (this.isEntityAvailable(cmd.entityId)) {
+          this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, cmd.data);
+        }
+      }
     });
   }
 
-  #onUpdate(entityId: string, value: unknown, stale = false): void {
-    this.store.set(entityId, value, stale);
+  #onUpdate(entityId: string, value: unknown, stale = false, available = true): void {
+    this.store.set(entityId, value, stale, available);
+    if (!available) {
+      // Ein bereits offener optimistischer Zustand darf die Last-known-
+      // Darstellung einer inzwischen verschwundenen Entität nicht überlagern.
+      this.#intents.delete(entityId);
+      clearTimeout(this.#timers.get(entityId));
+      this.#timers.delete(entityId);
+      return;
+    }
     const { outcome } = reconcile([...this.#intents.values()], { entityId, value }, this.#equals);
     if (outcome === 'external') return; // fremde Änderung: nur übernehmen
     // confirmed | contradicted → Intent auflösen; bei Widerspruch springt die
