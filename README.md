@@ -1,6 +1,10 @@
 <div align="center">
 
-# Hauser
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="app/public/brand/hauser-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="app/public/brand/hauser-logo-light.svg">
+  <img src="app/public/brand/hauser-logo-light.svg" alt="Hauser" width="380">
+</picture>
 
 **A calm, visual Home Assistant frontend for the people who live in the home.**
 
