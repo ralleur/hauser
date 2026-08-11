@@ -2,16 +2,20 @@
 
 The currently installable release is `v0.4.0-beta.3`, using
 `ghcr.io/ralleur/hauser:v0.4.0-beta.3`. Its Home Assistant App package and both
-release image tags are published for the focused real-HAOS smoke. An explicit
-source-build overlay remains available for development and source-level
-verification. No path comes with a support promise.
+release image tags are published. The maintainer-operated Home Assistant OS path
+passed installation, startup, setup against real Home Assistant, one real entity
+command and persistence across an App restart. An explicit source-build overlay
+remains available for development and source-level verification. No path comes
+with a support promise.
 
 ## Tested platform
 
 The current path is qualified on Linux containers through Docker Desktop on
 Apple Silicon. Other Docker Engine and CPU combinations are expected to work
 because the pinned Node base is multi-architecture, but they are not yet part of
-a tested support matrix.
+a tested support matrix. The experimental Home Assistant App path has additionally
+passed the focused maintainer-operated smoke on real Home Assistant OS; it does
+not yet have an independent-household compatibility matrix.
 
 Prerequisites:
 

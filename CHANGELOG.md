@@ -12,10 +12,12 @@ Semantic Versioning for its public release line.
   privileges before importing the unchanged server.
 - Docker/Compose continues to run explicitly as the unprivileged `node` user.
 
-### Known limitations
+### Post-release verification
 
-- The focused real Home Assistant OS smoke resumes from the previously failed
-  start step after publication of this immutable follow-up beta.
+- The real Home Assistant OS smoke passed repository discovery, installation,
+  startup, setup against real Home Assistant, one entity command and persistence
+  across an App restart. The run was maintainer-operated and is not external
+  household compatibility evidence.
 
 ## [0.4.0-beta.2] - 2026-08-11
 

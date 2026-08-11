@@ -87,8 +87,10 @@ beta work.
 
 ### Recommended — Home Assistant OS (`0.4.0-beta.3`)
 
-This App path is experimental. The package is published for a focused real-HAOS
-smoke; it does not yet imply a broad compatibility or support promise.
+This App path is experimental. Installation, startup, setup against a real Home
+Assistant instance, one real entity command and persistence across an App restart
+have passed on the maintainer's Home Assistant OS system. That does not yet imply
+broad compatibility or a support promise.
 
 [![Open your Home Assistant instance and add the Hauser App repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser)
 
@@ -179,8 +181,9 @@ Home Assistant topology compatibility is not yet a tested support matrix.
 - `0.4.0-beta.2` remains immutable; its real HAOS start failed because `/data`
   was not writable by the image user. `beta.3` contains only the runtime ownership
   fix required by that observed failure.
-- The Home Assistant App path was structurally validated before publication; the
-  focused real-HAOS post-publish smoke is the remaining launch gate.
+- The maintainer-operated Home Assistant OS smoke passed repository discovery,
+  installation, startup, setup against real Home Assistant, one entity command
+  and persistence across an App restart. It is not independent household evidence.
 - The clean-room install was operated by the maintainer. It proves the technical
   path, not yet usability by an unrelated installer or compatibility with a
   second real household.
@@ -197,10 +200,12 @@ Home Assistant topology compatibility is not yet a tested support matrix.
 ## Help test the beta
 
 The main missing evidence is an installation by someone unrelated to the
-maintainer in a different real Home Assistant household. If you can run the
-tagged Compose release on a clean Linux host, follow the structured
-[`linux/amd64` installation task](https://github.com/ralleur/hauser/issues/5) and
-report what worked, what did not and where the documentation caused friction.
+maintainer in a different real Home Assistant household. The shortest route is
+the experimental Home Assistant OS App above. Please submit the structured
+[installation report](https://github.com/ralleur/hauser/issues/new?template=installation-report.yml&title=%5BInstall%5D%3A%20),
+including the first unclear step and the time to your first successful light
+command. Docker users on a clean Linux `amd64` host can additionally follow the
+focused [`linux/amd64` installation task](https://github.com/ralleur/hauser/issues/5).
 
 Focused bug fixes, installation documentation, accessibility improvements and
 native reviews of the French, Italian, Portuguese or Polish translations are

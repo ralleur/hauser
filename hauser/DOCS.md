@@ -2,8 +2,10 @@
 
 ## Install
 
-> **Experimental beta:** `0.4.0-beta.3` is published for a focused real Home
-> Assistant OS smoke. It is not yet a broad compatibility or support promise.
+> **Experimental beta:** `0.4.0-beta.3` passed installation, startup, setup
+> against real Home Assistant, one real entity command and persistence across an
+> App restart on the maintainer's Home Assistant OS system. It is not yet a broad
+> compatibility or support promise.
 
 1. In Home Assistant, open **Settings → Apps → App Store → Repositories**.
 2. Add `https://github.com/ralleur/hauser`.
@@ -66,5 +68,6 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.3` is the current published App and Docker/Compose beta; the focused
-  real-HAOS post-publish smoke remains the community-launch gate.
+- `0.4.0-beta.3` is the current published App and Docker/Compose beta. The focused
+  maintainer-operated Home Assistant OS smoke passed; an unrelated real-home
+  installation remains the next beta-stabilisation evidence gate.

@@ -26,10 +26,12 @@ household screens are implemented. The versioned Compose path and isolated
 clean-room onboarding gate are green. No alpha was published;
 `v0.4.0-beta.1` is the first public release.
 
-A thin Home Assistant App package for `0.4.0-beta.3` is published after structural
-and local validation. It reuses the versioned multi-architecture image and the
-existing direct-port setup path; Docker/Compose remains supported. The focused
-real Home Assistant OS post-publish smoke remains the community-launch gate.
+A thin Home Assistant App package for `0.4.0-beta.3` is published. It reuses the
+versioned multi-architecture image and the existing direct-port setup path;
+Docker/Compose remains supported. The maintainer-operated real Home Assistant OS
+smoke passed installation, startup, setup, one real entity command and persistence
+across an App restart. An unrelated real-home installation remains the next
+beta-stabilisation evidence gate.
 
 ---
 
