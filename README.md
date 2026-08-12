@@ -14,13 +14,15 @@
 
 ## What is Hauser?
 
-Hauser is a self-hosted Home Assistant frontend and household dashboard. It
-prioritises a coherent visual language, room context and immediate feedback over
-maximum technical information density. The goal is a screen that feels calm and
-obvious to everyone in the home—not a wall of unrelated cards.
+Hauser is a self-hosted, room-first Home Assistant frontend and household
+dashboard for wall panels, tablets and phones. It prioritises a coherent visual
+language, room context and immediate feedback over maximum technical information
+density. The goal is a screen that feels calm and obvious to everyone in the
+home—not a wall of unrelated cards.
 
 It runs as a landscape wall-panel interface and as a compact phone layout. Home
-Assistant remains the automation engine and source of device truth.
+Assistant remains the automation engine and operator/admin interface; Hauser is
+the everyday interface for family members and the rest of the household.
 
 That split is deliberate. A smart home needs an **operator cockpit** for the
 person who builds it—dense diagnostics, configuration and technical detail—and a

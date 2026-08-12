@@ -3,17 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — a control surface for your home</title>
-<meta name="description" content="An open-source smart home interface built like a vehicle OS: one design system, optimistic UI, a hard performance budget. Home Assistant and Jellyfin behind a single surface.">
+<title>Hauser — a simple, room-first Home Assistant dashboard for the whole household</title>
+<meta name="description" content="Hauser is a self-hosted, room-first Home Assistant frontend for wall panels, tablets and phones — a calm everyday interface for the whole household.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ralleur.github.io/hauser/">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hauser — a control surface for your home">
-<meta property="og:description" content="An open-source smart home interface built like a vehicle OS. Home Assistant and Jellyfin behind a single design system.">
-<meta property="og:image" content="media/social-preview.jpg">
+<meta property="og:title" content="Hauser — a simple, room-first Home Assistant dashboard for the whole household">
+<meta property="og:description" content="A self-hosted, room-first Home Assistant frontend for wall panels, tablets and phones — a calm everyday interface for the whole household.">
+<meta property="og:url" content="https://ralleur.github.io/hauser/">
+<meta property="og:image" content="https://ralleur.github.io/hauser/media/social-preview.jpg">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="stylesheet" href="site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Hauser",
+  "description": "A self-hosted, room-first Home Assistant frontend for wall panels, tablets and phones — a calm everyday interface for the whole household.",
+  "applicationCategory": "Home automation",
+  "operatingSystem": "Any",
+  "url": "https://ralleur.github.io/hauser/",
+  "sameAs": "https://github.com/ralleur/hauser",
+  "license": "https://github.com/ralleur/hauser/blob/main/LICENSE"
+}
+</script>
 </head>
 <body>
 
@@ -22,9 +38,10 @@
   <div class="wrap">
     <h1>Your home,<br>with an interface<br>worth touching.</h1>
     <p class="lead">
-      Hauser is a smart home control surface built the way a car builds its
-      dashboard: one design system, one interaction language, and a hard rule
-      that the screen never waits for the network.
+      Hauser is a self-hosted, room-first Home Assistant frontend for the people
+      who live in the home. Home Assistant remains the operator and admin
+      interface; Hauser is the calm everyday dashboard for wall panels, tablets
+      and phones.
     </p>
     <div class="actions">
       <a class="btn btn-primary" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
@@ -337,6 +354,41 @@
       that technical path; the beta still has to prove it with external people,
       different homes and release-to-release upgrades.
     </p>
+  </div>
+</section>
+
+<!-- ── FAQ ────────────────────────────────────────────────────────────── -->
+<section id="faq">
+  <div class="wrap">
+    <p class="eyebrow">FAQ</p>
+    <h2 style="max-width:14ch">The short version.</h2>
+
+    <div class="cards">
+      <div class="card">
+        <h3>What is Hauser?</h3>
+        <p>A self-hosted, room-first frontend for Home Assistant, designed as a calm everyday interface for the household.</p>
+      </div>
+      <div class="card">
+        <h3>Is Hauser a replacement for Home Assistant?</h3>
+        <p>No. Home Assistant remains the automation engine and operator interface. Hauser connects to it for daily household use.</p>
+      </div>
+      <div class="card">
+        <h3>Is Hauser a Lovelace theme?</h3>
+        <p>No. It is a standalone Svelte PWA that connects to Home Assistant through its WebSocket API.</p>
+      </div>
+      <div class="card">
+        <h3>Can I use Hauser on a wall-mounted tablet?</h3>
+        <p>Yes. The landscape panel shell is designed for wall-mounted tablets and kiosk use.</p>
+      </div>
+      <div class="card">
+        <h3>Is it intended for non-technical household members?</h3>
+        <p>Yes. Hauser keeps everyday controls room-first and leaves administration to Home Assistant.</p>
+      </div>
+      <div class="card">
+        <h3>Does Hauser work on phones and tablets?</h3>
+        <p>Yes. It includes separate panel and one-handed phone layouts that share the same design system.</p>
+      </div>
+    </div>
   </div>
 </section>
 
