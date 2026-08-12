@@ -83,6 +83,24 @@ Hauser does not advertise roadmap work as released functionality. In particular,
 the guided portable laundry setup and personal room-image wizard remain later
 beta work.
 
+## AI full disclosure
+
+Hauser is developed with **substantial assistance from coding agents and
+generative AI**. They are used across implementation, tests, documentation and
+commit messages, while the maintainer leads the product direction, design,
+testing, debugging, scope and release decisions. This is stated prominently
+because it materially shaped how the project was built. If AI-developed code is
+a deal-breaker for you, Hauser is not the right project for you.
+
+The bundled room illustrations are also AI-generated from private photographs of
+the maintainer's own rooms; those source photographs are not included. Asset
+provenance and licensing are documented in [ASSETS-LICENSE.md](ASSETS-LICENSE.md).
+
+This development process is separate from the installed product: Hauser does not
+require an AI service for its core operation and does not send household data to
+a model. Optional future AI features are explicit capabilities rather than a
+hidden runtime dependency.
+
 ## Installation
 
 ### Recommended — Home Assistant OS (`0.4.0-beta.3`)
