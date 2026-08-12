@@ -1,5 +1,6 @@
 import { m } from '../../paraglide/messages.js';
 import { AI_CUSTOMIZING_ENABLED } from '../config/product-capabilities.ts';
+import { IS_DEMO } from '../demo/demo-mode.ts';
 /* ============================================
    Einstellungs-Registry — die eine Quelle für Gruppen, Sektionen (Sidebar) und
    durchsuchbare Einträge (Chrome-Settings-artige Suche). Pure Daten +
@@ -173,8 +174,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['apple', 'apple-id', 'caldav', 'app-passwort', 'account', 'einrichten', 'anmelden', 'icloud', 'kalender'] },
   { id: 'ablage-status', section: 'services', get label() { return m.settings_entry_ablage_status_label(); },
     keywords: ['paperless', 'ablage', 'dokumente', 'pin', 'privat', 'archiv', 'scan'] },
-  { id: 'songs-status', section: 'services', get label() { return m.settings_entry_songs_status_label(); },
-    keywords: ['songwerkstatt', 'ace-step', 'acestep', 'musik', 'lieder', 'generator', 'audio'] },
+  ...(!IS_DEMO ? [{ id: 'songs-status', section: 'services' as const, get label() { return m.settings_entry_songs_status_label(); },
+    keywords: ['songwerkstatt', 'ace-step', 'acestep', 'musik', 'lieder', 'generator', 'audio'] }] : []),
 
   /* ── Verbindungen · Betriebsmodus (die eine Wahrheit für Live/Demo) ── */
   { id: 'demo-mode', section: 'operating-mode', get label() { return m.settings_entry_demo_mode_label(); },
@@ -208,8 +209,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   }] : []),
   { id: 'ambient-hero-text', section: 'ai-features', get label() { return m.settings_entry_ambient_hero_text_label(); },
     keywords: ['llm', 'ki', 'ai', 'gpt', 'luna', 'codex', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
-  { id: 'ai-song-lyrics', section: 'ai-features', get label() { return m.settings_entry_ai_song_lyrics_label(); },
-    keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] },
+  ...(!IS_DEMO ? [{ id: 'ai-song-lyrics', section: 'ai-features' as const, get label() { return m.settings_entry_ai_song_lyrics_label(); },
+    keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] }] : []),
 
   /* ── Darstellung ── */
   { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },

@@ -27,6 +27,23 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
 
 const nowIso = () => new Date().toISOString();
 
+const demoShoppingConfig = {
+  version: 1,
+  stores: [
+    { id: 'walmart', label: 'Walmart', categories: [] },
+    { id: 'carrefour', label: 'Carrefour', categories: [] },
+    { id: 'tesco', label: 'Tesco', categories: [] },
+  ],
+};
+
+function publicDemoHouseholdConfig() {
+  return {
+    ...demoHouseholdConfig,
+    navigation: demoHouseholdConfig.navigation.filter((item) => item.target.id !== 'songs'),
+    enabledModules: demoHouseholdConfig.enabledModules.filter((id) => id !== 'songs'),
+  };
+}
+
 function demoReminders() {
   return {
     version: 1,
@@ -46,12 +63,12 @@ function demoShopping() {
   return {
     updated_at: nowIso(),
     source_name: 'Demo',
-    /* Die Abschnitts-IDs müssen den konfigurierten Läden entsprechen
-       (DEFAULT_SHOPPING_CONFIG) — sonst ordnet die UI nichts zu. */
+    /* Die Abschnitts-IDs müssen der Demo-Konfiguration aus `/api/config`
+       entsprechen — sonst ordnet die UI nichts zu. */
     sections: [
       {
-        id: 'aldi',
-        title: 'Aldi',
+        id: 'walmart',
+        title: 'Walmart',
         items: [
           { id: 'demo-a1', title: 'Oat milk', checked: false },
           { id: 'demo-a2', title: 'Tomatoes', checked: false },
@@ -59,8 +76,8 @@ function demoShopping() {
         ],
       },
       {
-        id: 'rewe',
-        title: 'Rewe',
+        id: 'carrefour',
+        title: 'Carrefour',
         items: [
           { id: 'demo-r1', title: 'Coffee beans', checked: false },
           { id: 'demo-r2', title: 'Parmesan', checked: false },
@@ -68,8 +85,8 @@ function demoShopping() {
         ],
       },
       {
-        id: 'dm',
-        title: 'dm',
+        id: 'tesco',
+        title: 'Tesco',
         items: [
           { id: 'demo-d1', title: 'Toothpaste', checked: false },
           { id: 'demo-d2', title: 'Laundry detergent', checked: false },
@@ -97,7 +114,7 @@ export function demoResponse(path: string, method: string): Response | null {
   }
   if (path === '/api/household-config') {
     return method === 'GET'
-      ? json(demoHouseholdConfig, 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
+      ? json(publicDemoHouseholdConfig(), 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
       : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' });
   }
   /* Die Ambient-Texte entstehen normalerweise über einen lokalen LLM-Dienst.
@@ -111,7 +128,9 @@ export function demoResponse(path: string, method: string): Response | null {
     return json({ error: 'Document access is not available in the public demo.' }, 403);
   }
   if (path.startsWith('/api/config')) {
-    return method === 'GET' ? json({ values: {} }) : json({ ok: true });
+    return method === 'GET'
+      ? json({ values: { 'hmi:shopping-config:v1': JSON.stringify(demoShoppingConfig) } })
+      : json({ ok: true });
   }
   if (path.startsWith('/api/reminders')) {
     return method === 'GET' ? json(demoReminders()) : json({ ok: true });
@@ -134,7 +153,7 @@ export function demoResponse(path: string, method: string): Response | null {
    Landing Page gezielt in einen Screen zu verlinken, statt Besucher selbst
    suchen zu lassen. Nur in der Demo — die Kiosk-App kennt keine URL-Navigation. */
 const DEEP_LINK_SCREENS = new Set([
-  'home', 'energy', 'calendar', 'notes', 'media', 'songs', 'library', 'system',
+  'home', 'energy', 'calendar', 'notes', 'media', 'library', 'system',
 ]);
 
 /* Startwerte für die Energie-Sensoren. Ohne sie zeigt der Energie-Screen in der

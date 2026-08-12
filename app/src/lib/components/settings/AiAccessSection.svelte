@@ -4,6 +4,7 @@
   import Icon from '../Icon.svelte';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
   import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 </script>
 
@@ -17,12 +18,14 @@
     </div>
     <span class="settings-row-value num">{AMBIENT_LLM_DEFAULT_MODEL}</span>
   </div>
-  <div class="settings-row">
-    <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
-    <div class="settings-row-text">
-      <span class="settings-row-label">{m.sys_ai_model_lyrics()}</span>
-      <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()}</span>
+  {#if !IS_DEMO}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.sys_ai_model_lyrics()}</span>
+        <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()}</span>
+      </div>
+      <span class="settings-row-value num">{SONG_LYRICS_MODEL}</span>
     </div>
-    <span class="settings-row-value num">{SONG_LYRICS_MODEL}</span>
-  </div>
+  {/if}
 </div>

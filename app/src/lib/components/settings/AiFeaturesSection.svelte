@@ -5,6 +5,7 @@
   import { settingsValues, setAmbientHeroText } from '../../state/settings.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
   import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 </script>
 
@@ -26,12 +27,14 @@
     </button>
   </div>
 
-  <div class="settings-row" data-setting-id="ai-song-lyrics">
-    <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
-    <div class="settings-row-text">
-      <span class="settings-row-label">{m.settings_entry_ai_song_lyrics_label()}</span>
-      <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()} ({SONG_LYRICS_MODEL})</span>
+  {#if !IS_DEMO}
+    <div class="settings-row" data-setting-id="ai-song-lyrics">
+      <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.settings_entry_ai_song_lyrics_label()}</span>
+        <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()} ({SONG_LYRICS_MODEL})</span>
+      </div>
+      <span class="settings-row-value">{m.sys_ai_always_on()}</span>
     </div>
-    <span class="settings-row-value">{m.sys_ai_always_on()}</span>
-  </div>
+  {/if}
 </div>

@@ -18,6 +18,7 @@
   import { refreshFamilyCalendar } from '../../state/calendar.svelte.ts';
   import { serviceProbes, probeLocalServices } from '../../state/service-probes.svelte.ts';
   import { confirmThen, isConfirming } from '../../state/settings-actions.svelte.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 
   const conn = $derived(connection());
@@ -220,12 +221,14 @@
     <span class="settings-row-value">{ablageLabel}</span>
   </div>
 
-  <div class="settings-row" data-setting-id="songs-status">
-    <span class="dot {songsDot}"></span>
-    <div class="settings-row-text">
-      <span class="settings-row-label">{m.settings_entry_songs_status_label()}</span>
-      <span class="settings-row-sub">{m.sys_songs_hint()}</span>
+  {#if !IS_DEMO}
+    <div class="settings-row" data-setting-id="songs-status">
+      <span class="dot {songsDot}"></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.settings_entry_songs_status_label()}</span>
+        <span class="settings-row-sub">{m.sys_songs_hint()}</span>
+      </div>
+      <span class="settings-row-value">{songsLabel}</span>
     </div>
-    <span class="settings-row-value">{songsLabel}</span>
-  </div>
+  {/if}
 </div>

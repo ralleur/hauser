@@ -84,22 +84,22 @@ export class FakeBackend implements Backend {
       return value.toISOString();
     };
     return [
-      { id: 'fake-family-1', title: 'Familienfrühstück', start: at(0, 9), end: at(0, 10, 30), allDay: false, location: 'Zuhause', description: null },
+      { id: 'fake-family-1', title: 'Family breakfast', start: at(0, 9), end: at(0, 10, 30), allDay: false, location: 'Home', description: null },
       // Laufender + anstehender Termin heute, damit die Ambient-Hero-Zeile
       // („Jetzt …") im Dev tagsüber sichtbar ist
-      { id: 'fake-family-4', title: 'Oma & Opa zu Besuch', start: at(0, 11), end: at(0, 21), allDay: false, location: null, description: null },
-      { id: 'fake-family-5', title: 'Wasserball', start: at(0, 19, 30), end: at(0, 21), allDay: false, location: 'Schwimmhalle', description: null },
-      { id: 'fake-family-2', title: 'Kita geschlossen', start: at(1, 0), end: at(2, 0), allDay: true, location: null, description: null },
-      { id: 'fake-family-3', title: 'Spielplatz', start: at(2, 15, 30), end: at(2, 17), allDay: false, location: 'Blücherpark', description: null },
+      { id: 'fake-family-4', title: 'Grandparents visiting', start: at(0, 11), end: at(0, 21), allDay: false, location: null, description: null },
+      { id: 'fake-family-5', title: 'Water polo', start: at(0, 19, 30), end: at(0, 21), allDay: false, location: 'Aquatic center', description: null },
+      { id: 'fake-family-2', title: 'Daycare closed', start: at(1, 0), end: at(2, 0), allDay: true, location: null, description: null },
+      { id: 'fake-family-3', title: 'Playground', start: at(2, 15, 30), end: at(2, 17), allDay: false, location: 'Central Park', description: null },
       // Über mehrere Wochen gestreut, damit sich das Monatsraster hoch- und
       // runterscrollen lässt und dabei Termine trägt.
-      { id: 'fake-family-6', title: 'Elternabend', start: at(-4, 19), end: at(-4, 20, 30), allDay: false, location: 'Kita', description: null },
-      { id: 'fake-family-7', title: 'Geburtstag Mia', start: at(-9, 0), end: at(-8, 0), allDay: true, location: null, description: null },
-      { id: 'fake-family-8', title: 'Zahnarzt', start: at(5, 8, 30), end: at(5, 9, 15), allDay: false, location: null, description: null },
-      { id: 'fake-family-9', title: 'Schwimmkurs', start: at(7, 16), end: at(7, 17), allDay: false, location: 'Schwimmhalle', description: null },
-      { id: 'fake-family-10', title: 'Wochenendausflug', start: at(11, 0), end: at(13, 0), allDay: true, location: 'Harz', description: null },
-      { id: 'fake-family-11', title: 'Konzert', start: at(16, 20), end: at(16, 22, 30), allDay: false, location: 'Philharmonie', description: null },
-      { id: 'fake-family-12', title: 'Sommerferien', start: at(23, 0), end: at(38, 0), allDay: true, location: null, description: null },
+      { id: 'fake-family-6', title: 'Parents evening', start: at(-4, 19), end: at(-4, 20, 30), allDay: false, location: 'Daycare', description: null },
+      { id: 'fake-family-7', title: "Mia's birthday", start: at(-9, 0), end: at(-8, 0), allDay: true, location: null, description: null },
+      { id: 'fake-family-8', title: 'Dentist appointment', start: at(5, 8, 30), end: at(5, 9, 15), allDay: false, location: null, description: null },
+      { id: 'fake-family-9', title: 'Swimming lesson', start: at(7, 16), end: at(7, 17), allDay: false, location: 'Aquatic center', description: null },
+      { id: 'fake-family-10', title: 'Weekend trip', start: at(11, 0), end: at(13, 0), allDay: true, location: 'Lake District', description: null },
+      { id: 'fake-family-11', title: 'Concert', start: at(16, 20), end: at(16, 22, 30), allDay: false, location: 'Concert Hall', description: null },
+      { id: 'fake-family-12', title: 'Summer holidays', start: at(23, 0), end: at(38, 0), allDay: true, location: null, description: null },
     ].filter((item) => new Date(item.start) < end && new Date(item.end) > start);
   }
 
