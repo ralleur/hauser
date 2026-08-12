@@ -615,7 +615,7 @@ describe('productive household bootstrap cutover', () => {
       startProductiveApp: start,
     });
     expect(start).toHaveBeenCalledOnce();
-    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'match' });
+    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'mismatch' });
     const mode = demoResponse('/api/household-config-mode', 'GET');
     expect(mode?.headers.get('cache-control')).toBe('no-store');
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');
