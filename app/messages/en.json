@@ -302,6 +302,7 @@
   "notif_done": "{device} finished",
   "notif_since": "for",
   "notif_ago": "ago",
+  "climate_current": "Current",
   "climate_target": "Target",
   "sys_one_surface": "One control surface",
   "sys_two_surfaces": "Two control surfaces",

@@ -302,6 +302,7 @@
   "notif_done": "{device} terminé",
   "notif_since": "depuis",
   "notif_ago": "il y a",
+  "climate_current": "Actuelle",
   "climate_target": "Cible",
   "sys_one_surface": "Une surface de commande",
   "sys_two_surfaces": "Deux surfaces de commande",

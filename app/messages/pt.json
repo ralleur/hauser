@@ -302,6 +302,7 @@
   "notif_done": "{device} terminada",
   "notif_since": "há",
   "notif_ago": "há",
+  "climate_current": "Atual",
   "climate_target": "Alvo",
   "sys_one_surface": "Uma superfície de controlo",
   "sys_two_surfaces": "Duas superfícies de controlo",

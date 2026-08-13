@@ -21,6 +21,14 @@ export interface PhoneRoomSummary {
 
 export type PhoneHeroVariant = 'light' | 'dark';
 
+export function currentClimateTemperature(rooms: readonly PhoneRoomSummary[]): number | null {
+  const temperatures = rooms.flatMap((room) => (
+    room.climateAvailable && room.temperature !== null ? [room.temperature] : []
+  ));
+  if (temperatures.length === 0) return null;
+  return temperatures.reduce((sum, temperature) => sum + temperature, 0) / temperatures.length;
+}
+
 const PHONE_HERO_ROOM = /^(?:wohnzimmer|kueche|bad|schlafzimmer|kinderzimmer|flur)$/;
 
 /** Phone Home needs one sun-driven variant per visible card, never the panel's

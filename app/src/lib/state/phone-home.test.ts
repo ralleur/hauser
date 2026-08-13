@@ -7,6 +7,7 @@ import roomControls from '../components/RoomControls.svelte?raw';
 import type { Room } from './app.svelte.ts';
 import {
   accessibleRoomSummary,
+  currentClimateTemperature,
   phoneHeroUrl,
   projectPhoneRooms,
   reconcilePhoneRoomLayer,
@@ -54,6 +55,16 @@ describe('phone home room projection', () => {
         windowOpen: false, presence: false, climateAvailable: false,
       },
     ]);
+  });
+
+  it('derives the central current temperature only from rooms with climate data', () => {
+    const projected = projectPhoneRooms(rooms, readers({
+      climate: (roomId) => roomId === 'living' ? { current: 21, target: 20, hvac: 'heat' } : null,
+    }));
+    expect(currentClimateTemperature(projected)).toBe(21.4);
+    expect(currentClimateTemperature(projected.map((room) => ({ ...room, climateAvailable: false })))).toBeNull();
+    expect(phoneHome).toContain('m.climate_current()');
+    expect(phoneHome).toContain('m.climate_target()');
   });
 
   it('tolerates missing readers and values without inventing room state', () => {

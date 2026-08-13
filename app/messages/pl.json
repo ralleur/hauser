@@ -302,6 +302,7 @@
   "notif_done": "{device} gotowe",
   "notif_since": "od",
   "notif_ago": "temu",
+  "climate_current": "Aktualna",
   "climate_target": "Cel",
   "sys_one_surface": "Jeden panel sterowania",
   "sys_two_surfaces": "Dwa panele sterowania",

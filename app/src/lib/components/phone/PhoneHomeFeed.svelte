@@ -4,7 +4,7 @@
   import { centralClimate } from '../../state/climate-central.svelte.ts';
   import { fmtTemp } from '../../format.ts';
   import { appState } from '../../state/app.svelte.ts';
-  import type { PhoneHeroVariant, PhoneRoomSummary } from '../../state/phone-home.ts';
+  import { currentClimateTemperature, type PhoneHeroVariant, type PhoneRoomSummary } from '../../state/phone-home.ts';
   import { shouldConfirmHomeOff, toggleVacationMode, turnOffHomeExceptBedroom, vacationModeActive } from '../../state/commands.ts';
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
 
@@ -24,6 +24,7 @@
   } = $props();
 
   const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
+  const currentTemperature = $derived(currentClimateTemperature(rooms));
   const vacationActive = $derived(vacationModeActive());
   const heroVariant = $derived<PhoneHeroVariant>(
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
@@ -81,8 +82,18 @@
       <div class="climate-dock phone-climate-dock" aria-label="Zentrale Klimasteuerung, alle Räume">
         <button class="cd-key cd-key-down pressable" type="button" aria-label="Alle Räume 0,5 Grad kälter"
                 onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
-        <div class="cd-readout">
-          <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
+        <div class="cd-readout phone-climate-readout">
+          <div class="phone-climate-reading">
+            <span class="phone-climate-label">{m.climate_current()}</span>
+            <span class="phone-climate-current-value num">
+              {currentTemperature === null ? '–' : `${fmtTemp(currentTemperature)}°`}
+            </span>
+          </div>
+          <span class="phone-climate-separator" aria-hidden="true"></span>
+          <div class="phone-climate-reading">
+            <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
+            <span class="phone-climate-label">{m.climate_target()}</span>
+          </div>
         </div>
         <button class="cd-key cd-key-up pressable" type="button" aria-label="Alle Räume 0,5 Grad wärmer"
                 onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>

@@ -471,6 +471,7 @@
   "notif_done": "{device} fertig",
   "notif_since": "seit",
   "notif_ago": "vor",
+  "climate_current": "Aktuell",
   "climate_target": "Ziel",
   "status_window_open_one": "1 Fenster offen",
   "status_window_open_two": "{count} Fenster offen",
