@@ -11,6 +11,7 @@ const websocket = vi.hoisted(() => ({
 vi.mock('home-assistant-js-websocket', () => websocket);
 
 import { HaBackend, installHaRetryFactory } from './ha-backend.ts';
+import type { EntitiesDiff } from './ha-entities.ts';
 import { createHaRetryController } from '../state/runtime-background.ts';
 
 class MemoryStorage {
@@ -20,9 +21,7 @@ class MemoryStorage {
   removeItem(key: string) { this.values.delete(key); }
 }
 
-type DiffSubscriber = (diff: unknown) => void;
-
-function connection(subscribeMessage: (onUpdate: DiffSubscriber) => Promise<() => Promise<void>>) {
+function connection(subscribeMessage: (callback: (diff: EntitiesDiff) => void) => Promise<() => Promise<void>>) {
   return {
     addEventListener: vi.fn(),
     subscribeMessage: vi.fn(subscribeMessage),
@@ -59,6 +58,96 @@ describe('HaBackend deferred startup', () => {
 
     expect(update).toHaveBeenCalledWith('light.demo', { on: true }, true);
     expect(websocket.createConnection).not.toHaveBeenCalled();
+  });
+
+  it('never hydrates configured laundry entities from browser cache or live seed', () => {
+    localStorage.setItem('hmi:ha-cache', JSON.stringify({
+      'input_select.fixture_washer': { state: 'running', changedAt: 100 },
+      'light.demo': { on: true },
+    }));
+    const backend = new HaBackend({
+      url: 'http://initial:8123',
+      entityIds: ['input_select.fixture_washer', 'light.demo'],
+      laundryEntityIds: ['input_select.fixture_washer'],
+      seed: new Map([
+        ['input_select.fixture_washer', { state: 'running', changedAt: 200 }],
+        ['light.demo', { on: false }],
+      ]),
+    });
+    const update = vi.fn();
+
+    backend.subscribe(update);
+
+    expect(update).toHaveBeenCalledExactlyOnceWith('light.demo', { on: true }, true);
+    expect(update).not.toHaveBeenCalledWith(
+      'input_select.fixture_washer',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('publishes raw laundry states for every supported domain and clears removals from runtime and cache', async () => {
+    let emit!: (diff: EntitiesDiff) => void;
+    const connected = connection(async (callback) => {
+      emit = callback;
+      return async () => {};
+    });
+    websocket.createConnection.mockResolvedValueOnce(connected);
+    const laundryEntityIds = [
+      'input_select.fixture_washer',
+      'select.fixture_dryer',
+      'sensor.fixture_enum',
+      'binary_sensor.fixture_binary',
+      'input_boolean.fixture_boolean',
+      'automation.fixture_cycle',
+    ];
+    const backend = new HaBackend({
+      url: 'http://ha:8123',
+      entityIds: [...laundryEntityIds, 'switch.fixture_general'],
+      laundryEntityIds,
+    });
+    const update = vi.fn();
+    backend.subscribe(update);
+    backend.start();
+    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
+
+    emit({
+      a: {
+        'input_select.fixture_washer': { s: 'running', a: {}, lc: 100 },
+        'select.fixture_dryer': { s: 'done', a: {}, lc: 101 },
+        'sensor.fixture_enum': { s: 'drying', a: {}, lc: 102 },
+        'binary_sensor.fixture_binary': { s: 'unknown', a: {}, lc: 103 },
+        'input_boolean.fixture_boolean': { s: 'unavailable', a: {}, lc: 104 },
+        'automation.fixture_cycle': {
+          s: 'on',
+          a: { last_triggered: '2026-08-02T08:00:00+00:00' },
+          lc: 104.5,
+        },
+        'switch.fixture_general': { s: 'unavailable', a: {}, lc: 105 },
+      },
+    });
+
+    expect(update).toHaveBeenCalledWith(
+      'input_select.fixture_washer',
+      { state: 'running', changedAt: 100_000 },
+    );
+    expect(update).toHaveBeenCalledWith('select.fixture_dryer', { state: 'done', changedAt: 101_000 });
+    expect(update).toHaveBeenCalledWith('sensor.fixture_enum', { state: 'drying', changedAt: 102_000 });
+    expect(update).toHaveBeenCalledWith('binary_sensor.fixture_binary', { state: 'unknown', changedAt: 103_000 });
+    expect(update).toHaveBeenCalledWith('input_boolean.fixture_boolean', { state: 'unavailable', changedAt: 104_000 });
+    expect(update).toHaveBeenCalledWith('automation.fixture_cycle', {
+      state: 'on',
+      changedAt: 104_500,
+      lastTriggered: '2026-08-02T08:00:00+00:00',
+    });
+    expect(update).toHaveBeenCalledWith('switch.fixture_general', { on: false, changedAt: 105_000 });
+
+    emit({ r: { 'input_select.fixture_washer': null } });
+
+    expect(update).toHaveBeenLastCalledWith('input_select.fixture_washer', undefined);
+    const cache = JSON.parse(localStorage.getItem('hmi:ha-cache') ?? '{}') as Record<string, unknown>;
+    expect(cache).not.toHaveProperty('input_select.fixture_washer');
+    expect(cache).toHaveProperty('select.fixture_dryer');
   });
 
   it('resolves the URL at start time and keeps concurrent starts single-flight', async () => {
@@ -273,112 +362,5 @@ describe('HaBackend deferred startup', () => {
     expect(invalidReasons).toEqual(['invalid-auth']);
     expect(localStorage.getItem('hmi:ha-token')).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('marks configured entities missing from the first subscription snapshot unavailable despite seed data', async () => {
-    const connected = connection(async () => async () => {});
-    websocket.createConnection.mockResolvedValueOnce(connected);
-    const backend = new HaBackend({
-      url: 'http://ha:8123',
-      entityIds: ['light.present', 'light.missing'],
-      seed: new Map([
-        ['light.present', { on: false, brightness: 10 }],
-        ['light.missing', { on: true, brightness: 55 }],
-      ]),
-    });
-    const update = vi.fn();
-    backend.subscribe(update);
-
-    backend.start();
-    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
-    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
-    onDiff({ a: { 'light.present': { s: 'on', a: { brightness: 255 } } } });
-
-    expect(update).toHaveBeenCalledWith(
-      'light.missing',
-      { on: true, brightness: 55 },
-      false,
-      false,
-    );
-  });
-
-  it('preserves the last-known value across removal and restores availability with the returning live value', async () => {
-    const connected = connection(async () => async () => {});
-    websocket.createConnection.mockResolvedValueOnce(connected);
-    const backend = new HaBackend({ url: 'http://ha:8123', entityIds: ['light.demo'] });
-    const update = vi.fn();
-    backend.subscribe(update);
-
-    backend.start();
-    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
-    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
-    onDiff({ a: { 'light.demo': { s: 'on', a: { brightness: 128 } } } });
-    const liveValue = { on: true, brightness: 50 };
-    expect(update).toHaveBeenLastCalledWith('light.demo', liveValue, false, true);
-
-    onDiff({ r: ['light.demo'] });
-    expect(update).toHaveBeenLastCalledWith('light.demo', liveValue, false, false);
-
-    onDiff({ a: { 'light.demo': { s: 'off', a: { brightness: 64 } } } });
-    expect(update).toHaveBeenLastCalledWith(
-      'light.demo',
-      { on: false, brightness: 25 },
-      false,
-      true,
-    );
-  });
-
-  it('treats HA state unavailable as entity availability and recovers on a normal state', async () => {
-    const connected = connection(async () => async () => {});
-    websocket.createConnection.mockResolvedValueOnce(connected);
-    const seedValue = { on: true, brightness: 80 };
-    const backend = new HaBackend({
-      url: 'http://ha:8123',
-      entityIds: ['light.demo'],
-      seed: new Map([['light.demo', seedValue]]),
-    });
-    const update = vi.fn();
-    backend.subscribe(update);
-
-    backend.start();
-    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
-    const onDiff = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
-    onDiff({ a: { 'light.demo': { s: 'unavailable', a: {} } } });
-    expect(update).toHaveBeenLastCalledWith('light.demo', seedValue, false, false);
-
-    onDiff({ c: { 'light.demo': { '+': { s: 'on', a: { brightness: 191 } } } } });
-    expect(update).toHaveBeenLastCalledWith(
-      'light.demo',
-      { on: true, brightness: 75 },
-      false,
-      true,
-    );
-  });
-
-  it('isolates subscription generations so old raw states cannot hide a missing entity', async () => {
-    const connected = connection(async () => async () => {});
-    websocket.createConnection.mockResolvedValueOnce(connected);
-    const seedValue = { on: false, brightness: 30 };
-    const backend = new HaBackend({
-      url: 'http://ha:8123',
-      entityIds: ['light.old'],
-      seed: new Map([['light.new', seedValue]]),
-    });
-    const update = vi.fn();
-    backend.subscribe(update);
-
-    backend.start();
-    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledOnce());
-    const oldGeneration = connected.subscribeMessage.mock.calls[0][0] as DiffSubscriber;
-    oldGeneration({ a: { 'light.old': { s: 'on', a: { brightness: 255 } } } });
-
-    backend.setVisible(['light.new']);
-    await vi.waitFor(() => expect(connected.subscribeMessage).toHaveBeenCalledTimes(2));
-    const newGeneration = connected.subscribeMessage.mock.calls[1][0] as DiffSubscriber;
-    newGeneration({ a: {} });
-    expect(update).toHaveBeenLastCalledWith('light.new', seedValue, false, false);
-
-    oldGeneration({ a: { 'light.new': { s: 'on', a: { brightness: 255 } } } });
-    expect(update).toHaveBeenLastCalledWith('light.new', seedValue, false, false);
   });
 });

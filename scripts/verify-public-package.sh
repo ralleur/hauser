@@ -35,6 +35,102 @@ from pathlib import Path
 import re
 import sys
 
+blueprint = Path('app/public/blueprints/automation/laundry-power-cycle-v1.yaml')
+if not blueprint.is_file() or blueprint.stat().st_size == 0:
+    raise SystemExit(f'Missing required non-empty laundry blueprint: {blueprint}')
+
+try:
+    blueprint_text = blueprint.read_text(encoding='utf-8')
+except UnicodeDecodeError as error:
+    raise SystemExit(f'Laundry blueprint is not UTF-8 text: {blueprint}: {error}') from error
+
+blueprint_lines = blueprint_text.splitlines()
+if not blueprint_lines or blueprint_lines[0] != '# SPDX-License-Identifier: MIT':
+    raise SystemExit('Laundry blueprint must start with the exact MIT SPDX header.')
+if '# Version: 1' not in blueprint_lines:
+    raise SystemExit('Laundry blueprint does not declare the required # Version: 1 contract.')
+
+# Ignore comments and empty lines for the structural contract, but preserve YAML
+# indentation. This intentionally validates the narrow canonical Blueprint shape
+# without adding a YAML package (and therefore without accepting arbitrary YAML).
+blueprint_contract = '\n'.join(
+    line.rstrip()
+    for line in blueprint_lines
+    if line.strip() and not line.lstrip().startswith('#')
+)
+if not re.search(r'(?m)^blueprint:\n(?:  .+\n)*?  domain: automation$', blueprint_contract):
+    raise SystemExit('Laundry blueprint does not declare blueprint.domain: automation.')
+
+states = {
+    state
+    for state in ('idle', 'running', 'done')
+    if re.search(rf'\b{state}\b', blueprint_contract)
+}
+if states != {'idle', 'running', 'done'}:
+    raise SystemExit(
+        'Laundry blueprint state vocabulary is incomplete; expected idle/running/done, '
+        f'found {sorted(states)}.'
+    )
+
+running_to_done_guard = '''      - conditions:
+          - condition: trigger
+            id:
+              - done
+          - condition: state
+            entity_id: !input state_helper
+            state: running
+        sequence:
+          - action: input_select.select_option
+            target:
+              entity_id: !input state_helper
+            data:
+              option: done'''
+if running_to_done_guard not in blueprint_contract:
+    raise SystemExit(
+        'Laundry blueprint lacks the canonical done-trigger + state_helper=running '
+        'guard before selecting done.'
+    )
+
+running_transition = '''      - conditions:
+          - condition: trigger
+            id:
+              - running
+        sequence:
+          - action: input_select.select_option
+            target:
+              entity_id: !input state_helper
+            data:
+              option: running'''
+if running_transition not in blueprint_contract:
+    raise SystemExit('Laundry blueprint lacks the canonical running transition.')
+
+private_blueprint_patterns = {
+    'private/local IPv4 address': re.compile(
+        r'(?<!\d)(?:10(?:\.\d{1,3}){3}|127(?:\.\d{1,3}){3}|'
+        r'169\.254(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|'
+        r'192\.168(?:\.\d{1,3}){2})(?!\d)'
+    ),
+    'URL': re.compile(r'https?://', re.IGNORECASE),
+    'email address': re.compile(r'\b[^\s@]+@[^\s@]+\.[^\s@]+\b'),
+    'absolute user-home path': re.compile(r'/(?:Users|home)/'),
+    'secret/token material': re.compile(
+        r'(?:!secret\b|\b(?:access[_-]?token|api[_-]?key|password|client[_-]?secret)\b)',
+        re.IGNORECASE,
+    ),
+}
+for label, pattern in private_blueprint_patterns.items():
+    if match := pattern.search(blueprint_text):
+        line_number = blueprint_text.count('\n', 0, match.start()) + 1
+        raise SystemExit(f'Laundry blueprint contains {label} at line {line_number}.')
+
+allowed_entity_inputs = {'!input power_sensor', '!input state_helper'}
+for line_number, line in enumerate(blueprint_lines, 1):
+    match = re.match(r'^\s*(?:-\s*)?entity_id:\s*(.+?)\s*$', line)
+    if match and match.group(1) not in allowed_entity_inputs:
+        raise SystemExit(
+            f'Laundry blueprint contains a concrete or unknown entity_id at line {line_number}.'
+        )
+
 private_paths = [
     Path('app/src/lib/components/ai'),
     Path('app/src/lib/state/ai-customizing.ts'),
@@ -48,10 +144,16 @@ if unexpected:
 capability = Path('app/src/lib/config/product-capabilities.ts').read_text()
 if 'AI_CUSTOMIZING_ENABLED = false' not in capability:
     raise SystemExit('Public product capability does not disable AI customization.')
+if 'ROOM_IMAGE_WIZARD_ENABLED = true' not in capability:
+    raise SystemExit('Public product capability does not enable room-image generation.')
 
 for path in (Path('Dockerfile'), Path('compose.yaml'), Path('compose.dev.yaml')):
     if 'HMI_AI_CUSTOMIZING_ENABLED' not in path.read_text():
         raise SystemExit(f'{path} does not pin the public AI-customizing boundary.')
+
+for path in (Path('compose.yaml'), Path('compose.dev.yaml')):
+    if 'HMI_ROOM_IMAGE_AUTH_MODE: direct' not in path.read_text():
+        raise SystemExit(f'{path} does not pin the same-origin room-image boundary.')
 
 markdown = [
     Path('README.md'),
@@ -81,15 +183,18 @@ if len(forms) < 5:
     raise SystemExit('Expected public issue-form inventory is incomplete.')
 
 print(f'private_capability_boundary=PASS')
+print('laundry_blueprint_required_artifact=PASS')
+print('laundry_blueprint_contract=MIT/version-1/automation/idle-running-done/running-to-done-guard PASS')
+print('laundry_blueprint_private_data=ABSENT')
 print(f'local_markdown_links={len(markdown)} files PASS')
 print(f'community_yaml_inventory={len(forms)} files PASS')
 PY
 
 npm ci --prefix app
 npm audit --prefix app --omit=dev --audit-level=high
+npm run build --prefix app
 npm test --prefix app
 npm run check --prefix app
-npm run build --prefix app
 npm run build:demo --prefix app
 ./scripts/build-pages.sh
 npm run performance:budget --prefix app

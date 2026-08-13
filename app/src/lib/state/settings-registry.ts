@@ -1,5 +1,5 @@
 import { m } from '../../paraglide/messages.js';
-import { AI_CUSTOMIZING_ENABLED } from '../config/product-capabilities.ts';
+import { AI_CUSTOMIZING_ENABLED, ROOM_IMAGE_WIZARD_ENABLED } from '../config/product-capabilities.ts';
 import { IS_DEMO } from '../demo/demo-mode.ts';
 /* ============================================
    Einstellungs-Registry — die eine Quelle für Gruppen, Sektionen (Sidebar) und
@@ -46,6 +46,7 @@ export type SettingsSectionId =
   /* System */
   | 'status'
   | 'updates'
+  | 'notifications'
   | 'maintenance';
 
 export type SettingsTint = 'success' | 'cool' | 'warm' | 'neutral';
@@ -143,6 +144,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_updates_desc(); },
   },
   {
+    id: 'notifications', group: 'system',
+    get label() { return m.settings_section_notifications_label(); }, icon: 'i-bell-outline', tint: 'warm',
+    get description() { return m.settings_section_notifications_desc(); },
+  },
+  {
     id: 'maintenance', group: 'system',
     get label() { return m.settings_section_maintenance_label(); }, icon: 'i-wrench', tint: 'neutral',
     get description() { return m.settings_section_maintenance_desc(); },
@@ -211,6 +217,10 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['llm', 'ki', 'ai', 'gpt', 'luna', 'codex', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
   ...(!IS_DEMO ? [{ id: 'ai-song-lyrics', section: 'ai-features' as const, get label() { return m.settings_entry_ai_song_lyrics_label(); },
     keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] }] : []),
+  ...(ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO ? [{
+    id: 'room-image-wizard', section: 'ai-features' as const, label: 'Raumbilder erstellen',
+    keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
+  }] : []),
 
   /* ── Darstellung ── */
   { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },
@@ -243,6 +253,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['zigbee', 'mqtt', 'broker', 'tunnel', 'cloudflared', 'adguard', 'services', 'gesundheit'] },
   { id: 'update-list', section: 'updates', get label() { return m.settings_entry_update_list_label(); },
     keywords: ['aktualisierung', 'version', 'software', 'core', 'os', 'esphome', 'matter'] },
+  { id: 'laundry', section: 'notifications', get label() { return m.settings_laundry_title(); },
+    keywords: ['wäsche', 'waschmaschine', 'trockner', 'laundry', 'helper', 'blueprint', 'leistungssensor'] },
   { id: 'cache-ha', section: 'maintenance', get label() { return m.settings_entry_cache_ha_label(); },
     keywords: ['home assistant', 'zustand', 'states', 'zwischenspeicher', 'cache'] },
   { id: 'cache-calendar', section: 'maintenance', get label() { return m.settings_entry_cache_calendar_label(); },

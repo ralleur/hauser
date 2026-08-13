@@ -7,7 +7,7 @@
     JELLYFIN_URL_DEFAULT,
     jellyfin,
   } from '../adapter/jellyfin.ts';
-  import { parseHouseholdConfig, type HouseholdConfigV2 } from '../config/household-config.ts';
+  import { parseHouseholdConfig, type HouseholdConfigV3 } from '../config/household-config.ts';
   import {
     addSetupRoom,
     buildSetupHouseholdSuggestion,
@@ -16,7 +16,9 @@
     moveSetupEntity,
     moveSetupRoom,
     omitSetupEntity,
+    preserveSetupRoomHeroes,
     removeSetupRoom,
+    renameSetupRoom,
     type SetupHouseholdSuggestion,
   } from '../config/setup-household.ts';
   import {
@@ -27,7 +29,6 @@
     localeState,
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
-  import { setupActivationErrorMessageKey } from './setup-activation-error.ts';
 
   let {
     mode = 'first-run',
@@ -140,7 +141,7 @@
         jellyfinMessage = m.setup_jellyfin_existing();
       }
       suggestion = {
-        config: structuredClone(parsed.value) as HouseholdConfigV2,
+        config: structuredClone(parsed.value) as HouseholdConfigV3,
         ignoredEntityIds: [],
         inferredRooms: false,
       };
@@ -174,7 +175,13 @@
     omittedCount = 0;
     try {
       const snapshot = await discoverHomeAssistant(haUrl, token);
-      suggestion = buildSetupHouseholdSuggestion(snapshot);
+      const discovered = buildSetupHouseholdSuggestion(snapshot);
+      suggestion = previousSuggestion
+        ? {
+            ...discovered,
+            config: preserveSetupRoomHeroes(previousSuggestion.config, discovered.config),
+          }
+        : discovered;
       status = 'ready';
       message = m.setup_found({
         rooms: suggestion.config.rooms.length,
@@ -211,6 +218,16 @@
     expandedRoomId = room?.id ?? expandedRoomId;
     await tick();
     if (room) document.querySelector<HTMLInputElement>(`[data-room-name="${room.id}"]`)?.focus();
+  }
+
+  function renameRoom(roomId: string, event: Event): void {
+    if (!suggestion) return;
+    const config = renameSetupRoom(
+      suggestion.config,
+      roomId,
+      (event.currentTarget as HTMLInputElement).value,
+    );
+    suggestion = { ...suggestion, config };
   }
 
   function moveRoom(roomId: string, direction: -1 | 1): void {
@@ -285,6 +302,7 @@
       });
       const payload = await response.json() as {
         code?: string;
+        message?: string;
         issue?: { path?: string; message?: string };
       };
       if (!response.ok) {
@@ -294,16 +312,6 @@
         if (payload.code === 'SETUP_JELLYFIN_UNREACHABLE'
             || payload.code === 'SETUP_JELLYFIN_HTTP_ERROR') {
           throw new Error(m.setup_jellyfin_unreachable());
-        }
-        const activationMessageKey = setupActivationErrorMessageKey(payload.code);
-        if (activationMessageKey === 'setup_ha_activation_auth_failed') {
-          throw new Error(m.setup_ha_activation_auth_failed());
-        }
-        if (activationMessageKey === 'setup_ha_activation_unreachable') {
-          throw new Error(m.setup_ha_activation_unreachable());
-        }
-        if (activationMessageKey === 'setup_ha_activation_http_error') {
-          throw new Error(m.setup_ha_activation_http_error());
         }
         const issue = payload.issue?.path ? ` ${payload.issue.path}: ${payload.issue.message ?? ''}` : '';
         throw new Error(`${m.setup_activate_failed()}${issue}`.trim());
@@ -409,7 +417,13 @@
                 </button>
                 <label class="room-title">
                   <span class="sr-only">{m.setup_room_name()}</span>
-                  <input id={`room-${room.id}`} data-room-name={room.id} bind:value={room.name} required />
+                  <input
+                    id={`room-${room.id}`}
+                    data-room-name={room.id}
+                    value={room.name}
+                    oninput={(event) => renameRoom(room.id, event)}
+                    required
+                  />
                 </label>
                 <span class="room-count">{m.setup_entity_count({ count: room.visibleEntities.length })}</span>
                 <div class="room-actions" aria-label={m.setup_room_order()}>

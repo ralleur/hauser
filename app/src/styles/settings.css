@@ -614,6 +614,270 @@
 .ai-choice-actions .primary-btn,
 .ai-choice-actions .secondary-btn { min-height: 56px; }
 
+/* ── Geführter Raumbild-Wizard ── */
+.settings-action-row {
+  width: 100%;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+.settings-action-row:hover { background: var(--color-surface-2); }
+
+.room-image-access {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: var(--overlay-control-background);
+}
+.room-image-access h3,
+.room-image-access h4,
+.room-image-access p { margin: 0; }
+.room-image-access-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+}
+.room-image-access-options article,
+.room-image-device-code,
+.room-image-access-options label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.room-image-access-options article {
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+}
+.room-image-access-options input {
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.room-image-device-code strong {
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-wide);
+}
+
+.room-image-wizard-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: var(--overlay-scrim);
+  -webkit-backdrop-filter: blur(var(--overlay-blur));
+  backdrop-filter: blur(var(--overlay-blur));
+}
+.room-image-wizard {
+  width: min(1180px, 100%);
+  max-height: min(900px, calc(100dvh - var(--space-7)));
+  overflow-y: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-2xl);
+  background: var(--overlay-panel-background);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-primary);
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.room-image-wizard-head,
+.room-image-wizard-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.room-image-wizard-head {
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+.room-image-wizard-head h2,
+.room-image-wizard h3,
+.room-image-wizard p { margin-top: 0; }
+.room-image-wizard-head p { margin-bottom: 0; color: var(--color-text-secondary); }
+.room-image-wizard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: var(--space-5);
+}
+.room-image-wizard-main,
+.room-image-wizard-side,
+.room-image-final-confirm,
+.room-image-counter-grid > div {
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: var(--overlay-control-background);
+}
+.room-image-wizard-side,
+.room-image-wizard-side label,
+.room-image-range,
+.room-image-preservation,
+.room-image-preservation label,
+.room-image-check,
+.room-image-progress,
+.room-image-terminal,
+.room-image-done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.room-image-wizard select {
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.room-image-crop,
+.room-image-focus-preview {
+  width: 100%;
+  aspect-ratio: 106 / 75;
+  margin-top: var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface-0);
+  background-repeat: no-repeat;
+}
+.room-image-crop { cursor: move; }
+.room-image-range input { width: 100%; }
+.room-image-focus-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.room-image-focus-tabs button {
+  min-height: var(--touch-min);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+.room-image-focus-tabs button.is-active {
+  border-color: var(--color-accent-warm);
+  color: var(--color-accent-warm);
+}
+.room-image-focus-preview { position: relative; margin-top: 0; background-position: center; }
+.room-image-focus-preview span {
+  position: absolute;
+  width: var(--space-5);
+  height: var(--space-5);
+  border: 2px solid var(--color-text-on-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-warm);
+  box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--color-accent-warm) 30%, transparent);
+  transform: translate(-50%, -50%);
+}
+.room-image-preservation { margin: 0; padding: 0; border: 0; }
+.room-image-preservation legend { margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); }
+.room-image-preservation label,
+.room-image-check { flex-direction: row; align-items: flex-start; }
+.room-image-preservation input,
+.room-image-check input { flex: none; width: var(--space-4); height: var(--space-4); margin-top: var(--space-1); }
+.room-image-preservation span { display: flex; flex-direction: column; gap: var(--space-1); }
+.room-image-preservation small,
+.room-image-policy,
+.room-image-wizard small,
+.room-image-counter-grid span { color: var(--color-text-secondary); }
+.room-image-policy { font-size: var(--text-sm); }
+.room-image-alert {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+.room-image-alert.is-error { border-color: var(--color-error); background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+.room-image-wizard-actions { justify-content: flex-end; margin-top: var(--space-5); }
+.room-image-wizard-actions button:disabled { opacity: 0.4; cursor: default; }
+.room-image-progress { align-items: center; text-align: center; }
+.room-image-progress-mark {
+  width: var(--space-7);
+  height: var(--space-7);
+  border: var(--space-1) solid var(--color-border);
+  border-top-color: var(--color-accent-warm);
+  border-radius: var(--radius-full);
+  animation: room-image-spin 1s linear infinite;
+}
+@keyframes room-image-spin { to { transform: rotate(360deg); } }
+.room-image-counter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+.room-image-counter-grid > div { display: flex; flex-direction: column; gap: var(--space-2); }
+.room-image-compare,
+.room-image-set-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.room-image-compare figure,
+.room-image-set-grid figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: var(--overlay-control-background);
+}
+.room-image-compare figure.is-selected { border-color: var(--color-accent-warm); }
+.room-image-compare figure button,
+.room-image-set-grid figure button { display: block; width: 100%; padding: 0; }
+.room-image-compare img,
+.room-image-set-grid img { display: block; width: 100%; aspect-ratio: 106 / 75; object-fit: cover; }
+.room-image-compare figcaption,
+.room-image-set-grid figcaption { padding: var(--space-3); }
+.room-image-final-confirm { margin-top: var(--space-5); }
+.room-image-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 230;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--color-surface-0);
+}
+.room-image-fullscreen img { max-width: 100%; max-height: 100%; border-radius: var(--radius-xl); object-fit: contain; }
+.room-image-fullscreen > button {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  font-size: var(--text-xl);
+}
+
+@media (max-width: 760px) {
+  .room-image-wizard-layer { padding: 0; }
+  .room-image-wizard { width: 100%; height: 100dvh; max-height: none; padding: var(--space-4); border-radius: var(--radius-none); }
+  .room-image-wizard-grid { grid-template-columns: 1fr; }
+  .room-image-access { flex-direction: column; }
+  .room-image-access-options { grid-template-columns: 1fr; }
+  .room-image-counter-grid { grid-template-columns: 1fr; }
+  .room-image-wizard-actions { align-items: stretch; flex-direction: column-reverse; }
+  .room-image-wizard-actions button { min-height: var(--touch-preferred); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-image-progress-mark { animation-duration: 2s; }
+}
+
 /* ── GitHub-iOS-inspirierte Settings-Chrome ──
    Kompakte, eingefasste Gruppen statt frei schwebender Einzelzeilen. Die
    bestehende Informationsarchitektur und alle stabilen Setting-IDs bleiben

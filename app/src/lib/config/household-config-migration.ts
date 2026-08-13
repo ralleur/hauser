@@ -1,4 +1,8 @@
-import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
+import {
+  HOUSEHOLD_SCHEMA_VERSION,
+  parseHouseholdConfig,
+  type ConfigIssue,
+} from './household-config.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -21,16 +25,118 @@ export type HouseholdConfigMigrationResult =
       code:
         | 'HOUSEHOLD_CONFIG_VERSION_INVALID'
         | 'HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED'
-        | 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW';
+        | 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW'
+        | 'HOUSEHOLD_CONFIG_INVALID'
+        | 'HOUSEHOLD_CONFIG_MIGRATION_INVALID';
       message: string;
+      issue?: ConfigIssue;
     };
 
-/**
- * Pure, deterministic migration boundary. The deployed v1 and current v2
- * contracts have identical fields; v2 introduces the supported migration
- * lifecycle itself. The version-only step deliberately exercises backup,
- * validation, atomic replacement and rollback before the public beta.
- */
+function typedLaundryAdapter(entityId: string): JsonObject {
+  return {
+    type: 'entity',
+    entityId,
+    runningStates: ['on'],
+    doneStates: ['off'],
+    doneOnInitial: false,
+  };
+}
+
+function migrateLaundryBindings(document: JsonObject): { document: JsonObject; changed: boolean } {
+  const globalEntities = document.globalEntities;
+  if (typeof globalEntities !== 'object' || globalEntities === null || Array.isArray(globalEntities)) {
+    return { document, changed: false };
+  }
+  const laundry = (globalEntities as JsonObject).laundry;
+  if (typeof laundry !== 'object' || laundry === null || Array.isArray(laundry)) {
+    return { document, changed: false };
+  }
+  const laundryObject = laundry as JsonObject;
+  let changed = false;
+  const migratedLaundry: JsonObject = { ...laundryObject };
+  for (const device of ['washer', 'dryer']) {
+    const binding = laundryObject[device];
+    if (typeof binding === 'string') {
+      migratedLaundry[device] = typedLaundryAdapter(binding);
+      changed = true;
+    }
+  }
+  if (!changed) return { document, changed: false };
+  return {
+    changed: true,
+    document: {
+      ...document,
+      globalEntities: {
+        ...(globalEntities as JsonObject),
+        laundry: migratedLaundry,
+      },
+    },
+  };
+}
+
+function invalidMigration(issue: ConfigIssue): HouseholdConfigMigrationResult {
+  return {
+    ok: false,
+    code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
+    message: 'The household config cannot be migrated because its legacy data is invalid.',
+    issue,
+  };
+}
+
+function invalidCurrent(issue: ConfigIssue): HouseholdConfigMigrationResult {
+  return {
+    ok: false,
+    code: 'HOUSEHOLD_CONFIG_INVALID',
+    message: 'The current household config is invalid.',
+    issue,
+  };
+}
+
+function validateCurrent(document: JsonObject): HouseholdConfigMigrationResult | null {
+  const parsed = parseHouseholdConfig(document);
+  return parsed.ok ? null : invalidMigration(parsed.issues[0]);
+}
+
+function migrateV1ToV2(document: JsonObject): JsonObject {
+  return { ...document, schemaVersion: 2 };
+}
+
+function migrateV2ToV3(document: JsonObject): JsonObject | HouseholdConfigMigrationResult {
+  const rooms = document.rooms;
+  if (!Array.isArray(rooms)) {
+    const candidate = { ...document, schemaVersion: HOUSEHOLD_SCHEMA_VERSION };
+    return validateCurrent(candidate) ?? candidate;
+  }
+
+  for (let index = 0; index < rooms.length; index += 1) {
+    const room = rooms[index];
+    if (typeof room === 'object' && room !== null && !Array.isArray(room) && Object.hasOwn(room, 'hero')) {
+      return invalidMigration({
+        code: 'UNKNOWN_FIELD',
+        path: `$.rooms[${index}].hero`,
+        message: 'Legacy household rooms must not contain the v3 hero field.',
+      });
+    }
+  }
+
+  return {
+    ...document,
+    schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
+    rooms: rooms.map((room) => (
+      typeof room === 'object' && room !== null && !Array.isArray(room)
+        ? { ...room, hero: null }
+        : room
+    )),
+  };
+}
+
+function isMigrationFailure(
+  value: JsonObject | HouseholdConfigMigrationResult,
+): value is Extract<HouseholdConfigMigrationResult, { ok: false }> {
+  return Object.hasOwn(value, 'ok') && value.ok === false;
+}
+
+/** Pure, deterministic and non-mutating v1 -> v2 -> v3 migration boundary. */
 export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigMigrationResult {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return {
@@ -57,9 +163,15 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
     };
   }
   if (version === HOUSEHOLD_SCHEMA_VERSION) {
-    return { ok: true, status: 'current', document, version: HOUSEHOLD_SCHEMA_VERSION };
+    const parsed = parseHouseholdConfig(document);
+    return parsed.ok ? {
+      ok: true,
+      status: 'current',
+      document,
+      version: HOUSEHOLD_SCHEMA_VERSION,
+    } : invalidCurrent(parsed.issues[0]);
   }
-  if (version !== 1) {
+  if (version !== 1 && version !== 2) {
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED',
@@ -67,11 +179,19 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
     };
   }
 
+  const fromVersion = version;
+  const v2 = version === 1 ? migrateV1ToV2(document) : document;
+  const typedV2 = migrateLaundryBindings(v2).document;
+  const migrated = migrateV2ToV3(typedV2);
+  if (isMigrationFailure(migrated)) return migrated;
+  const invalid = validateCurrent(migrated);
+  if (invalid) return invalid;
+
   return {
     ok: true,
     status: 'migrated',
-    document: { ...document, schemaVersion: HOUSEHOLD_SCHEMA_VERSION },
-    fromVersion: 1,
+    document: migrated,
+    fromVersion,
     toVersion: HOUSEHOLD_SCHEMA_VERSION,
   };
 }

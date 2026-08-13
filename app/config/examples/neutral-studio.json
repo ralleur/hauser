@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "rooms": [
     {
       "id": "studio",
@@ -8,7 +8,8 @@
         { "id": "ceiling", "name": "Ceiling", "entityId": "light.studio_ceiling", "role": "light" },
         { "id": "thermostat", "name": "Thermostat", "entityId": "climate.studio", "role": "climate" },
         { "id": "occupancy", "name": "Occupancy", "entityId": "binary_sensor.studio_occupancy", "role": "presence" }
-      ]
+      ],
+      "hero": null
     },
     {
       "id": "patio",
@@ -16,12 +17,14 @@
       "visibleEntities": [
         { "id": "string_lights", "name": "String lights", "entityId": "switch.patio_string_lights", "role": "other" },
         { "id": "camera", "name": "Camera", "entityId": "camera.patio", "role": "camera" }
-      ]
+      ],
+      "hero": null
     },
     {
       "id": "utility",
       "name": "Utility",
-      "visibleEntities": []
+      "visibleEntities": [],
+      "hero": null
     }
   ],
   "navigation": [
@@ -39,8 +42,20 @@
     "vacationMode": "switch.away_mode",
     "homeOffScript": "script.fixture_neutral_studio_home_off",
     "laundry": {
-      "washer": "input_boolean.washer_running",
-      "dryer": "input_boolean.dryer_running"
+      "washer": {
+        "type": "entity",
+        "entityId": "input_boolean.washer_running",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      },
+      "dryer": {
+        "type": "entity",
+        "entityId": "input_boolean.dryer_running",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      }
     }
   }
 }

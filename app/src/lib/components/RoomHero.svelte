@@ -1,24 +1,27 @@
 <script lang="ts">
-  /* ── Room-Hero (B-13): Vollbild-Bühne hinter dem Home-Screen. Der Hintergrund
-     zeigt die Comic-Collage (kein Raum gewählt) bzw. den selektierten Raum, in
-     der jeweiligen Tag/Nacht-Variante (`appState.theme` folgt sun.sun, docs/07).
+  /* ── Room-Hero (B-13): Vollbild-Bühne hinter dem Home-Screen.
 
      Performance (docs/03, 144 Hz = 6,9 ms/Frame): Wechsel als reiner
-     Opacity-Crossfade zweier gestapelter Ebenen — nur `opacity` animiert,
-     Compositor-only, kein Layout/Paint, kein Live-`backdrop-filter`. Das neue
-     Bild wird per `Image.decode()` fertig dekodiert, BEVOR es eingeblendet wird,
-     damit der Crossfade nicht auf einen Decode-Hitch trifft. ── */
+     Opacity-Crossfade zweier gestapelter Ebenen. User- und Projektbilder werden
+     vor dem Einblenden dekodiert; bei doppeltem Fehler bleibt die letzte gültige
+     Ebene beziehungsweise die neutrale Fläche sichtbar. ── */
   import { appState } from '../state/app.svelte.ts';
   import type { LightValue } from '../adapter/types.ts';
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
-  import { heroAssetUrl } from './room-hero-assets.ts';
+  import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
+  import {
+    loadRoomHero,
+    resolveRoomHero,
+    type HeroImageCandidate,
+  } from './room-hero-assets.ts';
 
   const base = import.meta.env.BASE_URL;
 
-  // Der Theme-Controller projiziert Sonnenautomatik beziehungsweise fixierten
-  // Tag/Abend einmalig in appState.heroSun; Panel und Phone lesen denselben Wert.
+  // Herozuweisungen leben getrennt von den Device-Manager-Raumobjekten. Diese
+  // bleiben ausschließlich für Licht-/Immersionsdaten zuständig.
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
+  const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
   const placements = $derived(roomLightPlacements(room?.id));
   const assignedLights = $derived((room?.lights ?? []).filter((light) => placements[light.entityId]));
   const renderedLights = $derived(assignedLights.map((device) => {
@@ -27,42 +30,55 @@
   }));
   const allAssignedLightsOff = $derived(assignedLights.length > 0 && renderedLights.every(({ value }) => value?.on !== true));
   const showImmersion = $derived(appState.heroSun?.day === false && !allAssignedLightsOff);
-  const targetUrl = $derived(heroAssetUrl({
+  const targetHero = $derived(resolveRoomHero({
+    target: 'panel',
     baseUrl: base,
     roomId: appState.currentRoom,
+    config: heroConfig,
     sun: appState.heroSun,
     fallbackTheme: appState.theme,
     allAssignedLightsOff,
   }));
 
-  // Doppelpuffer: eine Ebene vorne (sichtbar), eine hinten. Neues Bild lädt in
-  // die hintere Ebene, nach decode() wird die Sichtbarkeit getauscht.
-  let layerA = $state('');
-  let layerB = $state('');
+  // Doppelpuffer: die dekodierte Zielauflösung wird in die hintere Ebene gelegt,
+  // dann tauscht ausschließlich die Opacity-Klasse die Sichtbarkeit.
+  let layerA = $state<HeroImageCandidate | null>(null);
+  let layerB = $state<HeroImageCandidate | null>(null);
   let front = $state<'a' | 'b'>('a');
-  let shown = '';
+  let request = 0;
+  let requested = '';
 
   $effect(() => {
-    const url = targetUrl;
-    if (url === shown) return;
-    shown = url;
-    const img = new Image();
-    img.src = url;
-    const swap = () => {
-      // Zwischenzeitlicher Zielwechsel? Dann diesen Swap verwerfen.
-      if (shown !== url) return;
-      if (front === 'a') { layerB = url; front = 'b'; }
-      else { layerA = url; front = 'a'; }
-    };
-    img.decode().then(swap).catch(swap);
+    const resolution = targetHero;
+    const key = [
+      resolution.userCandidate?.url,
+      resolution.userCandidate?.position,
+      resolution.projectFallback?.url,
+    ].join('|');
+    if (key === requested) return;
+    requested = key;
+    const currentRequest = ++request;
+
+    void loadRoomHero(resolution, undefined, () => request === currentRequest).then((candidate) => {
+      if (!candidate || request !== currentRequest) return;
+      if (front === 'a') {
+        layerB = candidate;
+        front = 'b';
+      } else {
+        layerA = candidate;
+        front = 'a';
+      }
+    });
   });
 </script>
 
 <div class="room-hero" aria-hidden="true">
   <div class="hero-layer" class:is-front={front === 'a'}
-       style:background-image={layerA ? `url("${layerA}")` : undefined}></div>
+       style:background-image={layerA ? `url("${layerA.url}")` : undefined}
+       style:background-position={layerA?.position}></div>
   <div class="hero-layer" class:is-front={front === 'b'}
-       style:background-image={layerB ? `url("${layerB}")` : undefined}></div>
+       style:background-image={layerB ? `url("${layerB.url}")` : undefined}
+       style:background-position={layerB?.position}></div>
   <svg class="immersion-light-layer" class:is-visible={showImmersion}
        viewBox="0 0 3392 2400" preserveAspectRatio="xMidYMid slice">
     <defs>

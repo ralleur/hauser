@@ -16,6 +16,12 @@ export interface RawEntity {
   changedAt?: number;
 }
 
+export interface LaundryRawState {
+  state: string;
+  changedAt?: number;
+  lastTriggered?: string;
+}
+
 /* Kompaktes Diff-Format von HA `subscribe_entities` (websocket_api):
    `a` = added (voller Zustand), `c` = changed (Delta mit `+`/`-`), `r` = removed. */
 export interface EntitiesDiff {
@@ -146,6 +152,17 @@ export function haToClimate(raw: RawEntity): ClimateValue {
 
 export function haToSwitch(raw: RawEntity): SwitchValue {
   return { on: raw.state === 'on', ...(raw.changedAt !== undefined ? { changedAt: raw.changedAt } : {}) };
+}
+
+/** Laundry adapters consume Home Assistant's state verbatim. The configured
+ * entity ID, not the domain or a guessed state shape, selects this path. */
+export function haToLaundryState(raw: RawEntity): LaundryRawState {
+  const lastTriggered = raw.attributes.last_triggered;
+  return {
+    state: raw.state,
+    ...(raw.changedAt !== undefined ? { changedAt: raw.changedAt } : {}),
+    ...(typeof lastTriggered === 'string' ? { lastTriggered } : {}),
+  };
 }
 
 /* cover.* trägt open/opening/closed/closing — für die Switch-Kategorie

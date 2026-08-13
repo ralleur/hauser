@@ -12,7 +12,7 @@
   const camera = $derived(runtime.merged(entityId) as CameraValue | undefined);
   const source = $derived.by(() => {
     const picture = camera?.entityPicture;
-    if (!runtime.isEntityAvailable(entityId) || !camera?.available || !picture) return null;
+    if (!camera?.available || !picture) return null;
     const streamPath = picture.replace('/api/camera_proxy/', '/api/camera_proxy_stream/');
     return new URL(streamPath, `${configuredHaUrl()}/`).toString();
   });

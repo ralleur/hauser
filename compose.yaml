@@ -2,8 +2,7 @@ name: hauser
 
 services:
   hauser:
-    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.3}"
-    user: node
+    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.1}"
     pull_policy: missing
     init: true
     restart: unless-stopped
@@ -17,6 +16,7 @@ services:
     environment:
       HMI_ALLOWED_ORIGINS: "${HMI_ALLOWED_ORIGINS:-http://localhost:4173,http://127.0.0.1:4173}"
       HMI_AI_CUSTOMIZING_ENABLED: "0"
+      HMI_ROOM_IMAGE_AUTH_MODE: direct
       HMI_HOUSEHOLD_CONFIG_PATH: /config/household.json
       HMI_HOUSEHOLD_CONFIG_MODE: active
       HMI_CONFIG_PATH: /data/config.json

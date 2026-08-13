@@ -78,6 +78,7 @@ export const ROOM_SEED: RoomSeed[] = [
     id: 'wohnzimmer', name: 'Wohnzimmer', target: 21.0, current: 23.5,
     hvac: 'heat', presence: true, windowOpen: false,
     climateEntityId: 'climate.wohnzimmer',
+    tempSensorId: 'sensor.temp_wohnzimmer',
     lights: [
       { id: 'kugellampen', name: 'Kugellampen', entityId: 'light.wohnzimmer_kugellampen', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
       { id: 'esstisch', name: 'Esstisch', entityId: 'light.wohnzimmer_esstisch', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 3000, colorHex: null, icon: 'i-lamp-pendant' },
@@ -93,6 +94,7 @@ export const ROOM_SEED: RoomSeed[] = [
     id: 'schlafzimmer', name: 'Schlafzimmer', target: 16.0, current: 23.0,
     hvac: 'heat', presence: false, windowOpen: false,
     climateEntityId: 'climate.schlafzimmer',
+    tempSensorId: 'sensor.temp_schlafzimmer',
     lights: [
       { id: 'bett', name: 'Bett', entityId: 'light.schlafzimmer_bett', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
       { id: 'schreibtisch', name: 'Schreibtisch', entityId: 'light.schlafzimmer_schreibtisch', on: false, brightness: 50, dimmable: true, colorTemp: true, colorTempK: 4000 },
@@ -102,6 +104,7 @@ export const ROOM_SEED: RoomSeed[] = [
     id: 'bad', name: 'Bad', target: 17.0, current: 22.5,
     hvac: 'heat', presence: false, windowOpen: false,
     climateEntityId: 'climate.bad',
+    tempSensorId: 'sensor.temp_bad',
     lights: [
       { id: 'spiegel', name: 'Spiegellicht', entityId: 'light.bad_spiegel', on: false, brightness: 50, dimmable: true, colorTemp: true, colorTempK: 4000 },
     ],

@@ -31,10 +31,24 @@ export interface VisibleEntityConfig {
   role: EntityRole;
 }
 
+export interface RoomHeroFocus {
+  x: number;
+  y: number;
+}
+
+export interface RoomHeroConfig {
+  assetId: string;
+  focus: {
+    panel: RoomHeroFocus;
+    phone: RoomHeroFocus;
+  };
+}
+
 export interface RoomConfig {
   id: string;
   name: string;
   visibleEntities: VisibleEntityConfig[];
+  hero: RoomHeroConfig | null;
 }
 
 export interface NavigationTargetConfig {
@@ -76,17 +90,31 @@ export interface MediaTargetConfig {
   roomId: string | null;
 }
 
+export interface LaundryAdapterConfig {
+  type: 'entity';
+  entityId: string;
+  runningStates: string[];
+  doneStates: string[];
+  /** Explicit enum-style done may be surfaced after a client restart. Binary
+   * off-states require an observed running transition to avoid false notices. */
+  doneOnInitial: boolean;
+  /** Optional HA-side transition marker. Generated adapters bind the owning
+   * automation because its restored `last_triggered` distinguishes cycles even
+   * when Hauser was closed for the complete running → done transition. */
+  cycleMarkerEntityId?: string;
+}
+
 export interface GlobalEntitiesConfig {
   sun: string | null;
   vacationMode: string | null;
   homeOffScript: string | null;
   laundry: {
-    washer: string | null;
-    dryer: string | null;
+    washer: LaundryAdapterConfig | null;
+    dryer: LaundryAdapterConfig | null;
   };
 }
 
-export interface HouseholdConfigV2 {
+export interface HouseholdConfigV3 {
   schemaVersion: typeof HOUSEHOLD_SCHEMA_VERSION;
   rooms: RoomConfig[];
   navigation: NavigationItemConfig[];
@@ -116,10 +144,11 @@ export interface ConfigIssue {
 }
 
 export type HouseholdConfigParseResult =
-  | { ok: true; value: HouseholdConfigV2 }
+  | { ok: true; value: HouseholdConfigV3 }
   | { ok: false; issues: ConfigIssue[] };
 
 const LOCAL_ID = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
+const ROOM_HERO_ASSET_ID = /^[a-z0-9](?:[a-z0-9_-]{0,126}[a-z0-9])?$/;
 const HA_ENTITY_ID = /^[a-z][a-z0-9_]*\.[a-z0-9_]+$/;
 const MODULE_IDS: readonly ModuleId[] = [
   'home',
@@ -232,6 +261,35 @@ class ConfigValidator {
     return value;
   }
 
+  roomHeroAssetId(value: unknown | Missing, path: string): string {
+    if (value === MISSING) return '';
+    if (typeof value !== 'string') {
+      this.issue('TYPE_MISMATCH', path, 'Expected a room hero asset ID string.');
+      return '';
+    }
+    if (!ROOM_HERO_ASSET_ID.test(value)) {
+      this.issue(
+        'INVALID_ID',
+        path,
+        'Room hero asset ID must be 1-128 lower-case letters, digits, underscores or hyphens.',
+      );
+    }
+    return value;
+  }
+
+  unitNumber(value: unknown | Missing, path: string): number {
+    if (value === MISSING) return 0;
+    if (typeof value !== 'number') {
+      this.issue('TYPE_MISMATCH', path, 'Expected a number.');
+      return 0;
+    }
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      this.issue('INVALID_VALUE', path, 'Expected a finite number between 0 and 1.');
+      return 0;
+    }
+    return value;
+  }
+
   entityId(
     value: unknown | Missing,
     path: string,
@@ -270,6 +328,15 @@ class ConfigValidator {
     if (value === MISSING) return null;
     if (value === null) return null;
     return this.entityId(value, path, expectedDomain);
+  }
+
+  boolean(value: unknown | Missing, path: string): boolean {
+    if (value === MISSING) return false;
+    if (typeof value !== 'boolean') {
+      this.issue('TYPE_MISMATCH', path, 'Expected a boolean.');
+      return false;
+    }
+    return value;
   }
 }
 
@@ -326,10 +393,58 @@ function parseVisibleEntity(
   return { id, name, entityId, role };
 }
 
+function parseRoomHeroFocus(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): RoomHeroFocus {
+  if (value === MISSING) return { x: 0, y: 0 };
+  const object = validator.object(value, path);
+  if (!object) return { x: 0, y: 0 };
+  validator.exactKeys(object, ['x', 'y'], path);
+  return {
+    x: validator.unitNumber(validator.required(object, 'x', path), `${path}.x`),
+    y: validator.unitNumber(validator.required(object, 'y', path), `${path}.y`),
+  };
+}
+
+function parseRoomHero(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): RoomHeroConfig | null {
+  if (value === MISSING || value === null) return null;
+  const object = validator.object(value, path);
+  if (!object) return null;
+  validator.exactKeys(object, ['assetId', 'focus'], path);
+
+  const focusValue = validator.required(object, 'focus', path);
+  const focus = focusValue === MISSING ? undefined : validator.object(focusValue, `${path}.focus`);
+  if (focus) validator.exactKeys(focus, ['panel', 'phone'], `${path}.focus`);
+  return {
+    assetId: validator.roomHeroAssetId(
+      validator.required(object, 'assetId', path),
+      `${path}.assetId`,
+    ),
+    focus: {
+      panel: parseRoomHeroFocus(
+        validator,
+        focus ? validator.required(focus, 'panel', `${path}.focus`) : MISSING,
+        `${path}.focus.panel`,
+      ),
+      phone: parseRoomHeroFocus(
+        validator,
+        focus ? validator.required(focus, 'phone', `${path}.focus`) : MISSING,
+        `${path}.focus.phone`,
+      ),
+    },
+  };
+}
+
 function parseRoom(validator: ConfigValidator, value: unknown, path: string): RoomConfig {
   const object = validator.object(value, path);
-  if (!object) return { id: '', name: '', visibleEntities: [] };
-  validator.exactKeys(object, ['id', 'name', 'visibleEntities'], path);
+  if (!object) return { id: '', name: '', visibleEntities: [], hero: null };
+  validator.exactKeys(object, ['id', 'name', 'visibleEntities', 'hero'], path);
 
   const id = validator.localId(validator.required(object, 'id', path), `${path}.id`);
   const name = validator.string(validator.required(object, 'name', path), `${path}.name`, 'room name');
@@ -341,8 +456,13 @@ function parseRoom(validator: ConfigValidator, value: unknown, path: string): Ro
     id: entity.id,
     path: `${path}.visibleEntities[${index}].id`,
   })));
+  const hero = parseRoomHero(
+    validator,
+    validator.required(object, 'hero', path),
+    `${path}.hero`,
+  );
 
-  return { id, name, visibleEntities };
+  return { id, name, visibleEntities, hero };
 }
 
 function parseNavigationTarget(
@@ -500,6 +620,87 @@ function parseMediaTarget(
   };
 }
 
+function parseLaundryStates(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): string[] {
+  if (value === MISSING) return [];
+  const items = validator.array(value, path) ?? [];
+  const states: string[] = [];
+  const seen = new Set<string>();
+  for (const [index, item] of items.entries()) {
+    const itemPath = `${path}[${index}]`;
+    if (typeof item !== 'string') {
+      validator.issue('TYPE_MISMATCH', itemPath, 'Expected a Home Assistant state string.');
+      continue;
+    }
+    const state = item.trim().toLowerCase();
+    if (!state || state.length > 128) {
+      validator.issue('INVALID_VALUE', itemPath, 'State must contain 1 to 128 characters.');
+    } else if (seen.has(state)) {
+      validator.issue('INVALID_VALUE', itemPath, `Duplicate state "${state}".`);
+    } else {
+      seen.add(state);
+      states.push(state);
+    }
+  }
+  if (items.length === 0) validator.issue('INVALID_VALUE', path, 'At least one state is required.');
+  return states;
+}
+
+function parseLaundryAdapter(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): LaundryAdapterConfig | null {
+  if (value === MISSING || value === null) return null;
+  const object = validator.object(value, path);
+  if (!object) return null;
+  validator.exactKeys(object, [
+    'type', 'entityId', 'runningStates', 'doneStates', 'doneOnInitial', 'cycleMarkerEntityId',
+  ], path);
+  const type = validator.required(object, 'type', path);
+  if (type !== MISSING && type !== 'entity') {
+    validator.issue('INVALID_VALUE', `${path}.type`, 'Laundry adapter type must be "entity".');
+  }
+  const entityId = validator.entityId(
+    validator.required(object, 'entityId', path),
+    `${path}.entityId`,
+    ['input_boolean', 'binary_sensor', 'sensor', 'input_select', 'select'],
+  );
+  const runningStates = parseLaundryStates(
+    validator,
+    validator.required(object, 'runningStates', path),
+    `${path}.runningStates`,
+  );
+  const doneStates = parseLaundryStates(
+    validator,
+    validator.required(object, 'doneStates', path),
+    `${path}.doneStates`,
+  );
+  const running = new Set(runningStates);
+  for (const [index, state] of doneStates.entries()) {
+    if (running.has(state)) {
+      validator.issue('INVALID_VALUE', `${path}.doneStates[${index}]`, 'Running and done states must not overlap.');
+    }
+  }
+  const cycleMarkerEntityId = Object.hasOwn(object, 'cycleMarkerEntityId')
+    ? validator.entityId(object.cycleMarkerEntityId, `${path}.cycleMarkerEntityId`, 'automation')
+    : undefined;
+  return {
+    type: 'entity',
+    entityId,
+    runningStates,
+    doneStates,
+    doneOnInitial: validator.boolean(
+      validator.required(object, 'doneOnInitial', path),
+      `${path}.doneOnInitial`,
+    ),
+    ...(cycleMarkerEntityId === undefined ? {} : { cycleMarkerEntityId }),
+  };
+}
+
 function parseGlobalEntities(
   validator: ConfigValidator,
   value: unknown | Missing,
@@ -514,19 +715,19 @@ function parseGlobalEntities(
 
   const laundryValue = validator.required(object, 'laundry', path);
   const laundry = laundryValue === MISSING ? undefined : validator.object(laundryValue, `${path}.laundry`);
-  let washer: string | null = null;
-  let dryer: string | null = null;
+  let washer: LaundryAdapterConfig | null = null;
+  let dryer: LaundryAdapterConfig | null = null;
   if (laundry) {
     validator.exactKeys(laundry, ['washer', 'dryer'], `${path}.laundry`);
-    washer = validator.nullableEntityId(
+    washer = parseLaundryAdapter(
+      validator,
       validator.required(laundry, 'washer', `${path}.laundry`),
       `${path}.laundry.washer`,
-      'input_boolean',
     );
-    dryer = validator.nullableEntityId(
+    dryer = parseLaundryAdapter(
+      validator,
       validator.required(laundry, 'dryer', `${path}.laundry`),
       `${path}.laundry.dryer`,
-      'input_boolean',
     );
   }
   return {

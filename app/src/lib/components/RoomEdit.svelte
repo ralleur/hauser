@@ -19,16 +19,26 @@
     roomLightPlacements,
     setLightPlacement,
   } from '../state/immersion-light.svelte.ts';
+  import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
+  import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
 
   let query = $state('');
   let searchEl = $state<HTMLInputElement>();
-  let view = $state<'devices' | 'immersion'>('devices');
+  let view = $state<'devices' | 'immersion' | 'background'>('devices');
   let selectedLightId = $state('');
+  let backgroundInput = $state<HTMLInputElement>();
+  let backgroundBusy = $state(false);
+  let backgroundMessage = $state<string | null>(null);
+  let backgroundError = $state(false);
   const roomLights = $derived((room?.lights ?? []).filter((device) => (device.category ?? 'light') === 'light'));
   const placements = $derived(roomLightPlacements(room?.id));
   const selectedPlacement = $derived(placements[selectedLightId]);
+  const background = $derived(roomHeroConfig(room?.id));
+  const backgroundUrl = $derived(background
+    ? `/assets/room-images/${background.assetId}/light.avif`
+    : `${import.meta.env.BASE_URL}hero/${room?.id}-light.avif`);
 
   // Vorschläge erst ab Eingabe: bestes Präfix-Match zuerst, dann Name-Substring,
   // dann entity_id/Domain. Geräte, die schon im Raum liegen, tauchen nicht auf.
@@ -80,11 +90,55 @@
     query = '';
     view = 'devices';
     selectedLightId = '';
+    backgroundMessage = null;
+    backgroundError = false;
   });
 
   function openImmersionEditor() {
     view = 'immersion';
     selectedLightId = roomLights[0]?.entityId ?? '';
+  }
+
+  function openBackgroundEditor() {
+    view = 'background';
+    selectedLightId = '';
+    backgroundMessage = null;
+    backgroundError = false;
+  }
+
+  async function chooseBackground(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!room || !file || backgroundBusy) return;
+    backgroundBusy = true;
+    backgroundMessage = null;
+    backgroundError = false;
+    try {
+      await uploadRoomBackground(room.id, file);
+      backgroundMessage = m.room_background_saved();
+    } catch (error) {
+      backgroundError = true;
+      backgroundMessage = error instanceof Error ? error.message : m.room_background_failed();
+    } finally {
+      backgroundBusy = false;
+    }
+  }
+
+  async function restoreBackground() {
+    if (!room || !background || backgroundBusy) return;
+    backgroundBusy = true;
+    backgroundMessage = null;
+    backgroundError = false;
+    try {
+      await removeRoomBackground(room.id);
+      backgroundMessage = m.room_background_restored();
+    } catch (error) {
+      backgroundError = true;
+      backgroundMessage = error instanceof Error ? error.message : m.room_background_failed();
+    } finally {
+      backgroundBusy = false;
+    }
   }
 
   function placeSelected(event: MouseEvent) {
@@ -129,25 +183,33 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
-  <div class="room-edit-panel overlay-panel" class:is-immersion={view === 'immersion'} role="dialog" aria-modal="true"
+  <div class="room-edit-panel overlay-panel" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
        aria-label="Geräte in {room?.name ?? 'Raum'} bearbeiten" tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (roomEdit.mode === 'closing' && e.target === e.currentTarget) finishRoomEditClose(); }}>
     {#if room}
       {#key room.id}
         <header class="ld-header">
-          {#if view === 'immersion'}
+          {#if view !== 'devices'}
             <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
                     onclick={() => { view = 'devices'; selectedLightId = ''; }}>
               <Icon name="i-chevron-left" cls="icon icon-md" />
             </button>
           {/if}
-          <h2 class="ld-title">{room.name} <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : m.room_devices()}</span></h2>
+          <h2 class="ld-title">{room.name} <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : m.room_devices()}</span></h2>
           <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                   onclick={() => closeRoomEdit()}>×</button>
         </header>
 
         <div class="ld-body">
           {#if view === 'devices'}
+          <button class="re-immersion-entry pressable" type="button" onclick={openBackgroundEditor}>
+            <span class="re-icon" aria-hidden="true"><Icon name="i-image" /></span>
+            <span class="re-label">
+              <span class="re-name">{m.room_background()}</span>
+              <small class="re-meta">{background ? m.room_background_custom() : m.room_background_default()}</small>
+            </span>
+            <Icon name="i-chevron-right" cls="icon icon-md" />
+          </button>
           <button class="re-immersion-entry pressable" type="button" onclick={openImmersionEditor}>
             <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
             <span class="re-label">
@@ -219,7 +281,7 @@
               {/if}
             {/if}
           </section>
-          {:else}
+          {:else if view === 'immersion'}
             <div class="re-immersion-editor">
               <aside class="re-immersion-lights" aria-label={m.room_pick_lamps()}>
                 <p class="re-empty">{m.room_pick_lamp_hint()}</p>
@@ -265,6 +327,27 @@
                 {/each}
               </button>
             </div>
+          {:else}
+            <section class="re-background-editor">
+              <div class="re-background-preview" style:background-image={`url("${backgroundUrl}")`}
+                   aria-label={m.room_background_preview()}></div>
+              <div class="re-background-actions">
+                <p class="re-empty">{m.room_background_hint()}</p>
+                <input bind:this={backgroundInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif"
+                       onchange={chooseBackground} />
+                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
+                        onclick={() => backgroundInput?.click()}>
+                  {backgroundBusy ? m.room_background_saving() : background ? m.room_background_replace() : m.room_background_choose()}
+                </button>
+                {#if background}
+                  <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
+                          onclick={restoreBackground}>{m.room_background_restore()}</button>
+                {/if}
+                {#if backgroundMessage}
+                  <p class="re-background-message" class:is-error={backgroundError} role="status">{backgroundMessage}</p>
+                {/if}
+              </div>
+            </section>
           {/if}
         </div>
       {/key}

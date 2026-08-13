@@ -100,10 +100,10 @@
       </div>
       <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
               type="button" disabled={!online} aria-pressed={vacationActive}
-              aria-label={vacationActive ? m.phone_vacation_disable() : m.phone_vacation_enable()}
+              aria-label={vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'}
               onclick={toggleVacationMode}>
         <Icon name="i-umbrella-beach" cls="icon icon-md" />
-        <span>{vacationActive ? m.phone_vacation_active() : m.phone_vacation()}</span>
+        <span>{vacationActive ? 'Aktiv' : 'Urlaub'}</span>
       </button>
     </div>
   {/if}

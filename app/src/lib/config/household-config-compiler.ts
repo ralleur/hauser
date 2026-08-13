@@ -1,6 +1,6 @@
 import type {
   CommandContract,
-  HouseholdConfigV2,
+  HouseholdConfigV3,
   HouseholdRuntimeModel,
 } from './household-config.ts';
 
@@ -16,14 +16,21 @@ function commandKey(contract: Pick<CommandContract, 'entityId' | 'domain'>): str
   return `${contract.entityId}\u0000${contract.domain}`;
 }
 
-/** Compiles a validated v2 configuration into a canonical runtime representation. */
-export function compileHouseholdConfig(config: HouseholdConfigV2): HouseholdRuntimeModel {
+/** Compiles a validated v3 configuration into a canonical runtime representation. */
+export function compileHouseholdConfig(config: HouseholdConfigV3): HouseholdRuntimeModel {
   // Room order is installation semantics. Entities inside a room are keyed and
   // canonicalized so object/fixture construction order cannot create noise.
   const rooms = config.rooms.map((room) => ({
     id: room.id,
     name: room.name,
     visibleEntities: room.visibleEntities.map((entity) => ({ ...entity })).sort(byId),
+    hero: room.hero === null ? null : {
+      assetId: room.hero.assetId,
+      focus: {
+        panel: { ...room.hero.focus.panel },
+        phone: { ...room.hero.focus.phone },
+      },
+    },
   }));
   const navigation = config.navigation
     .map((item) => ({ ...item, target: { ...item.target } }))
@@ -45,7 +52,18 @@ export function compileHouseholdConfig(config: HouseholdConfigV2): HouseholdRunt
     sun: config.globalEntities.sun,
     vacationMode: config.globalEntities.vacationMode,
     homeOffScript: config.globalEntities.homeOffScript,
-    laundry: { ...config.globalEntities.laundry },
+    laundry: {
+      washer: config.globalEntities.laundry.washer === null ? null : {
+        ...config.globalEntities.laundry.washer,
+        runningStates: [...config.globalEntities.laundry.washer.runningStates],
+        doneStates: [...config.globalEntities.laundry.washer.doneStates],
+      },
+      dryer: config.globalEntities.laundry.dryer === null ? null : {
+        ...config.globalEntities.laundry.dryer,
+        runningStates: [...config.globalEntities.laundry.dryer.runningStates],
+        doneStates: [...config.globalEntities.laundry.dryer.doneStates],
+      },
+    },
   };
 
   const subscriptionEntityIds = new Set<string>();
@@ -85,8 +103,18 @@ export function compileHouseholdConfig(config: HouseholdConfigV2): HouseholdRunt
     subscriptionEntityIds.add(globalEntities.vacationMode);
     addCommand(globalEntities.vacationMode, 'switch', ['turn_on', 'turn_off']);
   }
-  if (globalEntities.laundry.washer) subscriptionEntityIds.add(globalEntities.laundry.washer);
-  if (globalEntities.laundry.dryer) subscriptionEntityIds.add(globalEntities.laundry.dryer);
+  if (globalEntities.laundry.washer) {
+    subscriptionEntityIds.add(globalEntities.laundry.washer.entityId);
+    if (globalEntities.laundry.washer.cycleMarkerEntityId) {
+      subscriptionEntityIds.add(globalEntities.laundry.washer.cycleMarkerEntityId);
+    }
+  }
+  if (globalEntities.laundry.dryer) {
+    subscriptionEntityIds.add(globalEntities.laundry.dryer.entityId);
+    if (globalEntities.laundry.dryer.cycleMarkerEntityId) {
+      subscriptionEntityIds.add(globalEntities.laundry.dryer.cycleMarkerEntityId);
+    }
+  }
   if (globalEntities.homeOffScript) addCommand(globalEntities.homeOffScript, 'script', ['turn_on']);
   if (energy) {
     if (energy.sensors.productionPower) subscriptionEntityIds.add(energy.sensors.productionPower);

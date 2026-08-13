@@ -1,0 +1,26 @@
+{
+  "policy": "room-image-transform-policy-v1",
+  "developmentPlatform": "darwin-arm64",
+  "sharp": "0.35.3",
+  "libvips": "8.18.3",
+  "fixtures": {
+    "animated-two-frame.webp": "4b2e07b2aaac757738f60b0bcdece03d5915c68647e1c5f172b7fddab9229a3d",
+    "neutral-alpha.png": "31ca33680e6a6c0289f798179e8058bdc7378699a75b5bc9f87fc0afcd500677",
+    "neutral-oriented.webp": "a694ffec386e2a093293db55b5d986936447fbc08f618914142a8888152679bf",
+    "orientation-1.jpg": "a3fdf34a53d460ea66ea27a2df5034303559351bf377b0ff290c80e04a0fe593",
+    "orientation-2.jpg": "7402eedb15bb818c102a541ab07c1a0d4dbac2c72995ee83d314ae8bccea9cd8",
+    "orientation-3.jpg": "4735da006fe273024658b2515ded8f90af2ae4c51a2cead89608394a75fd83b0",
+    "orientation-4.jpg": "2250767a646786d399dff7ef42d44fae26e0944a382e60521025ca497e585ade",
+    "orientation-5.jpg": "94ae778a52139e3ed6453232e2086eececa739ffff0b33de79c15f6e61bc5b34",
+    "orientation-6.jpg": "e4970301f737cc7fe860ac96ba7cdcf05a7f4039a9b4d10d94a1f3003cf17bf2",
+    "orientation-7.jpg": "2ef7422aa883e1272105842cf281d0a8cf3b733b221a6c6554ceaff176d41f02",
+    "orientation-8.jpg": "57308d55c1728a699abbc8e7538597450531956698b25c56dabd8833333a50ea",
+    "pixel-bomb-25mp.png": "fb8e0a2a11889d03acd5a7612035a06c3d6ea06fe7d24eca5eda52db013c6c85",
+    "provider-portrait.png": "2764f7961dbf32dc959638a2fe968c0b7f355e1b752a4e3f8c7948822eac2aa3"
+  },
+  "goldenOutputs": {
+    "source-provider.jpeg": "e179536688963d2401a1ab09c6d8ebc4971a7694cebae9a720ea8e185785eaeb",
+    "provider-provider.jpeg": "3bd30b41825a6439b27b50f9da70fa7aeaa16652b0a718dee9148a1ab2a5b2bb",
+    "provider-final.avif": "68a6f5643a4e9a61e228b42528def20e8b7a7bc7ecd2b0072aa7583b255e406e"
+  }
+}

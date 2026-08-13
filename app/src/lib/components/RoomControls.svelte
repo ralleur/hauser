@@ -16,17 +16,14 @@
   import { pulse } from '../actions/pulse.ts';
   import { fmtTemp } from '../format.ts';
   import type { ClimateValue } from '../adapter/types.ts';
-  import { runtime } from '../adapter/runtime.svelte.ts';
-  import { climateEntityId, roomCameraEntityId } from '../state/entities.ts';
+  import { roomCameraEntityId } from '../state/entities.ts';
 
   import { m } from '../../paraglide/messages.js';
   let { room }: { room: Room } = $props();
 
   const climate = $derived(mergedClimate(room.id));
-  const climateId = $derived(climateEntityId(room.id));
-  const climateAvailable = $derived(!climateId || runtime.isEntityAvailable(climateId));
   /* Ist-Temperatur mit Fallback-Kette (dedizierter Sensor > Thermostat-Ist >
-     nichts) — kein Mock mehr. null → die Ist-Anzeige wird ausgeblendet. */
+     nichts) — kein Mock mehr. null wird explizit als nicht verfügbar gezeigt. */
   const temp = $derived(roomTemperature(room.id));
   const cameraEntityId = $derived(roomCameraEntityId(room.id));
 
@@ -52,12 +49,6 @@
     void btn.offsetWidth;
     btn.classList.add('is-success');
   }
-
-  function sceneLabel(sceneId: SceneId): string {
-    if (sceneId === 'gemuetlich') return m.scene_cosy();
-    if (sceneId === 'hell') return m.scene_bright();
-    return m.scene_off();
-  }
 </script>
 
 <div class="room-controls">
@@ -67,7 +58,7 @@
         <button class="scene-btn pressable" type="button"
                 use:longpress={{ onLongPress: () => openSceneEdit(room.id, s.id) }}
                 onclick={(e) => onSceneTap(s.id, e)}>
-          {sceneLabel(s.id)}<span class="scene-check"><Icon name="i-check" cls="icon icon-md" /></span>
+          {s.label}<span class="scene-check"><Icon name="i-check" cls="icon icon-md" /></span>
         </button>
       {/each}
     </div>
@@ -89,39 +80,35 @@
 
   {#if climate}
     <section class="detail-section">
-      <div class="climate-card" class:is-unavailable={!climateAvailable}>
+      <span class="caps-label">{m.climate_temperature()}</span>
+      <div class="climate-card">
         <div class="climate-warning" class:is-visible={room.windowOpen}>
           <Icon name="i-window" cls="icon icon-md" /><span>Fenster offen — Heizung pausiert</span>
         </div>
-        {#if !climateAvailable}
-          <p class="entity-unavailable-hint" role="status">
-            <strong>{m.media_unavailable()}</strong>
-            <span>{m.entity_unavailable_repair_hint()}</span>
-          </p>
-        {/if}
         <div class="climate-hero">
-          {#if temp !== null}
-            <span class="climate-temp num">{fmtTemp(temp)}<span class="unit">°C</span></span>
-          {/if}
+          <span class="climate-temp num" class:is-unavailable={temp === null}>
+            {#if temp !== null}
+              {fmtTemp(temp)}<span class="unit">°C</span>
+            {:else}
+              {m.media_unavailable()}
+            {/if}
+          </span>
           <div class="climate-pills">
             <!-- Zieltemperatur des Raums als Pille (identisch zum TabBar-Klima-Dock). -->
             <div class="climate-dock room-climate-pill" aria-label="Zieltemperatur {room.name}">
               <button class="cd-key cd-key-down pressable" type="button" aria-label="0,5 Grad kälter"
-                      disabled={!climateAvailable}
                       onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
               <div class="cd-readout">
                 <span class="cd-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
                 <span class="cd-sub">{m.climate_target()}</span>
               </div>
               <button class="cd-key cd-key-up pressable" type="button" aria-label="0,5 Grad wärmer"
-                      disabled={!climateAvailable}
                       onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
             </div>
             <!-- Modus als zweite Pille, gleiche Breite: 3 Segmente zur Auswahl. -->
             <div class="mode-pill" role="radiogroup" aria-label="Modus">
               {#each HVAC_MODES as m (m.id)}
                 <button class="mode-seg pressable" type="button" role="radio" data-mode={m.id}
-                        disabled={!climateAvailable}
                         aria-label={m.label} aria-checked={climate.hvac === m.id} class:is-active={climate.hvac === m.id}
                         onclick={() => setHvac(room.id, m.id)}>
                   <Icon name={m.icon} cls="icon icon-md" />

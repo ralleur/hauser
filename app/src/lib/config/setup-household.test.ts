@@ -6,10 +6,13 @@ import {
   buildSetupHouseholdSuggestion,
   canRemoveSetupRoom,
   canMoveSetupEntity,
+  cloneSetupRoom,
   moveSetupEntity,
   moveSetupRoom,
   omitSetupEntity,
+  preserveSetupRoomHeroes,
   removeSetupRoom,
+  renameSetupRoom,
   type SetupDiscoverySnapshot,
 } from './setup-household.ts';
 
@@ -143,6 +146,35 @@ describe('deterministic setup household suggestion', () => {
       'hall', 'living_room', 'gaste_hobby_2', 'gaste_hobby',
     ]);
     expect(moveSetupRoom(moved, 'hall', -1)).toBe(moved);
+  });
+
+  it('preserves heroes by stable room id while add and clone deliberately start with null', () => {
+    const original = buildSetupHouseholdSuggestion(snapshot()).config;
+    original.rooms[0].hero = {
+      assetId: 'asset_hall_01',
+      focus: {
+        panel: { x: 0.25, y: 0.75 },
+        phone: { x: 0.6, y: 0.4 },
+      },
+    };
+    const before = structuredClone(original);
+
+    const renamed = renameSetupRoom(original, 'hall', 'Entry');
+    const moved = moveSetupRoom(renamed, 'hall', 1);
+    const added = addSetupRoom(moved, 'Office');
+    const cloned = cloneSetupRoom(added, 'hall', 'Entry copy');
+
+    expect(renamed.rooms.find(({ id }) => id === 'hall')?.hero).toEqual(original.rooms[0].hero);
+    expect(moved.rooms.find(({ id }) => id === 'hall')?.hero).toEqual(original.rooms[0].hero);
+    expect(added.rooms.at(-1)?.hero).toBeNull();
+    expect(cloned.rooms.at(-1)?.hero).toBeNull();
+    expect(original).toEqual(before);
+
+    const rescanned = buildSetupHouseholdSuggestion(snapshot()).config;
+    const preserved = preserveSetupRoomHeroes(original, rescanned);
+    expect(preserved.rooms.find(({ id }) => id === 'hall')?.hero).toEqual(original.rooms[0].hero);
+    expect(preserved.rooms.find(({ id }) => id === 'living_room')?.hero).toBeNull();
+    expect(rescanned.rooms.every(({ hero }) => hero === null)).toBe(true);
   });
 
   it('removes a room only through an explicit reference-safe strategy', () => {

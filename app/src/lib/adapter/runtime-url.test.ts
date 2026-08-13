@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdapterRuntime, configuredHaUrl, defaultHaUrl } from './runtime.svelte.ts';
+import { AdapterRuntime, configuredHaUrl, defaultHaUrl, seed } from './runtime.svelte.ts';
 import type { Backend, ConnectionStatus } from './types.ts';
 import { configuredBackendKind } from '../state/runtime-backend-sync.ts';
+import { LAUNDRY_ENTITIES } from '../state/entities.ts';
 
 class StubBackend implements Backend {
   starts = 0;
@@ -18,9 +19,7 @@ class StubBackend implements Backend {
 class ControlledBackend implements Backend {
   starts = 0;
   visible: string[][] = [];
-  services: Array<{ domain: string; service: string; entityId: string; data: Record<string, unknown> }> = [];
-  renames: Array<{ entityId: string; name: string }> = [];
-  update: ((entityId: string, value: unknown, stale?: boolean, available?: boolean) => void) | null = null;
+  update: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   connection: ((status: ConnectionStatus) => void) | null = null;
   commandError: ((entityId: string) => void) | null = null;
   catalog: ((items: unknown[]) => void) | null = null;
@@ -28,10 +27,8 @@ class ControlledBackend implements Backend {
   constructor(private readonly initialStatus: ConnectionStatus = 'connected') {}
 
   start(): void { this.starts += 1; }
-  subscribe(cb: (entityId: string, value: unknown, stale?: boolean, available?: boolean) => void): void { this.update = cb; }
-  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void {
-    this.services.push({ domain, service, entityId, data });
-  }
+  subscribe(cb: (entityId: string, value: unknown, stale?: boolean) => void): void { this.update = cb; }
+  callService(): void {}
   onConnectionChange(cb: (status: ConnectionStatus) => void): void {
     this.connection = cb;
     cb(this.initialStatus);
@@ -39,7 +36,6 @@ class ControlledBackend implements Backend {
   onCommandError(cb: (entityId: string) => void): void { this.commandError = cb; }
   subscribeCatalog(cb: (items: unknown[]) => void): void { this.catalog = cb; }
   setVisible(entityIds: readonly string[]): void { this.visible.push([...entityIds]); }
-  async renameEntity(entityId: string, name: string): Promise<void> { this.renames.push({ entityId, name }); }
 }
 
 describe('runtime HA URL defaults', () => {
@@ -59,6 +55,12 @@ describe('runtime HA URL defaults', () => {
 });
 
 describe('runtime backend bootstrap', () => {
+  it('does not invent initial laundry values', () => {
+    for (const adapter of Object.values(LAUNDRY_ENTITIES)) {
+      if (adapter) expect(seed.has(adapter.entityId)).toBe(false);
+    }
+  });
+
   it('derives the backend kind from synchronized storage', () => {
     expect(configuredBackendKind({ getItem: () => 'fake' }, undefined)).toBe('fake');
     expect(configuredBackendKind({ getItem: () => 'ha' }, undefined)).toBe('ha');
@@ -122,81 +124,75 @@ describe('runtime backend bootstrap', () => {
     configured.update?.('light.test', { on: true });
     expect(runtime.intentStatus('light.test')).toBeNull();
   });
-});
 
-describe('runtime entity availability', () => {
-  it('keeps the last-known value while exposing explicit availability changes', () => {
-    const backend = new ControlledBackend();
-    const runtime = new AdapterRuntime(backend);
+  it('deletes removed backend entities instead of retaining an undefined store record', () => {
+    const controlled = new ControlledBackend();
+    const runtime = new AdapterRuntime(controlled);
 
-    backend.update?.('light.test', { on: true, brightness: 42 }, false, true);
-    backend.update?.('light.test', undefined, false, false);
+    controlled.update?.('input_select.fixture_washer', { state: 'running', changedAt: 100 });
+    expect(runtime.store.has('input_select.fixture_washer')).toBe(true);
 
-    expect(runtime.isEntityAvailable('light.test')).toBe(false);
-    expect(runtime.store.get('light.test')).toMatchObject({
-      value: { on: true, brightness: 42 },
-      available: false,
-    });
+    controlled.update?.('input_select.fixture_washer', undefined);
 
-    backend.update?.('light.test', { on: false, brightness: 17 }, false, true);
-    expect(runtime.isEntityAvailable('light.test')).toBe(true);
-    expect(runtime.merged('light.test')).toEqual({ on: false, brightness: 17 });
+    expect(runtime.store.has('input_select.fixture_washer')).toBe(false);
+    expect(runtime.merged('input_select.fixture_washer')).toBeUndefined();
   });
 
-  it.each([
-    ['light.test', { on: true, brightness: 42 }],
-    ['climate.test', { target: 21, hvac: 'heat', current: 20 }],
-    ['sun.sun', { day: true }],
-    ['media_player.kitchen', { playing: true, available: true }],
-    ['camera.garden', { available: true, entityPicture: '/api/camera_proxy/camera.garden' }],
-    ['sensor.house_power', { value: 2480, unit: 'W' }],
-    ['switch.test', { on: true }],
-    ['input_boolean.test', { on: true }],
-    ['binary_sensor.test', { on: true }],
-    ['fan.test', { on: true }],
-    ['cover.test', { on: true }],
-  ])('keeps unavailable %s values as last-known context', (entityId, value) => {
-    const backend = new ControlledBackend();
-    const runtime = new AdapterRuntime(backend);
+  it('passes each configured laundry helper and cycle marker through the productive HA constructor', async () => {
+    const helperId = 'sensor.fixture_washer_status';
+    const markerId = 'automation.fixture_washer_cycle';
+    const constructorOptions: Array<{ laundryEntityIds?: readonly string[] }> = [];
 
-    backend.update?.(entityId, value, false, true);
-    backend.update?.(entityId, undefined, false, false);
+    vi.resetModules();
+    vi.doMock('./ha-backend.ts', () => ({
+      HaBackend: class implements Backend {
+        constructor(options: { laundryEntityIds?: readonly string[] }) {
+          constructorOptions.push(options);
+        }
+        subscribe(): void {}
+        callService(): void {}
+        onConnectionChange(cb: (status: ConnectionStatus) => void): void { cb('connecting'); }
+      },
+    }));
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('localStorage', { getItem: () => null });
 
-    expect(runtime.store.get(entityId)?.value).toEqual(value);
-    expect(runtime.merged(entityId)).toEqual(value);
-    expect(runtime.isEntityAvailable(entityId)).toBe(false);
-  });
+    try {
+      const { legacyHouseholdRuntimeModel } = await import('../config/legacy-household-config.ts');
+      const { installActiveHouseholdData } = await import('../config/household-runtime-data.ts');
+      installActiveHouseholdData({
+        ...legacyHouseholdRuntimeModel,
+        subscriptionEntityIds: [
+          ...legacyHouseholdRuntimeModel.subscriptionEntityIds,
+          helperId,
+          markerId,
+        ],
+        globalEntities: {
+          ...legacyHouseholdRuntimeModel.globalEntities,
+          laundry: {
+            ...legacyHouseholdRuntimeModel.globalEntities.laundry,
+            washer: {
+              type: 'entity',
+              entityId: helperId,
+              runningStates: ['running'],
+              doneStates: ['done'],
+              doneOnInitial: true,
+              cycleMarkerEntityId: markerId,
+            },
+          },
+        },
+      });
 
-  it('defaults unknown and legacy backend updates to available', () => {
-    const backend = new ControlledBackend();
-    const runtime = new AdapterRuntime(backend);
+      await import('./runtime.svelte.ts');
 
-    expect(runtime.isEntityAvailable('light.not-seen')).toBe(true);
-    backend.update?.('light.test', { on: false });
-    expect(runtime.isEntityAvailable('light.test')).toBe(true);
-  });
-
-  it('blocks dispatch, send, and rename without creating an optimistic intent', async () => {
-    const backend = new ControlledBackend();
-    const runtime = new AdapterRuntime(backend);
-    const command = {
-      entityId: 'light.test',
-      domain: 'light',
-      service: 'turn_on',
-      data: {},
-      queuedAt: 1,
-    };
-    backend.update?.('light.test', { on: false, brightness: 20 });
-    backend.update?.('light.test', undefined, false, false);
-
-    runtime.dispatch(command, { on: true, brightness: 20 });
-    runtime.send({ ...command, service: 'toggle' });
-    await expect(runtime.renameEntity('light.test', 'Testlicht')).rejects.toThrow('nicht verfügbar');
-    await Promise.resolve();
-
-    expect(runtime.intentStatus('light.test')).toBeNull();
-    expect(runtime.merged('light.test')).toEqual({ on: false, brightness: 20 });
-    expect(backend.services).toEqual([]);
-    expect(backend.renames).toEqual([]);
+      expect(constructorOptions).toHaveLength(1);
+      expect(constructorOptions[0].laundryEntityIds).toEqual(
+        expect.arrayContaining([helperId, markerId]),
+      );
+    } finally {
+      vi.doUnmock('./ha-backend.ts');
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
   });
 });

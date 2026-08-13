@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Hauser contributors
+# Version: 1
+blueprint:
+  name: Hauser laundry power cycle state v1
+  description: >-
+    Converts a power sensor into the idle, running, and done states consumed by
+    Hauser. The state is maintained in Home Assistant while Hauser is closed.
+  domain: automation
+  input:
+    power_sensor:
+      name: Power sensor
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: power
+    state_helper:
+      name: Laundry state helper
+      selector:
+        entity:
+          filter:
+            - domain: input_select
+    start_threshold:
+      name: Start threshold
+      selector:
+        number:
+          mode: box
+    end_threshold:
+      name: End threshold
+      selector:
+        number:
+          mode: box
+    start_hold_seconds:
+      name: Start hold time in seconds
+      selector:
+        number:
+          min: 1
+          max: 3600
+          mode: box
+    end_hold_seconds:
+      name: End hold time in seconds
+      selector:
+        number:
+          min: 1
+          max: 3600
+          mode: box
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input power_sensor
+    above: !input start_threshold
+    for:
+      seconds: !input start_hold_seconds
+    id: running
+  - trigger: numeric_state
+    entity_id: !input power_sensor
+    below: !input end_threshold
+    for:
+      seconds: !input end_hold_seconds
+    id: done
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - running
+        sequence:
+          - action: input_select.select_option
+            target:
+              entity_id: !input state_helper
+            data:
+              option: running
+      - conditions:
+          - condition: trigger
+            id:
+              - done
+          - condition: state
+            entity_id: !input state_helper
+            state: running
+        sequence:
+          - action: input_select.select_option
+            target:
+              entity_id: !input state_helper
+            data:
+              option: done
+mode: restart

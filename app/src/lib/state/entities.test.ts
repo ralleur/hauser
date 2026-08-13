@@ -41,7 +41,11 @@ describe('ambient subscription set (ADR-006)', () => {
 
   it('enthält nichts außer sun + Energie + globale Laundry-Zustände (keine null, keine Duplikate)', () => {
     const ambient = ambientEntityIds();
-    const expected = new Set([SUN_ENTITY, ...configuredEnergyIds, ...Object.values(LAUNDRY_ENTITIES)]);
+    const expected = new Set([
+      SUN_ENTITY,
+      ...configuredEnergyIds,
+      ...Object.values(LAUNDRY_ENTITIES).map((adapter) => adapter?.entityId ?? null),
+    ]);
     for (const id of ambient) expect(expected.has(id)).toBe(true);
     expect(ambient).not.toContain(null);
     expect(new Set(ambient).size).toBe(ambient.length);

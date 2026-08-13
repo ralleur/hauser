@@ -2,21 +2,25 @@
   import '../../styles/notifications.css';
   import NotificationTile from './NotificationTile.svelte';
   import { runtime } from '../adapter/runtime.svelte.ts';
-  import type { SwitchValue } from '../adapter/types.ts';
   import { LAUNDRY_ENTITIES } from '../state/entities.ts';
   import { notifications } from '../state/notifications.svelte.ts';
+  import { normalizeLaundryState } from '../state/notifications.ts';
 
   let now = $state(Date.now());
 
-  function laundryValue(entityId: string | null): SwitchValue | undefined {
-    return entityId && runtime.isEntityAvailable(entityId)
-      ? runtime.merged(entityId) as SwitchValue
-      : undefined;
-  }
-
   $effect(() => {
-    notifications.syncLaundry('washer', laundryValue(LAUNDRY_ENTITIES.washer));
-    notifications.syncLaundry('dryer', laundryValue(LAUNDRY_ENTITIES.dryer));
+    const washer = LAUNDRY_ENTITIES.washer;
+    const dryer = LAUNDRY_ENTITIES.dryer;
+    notifications.syncLaundry('washer', normalizeLaundryState(
+      washer,
+      washer ? runtime.merged(washer.entityId) : undefined,
+      washer?.cycleMarkerEntityId ? runtime.merged(washer.cycleMarkerEntityId) : undefined,
+    ));
+    notifications.syncLaundry('dryer', normalizeLaundryState(
+      dryer,
+      dryer ? runtime.merged(dryer.entityId) : undefined,
+      dryer?.cycleMarkerEntityId ? runtime.merged(dryer.cycleMarkerEntityId) : undefined,
+    ));
   });
 
   $effect(() => {

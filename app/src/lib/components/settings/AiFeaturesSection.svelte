@@ -2,15 +2,30 @@
   /* Public product: only non-code-modifying AI functions remain here. The
      repository/deploying customization agent is intentionally absent. */
   import Icon from '../Icon.svelte';
+  import RoomImageWizard from './RoomImageWizard.svelte';
+  import { ROOM_IMAGE_WIZARD_ENABLED } from '../../config/product-capabilities.ts';
   import { settingsValues, setAmbientHeroText } from '../../state/settings.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
   import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
+
+  let roomImageWizardOpen = $state(false);
 </script>
 
 <h3 class="caps-label settings-group-label">{m.sys_ai_features_group()}</h3>
 <div class="settings-group">
+  {#if ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO}
+    <button class="settings-row settings-action-row pressable" data-setting-id="room-image-wizard" type="button"
+            onclick={() => roomImageWizardOpen = true}>
+      <span class="settings-row-icon"><Icon name="i-image" cls="icon icon-md" /></span>
+      <span class="settings-row-text">
+        <span class="settings-row-label">Raumbilder erstellen</span>
+        <span class="settings-row-sub">Foto hochladen, Hauser-Varianten prüfen und als Bildset speichern.</span>
+      </span>
+      <Icon name="i-chevron-right" cls="icon icon-md settings-arrow" />
+    </button>
+  {/if}
   <div class="settings-row" data-setting-id="ambient-hero-text">
     <span class="settings-row-icon"><Icon name="i-creation" cls="icon icon-md" /></span>
     <div class="settings-row-text">
@@ -38,3 +53,7 @@
     </div>
   {/if}
 </div>
+
+{#if ROOM_IMAGE_WIZARD_ENABLED}
+  <RoomImageWizard open={roomImageWizardOpen} onclose={() => roomImageWizardOpen = false} />
+{/if}

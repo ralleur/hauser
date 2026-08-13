@@ -46,9 +46,68 @@ describe('neutral household FakeBackend runtime', () => {
     expect(fetchImpl).toHaveBeenCalledWith('/api/household-config', { cache: 'no-store' });
     expect(result.backend).toBeInstanceOf(FakeBackend);
     expect(result.backendType).toBe('fake');
-    expect(result.configId).toBe('household-v2:studio');
+    expect(result.configId).toBe('household-v3:studio');
     expect(result.model.rooms.map(({ id }) => id)).toEqual(['studio', 'patio', 'utility']);
     expect(result.model.navigation.map(({ id }) => id)).toEqual(['start', 'listen']);
+  });
+
+  it('deep-copies legacy Laundry adapters and state arrays on initialization and reset', async () => {
+    vi.resetModules();
+    const runtime = await import('./household-runtime-data.ts');
+    const legacy = await import('./legacy-household-config.ts');
+    const source = legacy.legacyHouseholdRuntimeModel.globalEntities.laundry;
+    const initial = runtime.LAUNDRY_ENTITIES;
+    const initialWasher = initial.washer;
+    const initialDryer = initial.dryer;
+    const sourceWasher = source.washer;
+    const sourceDryer = source.dryer;
+    if (!initialWasher || !initialDryer || !sourceWasher || !sourceDryer) {
+      throw new Error('Expected legacy Laundry adapters');
+    }
+    const initialSourceBefore = structuredClone(source);
+
+    initialWasher.entityId = 'sensor.mutated_initial_washer';
+    initialWasher.runningStates.push('mutated-initial-running');
+    initialWasher.doneStates.push('mutated-initial-done');
+    initialDryer.entityId = 'sensor.mutated_initial_dryer';
+    initialDryer.runningStates.push('mutated-initial-running');
+    initialDryer.doneStates.push('mutated-initial-done');
+    const initialSourceAfterMutation = structuredClone(source);
+
+    runtime.resetHouseholdDataToLegacy();
+    const reset = runtime.LAUNDRY_ENTITIES;
+    const resetWasher = reset.washer;
+    const resetDryer = reset.dryer;
+    if (!resetWasher || !resetDryer || !source.washer || !source.dryer) {
+      throw new Error('Expected reset Laundry adapters');
+    }
+    const resetSourceBefore = structuredClone(source);
+
+    resetWasher.entityId = 'sensor.mutated_reset_washer';
+    resetWasher.runningStates.push('mutated-reset-running');
+    resetWasher.doneStates.push('mutated-reset-done');
+    resetDryer.entityId = 'sensor.mutated_reset_dryer';
+    resetDryer.runningStates.push('mutated-reset-running');
+    resetDryer.doneStates.push('mutated-reset-done');
+    const resetSourceAfterMutation = structuredClone(source);
+
+    expect(initial).not.toBe(source);
+    expect(initialWasher).not.toBe(sourceWasher);
+    expect(initialWasher.runningStates).not.toBe(sourceWasher.runningStates);
+    expect(initialWasher.doneStates).not.toBe(sourceWasher.doneStates);
+    expect(initialDryer).not.toBe(sourceDryer);
+    expect(initialDryer.runningStates).not.toBe(sourceDryer.runningStates);
+    expect(initialDryer.doneStates).not.toBe(sourceDryer.doneStates);
+    expect(initialSourceAfterMutation).toEqual(initialSourceBefore);
+    expect(reset).not.toBe(initial);
+    expect(reset).not.toBe(source);
+    expect(resetWasher).not.toBe(source.washer);
+    expect(resetWasher.runningStates).not.toBe(source.washer.runningStates);
+    expect(resetWasher.doneStates).not.toBe(source.washer.doneStates);
+    expect(resetDryer).not.toBe(source.dryer);
+    expect(resetDryer.runningStates).not.toBe(source.dryer.runningStates);
+    expect(resetDryer.doneStates).not.toBe(source.dryer.doneStates);
+    expect(resetSourceAfterMutation).toEqual(resetSourceBefore);
   });
 
   it('derives every seed and injected catalog entry exclusively from the compiled neutral model', async () => {

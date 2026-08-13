@@ -1,12 +1,14 @@
 import { m } from '../../paraglide/messages.js';
+import demoHouseholdConfig from '../../../config/households/current-v1.json';
 
-/* Der Raum-Seed trägt die Raumnamen des Haushalts, für den diese HMI gebaut
-   wurde. In der öffentlichen Demo werden Räume und sichtbare Leuchten deshalb
-   mit neutralen Präsentationsnamen versehen. Produktion und der zugrunde
-   liegende Household-/Entity-Vertrag bleiben unangetastet. */
-export function applyDemoNames(
-  rooms: { id: string; name: string; lights?: { name: string }[] }[],
-): void {
+/* Demo-only presentation state. Kept outside demo-mode.ts so production startup
+   does not retain translated sample names and synthetic room values. */
+export function applyDemoNames(rooms: {
+  id: string;
+  name: string;
+  presence: boolean;
+  lights: Array<{ entityId: string }>;
+}[]): void {
   if (import.meta.env.VITE_DEMO !== '1') return;
 
   const room: Record<string, () => string> = {
@@ -14,19 +16,43 @@ export function applyDemoNames(
     schlafzimmer: m.demo_room_schlafzimmer, bad: m.demo_room_bad,
     kueche: m.demo_room_kueche, flur: m.demo_room_flur,
   };
-  const light: Readonly<Record<string, string>> = {
-    Kugellampen: 'Main lights',
-    Esstisch: 'Dining pendant',
-    'Kugellampe TV': 'Floor lamp',
-    'Kugellampe Fenster': 'Window lamp',
-    Bett: 'Bedside lights',
-    Schreibtisch: 'Desk lamp',
-    Spiegellicht: 'Mirror light',
-    'LED-Leiste': 'Counter lights',
+  const present = new Set(['wohnzimmer', 'kueche']);
+  const lightsOn: Readonly<Record<string, readonly number[]>> = {
+    wohnzimmer: [0, 2], schlafzimmer: [0], kueche: [0],
+  };
+  const climate: Readonly<Record<string, { target: number; current: number }>> = {
+    wohnzimmer: { target: 21, current: 23.5 },
+    schlafzimmer: { target: 18, current: 22.5 },
+    bad: { target: 21, current: 22 },
+  };
+  const store = (window as unknown as {
+    __hmi?: { runtime?: { store?: {
+      get: (entityId: string) => { value?: unknown } | undefined;
+      set: (entityId: string, value: unknown) => void;
+    } } };
+  }).__hmi?.runtime?.store;
+  const merge = (entityId: string, value: Record<string, unknown>) => {
+    const current = store?.get(entityId)?.value;
+    store?.set(entityId, {
+      ...(current && typeof current === 'object' && !Array.isArray(current) ? current : {}),
+      ...value,
+    });
   };
 
   for (const item of rooms) {
     if (room[item.id]) item.name = room[item.id]();
-    for (const entity of item.lights ?? []) entity.name = light[entity.name] ?? entity.name;
+    item.presence = present.has(item.id);
+
+    const configured = demoHouseholdConfig.rooms.find(({ id }) => id === item.id);
+    const climateEntity = configured?.visibleEntities.find(({ role }) => role === 'climate');
+    if (climateEntity && climate[item.id]) {
+      merge(climateEntity.entityId, { ...climate[item.id], hvac: 'heat' });
+    }
+    const activeIndexes = new Set(lightsOn[item.id] ?? []);
+    item.lights.forEach((light, index) => {
+      if (activeIndexes.has(index)) {
+        merge(light.entityId, { on: true, brightness: index === 0 ? 68 : 42 });
+      }
+    });
   }
 }

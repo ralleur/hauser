@@ -4,6 +4,7 @@ import phoneHome from '../components/phone/PhoneHomeFeed.svelte?raw';
 import roomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomSheet from '../components/phone/RoomControlSheet.svelte?raw';
 import roomControls from '../components/RoomControls.svelte?raw';
+import phoneHomeState from './phone-home.ts?raw';
 import type { Room } from './app.svelte.ts';
 import {
   accessibleRoomSummary,
@@ -36,10 +37,10 @@ function readers(overrides: Partial<PhoneHomeReaders> = {}): PhoneHomeReaders {
 }
 
 describe('phone home room projection', () => {
-  it('builds the visible day/night card asset and preserves the unknown-room fallback', () => {
-    expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).toBe('/hero/wohnzimmer-light.avif');
-    expect(phoneHeroUrl('/app', 'bad', 'dark')).toBe('/app/hero/bad-dark.avif');
-    expect(phoneHeroUrl('/', 'garage', 'light')).toBeNull();
+  it('builds the visible day/night card asset and preserves the unknown-room fallback', async () => {
+    await expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).resolves.toBe('/hero/wohnzimmer-light.avif');
+    await expect(phoneHeroUrl('/app', 'bad', 'dark')).resolves.toBe('/app/hero/bad-dark.avif');
+    await expect(phoneHeroUrl('/', 'garage', 'light')).resolves.toBeNull();
   });
 
   it('preserves room order and projects merged temperature/light/security values', () => {
@@ -98,19 +99,23 @@ describe('phone home source, command and modal boundaries', () => {
     expect((roomCard.match(/<button/g) ?? [])).toHaveLength(1);
     expect(roomCard).toMatch(/aria-label=/);
     for (const source of [phoneShell, phoneHome, roomCard, roomSheet]) {
-      for (const forbidden of ['RoomHero', 'HomeScreen', 'PanelAppShell', 'hls.js', 'IconPicker', 'icon-recents']) {
+      for (const forbidden of ['RoomHero.svelte', 'HomeScreen', 'PanelAppShell', 'hls.js', 'IconPicker', 'icon-recents']) {
         expect(source).not.toContain(forbidden);
       }
     }
   });
 
-  it('selects one Phone-Home hero variant without importing the panel hero catalog', () => {
+  it('uses the shared resolver/loader and reactive assignment store without importing panel UI', () => {
     expect(phoneHome).toMatch(/const heroVariant = \$derived/);
     expect(phoneHome).toContain('appState.heroSun');
     expect(phoneHome).not.toContain('runtime.merged(SUN_ENTITY)');
     expect(phoneHome).toMatch(/<RoomSummaryCard[^>]*\{heroVariant\}/);
-    expect(roomCard).not.toContain('room-hero-assets.ts');
-    expect(roomCard).toMatch(/phoneHeroUrl\([^)]*heroVariant\)/);
+    expect(phoneHomeState).toContain("from '../components/room-hero-assets.ts'");
+    expect(phoneHomeState).toContain('resolveRoomHero');
+    expect(roomCard).toContain('roomHeroConfig(summary.id)');
+    expect(roomCard).toContain('resolvePhoneHero');
+    expect(roomCard).toContain('loadRoomHero');
+    expect(roomCard).toContain('style:--phone-room-focus');
   });
 
   it('reuses the tablet room controls 1:1 and never calls a backend directly', () => {
@@ -133,7 +138,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHome).toMatch(/onclick=\{toggleVacationMode\}/);
     expect(phoneHome).toMatch(/disabled=\{!online\}/);
     expect(phoneHome).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
-    expect(phoneHome).toContain('vacationActive ? m.phone_vacation_disable() : m.phone_vacation_enable()');
+    expect(phoneHome).toContain("vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'");
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {

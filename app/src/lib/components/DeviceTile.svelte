@@ -11,22 +11,17 @@
   import { openDeviceDetail } from '../state/overlay.svelte.ts';
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { fmtTemp } from '../format.ts';
-  import { runtime } from '../adapter/runtime.svelte.ts';
-  import { lightEntityId } from '../state/entities.ts';
   import type { Light } from '../state/app.svelte.ts';
   import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue } from '../adapter/types.ts';
-  import { m } from '../../paraglide/messages.js';
 
   interface Props { roomId: string; device: Light }
   const { roomId, device }: Props = $props();
 
   const category = $derived(device.category ?? 'light');
   const toggles = $derived(category === 'light' || category === 'switch');
-  const entityId = $derived(device.entityId ?? lightEntityId(roomId, device.id));
 
   const cur = $derived(mergedDevice(roomId, device));
-  const pending = $derived(devicePending(entityId));
-  const available = $derived(runtime.isEntityAvailable(entityId));
+  const pending = $derived(devicePending(device.entityId));
 
   // „Aktiv"-Zustand des Icon-Felds je Kategorie (sensor bleibt neutral).
   const isOn = $derived.by(() => {
@@ -58,7 +53,6 @@
   });
 
   function onTap() {
-    if (!available) return;
     if (toggles) toggleDevice(roomId, device);
     else openDeviceDetail(roomId, device.id);
   }
@@ -69,7 +63,7 @@
   let seenSeq = 0;
   $effect(() => {
     if (!toggles) return;
-    const ev = deviceReconcile(entityId);
+    const ev = deviceReconcile(device.entityId);
     if (!ev || ev.seq <= seenSeq) return;
     seenSeq = ev.seq;
     const o = ev.optimistic as Partial<LightValue>;
@@ -82,11 +76,9 @@
      aria-pressed; nicht-schaltbare öffnen das Detail (kein pressed-State).
      Icon dekorativ (aria-hidden), der Name trägt die Beschriftung. -->
 <button class="light-tile pressable" type="button"
-        class:is-on={isOn} class:is-unavailable={!available}
-        aria-pressed={toggles ? isOn : undefined}
-        disabled={!available}
+        class:is-on={isOn} aria-pressed={toggles ? isOn : undefined}
         use:pulse={{ seq: toggleWobble, cls: 'is-wobble', ms: 200 }}
-        use:longpress={{ enabled: available, onLongPress: () => openDeviceDetail(roomId, device.id) }}
+        use:longpress={{ enabled: true, onLongPress: () => openDeviceDetail(roomId, device.id) }}
         onclick={onTap}>
   <span class="light-tile-icon" aria-hidden="true">
     <Icon name={device.icon ?? 'i-bulb'} />
@@ -94,10 +86,6 @@
   </span>
   <span class="light-tile-label">
     <span class="light-tile-name">{device.name}</span>
-    {#if !available}
-      <span class="light-tile-state">{m.media_unavailable()}</span>
-    {:else if stateLine !== null}
-      <span class="light-tile-state num">{stateLine}</span>
-    {/if}
+    {#if stateLine !== null}<span class="light-tile-state num">{stateLine}</span>{/if}
   </span>
 </button>

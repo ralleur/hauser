@@ -1,4 +1,9 @@
 import type { ClimateValue, LightValue } from '../adapter/types.ts';
+import type { RoomHeroConfig } from '../config/household-config.ts';
+import type {
+  PhoneHeroVariant as SharedPhoneHeroVariant,
+  RoomHeroResolution,
+} from '../components/room-hero-assets.ts';
 import type { Room } from './app.svelte.ts';
 
 export interface PhoneHomeReaders {
@@ -19,7 +24,7 @@ export interface PhoneRoomSummary {
   climateAvailable: boolean;
 }
 
-export type PhoneHeroVariant = 'light' | 'dark';
+export type PhoneHeroVariant = SharedPhoneHeroVariant;
 
 export function currentClimateTemperature(rooms: readonly PhoneRoomSummary[]): number | null {
   const temperatures = rooms.flatMap((room) => (
@@ -29,18 +34,25 @@ export function currentClimateTemperature(rooms: readonly PhoneRoomSummary[]): n
   return temperatures.reduce((sum, temperature) => sum + temperature, 0) / temperatures.length;
 }
 
-const PHONE_HERO_ROOM = /^(?:wohnzimmer|kueche|bad|schlafzimmer|kinderzimmer|flur)$/;
-
-/** Phone Home needs one sun-driven variant per visible card, never the panel's
- * lights-off/collage matrix. Unknown configured rooms keep their surface color. */
-export function phoneHeroUrl(
+/** Phone Home keeps its sun-driven light/dark input while delegating all URL,
+ * focus and fallback policy to the shared resolver. */
+export async function resolvePhoneHero(
   baseUrl: string,
   roomId: string,
   variant: PhoneHeroVariant,
-): string | null {
-  if (!PHONE_HERO_ROOM.test(roomId)) return null;
-  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${base}hero/${roomId}-${variant}.avif`;
+  config: RoomHeroConfig | null = null,
+): Promise<RoomHeroResolution> {
+  const { resolveRoomHero } = await import('../components/room-hero-assets.ts');
+  return resolveRoomHero({ target: 'phone', baseUrl, roomId, variant, config });
+}
+
+/** Compatibility projection for callers that only need the static fallback URL. */
+export async function phoneHeroUrl(
+  baseUrl: string,
+  roomId: string,
+  variant: PhoneHeroVariant,
+): Promise<string | null> {
+  return (await resolvePhoneHero(baseUrl, roomId, variant)).projectFallback?.url ?? null;
 }
 
 function safely<T>(read: () => T, fallback: T): T {

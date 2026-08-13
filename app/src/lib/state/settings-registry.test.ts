@@ -85,6 +85,12 @@ describe('fachliche Gliederung', () => {
     expect(searchSettings('räume verwalten')[0]?.entry.id).toBe('household-setup');
   });
 
+  it('führt Wäsche direkt unter System · Benachrichtigungen', () => {
+    expect(settingsEntry('laundry')?.section).toBe('notifications');
+    expect(settingsSection('notifications').group).toBe('system');
+    expect(searchSettings('wäsche')[0]?.entry.id).toBe('laundry');
+  });
+
   it('trennt Inhaltsauswahl von der Kontoeinrichtung', () => {
     /* Welche Kalender angezeigt werden, ist Inhalt … */
     expect(settingsSection(settingsEntry('calendar-selection')!.section).group).toBe('content');

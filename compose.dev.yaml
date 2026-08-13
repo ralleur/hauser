@@ -42,6 +42,7 @@ services:
     environment:
       HMI_ALLOWED_ORIGINS: "http://localhost:${HAUSER_DEV_APP_PORT:-14173},http://127.0.0.1:${HAUSER_DEV_APP_PORT:-14173},http://${HAUSER_DEV_HOST_ADDRESS}:${HAUSER_DEV_APP_PORT:-14173}"
       HMI_AI_CUSTOMIZING_ENABLED: "0"
+      HMI_ROOM_IMAGE_AUTH_MODE: direct
       HMI_HOUSEHOLD_CONFIG_PATH: /config/household.json
       HMI_HOUSEHOLD_CONFIG_MODE: active
       HMI_CONFIG_PATH: /data/config.json

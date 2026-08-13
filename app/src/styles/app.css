@@ -722,11 +722,6 @@ body.theme-fade * {
               background-color var(--duration-normal) var(--ease-out),
               border-color var(--duration-normal) var(--ease-out);
 }
-.light-tile.is-unavailable {
-  border-style: dashed;
-  opacity: 0.5;
-  cursor: default;
-}
 .light-tile:focus-visible {
   outline: 2px solid var(--color-accent-warm);
   outline-offset: 2px;
@@ -813,26 +808,6 @@ body.theme-fade * {
 .light-detail-panel {
   width: min(100%, 460px);
   outline: none;
-}
-.light-detail-panel.is-unavailable {
-  border-style: dashed;
-}
-.light-detail-panel.is-unavailable .ld-body {
-  opacity: 0.5;
-}
-
-.entity-unavailable-hint {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0 0 var(--space-5);
-  color: var(--color-text-secondary);
-  font-size: var(--text-2xs);
-  line-height: var(--leading-snug);
-}
-.entity-unavailable-hint strong {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
 }
 
 .ld-header {
@@ -3246,6 +3221,32 @@ body.theme-fade * {
 .room-edit-panel.is-immersion {
   width: calc(100vw - var(--space-8));
 }
+.room-edit-panel.is-background {
+  width: min(760px, calc(100vw - var(--space-8)));
+}
+.re-background-editor {
+  display: grid;
+  gap: var(--space-5);
+}
+.re-background-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-xl);
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+.re-background-actions {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+.re-background-message {
+  margin: 0;
+  color: var(--color-success);
+}
+.re-background-message.is-error { color: var(--color-error); }
+.re-background-actions button:disabled { opacity: 0.55; }
 .re-subtitle {
   margin-left: var(--space-2);
   font-size: var(--text-sm);

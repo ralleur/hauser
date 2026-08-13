@@ -1,7 +1,7 @@
 {
   "name": "smart-home-hmi",
   "private": true,
-  "version": "0.4.0-beta.3",
+  "version": "0.4.0-beta.1",
   "type": "module",
   "description": "Smart Home HMI — Phase 3 App (Svelte 5 + Vite, ADR-013/014)",
   "scripts": {
@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "hls.js": "^1.6.16",
-    "home-assistant-js-websocket": "^9.6.0"
+    "home-assistant-js-websocket": "^9.6.0",
+    "sharp": "0.35.3"
   }
 }

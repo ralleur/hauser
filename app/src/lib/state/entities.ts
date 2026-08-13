@@ -134,7 +134,12 @@ export function buildMediaSeed(players: readonly MediaSeed[]): Map<string, unkno
    Entitäten), die Dauer-Subscription damit vernachlässigbar. Nicht konfigurierte
    (null) Energie-Sensoren werden ausgelassen. */
 export function ambientEntityIds(): string[] {
-  const ids = [SUN_ENTITY, ...Object.values(LAUNDRY_ENTITIES)]
+  const ids = [
+    SUN_ENTITY,
+    ...Object.values(LAUNDRY_ENTITIES).flatMap((adapter) => adapter
+      ? [adapter.entityId, adapter.cycleMarkerEntityId ?? null]
+      : []),
+  ]
     .filter((entityId): entityId is string => entityId !== null);
   for (const ref of Object.values(ENERGY_SENSORS)) ids.push(...energyRefIds(ref));
   return ids;

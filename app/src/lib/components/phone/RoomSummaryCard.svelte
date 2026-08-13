@@ -1,9 +1,11 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import type { HeroImageCandidate } from '../room-hero-assets.ts';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
+  import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
   import {
     accessibleRoomSummary,
-    phoneHeroUrl,
+    resolvePhoneHero,
     type PhoneHeroVariant,
     type PhoneRoomSummary,
   } from '../../state/phone-home.ts';
@@ -20,15 +22,45 @@
     onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
   } = $props();
 
-  const heroUrl = $derived(phoneHeroUrl(import.meta.env.BASE_URL, summary.id, heroVariant));
+  let shownHero = $state<HeroImageCandidate | null>(null);
+  let request = 0;
+  let requested = '';
+
+  $effect(() => {
+    const key = [
+      summary.id,
+      heroVariant,
+      JSON.stringify(roomHeroConfig(summary.id)),
+    ].join('|');
+    if (key === requested) return;
+    requested = key;
+    const currentRequest = ++request;
+
+    void Promise.all([
+      resolvePhoneHero(
+        import.meta.env.BASE_URL,
+        summary.id,
+        heroVariant,
+        roomHeroConfig(summary.id),
+      ),
+      import('../room-hero-assets.ts'),
+    ]).then(([resolution, { loadRoomHero }]) => (
+      loadRoomHero(resolution, undefined, () => request === currentRequest)
+    )).then((candidate) => {
+      if (candidate && request === currentRequest) shownHero = candidate;
+    }).catch(() => {
+      if (request === currentRequest) shownHero = null;
+    });
+  });
 </script>
 
 <button
   class="phone-room-card pressable"
   class:is-active={active}
-  class:has-hero={heroUrl !== null}
+  class:has-hero={shownHero !== null}
   type="button"
-  style:--phone-room-hero={heroUrl ? `url("${heroUrl}")` : undefined}
+  style:--phone-room-hero={shownHero ? `url("${shownHero.url}")` : undefined}
+  style:--phone-room-focus={shownHero?.position}
   aria-label={accessibleRoomSummary(summary)}
   aria-pressed={active}
   use:longpress={{ onLongPress: () => openRoomEdit(summary.id) }}

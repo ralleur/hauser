@@ -29,6 +29,7 @@
   import ShoppingSection from '../components/settings/ShoppingSection.svelte';
   import StatusSection from '../components/settings/StatusSection.svelte';
   import UpdatesSection from '../components/settings/UpdatesSection.svelte';
+  import NotificationsSection from '../components/settings/NotificationsSection.svelte';
   import MaintenanceSection from '../components/settings/MaintenanceSection.svelte';
 
   let { phone = false, titleAnchor = $bindable() }: { phone?: boolean; titleAnchor?: HTMLHeadingElement } = $props();
@@ -56,6 +57,7 @@
     'shopping': ShoppingSection,
     'status': StatusSection,
     'updates': UpdatesSection,
+    'notifications': NotificationsSection,
     'maintenance': MaintenanceSection,
   } as const;
 

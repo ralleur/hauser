@@ -23,7 +23,13 @@ import {
   type Connection,
 } from 'home-assistant-js-websocket';
 import type { AuthRequiredReason, Backend, ConnectionStatus } from './types.ts';
-import { applyEntitiesDiff, haToValue, type RawEntity, type EntitiesDiff } from './ha-entities.ts';
+import {
+  applyEntitiesDiff,
+  haToLaundryState,
+  haToValue,
+  type RawEntity,
+  type EntitiesDiff,
+} from './ha-entities.ts';
 import { catalogItemFromHaState } from './capabilities.ts';
 import type { EntityCatalogItem } from '../state/device-config.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
@@ -31,6 +37,7 @@ import { calendarEventsMessage } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 import { reminderListMessage } from '../state/reminders.ts';
 import { sharedStorage } from '../state/shared-config.ts';
+import { LAUNDRY_ENTITIES as CONFIGURED_LAUNDRY_ENTITIES } from '../config/household-runtime-data.ts';
 
 function markHaStartup(name: 'hmi:ha-connected' | 'hmi:fresh-data', label: string): void {
   if (!import.meta.env.DEV || typeof performance === 'undefined') return;
@@ -64,6 +71,9 @@ export interface HaBackendOptions {
   entityIds: readonly string[];
   /** Konfig-Seed als Fallback, wenn kein localStorage-Cache existiert. */
   seed?: Map<string, unknown>;
+  /** Configured Laundry source IDs that must bypass generic domain mapping.
+   * Defaults to the active household config at backend construction time. */
+  laundryEntityIds?: readonly string[];
 }
 
 export function entityRegistryRenameMessage(entityId: string, name: string) {
@@ -74,8 +84,9 @@ export class HaBackend implements Backend {
   #resolveUrl: () => string;
   #entityIds: string[];
   #seed: Map<string, unknown>;
+  #laundryEntityIds: Set<string>;
 
-  #onUpdate: ((entityId: string, value: unknown, stale?: boolean, available?: boolean) => void) | null = null;
+  #onUpdate: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #onAuth: ((reason: AuthRequiredReason) => void) | null = null;
   #onCmdErr: ((entityId: string) => void) | null = null;
@@ -90,15 +101,18 @@ export class HaBackend implements Backend {
 
   #raw = new Map<string, RawEntity>();
   #last = new Map<string, unknown>();
-  #subscriptionGeneration = 0;
-  #subscriptionEntityIds: string[] = [];
-  #awaitingInitialSnapshot = false;
 
   constructor(opts: HaBackendOptions) {
     const url = opts.url;
     this.#resolveUrl = typeof url === 'function' ? url : () => url;
     this.#entityIds = [...opts.entityIds];
     this.#seed = opts.seed ?? new Map();
+    const laundryEntityIds = opts.laundryEntityIds
+      ?? Object.values(CONFIGURED_LAUNDRY_ENTITIES)
+        .flatMap((adapter) => adapter
+          ? [adapter.entityId, ...(adapter.cycleMarkerEntityId ? [adapter.cycleMarkerEntityId] : [])]
+          : []);
+    this.#laundryEntityIds = new Set(laundryEntityIds);
   }
 
   /* ── Backend-Interface ── */
@@ -107,16 +121,17 @@ export class HaBackend implements Backend {
     void this.#start();
   }
 
-  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean, available?: boolean) => void): void {
+  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void {
     this.#onUpdate = onUpdate;
     // Sofort-Render aus dem Cache (bzw. Seed) — kein Leerzustand/Spinner (docs/04).
-    // Die gesamte Fallback-Menge bleibt in #last, auch wenn eine Entität erst
-    // durch einen späteren sichtbaren Screen ins selektive Abo kommt.
     const cache = this.#loadCache();
-    this.#last = new Map([...this.#seed, ...cache]);
     for (const id of this.#entityIds) {
-      const v = this.#last.get(id);
-      if (v !== undefined) onUpdate(id, v, cache.has(id));
+      if (this.#laundryEntityIds.has(id)) continue;
+      const v = cache.get(id) ?? this.#seed.get(id);
+      if (v !== undefined) {
+        this.#last.set(id, v);
+        onUpdate(id, v, cache.has(id));
+      }
     }
   }
 
@@ -323,7 +338,6 @@ export class HaBackend implements Backend {
       conn.addEventListener('disconnected', () => {
         if (this.#conn !== conn) return;
         this.#raw.clear();
-        this.#awaitingInitialSnapshot = true;
         this.#setStatus('reconnecting');
       });
       conn.addEventListener('reconnect-error', () => {
@@ -372,31 +386,12 @@ export class HaBackend implements Backend {
 
   async #resubscribe(): Promise<void> {
     if (!this.#conn) return;
-    const connection = this.#conn;
-    const generation = ++this.#subscriptionGeneration;
-    const entityIds = [...this.#entityIds];
-    const previousUnsub = this.#unsub;
-    this.#unsub = null;
-    if (previousUnsub) await previousUnsub().catch(() => {});
-    if (this.#conn !== connection || generation !== this.#subscriptionGeneration) return;
-
-    // Jede Generation beginnt mit leerem Rohzustand. Cache/Seed bleiben separat
-    // in #last und können nur Darstellungskontext, nie Live-Präsenz belegen.
-    this.#raw.clear();
-    this.#subscriptionEntityIds = entityIds;
-    this.#awaitingInitialSnapshot = true;
-    const unsub = await connection.subscribeMessage<EntitiesDiff>(
-      (diff) => {
-        if (generation === this.#subscriptionGeneration) this.#onDiff(diff);
-      },
-      { type: 'subscribe_entities', entity_ids: entityIds },
+    if (this.#unsub) { await this.#unsub().catch(() => {}); this.#unsub = null; }
+    this.#unsub = await this.#conn.subscribeMessage<EntitiesDiff>(
+      (diff) => this.#onDiff(diff),
+      { type: 'subscribe_entities', entity_ids: this.#entityIds },
       { resubscribe: true },
     );
-    if (this.#conn !== connection || generation !== this.#subscriptionGeneration) {
-      await unsub().catch(() => {});
-      return;
-    }
-    this.#unsub = unsub;
   }
 
   async #refreshCatalog(): Promise<void> {
@@ -410,34 +405,26 @@ export class HaBackend implements Backend {
   }
 
   #onDiff(diff: EntitiesDiff): void {
-    const initialSnapshot = this.#awaitingInitialSnapshot;
-    this.#awaitingInitialSnapshot = false;
     const changed = applyEntitiesDiff(this.#raw, diff);
     for (const id of changed) {
       const raw = this.#raw.get(id);
-      if (!raw || raw.state === 'unavailable') {
-        this.#emitUnavailable(id);
+      if (!raw) {
+        this.#last.delete(id);
+        this.#onUpdate?.(id, undefined);
         continue;
       }
-      const value = haToValue(id, raw, this.#last.get(id));
+      const value = this.#laundryEntityIds.has(id)
+        ? haToLaundryState(raw)
+        : haToValue(id, raw, this.#last.get(id));
       if (value === undefined) continue; // nicht steuerbare Domäne
       this.#last.set(id, value);
-      this.#onUpdate?.(id, value, false, true);
-    }
-    if (initialSnapshot) {
-      for (const id of this.#subscriptionEntityIds) {
-        if (!this.#raw.has(id)) this.#emitUnavailable(id);
-      }
+      this.#onUpdate?.(id, value);
     }
     if (!this.#receivedFreshData && changed.length > 0) {
       this.#receivedFreshData = true;
       markHaStartup('hmi:fresh-data', 'Aktuelle Daten eingetroffen');
     }
     this.#saveCache();
-  }
-
-  #emitUnavailable(entityId: string): void {
-    this.#onUpdate?.(entityId, this.#last.get(entityId), false, false);
   }
 
   /* ── Entity-Cache (localStorage) ── */

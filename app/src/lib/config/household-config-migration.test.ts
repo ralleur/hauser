@@ -11,32 +11,107 @@ function expectMigrated(result: HouseholdConfigMigrationResult) {
   return result;
 }
 
+function legacyFixture(version: 1 | 2): Record<string, any> {
+  const source = structuredClone(neutralSmall) as Record<string, any>;
+  source.schemaVersion = version;
+  for (const room of source.rooms) delete room.hero;
+  return source;
+}
+
+const typedWasher = {
+  type: 'entity',
+  entityId: 'sensor.fixture_washer_status',
+  runningStates: ['running'],
+  doneStates: ['done'],
+  doneOnInitial: true,
+  cycleMarkerEntityId: 'automation.fixture_washer_cycle',
+};
+
+const typedDryer = {
+  type: 'entity',
+  entityId: 'binary_sensor.fixture_dryer_running',
+  runningStates: ['on'],
+  doneStates: ['off'],
+  doneOnInitial: false,
+};
+
 describe('household config document migration', () => {
-  it('migrates the deployed v1 contract to v2 without mutating the source', () => {
-    const source = structuredClone(neutralSmall) as Record<string, unknown>;
-    source.schemaVersion = 1;
+  it.each([1, 2] as const)('migrates deployed scalar v%s data to typed Laundry plus Hero v3 without mutation', (version) => {
+    const source = legacyFixture(version);
     const before = JSON.stringify(source);
 
     const result = expectMigrated(migrateHouseholdConfigDocument(source));
 
-    expect(result.fromVersion).toBe(1);
-    expect(result.toVersion).toBe(2);
-    expect(result.document).toEqual({ ...source, schemaVersion: 2 });
+    expect(result.fromVersion).toBe(version);
+    expect(result.toVersion).toBe(3);
+    expect(result.document).toMatchObject({
+      schemaVersion: 3,
+      rooms: (source.rooms as Array<Record<string, unknown>>).map((room) => ({ ...room, hero: null })),
+      globalEntities: {
+        laundry: {
+          washer: {
+            type: 'entity',
+            entityId: 'input_boolean.washer_running',
+            runningStates: ['on'],
+            doneStates: ['off'],
+            doneOnInitial: false,
+          },
+          dryer: {
+            type: 'entity',
+            entityId: 'input_boolean.dryer_running',
+            runningStates: ['on'],
+            doneStates: ['off'],
+            doneOnInitial: false,
+          },
+        },
+      },
+    });
     expect(JSON.stringify(source)).toBe(before);
   });
 
+  it('adds only hero null in the v2-to-v3 step and preserves rich typed Laundry data exactly', () => {
+    const source = legacyFixture(2);
+    source.globalEntities.laundry = {
+      washer: structuredClone(typedWasher),
+      dryer: structuredClone(typedDryer),
+    };
+    const before = JSON.stringify(source);
+
+    const result = expectMigrated(migrateHouseholdConfigDocument(source));
+
+    expect(result.document).toEqual({
+      ...source,
+      schemaVersion: 3,
+      rooms: source.rooms.map((room: Record<string, unknown>) => ({ ...room, hero: null })),
+    });
+    expect(JSON.stringify(source)).toBe(before);
+  });
+
+  it('rejects an invalid current v3 document without reporting a migration failure', () => {
+    const source = structuredClone(neutralSmall) as Record<string, any>;
+    source.globalEntities.laundry.washer = 'input_boolean.washer_running';
+
+    expect(migrateHouseholdConfigDocument(source)).toMatchObject({
+      ok: false,
+      code: 'HOUSEHOLD_CONFIG_INVALID',
+      issue: {
+        code: 'TYPE_MISMATCH',
+        path: '$.globalEntities.laundry.washer',
+      },
+    });
+  });
+
   it('is deterministic and idempotent for the current contract', () => {
-    const source = structuredClone(neutralSmall) as Record<string, unknown>;
-    source.schemaVersion = 1;
+    const source = legacyFixture(1);
     const first = expectMigrated(migrateHouseholdConfigDocument(source));
     const second = migrateHouseholdConfigDocument(first.document);
 
     expect(expectMigrated(migrateHouseholdConfigDocument(source)).document).toEqual(first.document);
-    expect(second).toEqual({ ok: true, status: 'current', document: first.document, version: 2 });
+    expect(second).toEqual({ ok: true, status: 'current', document: first.document, version: 3 });
   });
 
   it.each([
-    [{ ...neutralSmall, schemaVersion: 3 }, 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW'],
+    [{ ...neutralSmall, schemaVersion: 4 }, 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW'],
     [{ ...neutralSmall, schemaVersion: 0 }, 'HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED'],
     [{ ...neutralSmall, schemaVersion: '1' }, 'HOUSEHOLD_CONFIG_VERSION_INVALID'],
     [Object.fromEntries(Object.entries(neutralSmall).filter(([key]) => key !== 'schemaVersion')), 'HOUSEHOLD_CONFIG_VERSION_INVALID'],

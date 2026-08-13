@@ -6,10 +6,10 @@ import {
   compileHouseholdConfig,
   parseHouseholdConfig,
   type ConfigIssue,
-  type HouseholdConfigV2,
+  type HouseholdConfigV3,
 } from './household-config.ts';
 
-function parseValid(input: unknown): HouseholdConfigV2 {
+function parseValid(input: unknown): HouseholdConfigV3 {
   const result = parseHouseholdConfig(input);
   expect(result.ok).toBe(true);
   if (!result.ok) throw new Error(JSON.stringify(result.issues));
@@ -29,7 +29,7 @@ function expectIssue(input: unknown, code: ConfigIssue['code'], path: string): v
   ]));
 }
 
-describe('household config v1', () => {
+describe('household config v3', () => {
   it('accepts two independent configurations and compiles different runtime models', () => {
     const first = compileHouseholdConfig(parseValid(neutralSmall));
     const second = compileHouseholdConfig(parseValid(neutralStudio));
@@ -40,7 +40,7 @@ describe('household config v1', () => {
   });
 
   it('represents unavailable optional global integrations explicitly as null', () => {
-    const setupConfig = structuredClone(neutralStudio) as HouseholdConfigV2;
+    const setupConfig = structuredClone(parseValid(neutralStudio));
     setupConfig.globalEntities = {
       sun: null,
       vacationMode: null,
@@ -52,6 +52,51 @@ describe('household config v1', () => {
     expect(runtime.globalEntities).toEqual(setupConfig.globalEntities);
     expect(runtime.subscriptionEntityIds.every((entityId) => entityId !== '')).toBe(true);
     expect(runtime.commandContracts.every(({ entityId }) => entityId !== '')).toBe(true);
+  });
+
+  it('accepts typed binary and enum laundry adapters and subscribes their sources', () => {
+    const typed = {
+      ...neutralSmall,
+      globalEntities: {
+        ...neutralSmall.globalEntities,
+        laundry: {
+          washer: {
+            type: 'entity',
+            entityId: 'binary_sensor.fixture_washer',
+            runningStates: ['on'],
+            doneStates: ['off'],
+            doneOnInitial: false,
+          },
+          dryer: {
+            type: 'entity',
+            entityId: 'sensor.fixture_dryer_status',
+            runningStates: ['running', 'drying'],
+            doneStates: ['done'],
+            doneOnInitial: true,
+          },
+        },
+      },
+    };
+
+    const runtime = compileHouseholdConfig(parseValid(typed));
+    expect(runtime.globalEntities.laundry).toEqual(typed.globalEntities.laundry);
+    expect(runtime.subscriptionEntityIds).toEqual(expect.arrayContaining([
+      'binary_sensor.fixture_washer',
+      'sensor.fixture_dryer_status',
+    ]));
+
+    const selectSource = structuredClone(typed);
+    selectSource.globalEntities.laundry.dryer.entityId = 'select.fixture_dryer_status';
+    expect(parseValid(selectSource).globalEntities.laundry.dryer?.entityId)
+      .toBe('select.fixture_dryer_status');
+
+    const incompatible = structuredClone(typed);
+    incompatible.globalEntities.laundry.washer.entityId = 'light.fixture_washer';
+    expectIssue(incompatible, 'INVALID_ENTITY_ID', '$.globalEntities.laundry.washer.entityId');
+
+    const overlapping = structuredClone(typed);
+    overlapping.globalEntities.laundry.dryer.doneStates = ['running'];
+    expectIssue(overlapping, 'INVALID_VALUE', '$.globalEntities.laundry.dryer.doneStates[0]');
   });
 
   it('fails closed for partial data, wrong types, unknown fields and invalid HA entity IDs', () => {
@@ -81,7 +126,7 @@ describe('household config v1', () => {
   });
 
   it('rejects unknown schema versions, duplicate IDs and duplicate HA entity IDs', () => {
-    expectIssue({ ...neutralSmall, schemaVersion: 3 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
+    expectIssue({ ...neutralSmall, schemaVersion: 4 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
 
     const duplicateRoom = structuredClone(neutralSmall);
     duplicateRoom.rooms[1].id = duplicateRoom.rooms[0].id;
@@ -174,7 +219,7 @@ describe('household config v1', () => {
   });
 
   it('preserves optional energy groups through validation and compilation', () => {
-    const grouped = structuredClone(neutralSmall) as unknown as HouseholdConfigV2;
+    const grouped = structuredClone(parseValid(neutralSmall));
     grouped.energy!.sensors.consumptionPower[0].group = 'Workshop group';
 
     const compiled = compileHouseholdConfig(parseValid(grouped));
@@ -199,7 +244,7 @@ describe('household config v1', () => {
       { path: '$.mediaTargets[0].entityId', mutate: (config) => { config.mediaTargets[0].entityId = 'switch.not_media'; } },
       { path: '$.globalEntities.vacationMode', mutate: (config) => { config.globalEntities.vacationMode = 'input_boolean.not_vacation'; } },
       { path: '$.globalEntities.homeOffScript', mutate: (config) => { config.globalEntities.homeOffScript = 'switch.not_home_off'; } },
-      { path: '$.globalEntities.laundry.washer', mutate: (config) => { config.globalEntities.laundry.washer = 'binary_sensor.not_laundry'; } },
+      { path: '$.globalEntities.laundry.washer.entityId', mutate: (config) => { config.globalEntities.laundry.washer.entityId = 'light.not_laundry'; } },
       { path: '$.globalEntities.sun', mutate: (config) => { config.globalEntities.sun = 'sensor.not_sun'; } },
     ];
 

@@ -6,6 +6,7 @@ import {
   haToMedia,
   haToSun,
   haToSensor,
+  haToLaundryState,
   haToValue,
   miredToKelvin,
   rgbToHex,
@@ -162,6 +163,19 @@ describe('haToSensor', () => {
   });
 });
 
+describe('haToLaundryState', () => {
+  it.each([
+    ['input_select.fixture_laundry', 'running'],
+    ['select.fixture_laundry', 'done'],
+    ['sensor.fixture_laundry', 'drying'],
+    ['binary_sensor.fixture_laundry', 'unknown'],
+    ['input_boolean.fixture_laundry', 'unavailable'],
+  ])('preserves the raw HA state for %s', (_entityId, state) => {
+    expect(haToLaundryState({ state, attributes: {}, changedAt: 1_784_888_380_250 }))
+      .toEqual({ state, changedAt: 1_784_888_380_250 });
+  });
+});
+
 describe('haToValue (Domänen-Routing)', () => {
   it('routet nach entity_id-Präfix', () => {
     expect(haToValue('light.x', { state: 'on', attributes: { brightness: 255 } })).toEqual({ on: true, brightness: 100 });
@@ -190,6 +204,7 @@ describe('haToValue (Domänen-Routing)', () => {
     expect(haToValue('cover.x', { state: 'closed', attributes: {} })).toEqual({ on: false });
   });
   it('ungemappte Domäne → undefined', () => {
+    expect(haToValue('select.x', { state: 'running', attributes: {} })).toBeUndefined();
     expect(haToValue('automation.x', { state: 'on', attributes: {} })).toBeUndefined();
   });
 });

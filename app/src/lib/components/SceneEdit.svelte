@@ -13,15 +13,10 @@
     sceneMembers, sceneDefaults, sceneCustomized,
     addToScene, removeFromScene, resetScene,
   } from '../state/scene-manager.svelte.ts';
-  import { SCENES, sceneDef, isSceneCapableEntity, isLightEntity, type SceneId } from '../state/scene-config.ts';
+  import { SCENES, sceneDef, isSceneCapableEntity, isLightEntity } from '../state/scene-config.ts';
   import type { EntityCatalogItem } from '../state/device-config.ts';
 
   import { m } from '../../paraglide/messages.js';
-  function sceneLabel(sceneId: SceneId): string {
-    if (sceneId === 'gemuetlich') return m.scene_cosy();
-    if (sceneId === 'hell') return m.scene_bright();
-    return m.scene_off();
-  }
   const room = $derived(appState.rooms.find((r) => r.id === sceneEdit.roomId));
   const scene = $derived(sceneDef(sceneEdit.sceneId));
   const members = $derived(room ? sceneMembers(room.id, sceneEdit.sceneId) : []);
@@ -127,7 +122,7 @@
             {#each SCENES as s (s.id)}
               <button class="se-tab pressable" type="button" role="tab"
                       aria-selected={sceneEdit.sceneId === s.id} class:is-active={sceneEdit.sceneId === s.id}
-                      onclick={() => (sceneEdit.sceneId = s.id)}>{sceneLabel(s.id)}</button>
+                      onclick={() => (sceneEdit.sceneId = s.id)}>{s.label}</button>
             {/each}
           </div>
           <p class="se-hint">{sceneHint}</p>

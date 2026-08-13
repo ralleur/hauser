@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "rooms": [
     {
       "id": "wohnzimmer",
@@ -10,13 +10,16 @@
         { "id": "kugel_tv", "name": "Kugellampe TV", "entityId": "light.wohnzimmer_tv", "role": "light" },
         { "id": "kugel_fenster", "name": "Kugellampe Fenster", "entityId": "light.wohnzimmer_fensterlampe", "role": "light" },
         { "id": "climate", "name": "Klima", "entityId": "climate.wohnzimmer", "role": "climate" },
+        { "id": "temperature", "name": "Temperatur", "entityId": "sensor.temp_wohnzimmer", "role": "temperature" },
         { "id": "camera", "name": "Kamera", "entityId": "camera.balkon", "role": "camera" }
-      ]
+      ],
+      "hero": null
     },
     {
       "id": "kinderzimmer",
       "name": "Kinderzimmer",
-      "visibleEntities": []
+      "visibleEntities": [],
+      "hero": null
     },
     {
       "id": "schlafzimmer",
@@ -24,28 +27,34 @@
       "visibleEntities": [
         { "id": "bett", "name": "Bett", "entityId": "light.schlafzimmer_bett", "role": "light" },
         { "id": "schreibtisch", "name": "Schreibtisch", "entityId": "light.schlafzimmer_schreibtisch", "role": "light" },
-        { "id": "climate", "name": "Klima", "entityId": "climate.schlafzimmer", "role": "climate" }
-      ]
+        { "id": "climate", "name": "Klima", "entityId": "climate.schlafzimmer", "role": "climate" },
+        { "id": "temperature", "name": "Temperatur", "entityId": "sensor.temp_schlafzimmer", "role": "temperature" }
+      ],
+      "hero": null
     },
     {
       "id": "bad",
       "name": "Bad",
       "visibleEntities": [
         { "id": "spiegel", "name": "Spiegellicht", "entityId": "light.bad_spiegel", "role": "light" },
-        { "id": "climate", "name": "Klima", "entityId": "climate.bad", "role": "climate" }
-      ]
+        { "id": "climate", "name": "Klima", "entityId": "climate.bad", "role": "climate" },
+        { "id": "temperature", "name": "Temperatur", "entityId": "sensor.temp_bad", "role": "temperature" }
+      ],
+      "hero": null
     },
     {
       "id": "kueche",
       "name": "Küche",
       "visibleEntities": [
         { "id": "ledfridge", "name": "LED-Leiste", "entityId": "light.kueche_ledleiste", "role": "light" }
-      ]
+      ],
+      "hero": null
     },
     {
       "id": "flur",
       "name": "Flur",
-      "visibleEntities": []
+      "visibleEntities": [],
+      "hero": null
     }
   ],
   "navigation": [
@@ -111,8 +120,20 @@
     "vacationMode": "switch.urlaubsmodus",
     "homeOffScript": "script.hmi_home_ausser_schlafzimmer_aus",
     "laundry": {
-      "washer": "input_boolean.waschmaschine_laeuft",
-      "dryer": "input_boolean.trockner_laeuft"
+      "washer": {
+        "type": "entity",
+        "entityId": "input_boolean.waschmaschine_laeuft",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      },
+      "dryer": {
+        "type": "entity",
+        "entityId": "input_boolean.trockner_laeuft",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      }
     }
   }
 }

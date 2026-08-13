@@ -1,8 +1,9 @@
 import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import type {
   EntityRole,
-  HouseholdConfigV2,
+  HouseholdConfigV3,
   RoomConfig,
+  RoomHeroConfig,
   VisibleEntityConfig,
 } from './household-config.ts';
 
@@ -39,7 +40,7 @@ export interface SetupDiscoverySnapshot {
 }
 
 export interface SetupHouseholdSuggestion {
-  config: HouseholdConfigV2;
+  config: HouseholdConfigV3;
   ignoredEntityIds: string[];
   inferredRooms: boolean;
 }
@@ -48,12 +49,23 @@ export type SetupRoomRemoval =
   | { type: 'move'; targetRoomId: string }
   | { type: 'omit' };
 
-function cloneHouseholdConfig(config: HouseholdConfigV2): HouseholdConfigV2 {
+function cloneRoomHero(hero: RoomHeroConfig | null): RoomHeroConfig | null {
+  return hero === null ? null : {
+    assetId: hero.assetId,
+    focus: {
+      panel: { ...hero.focus.panel },
+      phone: { ...hero.focus.phone },
+    },
+  };
+}
+
+function cloneHouseholdConfig(config: HouseholdConfigV3): HouseholdConfigV3 {
   return {
     ...config,
     rooms: config.rooms.map((room) => ({
       ...room,
       visibleEntities: room.visibleEntities.map((entity) => ({ ...entity })),
+      hero: cloneRoomHero(room.hero),
     })),
     navigation: config.navigation.map((item) => ({ ...item, target: { ...item.target } })),
     enabledModules: [...config.enabledModules],
@@ -67,12 +79,23 @@ function cloneHouseholdConfig(config: HouseholdConfigV2): HouseholdConfigV2 {
     mediaTargets: config.mediaTargets.map((target) => ({ ...target })),
     globalEntities: {
       ...config.globalEntities,
-      laundry: { ...config.globalEntities.laundry },
+      laundry: {
+        washer: config.globalEntities.laundry.washer === null ? null : {
+          ...config.globalEntities.laundry.washer,
+          runningStates: [...config.globalEntities.laundry.washer.runningStates],
+          doneStates: [...config.globalEntities.laundry.washer.doneStates],
+        },
+        dryer: config.globalEntities.laundry.dryer === null ? null : {
+          ...config.globalEntities.laundry.dryer,
+          runningStates: [...config.globalEntities.laundry.dryer.runningStates],
+          doneStates: [...config.globalEntities.laundry.dryer.doneStates],
+        },
+      },
     },
   };
 }
 
-export function addSetupRoom(config: HouseholdConfigV2, name: string): HouseholdConfigV2 {
+export function addSetupRoom(config: HouseholdConfigV3, name: string): HouseholdConfigV3 {
   const next = cloneHouseholdConfig(config);
   const normalizedName = name.trim() || 'Room';
   const usedRoomIds = new Set(next.rooms.map(({ id }) => id));
@@ -80,15 +103,58 @@ export function addSetupRoom(config: HouseholdConfigV2, name: string): Household
     id: uniqueSlug(normalizedName, 'room', usedRoomIds),
     name: normalizedName,
     visibleEntities: [],
+    hero: null,
   });
   return next;
 }
 
+export function cloneSetupRoom(
+  config: HouseholdConfigV3,
+  roomId: string,
+  name?: string,
+): HouseholdConfigV3 {
+  const source = config.rooms.find((room) => room.id === roomId);
+  if (!source) return config;
+  const next = cloneHouseholdConfig(config);
+  const normalizedName = name?.trim() || `${source.name} copy`;
+  const usedRoomIds = new Set(next.rooms.map(({ id }) => id));
+  next.rooms.push({
+    id: uniqueSlug(normalizedName, 'room', usedRoomIds),
+    name: normalizedName,
+    visibleEntities: [],
+    hero: null,
+  });
+  return next;
+}
+
+export function renameSetupRoom(
+  config: HouseholdConfigV3,
+  roomId: string,
+  name: string,
+): HouseholdConfigV3 {
+  if (!config.rooms.some((room) => room.id === roomId)) return config;
+  const next = cloneHouseholdConfig(config);
+  next.rooms.find((room) => room.id === roomId)!.name = name;
+  return next;
+}
+
+export function preserveSetupRoomHeroes(
+  previous: HouseholdConfigV3,
+  discovered: HouseholdConfigV3,
+): HouseholdConfigV3 {
+  const heroes = new Map(previous.rooms.map((room) => [room.id, room.hero] as const));
+  const next = cloneHouseholdConfig(discovered);
+  for (const room of next.rooms) {
+    if (heroes.has(room.id)) room.hero = cloneRoomHero(heroes.get(room.id) ?? null);
+  }
+  return next;
+}
+
 export function moveSetupRoom(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   roomId: string,
   direction: -1 | 1,
-): HouseholdConfigV2 {
+): HouseholdConfigV3 {
   const index = config.rooms.findIndex((room) => room.id === roomId);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= config.rooms.length) return config;
@@ -109,7 +175,7 @@ function compatibleRoomMerge(source: RoomConfig, target: RoomConfig): boolean {
 }
 
 export function canRemoveSetupRoom(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   roomId: string,
   removal: SetupRoomRemoval,
 ): boolean {
@@ -122,10 +188,10 @@ export function canRemoveSetupRoom(
 }
 
 export function removeSetupRoom(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   roomId: string,
   removal: SetupRoomRemoval,
-): HouseholdConfigV2 {
+): HouseholdConfigV3 {
   if (!canRemoveSetupRoom(config, roomId, removal)) return config;
   const next = cloneHouseholdConfig(config);
   const source = next.rooms.find((room) => room.id === roomId)!;
@@ -156,7 +222,7 @@ export function removeSetupRoom(
 }
 
 export function canMoveSetupEntity(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   entityId: string,
   targetRoomId: string,
 ): boolean {
@@ -169,10 +235,10 @@ export function canMoveSetupEntity(
 }
 
 export function moveSetupEntity(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   entityId: string,
   targetRoomId: string,
-): HouseholdConfigV2 {
+): HouseholdConfigV3 {
   if (!canMoveSetupEntity(config, entityId, targetRoomId)) return config;
   const next = cloneHouseholdConfig(config);
   const source = next.rooms.find((room) => room.visibleEntities.some((entity) => entity.entityId === entityId));
@@ -188,9 +254,9 @@ export function moveSetupEntity(
 }
 
 export function omitSetupEntity(
-  config: HouseholdConfigV2,
+  config: HouseholdConfigV3,
   entityId: string,
-): HouseholdConfigV2 {
+): HouseholdConfigV3 {
   if (!config.rooms.some((room) => room.visibleEntities.some((entity) => entity.entityId === entityId))) {
     return config;
   }
@@ -304,6 +370,7 @@ export function buildSetupHouseholdSuggestion(
         id: uniqueSlug(roomName, 'room', usedRoomIds),
         name: roomName,
         visibleEntities,
+        hero: null,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id));

@@ -9,7 +9,7 @@ import neutralStudio from '../../../config/examples/neutral-studio.json';
 import {
   compileHouseholdConfig,
   parseHouseholdConfig,
-  type HouseholdConfigV2,
+  type HouseholdConfigV3,
   type HouseholdRuntimeModel,
 } from './household-config.ts';
 import { legacyHouseholdRuntimeModel } from './legacy-household-config.ts';
@@ -47,6 +47,13 @@ function compileValid(input: unknown): HouseholdRuntimeModel {
   return compileHouseholdConfig(parsed.value);
 }
 
+function cloneValidConfig(input: unknown): HouseholdConfigV3 {
+  const parsed = parseHouseholdConfig(input);
+  expect(parsed.ok).toBe(true);
+  if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
+  return structuredClone(parsed.value);
+}
+
 function response(input: unknown, mode: string, status = 200): Response {
   return new Response(typeof input === 'string' ? input : JSON.stringify(input), {
     status,
@@ -67,8 +74,8 @@ class MemoryStorage {
   }
 }
 
-function syntheticActiveConfig(): HouseholdConfigV2 {
-  const config = structuredClone(neutralStudio) as HouseholdConfigV2;
+function syntheticActiveConfig(): HouseholdConfigV3 {
+  const config = cloneValidConfig(neutralStudio);
   config.navigation = [
     { id: 'start', name: 'Startseite', order: 0, target: { type: 'module', id: 'home' } },
     { id: 'listen', name: 'Audio', order: 1, target: { type: 'module', id: 'media' } },
@@ -136,7 +143,7 @@ describe('active household runtime projection', () => {
       projected.SUN_ENTITY,
       projected.VACATION_MODE_ENTITY,
       projected.HOME_OFF_SCRIPT_ENTITY,
-      ...Object.values(projected.LAUNDRY_ENTITIES),
+      ...Object.values(projected.LAUNDRY_ENTITIES).map((adapter) => adapter?.entityId ?? null),
     ].filter((id): id is string => Boolean(id));
     expect(projectedSeedIds.filter((id) => legacyIds.has(id))).toEqual([]);
   });
@@ -191,7 +198,7 @@ describe('active household runtime projection', () => {
   });
 
   it('fails closed for navigation the productive shell cannot represent and incomplete song targets', () => {
-    const unsupportedNavigation = structuredClone(neutralStudio) as HouseholdConfigV2;
+    const unsupportedNavigation = cloneValidConfig(neutralStudio);
     unsupportedNavigation.navigation.splice(1, 0, {
       id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
     });
@@ -476,7 +483,7 @@ describe('productive household bootstrap cutover', () => {
 
   it('deletes a valid-schema snapshot whose active UI projection is unsafe', async () => {
     const storage = new MemoryStorage();
-    const unsupported = structuredClone(neutralStudio) as HouseholdConfigV2;
+    const unsupported = cloneValidConfig(neutralStudio);
     unsupported.navigation.splice(1, 0, {
       id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
     });
@@ -532,7 +539,7 @@ describe('productive household bootstrap cutover', () => {
   });
 
   it('does not import App, runtime or backend for active invalid, unavailable or projection errors', async () => {
-    const projectionError = structuredClone(neutralStudio) as HouseholdConfigV2;
+    const projectionError = cloneValidConfig(neutralStudio);
     projectionError.navigation.splice(1, 0, {
       id: 'studio-room', name: 'Studio room', order: 5, target: { type: 'room', id: 'studio' },
     });
@@ -621,10 +628,10 @@ describe('productive household bootstrap cutover', () => {
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');
     const config = demoResponse('/api/household-config', 'GET');
     expect(config?.headers.get('x-hmi-household-config-mode')).toBe('active');
-    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 2 });
+    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 3 });
     const health = demoResponse('/api/health', 'GET');
     expect(health?.headers.get('cache-control')).toBe('no-store');
-    await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 2 });
+    await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 3 });
     expect(demoResponse('/api/health', 'POST')?.status).toBe(405);
     const shopping = demoResponse('/notion-shopping.json', 'GET');
     expect(shopping?.headers.get('cache-control')).toBe('no-store');

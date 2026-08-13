@@ -447,7 +447,7 @@
   z-index: 0;
   background-image: var(--phone-room-hero);
   background-size: cover;
-  background-position: center;
+  background-position: var(--phone-room-focus, center);
   background-repeat: no-repeat;
   transform: scale(1.15);
   pointer-events: none;

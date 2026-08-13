@@ -13,10 +13,10 @@ import {
   type EnergySensorRef,
 } from './legacy-household-data.ts';
 import { compileHouseholdConfig } from './household-config-compiler.ts';
-import { HOUSEHOLD_SCHEMA_VERSION } from './household-config-schema.ts';
+import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import type {
   EnergyConfig,
-  HouseholdConfigV2,
+  HouseholdConfigV3,
   HouseholdRuntimeModel,
   VisibleEntityConfig,
 } from './household-config.ts';
@@ -59,7 +59,7 @@ function projectEnergy(): EnergyConfig {
  * Pure projection of the currently controlling installation constants. It does
  * not import the adapter runtime or command module and never alters a source.
  */
-export function projectLegacyHouseholdConfig(): HouseholdConfigV2 {
+export function projectLegacyHouseholdConfig(): HouseholdConfigV3 {
   const roomIds = new Set(ROOM_SEED.map(({ id }) => id));
   return {
     schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
@@ -95,7 +95,7 @@ export function projectLegacyHouseholdConfig(): HouseholdConfigV2 {
           role: 'camera',
         });
       }
-      return { id: room.id, name: room.name, visibleEntities };
+      return { id: room.id, name: room.name, visibleEntities, hero: null };
     }),
     navigation: LEGACY_TABS.map((tab, order) => ({
       id: tab.id,
@@ -115,7 +115,22 @@ export function projectLegacyHouseholdConfig(): HouseholdConfigV2 {
       sun: SUN_ENTITY,
       vacationMode: VACATION_MODE_ENTITY,
       homeOffScript: HOME_OFF_SCRIPT_ENTITY,
-      laundry: { ...LAUNDRY_ENTITIES },
+      laundry: {
+        washer: LAUNDRY_ENTITIES.washer ? {
+          type: 'entity',
+          entityId: LAUNDRY_ENTITIES.washer,
+          runningStates: ['on'],
+          doneStates: ['off'],
+          doneOnInitial: false,
+        } : null,
+        dryer: LAUNDRY_ENTITIES.dryer ? {
+          type: 'entity',
+          entityId: LAUNDRY_ENTITIES.dryer,
+          runningStates: ['on'],
+          doneStates: ['off'],
+          doneOnInitial: false,
+        } : null,
+      },
     },
   };
 }

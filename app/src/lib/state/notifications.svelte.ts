@@ -1,12 +1,15 @@
 import { m } from '../../paraglide/messages.js';
-import type { SwitchValue } from '../adapter/types.ts';
-import { LAUNDRY_ENTITIES } from './entities.ts';
-import { sortNotifications, type HmiNotification } from './notifications.ts';
+
+import {
+  sortNotifications,
+  type HmiNotification,
+  type NormalizedLaundryState,
+} from './notifications.ts';
 
 /* v2: v1-Einträge tragen Zeitstempel im `dedupeKey` und würden nach der
    Umstellung als Dubletten liegenbleiben. Neuer Schlüssel = sauberer Start. */
 const STORAGE_KEY = 'hmi:notifications:v2';
-type LaundryKind = keyof typeof LAUNDRY_ENTITIES;
+type LaundryKind = 'washer' | 'dryer';
 
 interface StoredNotifications {
   active: HmiNotification[];
@@ -21,7 +24,7 @@ const LABELS: Record<LaundryKind, { name: string; icon: string }> = {
 class NotificationCenter {
   items = $state<HmiNotification[]>([]);
   #dismissed = new Set<string>();
-  #previous = new Map<LaundryKind, boolean>();
+  #previous = new Map<LaundryKind, NormalizedLaundryState>();
   #initialized = false;
 
   init(): void {
@@ -36,25 +39,39 @@ class NotificationCenter {
     } catch { /* Best-effort-Persistenz. */ }
   }
 
-  syncLaundry(kind: LaundryKind, value: SwitchValue | undefined): void {
-    if (!value) return;
-    const previous = this.#previous.get(kind);
-    this.#previous.set(kind, value.on);
+  syncLaundry(kind: LaundryKind, value: NormalizedLaundryState | undefined): void {
     const source = `laundry:${kind}`;
-
-    if (previous === undefined) {
-      if (value.on) this.#showLaundry(kind, 'running', value.changedAt ?? Date.now());
-      else this.#removeWhere((item) => item.source === source && item.state === 'running');
+    if (!value) {
+      this.#previous.delete(kind);
+      this.#removeWhere((item) => item.source === source);
       return;
     }
-    if (previous === value.on) return;
+    const previous = this.#previous.get(kind);
+
+    if (previous === undefined) {
+      this.#previous.set(kind, value);
+      if (value.state === 'running') {
+        this.#showLaundry(kind, value);
+      } else if (value.doneOnInitial) {
+        this.#removeWhere((item) => item.source === source && item.state === 'running');
+        this.#showLaundry(kind, value);
+      } else {
+        this.#removeWhere((item) => item.source === source && item.state === 'running');
+      }
+      return;
+    }
+    const stateChanged = previous.state !== value.state;
+    const cycleChanged = previous.cycleId !== value.cycleId;
+    const markerBound = previous.cycleId !== undefined || value.cycleId !== undefined;
+    if (markerBound ? !stateChanged || !cycleChanged : !stateChanged) return;
+    this.#previous.set(kind, value);
     this.#removeWhere((item) => item.source === source);
-    /* Der Dedupe-Schlüssel ist jetzt zustandsstabil — ein Wegwischen darf den
-       nächsten Waschgang nicht dauerhaft stummschalten. */
+    /* Ein neuer HA-seitiger Zyklusmarker macht eine frühere Dismiss-Entscheidung
+       obsolet, ohne denselben restaurierten Zustand nach Reload zu duplizieren. */
     for (const key of [...this.#dismissed]) {
       if (key.startsWith(`${source}:`)) this.#dismissed.delete(key);
     }
-    this.#showLaundry(kind, value.on ? 'running' : 'done', value.changedAt ?? Date.now());
+    this.#showLaundry(kind, value);
   }
 
   dismiss(dedupeKey: string): void {
@@ -63,23 +80,21 @@ class NotificationCenter {
     this.#save();
   }
 
-  #showLaundry(kind: LaundryKind, state: 'running' | 'done', changedAt: number): void {
+  #showLaundry(kind: LaundryKind, value: NormalizedLaundryState): void {
     const label = LABELS[kind];
-    /* Ohne Zeitstempel: derselbe fortdauernde Zustand muss nach einem Reload auf
-       den persistierten Eintrag treffen, statt einen zweiten zu erzeugen. Die
-       verstrichene Zeit kommt aus dem `createdAt` des bestehenden Eintrags. */
-    const dedupeKey = `laundry:${kind}:${state}`;
+    const marker = value.cycleId ? `:${value.cycleId}` : '';
+    const dedupeKey = `laundry:${kind}:${value.state}${marker}`;
     if (this.#dismissed.has(dedupeKey) || this.items.some((item) => item.dedupeKey === dedupeKey)) return;
     const notification: HmiNotification = {
       id: dedupeKey,
       source: `laundry:${kind}`,
-      type: state === 'running' ? 'info' : 'success',
-      title: state === 'running' ? m.notif_running({ device: label.name }) : m.notif_done({ device: label.name }),
+      type: value.state === 'running' ? 'info' : 'success',
+      title: value.state === 'running' ? m.notif_running({ device: label.name }) : m.notif_done({ device: label.name }),
       icon: label.icon,
       priority: 50,
-      createdAt: changedAt,
+      createdAt: value.changedAt ?? Date.now(),
       dedupeKey,
-      state,
+      state: value.state,
     };
     this.items = sortNotifications([...this.items, notification]);
     this.#save();

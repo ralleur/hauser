@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "rooms": [
     {
       "id": "den",
@@ -7,14 +7,16 @@
       "visibleEntities": [
         { "id": "main_light", "name": "Main light", "entityId": "light.den_main", "role": "light" },
         { "id": "temperature", "name": "Temperature", "entityId": "sensor.den_temperature", "role": "temperature" }
-      ]
+      ],
+      "hero": null
     },
     {
       "id": "entry",
       "name": "Entry",
       "visibleEntities": [
         { "id": "door", "name": "Front door", "entityId": "binary_sensor.entry_door", "role": "window" }
-      ]
+      ],
+      "hero": null
     }
   ],
   "navigation": [
@@ -47,8 +49,20 @@
     "vacationMode": "switch.vacation_mode",
     "homeOffScript": "script.fixture_neutral_small_home_off",
     "laundry": {
-      "washer": "input_boolean.washer_running",
-      "dryer": "input_boolean.dryer_running"
+      "washer": {
+        "type": "entity",
+        "entityId": "input_boolean.washer_running",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      },
+      "dryer": {
+        "type": "entity",
+        "entityId": "input_boolean.dryer_running",
+        "runningStates": ["on"],
+        "doneStates": ["off"],
+        "doneOnInitial": false
+      }
     }
   }
 }

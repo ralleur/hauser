@@ -39,7 +39,6 @@ function tabLabel(id: RuntimeTab['id']): string {
 export const TABS = NAV_TABS.map((tab) => ({
   ...tab,
   get label() {
-    if (import.meta.env.VITE_DEMO === '1') return tabLabel(tab.id);
     return HOUSEHOLD_DATA_SOURCE === 'active' ? tab.configName : tabLabel(tab.id);
   },
 }));

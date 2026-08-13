@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
+// @ts-expect-error Nativer Node-Test ohne @types/node.
+import { createHash } from 'node:crypto';
 // @ts-expect-error Das Projekt benötigt für diesen nativen Node-Smoke keine @types/node-Laufzeitabhängigkeit.
 import http from 'node:http';
 // @ts-expect-error Nativer Node-Test ohne @types/node.
@@ -9,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -358,93 +360,11 @@ describe('HMI-Backend-Proxy', () => {
     expect(await response.json()).toEqual({ error: 'Route nicht gefunden' });
   });
 
-  it('erlaubt direkte Browserzugriffe nur bei exaktem effektiven Request-Origin', () => {
-    const req = (origin: string | undefined, host = 'haos.local:4173', encrypted = false) => ({
-      headers: { ...(origin === undefined ? {} : { origin }), host },
-      socket: { encrypted },
-    });
-    const explicit = new Set(['https://dashboard.example.com']);
-
-    expect(requestOriginAllowed(req(undefined), explicit)).toBe(true);
-    expect(requestOriginAllowed(req('http://haos.local:4173'), explicit)).toBe(true);
-    expect(requestOriginAllowed(req('https://haos.local:4173', 'haos.local:4173', true), explicit)).toBe(true);
-    expect(requestOriginAllowed(req('https://dashboard.example.com'), explicit)).toBe(true);
-
-    expect(requestOriginAllowed(req('http://haos.local'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('http://haos.local:4174'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('https://haos.local:4173'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('http://evil.invalid'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('null'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('http://haos.local:4173/path'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('not an origin'), explicit)).toBe(false);
-    expect(requestOriginAllowed(req('http://haos.local:4173', 'bad host/value'), explicit)).toBe(false);
-  });
-
-  it('wendet die Same-Origin-Grenze auf Config-PUT und Setup-POST an', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'hmi-app-origin-'));
-    tempDirs.push(root);
-    writeFileSync(join(root, 'index.html'), '<!doctype html><title>Origin harness</title>');
-    const common = {
-      staticRoot: root,
-      familyDataPath: join(root, 'family-data.json'),
-      songLibrary: createSongLibrary(join(root, 'songs'), join(root, 'songs', 'library.json'), root),
-      paperlessPin: '',
-      paperlessToken: '',
-      allowedOrigins: new Set<string>(),
-    };
-
-    const configServer = createHmiServer('', {
-      ...common,
-      configPath: join(root, 'config.json'),
-      householdConfigMode: 'shadow',
-    });
-    servers.push(configServer);
-    await new Promise<void>((resolve) => configServer.listen(0, '127.0.0.1', resolve));
-    const configOrigin = `http://127.0.0.1:${(configServer.address() as { port: number }).port}`;
-    const configBody = JSON.stringify({ updates: { 'hmi:backend': 'fake' } });
-
-    const configPut = await fetch(`${configOrigin}/api/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Origin: configOrigin },
-      body: configBody,
-    });
-    expect(configPut.status).toBe(200);
-    const crossOriginConfig = await fetch(`${configOrigin}/api/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Origin: 'http://evil.invalid' },
-      body: configBody,
-    });
-    expect(crossOriginConfig.status).toBe(403);
-
-    const setupServer = createHmiServer('', {
-      ...common,
-      configPath: join(root, 'setup-config.json'),
-      householdConfigPath: join(root, 'household.json'),
-      householdConfigMode: 'active',
-    });
-    servers.push(setupServer);
-    await new Promise<void>((resolve) => setupServer.listen(0, '127.0.0.1', resolve));
-    const setupOrigin = `http://127.0.0.1:${(setupServer.address() as { port: number }).port}`;
-
-    const setupPost = await fetch(`${setupOrigin}/api/setup/activate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Origin: setupOrigin },
-      body: '{}',
-    });
-    expect(setupPost.status).toBe(400);
-    const crossOriginSetup = await fetch(`${setupOrigin}/api/setup/activate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Origin: 'http://evil.invalid' },
-      body: '{}',
-    });
-    expect(crossOriginSetup.status).toBe(403);
-  });
-
   it('weist fremde Browser-Origins und unbekannte Methoden ab', () => {
     const allowed = new Set(['http://localhost:4173']);
     expect(proxyRequestAllowed({ method: 'GET', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);
     expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'localhost:4173', origin: 'http://localhost:4173' } }, allowed)).toBe(true);
-    expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'attacker.example', origin: 'http://evil.invalid' } }, allowed)).toBe(false);
+    expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'attacker.example', origin: 'http://attacker.example' } }, allowed)).toBe(false);
     expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'localhost:4173', origin: 'https://evil.invalid' } }, allowed)).toBe(false);
     expect(proxyRequestAllowed({ method: 'PATCH', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);
     expect(proxyRequestAllowed({ method: 'PUT', headers: { host: 'localhost:4173' } }, allowed)).toBe(false);
@@ -668,8 +588,10 @@ describe('HMI-Backend-Proxy', () => {
     expect(observedBody).toBe('{"input":"test"}');
   });
 
-  it('speichert die gemeinsame Konfiguration zentral und ignoriert unbekannte Schlüssel', async () => {
-    const configPath = `/tmp/hmi-config-${crypto.randomUUID()}.json`;
+  it('schützt die gemeinsame Konfiguration per starkem Byte-ETag und ignoriert unbekannte Schlüssel', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-shared-config-cas-'));
+    tempDirs.push(root);
+    const configPath = join(root, 'shared.json');
     const allowed = new Set(['http://test-client.local']);
     expect(configRequestAllowed({ method: 'GET', headers: { origin: 'http://test-client.local' } }, allowed)).toBe(true);
     expect(configRequestAllowed({ method: 'PUT', headers: { origin: 'https://evil.invalid' } }, allowed)).toBe(false);
@@ -677,23 +599,55 @@ describe('HMI-Backend-Proxy', () => {
     const server = createHmiServer('server-secret', { configPath, allowedOrigins: allowed });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const port = (server.address() as { port: number }).port;
+    const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+    const initial = await fetch(`${base}/api/config`);
+    const initialEtag = initial.headers.get('etag');
+    expect(initial.status).toBe(200);
+    expect(initial.headers.get('cache-control')).toBe('no-store');
+    expect(initialEtag).toMatch(/^"[0-9a-f]{64}"$/);
+    const initialBytes = new Uint8Array(await initial.arrayBuffer());
+    expect(initialEtag).toBe(`"${createHash('sha256').update(initialBytes).digest('hex')}"`);
+    expect(JSON.parse(new TextDecoder().decode(initialBytes))).toEqual({ values: {} });
 
-    const put = await fetch(`http://127.0.0.1:${port}/api/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Origin: 'http://test-client.local' },
-      body: JSON.stringify({ updates: {
-        'hmi:ha-url': 'http://zentral:8123',
-        'hmi:device-config:v1': '{"version":1,"devices":{},"order":{}}',
-        'nicht:erlaubt': 'nein',
-      } }),
+    const updates = JSON.stringify({ updates: {
+      'hmi:ha-url': 'http://zentral:8123',
+      'hmi:device-config:v1': '{"version":1,"devices":{},"order":{}}',
+      'nicht:erlaubt': 'nein',
+    } });
+    const putHeaders = { 'Content-Type': 'application/json', Origin: 'http://test-client.local' };
+    const missing = await fetch(`${base}/api/config`, { method: 'PUT', headers: putHeaders, body: updates });
+    expect(missing.status).toBe(428);
+    await expect(missing.json()).resolves.toMatchObject({ code: 'CONFIG_PRECONDITION_REQUIRED' });
+    expect(existsSync(configPath)).toBe(false);
+
+    const stale = await fetch(`${base}/api/config`, {
+      method: 'PUT', headers: { ...putHeaders, 'If-Match': '"stale"' }, body: updates,
     });
-    expect(put.status).toBe(200);
+    expect(stale.status).toBe(412);
+    await expect(stale.json()).resolves.toMatchObject({ code: 'CONFIG_PRECONDITION_FAILED' });
+    expect(existsSync(configPath)).toBe(false);
 
-    const response = await fetch(`http://127.0.0.1:${port}/api/config`);
+    const put = await fetch(`${base}/api/config`, {
+      method: 'PUT', headers: { ...putHeaders, 'If-Match': initialEtag! }, body: updates,
+    });
+    const nextEtag = put.headers.get('etag');
+    expect(put.status).toBe(200);
+    expect(nextEtag).toMatch(/^"[0-9a-f]{64}"$/);
+    expect(nextEtag).not.toBe(initialEtag);
+    const putBytes = new Uint8Array(await put.arrayBuffer());
+    expect(nextEtag).toBe(`"${createHash('sha256').update(putBytes).digest('hex')}"`);
+    expect(JSON.parse(new TextDecoder().decode(putBytes))).toEqual({ values: {
+      'hmi:ha-url': 'http://zentral:8123',
+      'hmi:device-config:v1': '{"version":1,"devices":{},"order":{}}',
+    } });
+
+    const response = await fetch(`${base}/api/config`);
     expect(response.status).toBe(200);
+    expect(response.headers.get('etag')).toBe(nextEtag);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(await response.json()).toEqual({ values: {
+    const responseBytes = new Uint8Array(await response.arrayBuffer());
+    expect(response.headers.get('etag')).toBe(`"${createHash('sha256').update(responseBytes).digest('hex')}"`);
+    expect(JSON.parse(new TextDecoder().decode(responseBytes))).toEqual({ values: {
       'hmi:ha-url': 'http://zentral:8123',
       'hmi:device-config:v1': '{"version":1,"devices":{},"order":{}}',
     } });

@@ -39,17 +39,33 @@ brand_roots = (
 third_party_roots = (
     Path('app/public/mdi-icons'),
 )
-brand_files = {
-    Path('hauser/icon.png'),
-    Path('hauser/logo.png'),
-    Path('website/favicon.png'),
-}
+brand_files = {Path('website/favicon.png')}
 third_party_files = {
     Path('app/public/fonts/InterVariable-subset.woff2'),
     Path('app/public/fonts/InstrumentSerif-subset.woff2'),
     Path('website/fonts/InterVariable-subset.woff2'),
     Path('website/fonts/InstrumentSerif-subset.woff2'),
 }
+
+blueprint_root = Path('app/public/blueprints')
+blueprint_yaml = sorted(
+    path
+    for path in blueprint_root.rglob('*')
+    if path.is_file() and path.suffix.lower() in {'.yaml', '.yml'}
+)
+if not blueprint_yaml:
+    raise SystemExit(f'No technical Blueprint YAML found below {blueprint_root}.')
+for path in blueprint_yaml:
+    if path.stat().st_size == 0:
+        raise SystemExit(f'Empty technical Blueprint YAML: {path}')
+    try:
+        first_line = path.read_text(encoding='utf-8').splitlines()[0]
+    except (UnicodeDecodeError, IndexError) as error:
+        raise SystemExit(f'Invalid technical Blueprint YAML: {path}: {error}') from error
+    if first_line != '# SPDX-License-Identifier: MIT':
+        raise SystemExit(
+            f'Technical Blueprint YAML lacks the exact first-line MIT SPDX header: {path}'
+        )
 
 for path in cc_roots:
     if f'`{path}/`' not in asset_text:
@@ -71,7 +87,7 @@ asset_suffixes = {
     '.mp4', '.ogg', '.otf', '.png', '.svg', '.ttf', '.wav', '.webm', '.webp',
     '.woff', '.woff2',
 }
-scan_roots = (Path('app/public'), Path('hauser'), Path('website'))
+scan_roots = (Path('app/public'), Path('website'))
 unknown = []
 
 
@@ -100,4 +116,6 @@ if unknown:
 
 print('license_files=PASS')
 print('media_asset_boundary=PASS')
+print(f'blueprint_yaml_mit_technical={len(blueprint_yaml)} files PASS')
+print('blueprint_yaml_cc_by_media_classification=NOT_APPLICABLE')
 PY
