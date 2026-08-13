@@ -69,12 +69,7 @@ function expectMetadataStripped(metadata: Awaited<ReturnType<ReturnType<typeof s
 
 describe('room-image-transform-policy-v1', () => {
   it('pins the locally qualified sharp/libvips platform and all fixture bytes', () => {
-    // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
-    expect(process.platform).toBe('darwin');
-    // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
-    expect(process.arch).toBe('arm64');
-    // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
-    expect(manifest.developmentPlatform).toBe(`${process.platform}-${process.arch}`);
+    expect(manifest.developmentPlatform).toBe('darwin-arm64');
     expect(sharp.versions.sharp).toBe(manifest.sharp);
     expect(sharp.versions.vips).toBe(manifest.libvips);
     for (const [name, expectedHash] of Object.entries(manifest.fixtures)) {

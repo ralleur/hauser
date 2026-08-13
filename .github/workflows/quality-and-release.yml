@@ -49,17 +49,17 @@ jobs:
       - name: Verify license boundary
         run: ./scripts/verify-license-boundary.sh
 
+      - name: Build production application
+        working-directory: app
+        run: npm run build
+
       - name: Run tests
         working-directory: app
-        run: npm test
+        run: npm test -- --maxWorkers=1
 
       - name: Run typecheck
         working-directory: app
         run: npm run check
-
-      - name: Build production application
-        working-directory: app
-        run: npm run build
 
       - name: Build static demo
         working-directory: app
