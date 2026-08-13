@@ -149,6 +149,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           tags: |
             ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.repository }}:${{ steps.image.outputs.version }}
             ${{ steps.image.outputs.repository }}:sha-${{ steps.image.outputs.short_sha }}
 
       - name: Report immutable manifest
