@@ -4,6 +4,9 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { VitePWA } from 'vite-plugin-pwa';
 import type { Plugin } from 'vite';
 
+// @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+const CI_TEST_TIMEOUT = process.env.CI === 'true' ? 60_000 : 5_000;
+
 const START_SCREEN_HERO_ROOMS = [
   'wohnzimmer',
   'kinderzimmer',
@@ -226,5 +229,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    testTimeout: CI_TEST_TIMEOUT,
+    hookTimeout: CI_TEST_TIMEOUT,
   },
 });

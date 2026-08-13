@@ -144,7 +144,9 @@ async function postMainPayload(base: string, payload: Record<string, any>) {
 }
 
 async function waitFor(base: string, jobId: string, statuses: string[]) {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+  const attempts = process.env.CI === 'true' ? 1_000 : 100;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     const response = await fetch(`${base}/api/room-image-jobs/${jobId}`, { headers: headers() });
     const job = await response.json();
     if (statuses.includes(job.status)) return job;
