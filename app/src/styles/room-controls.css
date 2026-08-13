@@ -95,6 +95,16 @@
   color: var(--color-text-secondary);
 }
 
+.climate-card.is-unavailable {
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+.climate-card.is-unavailable .entity-unavailable-hint {
+  margin: var(--space-3) 0 0;
+  opacity: 1;
+}
+
 .climate-pills {
   display: flex;
   flex-direction: column;

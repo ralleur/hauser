@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import phoneHome from '../components/phone/PhoneHomeFeed.svelte?raw';
+import phoneClimateDock from '../components/phone/PhoneClimateDock.svelte?raw';
 import roomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomSheet from '../components/phone/RoomControlSheet.svelte?raw';
 import roomControls from '../components/RoomControls.svelte?raw';
@@ -64,8 +65,9 @@ describe('phone home room projection', () => {
     }));
     expect(currentClimateTemperature(projected)).toBe(21.4);
     expect(currentClimateTemperature(projected.map((room) => ({ ...room, climateAvailable: false })))).toBeNull();
-    expect(phoneHome).toContain('m.climate_current()');
-    expect(phoneHome).toContain('m.climate_target()');
+    expect(phoneHome).toContain("import('./PhoneClimateDock.svelte')");
+    expect(phoneClimateDock).toContain('m.climate_current()');
+    expect(phoneClimateDock).toContain('m.climate_target()');
   });
 
   it('tolerates missing readers and values without inventing room state', () => {
@@ -109,7 +111,8 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHome).toMatch(/const heroVariant = \$derived/);
     expect(phoneHome).toContain('appState.heroSun');
     expect(phoneHome).not.toContain('runtime.merged(SUN_ENTITY)');
-    expect(phoneHome).toMatch(/<RoomSummaryCard[^>]*\{heroVariant\}/);
+    expect(phoneHome).toContain("import('./RoomSummaryCard.svelte')");
+    expect(phoneHome).toMatch(/<RoomSummaryCardComponent[^>]*\{heroVariant\}/);
     expect(phoneHomeState).toContain("from '../components/room-hero-assets.ts'");
     expect(phoneHomeState).toContain('resolveRoomHero');
     expect(roomCard).toContain('roomHeroConfig(summary.id)');
@@ -138,7 +141,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHome).toMatch(/onclick=\{toggleVacationMode\}/);
     expect(phoneHome).toMatch(/disabled=\{!online\}/);
     expect(phoneHome).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
-    expect(phoneHome).toContain("vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'");
+    expect(phoneHome).toContain('vacationActive ? m.phone_vacation_disable() : m.phone_vacation_enable()');
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {

@@ -11,6 +11,8 @@ The following are not licensed under MIT or CC BY 4.0:
 - the **Hauser** name when used to identify a software distribution or service;
 - the Hauser logos and marks in `app/public/brand/`;
 - the official application icons in `app/public/icons/`;
+- the Home Assistant App Store icon in `hauser/icon.png`;
+- the Home Assistant App Store logo in `hauser/logo.png`;
 - `website/favicon.png`.
 
 No claim is made here that Hauser is a registered trademark. This policy states

@@ -126,7 +126,12 @@ run_invalid_probe() {
   printf '%s' "$output" | grep -q "$expected_code"
 }
 
-printf '%s\n' '{"schemaVersion":3,"rooms":[]}' > "$tmp/invalid-v3.json"
+node -e '
+  const fs = require("node:fs");
+  const config = JSON.parse(fs.readFileSync("app/config/examples/neutral-small.json", "utf8"));
+  config.rooms = [];
+  fs.writeFileSync(process.argv[1], `${JSON.stringify(config)}\n`);
+' "$tmp/invalid-v3.json"
 printf '%s\n' '{"schemaVersion":1,"rooms":[]}' > "$tmp/invalid-v1.json"
 run_invalid_probe "$tmp/invalid-v3.json" HOUSEHOLD_CONFIG_INVALID
 run_invalid_probe "$tmp/invalid-v1.json" HOUSEHOLD_CONFIG_MIGRATION_INVALID

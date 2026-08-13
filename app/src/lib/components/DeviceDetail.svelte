@@ -22,6 +22,7 @@
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { renameDevice } from '../state/device-manager.svelte.ts';
   import { fmtTemp } from '../format.ts';
+  import { runtime } from '../adapter/runtime.svelte.ts';
   import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue } from '../adapter/types.ts';
 
   import { m } from '../../paraglide/messages.js';
@@ -32,6 +33,7 @@
   );
   const category = $derived(device?.category ?? 'light');
   const entityId = $derived(device?.entityId ?? '');
+  const available = $derived(!entityId || runtime.isEntityAvailable(entityId));
 
   // Gemergte Sicht (Server bzw. pending Intent); undefined tolerieren —
   // frisch eingeblendete Geräte haben ggf. noch keinen Wert (commands.ts).
@@ -51,13 +53,14 @@
   let nameError = $state('');
   let nameInput = $state<HTMLInputElement>();
   function beginNameEdit() {
+    if (!available) return;
     nameDraft = device?.name ?? '';
     nameError = '';
     editingName = true;
     requestAnimationFrame(() => { nameInput?.focus(); nameInput?.select(); });
   }
   async function saveName() {
-    if (!editingName) return;
+    if (!editingName || !available) return;
     const normalized = nameDraft.trim().replace(/\s+/g, ' ');
     if (!normalized || !device || normalized === device.name) { editingName = false; return; }
     nameError = '';
@@ -113,18 +116,22 @@
   });
 
   function onBrightness(val: number, final: boolean) {
+    if (!available) return;
     dragBri = final ? null : val;
     if (final) setBrightness(roomId, deviceId, val);
   }
   function onTemp(val: number, final: boolean) {
+    if (!available) return;
     dragTemp = final ? null : val;
     if (final) setColorTemp(roomId, deviceId, val);
   }
   function onTarget(val: number, final: boolean) {
+    if (!available) return;
     dragTarget = final ? null : val;
     if (final) setClimateTarget(entityId, val);
   }
   function onVolume(val: number, final: boolean) {
+    if (!available) return;
     dragVol = final ? null : val;
     if (final) setMediaVolume(entityId, val);
   }
@@ -132,7 +139,7 @@
   // Primäraktion im Header: light/switch = Schalten, media = Play/Pause.
   const hasPower = $derived(category === 'light' || category === 'switch' || category === 'media');
   function onPower() {
-    if (!device) return;
+    if (!device || !available) return;
     if (category === 'media') toggleMediaEntity(entityId);
     else toggleDevice(roomId, device);
   }
@@ -155,6 +162,7 @@
   let pickerOpen = $state(false);
   let IconPickerComponent = $state<any>(null);
   async function togglePicker() {
+    if (!available) return;
     if (pickerOpen) { pickerOpen = false; return; }
     IconPickerComponent ??= (await import('./IconPicker.svelte')).default;
     pickerOpen = true;
@@ -180,6 +188,12 @@
   }
   // Beim Geräte-Wechsel schließen (der Picker gehört zum einzelnen Gerät).
   $effect(() => { void deviceDetail.deviceId; pickerOpen = false; editingName = false; });
+  $effect(() => {
+    if (available) return;
+    pickerOpen = false;
+    editingName = false;
+    dragBri = dragTemp = dragTarget = dragVol = null;
+  });
 
   // animationend-Fallback (deckt prefers-reduced-motion: 0ms ab)
   $effect(() => {
@@ -208,7 +222,8 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeDeviceDetail()}></div>
-  <div class="light-detail-panel overlay-panel" role="dialog" aria-modal="true"
+  <div class="light-detail-panel overlay-panel" class:is-unavailable={!available}
+       role="dialog" aria-modal="true"
        aria-label={device?.name ?? m.dev_device()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (deviceDetail.mode === 'closing' && e.target === e.currentTarget) finishDeviceDetailClose(); }}>
     {#if device}
@@ -216,6 +231,7 @@
         <header class="ld-header">
           <!-- Piktogramm: Tap öffnet die Symbol-Auswahl (nicht der Schalter) -->
           <button class="ld-symbol pressable" class:is-on={isActive} type="button"
+                  disabled={!available}
                   aria-haspopup="true" aria-expanded={pickerOpen}
                   aria-label={m.dev_change_icon()} onclick={togglePicker}>
             <Icon name={currentIcon} />
@@ -227,11 +243,13 @@
                    onkeydown={onNameKeydown} onblur={() => void saveName()} />
           {:else}
             <button class="ld-title ld-title-button pressable" type="button"
-                    aria-label={`${device.name} umbenennen`} onclick={beginNameEdit}>{device.name}</button>
+                    aria-label={`${device.name} umbenennen`} disabled={!available}
+                    onclick={beginNameEdit}>{device.name}</button>
           {/if}
           {#if hasPower}
             <!-- Primäraktion: Schalten bzw. Play/Pause (die Skalen schalten nie aus) -->
             <button class="ld-power pressable" class:is-on={isActive} type="button"
+                    disabled={!available}
                     aria-pressed={isActive}
                     aria-label={category === 'media' ? `${device.name} Wiedergabe umschalten` : `${device.name} schalten`}
                     use:pulse={{ seq: toggleWobble, cls: 'is-wobble', ms: 200 }}
@@ -243,6 +261,12 @@
           <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                   onclick={() => closeDeviceDetail()}>×</button>
         </header>
+        {#if !available}
+          <p class="entity-unavailable-hint" role="status">
+            <strong>{m.media_unavailable()}</strong>
+            <span>{m.entity_unavailable_repair_hint()}</span>
+          </p>
+        {/if}
         {#if nameError}<p id="device-name-error" class="ld-name-error" role="alert">{nameError}</p>{/if}
 
         <div class="ld-body">
@@ -252,6 +276,7 @@
                 <span class="caps-label">{m.dev_brightness()}</span>
                 {#key `${deviceId}-${brightnessIntro}`}
                   <TickScale ariaLabel={m.dev_brightness()} orientation="vertical" mode="fill" intro
+                             disabled={!available}
                              value={briDisplay} min={0} max={100} step={1} keyStep={5}
                              onInput={onBrightness} format={(v) => `${Math.round(v)}%`} />
                 {/key}
@@ -262,6 +287,7 @@
               <section class="ld-section">
                 <span class="caps-label">{m.dev_color_temp()}</span>
                 <TickScale ariaLabel={m.dev_color_temp()} orientation="horizontal" mode="gradient"
+                           disabled={!available}
                            value={tempDisplay} min={tempRange.min} max={tempRange.max}
                            step={50} keyStep={100} tint={tempTint}
                            onInput={onTemp} format={(v) => `${Math.round(v)} K`} />
@@ -275,6 +301,7 @@
                 <div class="swatch-grid" role="radiogroup" aria-label={m.dev_color()}>
                   {#each LIGHT_COLOR_SWATCHES as swatch (swatch.hex)}
                     <button class="swatch pressable" type="button" role="radio"
+                            disabled={!available}
                             aria-checked={light?.color === swatch.hex} aria-label={swatch.name}
                             style="--sw:{swatch.hex}" onclick={() => setColor(roomId, deviceId, swatch.hex)}>
                       <span class="swatch-check" aria-hidden="true"><Icon name="i-check" /></span>
@@ -283,6 +310,7 @@
                   {#if device.colorTemp}
                     <!-- Zurück in den Weiß-/Temperatur-Modus -->
                     <button class="swatch swatch-white pressable" type="button" role="radio"
+                            disabled={!available}
                             aria-checked={light?.color == null} aria-label={m.dev_white()}
                             onclick={() => setColorTemp(roomId, deviceId, tempDisplay)}>
                       <span class="swatch-check" aria-hidden="true"><Icon name="i-check" /></span>
@@ -300,6 +328,7 @@
             <section class="ld-section">
               <span class="caps-label">{m.dev_target_temp()}</span>
               <TickScale ariaLabel={m.dev_target_temp()} orientation="horizontal" mode="gradient"
+                         disabled={!available}
                          value={targetDisplay} min={16} max={26} step={0.5} keyStep={1}
                          tint={climateTint}
                          onInput={onTarget} format={(v) => `${fmtTemp(v)} °C`} />
@@ -310,6 +339,7 @@
               <div class="mode-pill" role="radiogroup" aria-label={m.dev_mode()}>
                 {#each HVAC_MODES as m (m.id)}
                   <button class="mode-seg pressable" type="button" role="radio" data-mode={m.id}
+                          disabled={!available}
                           aria-label={m.label} aria-checked={climate?.hvac === m.id}
                           class:is-active={climate?.hvac === m.id}
                           onclick={() => setClimateHvac(entityId, m.id)}>
@@ -337,6 +367,7 @@
             <section class="ld-section">
               <span class="caps-label">{m.dev_volume()}</span>
               <TickScale ariaLabel={m.dev_volume()} orientation="horizontal" mode="fill"
+                         disabled={!available}
                          value={volDisplay} min={0} max={100} step={1} keyStep={5}
                          onInput={onVolume} format={(v) => `${Math.round(v)}%`} />
             </section>

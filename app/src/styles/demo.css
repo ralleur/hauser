@@ -42,6 +42,10 @@
 
 @media (max-width: 600px) {
   .demo-badge {
+    --demo-badge-inset: 0px;
+    inset-block-start: max(var(--space-2, 8px), env(safe-area-inset-top));
+    inset-block-end: auto;
+    z-index: 170;
     font-size: 11px;
     padding: 5px 10px;
   }

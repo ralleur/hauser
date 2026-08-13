@@ -19,7 +19,9 @@ import type { MediaValue, ReconcileEvent } from '../adapter/types.ts';
 
 /* ── Lesen: gemergte Sicht ── */
 export function mergedMedia(playerId: string): MediaValue {
-  return runtime.merged(mediaEntityId(playerId)) as MediaValue;
+  const entityId = mediaEntityId(playerId);
+  const value = runtime.merged(entityId) as MediaValue;
+  return { ...value, available: value.available && runtime.isEntityAvailable(entityId) };
 }
 
 export function mediaStateLabel(v: MediaValue): string {

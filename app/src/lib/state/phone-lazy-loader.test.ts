@@ -20,6 +20,8 @@ describe('phone inactive-view source boundaries', () => {
     expect(phoneShell).not.toMatch(/^\s*import MoreSheet from/m);
     expect(phoneShell).not.toMatch(/^\s*import SystemScreen from/m);
     expect(phoneHome).not.toMatch(/^\s*import\s*\{?\s*settingsValues/m);
+    expect(phoneHome).toContain("import('./PhoneClimateDock.svelte')");
+    expect(phoneHome).toContain("import('./RoomSummaryCard.svelte')");
 
     expect(lazyLoaderSource).toContain("import('../components/phone/MoreSheet.svelte')");
     expect(lazyLoaderSource).toContain("import('../screens/SystemScreen.svelte')");

@@ -31,15 +31,27 @@ body:
     id: version
     attributes:
       label: Hauser version or commit
-      placeholder: v0.4.0-beta.1, image digest, or commit SHA
+      placeholder: v0.4.0-beta.3, image digest, or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation path
+      options:
+        - Home Assistant OS App
+        - Published container image with Docker Compose
+        - Source build with Docker Compose
+        - Local developer build
+        - Other
     validations:
       required: true
   - type: input
     id: platform
     attributes:
       label: Host platform
-      description: OS, CPU architecture, Docker Engine and Compose versions.
-      placeholder: Debian 13, linux/arm64, Docker 27.5, Compose 2.32
+      description: For the App path include Home Assistant OS and Core versions. For Docker include OS, CPU architecture, Docker Engine and Compose versions.
+      placeholder: HAOS 18.0 / Core 2026.8, or Debian 13 / linux/arm64 / Docker 27.5 / Compose 2.32
     validations:
       required: true
   - type: input
@@ -88,7 +100,7 @@ body:
     id: worked
     attributes:
       label: What worked
-      description: Mention setup, room display, light control/state echo, reconnect and persistence after restart where tested.
+      description: Mention setup, room display, light control/state echo, reconnect and persistence after an App or container restart where tested.
     validations:
       required: true
   - type: textarea

@@ -1,10 +1,8 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
-  import RoomSummaryCard from './RoomSummaryCard.svelte';
   import { centralClimate } from '../../state/climate-central.svelte.ts';
-  import { fmtTemp } from '../../format.ts';
   import { appState } from '../../state/app.svelte.ts';
-  import { currentClimateTemperature, type PhoneHeroVariant, type PhoneRoomSummary } from '../../state/phone-home.ts';
+  import type { PhoneHeroVariant, PhoneRoomSummary } from '../../state/phone-home.ts';
   import { shouldConfirmHomeOff, toggleVacationMode, turnOffHomeExceptBedroom, vacationModeActive } from '../../state/commands.ts';
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
 
@@ -24,7 +22,20 @@
   } = $props();
 
   const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
-  const currentTemperature = $derived(currentClimateTemperature(rooms));
+  let RoomSummaryCardComponent = $state<any>(null);
+  let PhoneClimateDockComponent = $state<any>(null);
+  $effect(() => {
+    if (rooms.length === 0 || RoomSummaryCardComponent) return;
+    void import('./RoomSummaryCard.svelte').then(({ default: component }) => {
+      RoomSummaryCardComponent = component;
+    });
+  });
+  $effect(() => {
+    if (!centralClimate.hasClimate || PhoneClimateDockComponent) return;
+    void import('./PhoneClimateDock.svelte').then(({ default: component }) => {
+      PhoneClimateDockComponent = component;
+    });
+  });
   const vacationActive = $derived(vacationModeActive());
   const heroVariant = $derived<PhoneHeroVariant>(
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
@@ -66,7 +77,11 @@
       <p class="phone-empty-state">{m.phone_no_rooms()}</p>
     {:else}
       {#each rooms as room (room.id)}
-        <RoomSummaryCard summary={room} active={currentRoom === room.id} {heroVariant} {onopen} />
+        {#if RoomSummaryCardComponent}
+          <RoomSummaryCardComponent summary={room} active={currentRoom === room.id} {heroVariant} {onopen} />
+        {:else}
+          <div class="phone-room-card" aria-hidden="true"></div>
+        {/if}
       {/each}
     {/if}
   </section>
@@ -79,31 +94,17 @@
         <Icon name="i-power" cls="icon icon-md" />
         <span>{m.phone_off()}</span>
       </button>
-      <div class="climate-dock phone-climate-dock" aria-label="Zentrale Klimasteuerung, alle Räume">
-        <button class="cd-key cd-key-down pressable" type="button" aria-label="Alle Räume 0,5 Grad kälter"
-                onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
-        <div class="cd-readout phone-climate-readout">
-          <div class="phone-climate-reading">
-            <span class="phone-climate-label">{m.climate_current()}</span>
-            <span class="phone-climate-current-value num">
-              {currentTemperature === null ? '–' : `${fmtTemp(currentTemperature)}°`}
-            </span>
-          </div>
-          <span class="phone-climate-separator" aria-hidden="true"></span>
-          <div class="phone-climate-reading">
-            <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
-            <span class="phone-climate-label">{m.climate_target()}</span>
-          </div>
-        </div>
-        <button class="cd-key cd-key-up pressable" type="button" aria-label="Alle Räume 0,5 Grad wärmer"
-                onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
-      </div>
+      {#if PhoneClimateDockComponent}
+        <PhoneClimateDockComponent {rooms} />
+      {:else}
+        <div class="climate-dock phone-climate-dock" aria-hidden="true"></div>
+      {/if}
       <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
               type="button" disabled={!online} aria-pressed={vacationActive}
-              aria-label={vacationActive ? 'Urlaubsmodus ausschalten' : 'Urlaubsmodus einschalten'}
+              aria-label={vacationActive ? m.phone_vacation_disable() : m.phone_vacation_enable()}
               onclick={toggleVacationMode}>
         <Icon name="i-umbrella-beach" cls="icon icon-md" />
-        <span>{vacationActive ? 'Aktiv' : 'Urlaub'}</span>
+        <span>{vacationActive ? m.phone_vacation_active() : m.phone_vacation()}</span>
       </button>
     </div>
   {/if}

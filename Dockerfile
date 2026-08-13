@@ -43,7 +43,7 @@ RUN npm run build && \
     npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.4.0-beta.1
+ARG HAUSER_VERSION=0.4.0-beta.3
 LABEL org.opencontainers.image.title="Hauser" \
       org.opencontainers.image.description="Local-first smart home control surface" \
       org.opencontainers.image.source="https://github.com/ralleur/hauser" \
@@ -68,12 +68,11 @@ COPY --from=build --chown=node:node /build/app/node_modules ./node_modules
 COPY --from=build --chown=node:node /build/server-contract ./server-contract
 COPY --from=build --chown=node:node /build/room-image-contract ./room-image-contract
 COPY --chown=node:node app/server.mjs app/package.json ./
-COPY --chown=node:node container/healthcheck.mjs ./container/healthcheck.mjs
+COPY --chown=node:node container/healthcheck.mjs container/start.mjs ./container/
 RUN mkdir -p /config /data/songs /assets && chown -R node:node /opt/hauser /config /data /assets
 
 VOLUME ["/config", "/data", "/assets"]
-USER node
 EXPOSE 4173
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD ["node", "container/healthcheck.mjs"]
-CMD ["node", "server.mjs"]
+CMD ["node", "container/start.mjs"]

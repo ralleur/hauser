@@ -2,7 +2,8 @@ name: hauser
 
 services:
   hauser:
-    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.1}"
+    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.3}"
+    user: node
     pull_policy: missing
     init: true
     restart: unless-stopped

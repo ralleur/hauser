@@ -140,7 +140,7 @@ describe('HaBackend deferred startup', () => {
       changedAt: 104_500,
       lastTriggered: '2026-08-02T08:00:00+00:00',
     });
-    expect(update).toHaveBeenCalledWith('switch.fixture_general', { on: false, changedAt: 105_000 });
+    expect(update).toHaveBeenCalledWith('switch.fixture_general', undefined, false, false);
 
     emit({ r: { 'input_select.fixture_washer': null } });
 

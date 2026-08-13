@@ -563,7 +563,7 @@ describe('phone source and accessibility boundaries', () => {
   it('renders three ordered targets plus fixed More and puts every remaining target in the sheet', () => {
     expect(bottomNav).toMatch(/phoneNavOrder\.order\.slice\(0, 3\)/);
     expect(bottomNav).toMatch(/bind:this=\{moreButton\}/);
-    expect(bottomNav).toContain('<span>Mehr</span>');
+    expect(bottomNav).toContain('<span>{m.nav_more()}</span>');
     expect(moreSheet).toMatch(/role="dialog"/);
     expect(moreSheet).toMatch(/aria-modal="true"/);
     expect(moreSheet).toMatch(/event\.target\s*!==\s*event\.currentTarget/);

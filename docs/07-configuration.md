@@ -39,9 +39,13 @@ access token in the System settings. Credentials are browser/runtime settings;
 they do not belong in the household JSON or repository.
 
 The Compose installation fixes the config path to
-`/config/household.json`. The file lives in its persistent config volume and is
-seeded once from `neutral-small.json`; later image updates do not overwrite it.
-See [`08-installation.md`](08-installation.md) for the export/edit/import flow.
+`/config/household.json`. A missing file is the explicit first-run marker: the
+restricted setup runtime and wizard create it only after successful validation
+and activation, using an atomic replacement. The file then lives in the
+persistent config volume, and later image updates do not overwrite it. The Home
+Assistant URL and token are stored in `/data/config.json`, not in the household
+JSON. See [`08-installation.md`](08-installation.md) for the setup and
+export/edit/import flows.
 
 `HMI_HOUSEHOLD_CONFIG_MODE` accepts exactly:
 
@@ -118,10 +122,9 @@ screens.
 
 ## Current beta boundary
 
-The configuration core, source-built container, Compose file, persistent
-`/config`, `/data` and `/assets` volumes, deterministic setup wizard and automatic
-v1-to-v2 migration with rollback backup are implemented. The versioned registry
-image will be the normal public installation path after `v0.4.0-beta.1` is
-published. External real-home evidence remains
-required during beta stabilisation before the release candidate; the first beta
-does not claim broad compatibility or a support promise.
+The configuration core, release container, Compose file, persistent `/config`,
+`/data` and `/assets` volumes, deterministic setup wizard and automatic v1-to-v2
+migration with rollback backup are implemented. The versioned registry image is
+the normal public installation path. External real-home evidence remains required
+during beta stabilisation before the release candidate; the first beta does not
+claim broad compatibility or a support promise.

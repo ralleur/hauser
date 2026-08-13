@@ -3,10 +3,54 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
-## [0.4.0-beta.1] - Unreleased
+## [0.4.0-beta.3] - 2026-08-11
 
-This is the planned first public release. It remains a self-hosted hobby-project
-beta without a support or compatibility promise beyond the documented paths.
+### Fixed
+
+- Home Assistant OS now starts Hauser through a minimal runtime wrapper that
+  assigns the App-owned `/data` tree to UID/GID 1000 and immediately drops root
+  privileges before importing the unchanged server.
+- Docker/Compose continues to run explicitly as the unprivileged `node` user.
+
+### Post-release verification
+
+- The real Home Assistant OS smoke passed repository discovery, installation,
+  startup, setup against real Home Assistant, one entity command and persistence
+  across an App restart. The run was maintainer-operated and is not external
+  household compatibility evidence.
+
+## [0.4.0-beta.2] - 2026-08-11
+
+### Added
+
+- Experimental Home Assistant App packaging in the public repository, including
+  direct-port metadata, persistent `/data` mapping, cold-backup behavior,
+  App Store branding and one-click/fallback installation guidance.
+- A dependency-free local App contract verifier and a commit-pinned Home
+  Assistant App linter in the quality workflow.
+
+### Changed
+
+- Browser requests with a syntactically valid Origin are accepted when that
+  Origin exactly matches the effective direct HTTP request host and port. Exact
+  `HMI_ALLOWED_ORIGINS` entries remain supported for TLS reverse proxies.
+- Release automation publishes both `0.4.0-beta.2` and `v0.4.0-beta.2` from the
+  same multi-architecture build manifest.
+- Docker/Compose remains supported and now defaults to `v0.4.0-beta.2`.
+
+### Known limitations
+
+- The real HAOS installation succeeded, but App start failed because the
+  Supervisor-mounted `/data` directory was not writable by UID 1000. This release
+  remains immutable; `0.4.0-beta.3` carries the narrow ownership fix.
+- Direct App access intentionally does not use Ingress or a Supervisor token.
+
+`v0.4.0-beta.1` and its published artifacts remain unchanged.
+
+## [0.4.0-beta.1] - 2026-08-10
+
+This is Hauser's first public technical beta. It remains a self-hosted hobby
+project without a support or compatibility promise beyond the documented paths.
 
 ### Added
 
@@ -22,8 +66,10 @@ beta without a support or compatibility promise beyond the documented paths.
   volumes, including explicit-Area and no-Area onboarding paths.
 - Six interface languages: German, English, French, Italian, Portuguese and
   Polish.
-- Local custom room-background upload under room editing for JPEG, PNG, WebP and
-  AVIF files up to 12 MiB, including replacement and restore to the project default.
+- Public Pages demo with representative simulated devices and no dependency on
+  the maintainer's Home Assistant or household services.
+- English first-visit README with current candidate screenshots, a prominent
+  demo link and the release installation/setup path.
 - Tag-gated quality and container-image workflow. A matching version tag can
   publish immutable `linux/amd64` and `linux/arm64` images to GHCR only after the
   full quality job passes.
@@ -32,6 +78,12 @@ beta without a support or compatibility promise beyond the documented paths.
 
 - The Home Assistant adapter now recovers entity state correctly after a lost
   and restored connection.
+- Setup activation distinguishes a rejected Home Assistant token from Home
+  Assistant being unreachable from the Hauser server/container and from an
+  unsuccessful Home Assistant or proxy HTTP response.
+- Configured Home Assistant entities that are missing or reported unavailable
+  retain their last known value only as context, are marked unavailable and
+  cannot be controlled.
 - Release evidence is split honestly: the isolated clean-room pilot proves the
   technical beta contract; an external real-home installation remains mandatory
   during beta stabilisation before the release candidate.

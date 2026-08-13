@@ -17,8 +17,11 @@ export class EntityStore {
   }
 
   /** Push aus der Backend-Subscription (bzw. Fake-Echo). */
-  set(entityId: string, value: unknown, stale = false): void {
-    this.#entities.set(entityId, { entityId, value, updatedAt: Date.now(), stale });
+  set(entityId: string, value: unknown, stale = false, available = true): void {
+    const previous = this.#entities.get(entityId);
+    this.#entities.set(entityId, !available && previous
+      ? { ...previous, available: false }
+      : { entityId, value, updatedAt: Date.now(), stale, available });
   }
 
   /** Explicit HA removal: no stale/undefined placeholder remains addressable. */
