@@ -57,12 +57,28 @@
   font-size: var(--text-sm);
 }
 
+.camera-feed-frame[role='button'] {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.camera-feed-frame:fullscreen {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  background: var(--color-surface-0);
+  cursor: default;
+}
+
 .camera-feed-frame img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
+.camera-feed-frame:fullscreen img { object-fit: contain; }
 
 /* Ist-Temperatur links, Ziel- und Modus-Pille rechts. */
 .room-controls .climate-hero {
