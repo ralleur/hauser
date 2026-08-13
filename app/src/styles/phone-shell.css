@@ -329,7 +329,7 @@
 
 .phone-quick-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
   gap: var(--space-2);
   flex: none;
   justify-content: space-between;
@@ -340,23 +340,29 @@
   display: flex;
   min-width: 0;
   justify-content: space-between;
+  padding-inline: var(--space-1);
 }
 
 .phone-climate-readout {
   flex: 1;
   flex-direction: row;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
   padding: 0;
 }
 
 .phone-climate-reading {
   display: flex;
+  flex: 1 1 0;
   min-width: 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.phone-climate-reading .cd-value {
+  font-size: var(--text-base);
 }
 
 .phone-climate-label {
@@ -372,7 +378,7 @@
 
 .phone-climate-current-value {
   color: var(--color-text-secondary);
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   font-weight: var(--font-weight-normal);
   font-variant-numeric: tabular-nums;
   line-height: var(--leading-tight);
