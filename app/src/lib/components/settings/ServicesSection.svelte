@@ -20,6 +20,10 @@
   import { confirmThen, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
+  import { aiHealth, checkAiHealth } from '../../state/ai-health.svelte.ts';
+  import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
+  import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
+  import SettingsCardHead from './SettingsCardHead.svelte';
 
   const conn = $derived(connection());
   const auth = authState();
@@ -90,10 +94,25 @@
       : serviceProbes.songs.state === 'error' ? m.sys_service_unreachable()
       : m.sys_service_checking(),
   );
+
+  const dot = $derived(
+    aiHealth.checking ? 'dot-degraded'
+      : aiHealth.status === 'ok' ? 'dot-online'
+      : aiHealth.status === 'unknown' ? 'dot-degraded'
+      : 'dot-offline',
+  );
+
+  const label = $derived(
+    aiHealth.checking ? m.sys_service_checking()
+      : aiHealth.status === 'ok' ? m.sys_service_reachable()
+      : aiHealth.status === 'unauthorized' ? m.sys_service_not_configured()
+      : aiHealth.status === 'unknown' ? m.sys_service_checking()
+      : m.sys_service_unreachable(),
+  );
 </script>
 
-<h3 class="caps-label settings-group-label">{m.sys_group_services_ha()}</h3>
 <div class="settings-group">
+  <SettingsCardHead icon="i-home-assistant" tint="success" title={m.sys_group_services_ha()} />
   <div class="settings-row" data-setting-id="connection-status">
     <span class="dot {conn.dot}"></span>
     <div class="settings-row-text">
@@ -126,8 +145,8 @@
 
 </div>
 
-<h3 class="caps-label settings-group-label">{m.sys_group_services_media()}</h3>
 <div class="settings-group">
+  <SettingsCardHead icon="i-play-network" tint="cool" title={m.sys_group_services_media()} />
   <div class="settings-row is-stacked" data-setting-id="jf-url">
     <div class="settings-row-text">
       <span class="settings-row-label">Jellyfin-Adresse</span>
@@ -210,8 +229,8 @@
   </form>
 </div>
 
-<h3 class="caps-label settings-group-label">{m.sys_group_services_private()}</h3>
 <div class="settings-group">
+  <SettingsCardHead icon="i-shield-lock" tint="neutral" title={m.sys_group_services_private()} />
   <div class="settings-row" data-setting-id="ablage-status">
     <span class="dot {ablageDot}"></span>
     <div class="settings-row-text">
@@ -229,6 +248,46 @@
         <span class="settings-row-sub">{m.sys_songs_hint()}</span>
       </div>
       <span class="settings-row-value">{songsLabel}</span>
+    </div>
+  {/if}
+</div>
+
+<div class="settings-group">
+  <SettingsCardHead icon="i-creation" tint="cool" title={m.sys_group_services_ai()} />
+  <div class="settings-row" data-setting-id="ai-access-status">
+    <span class="dot {dot}"></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.settings_entry_ai_access_status_label()}</span>
+      <span class="settings-row-sub">{m.sys_ai_access_hint()}</span>
+    </div>
+    <span class="settings-row-value">{label}</span>
+    <button class="secondary-btn pressable" type="button" disabled={aiHealth.checking}
+            onclick={() => void checkAiHealth()}>{m.sys_check()}</button>
+  </div>
+
+</div>
+
+<!-- Aufgerufene Modelle: eigene Karte, nicht in die Zugangskarte geschachtelt —
+     eine .settings-group in einer .settings-group erbt Rahmen und Radius
+     doppelt und bricht das Zeilenraster. -->
+<div class="settings-group" data-setting-id="ai-models">
+  <SettingsCardHead icon="i-creation" tint="cool"
+                    title={m.settings_entry_ai_models_label()} sub={m.sys_ai_models_hint()} />
+  <div class="settings-row">
+    <span class="settings-row-icon"><Icon name="i-creation" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_ai_model_ambient()}</span>
+    </div>
+    <span class="settings-row-value num">{AMBIENT_LLM_DEFAULT_MODEL}</span>
+  </div>
+  {#if !IS_DEMO}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.sys_ai_model_lyrics()}</span>
+        <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()}</span>
+      </div>
+      <span class="settings-row-value num">{SONG_LYRICS_MODEL}</span>
     </div>
   {/if}
 </div>

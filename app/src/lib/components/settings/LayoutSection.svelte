@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* ── Darstellung · Home & Energie ── */
+  /* ── Darstellung · Layout & Bedienung ── */
   import Icon from '../Icon.svelte';
   import { layoutManager } from '../../state/layout-manager.svelte.ts';
   import { widthPreset } from '../../state/layout-config.ts';

@@ -3995,31 +3995,6 @@ export function songTargetPath(url) {
   return null;
 }
 
-export function requestOriginAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  const origin = req.headers?.origin;
-  if (origin === undefined) return true;
-  if (typeof origin !== 'string' || !origin) return false;
-  if (allowedOrigins.has(origin)) return true;
-
-  const host = req.headers?.host;
-  if (typeof host !== 'string' || !host) return false;
-  const protocol = req.socket?.encrypted ? 'https:' : 'http:';
-  try {
-    const browserOrigin = new URL(origin);
-    const requestUrl = new URL(`${protocol}//${host}`);
-    const validBrowserOrigin = ['http:', 'https:'].includes(browserOrigin.protocol)
-      && !browserOrigin.username && !browserOrigin.password
-      && browserOrigin.pathname === '/' && !browserOrigin.search && !browserOrigin.hash
-      && browserOrigin.origin === origin;
-    const validRequestHost = requestUrl.pathname === '/'
-      && !requestUrl.username && !requestUrl.password
-      && !requestUrl.search && !requestUrl.hash;
-    return validBrowserOrigin && validRequestHost && browserOrigin.origin === requestUrl.origin;
-  } catch {
-    return false;
-  }
-}
-
 export function songRequestAllowed(req, target, allowedOrigins = ALLOWED_ORIGINS) {
   if (!target) return false;
   const methodAllowed = target.method
@@ -4027,42 +4002,57 @@ export function songRequestAllowed(req, target, allowedOrigins = ALLOWED_ORIGINS
     : (target.kind === 'library' && ['GET', 'POST'].includes(req.method || ''))
       || (target.kind === 'library-item' && ['PATCH', 'DELETE'].includes(req.method || ''))
       || (target.kind === 'library-audio' && ['GET', 'HEAD'].includes(req.method || ''));
-  return methodAllowed && requestOriginAllowed(req, allowedOrigins);
+  if (!methodAllowed) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 
 export function proxyRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method || '')) return false;
-  return requestOriginAllowed(req, allowedOrigins);
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  return allowedOrigins.has(origin);
 }
 
 export function notionBridgeRequestAllowed(req, targetPath, allowedOrigins = ALLOWED_ORIGINS) {
   const methodAllowed = (targetPath === '/health' && req.method === 'GET')
     || (targetPath !== '/health' && req.method === 'POST');
-  return methodAllowed && requestOriginAllowed(req, allowedOrigins);
+  if (!methodAllowed) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 export function ambientRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return req.method === 'POST' && requestOriginAllowed(req, allowedOrigins);
+  if (req.method !== 'POST') return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 export function configRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return ['GET', 'PUT'].includes(req.method || '') && requestOriginAllowed(req, allowedOrigins);
+  if (!['GET', 'PUT'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 export function householdConfigRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return req.method === 'GET' && requestOriginAllowed(req, allowedOrigins);
+  if (req.method !== 'GET') return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 export function familyDataRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return ['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method || '')
-    && requestOriginAllowed(req, allowedOrigins);
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 
 
 export function ablageRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return ['GET', 'POST'].includes(req.method || '') && requestOriginAllowed(req, allowedOrigins);
+  if (!['GET', 'POST'].includes(req.method || '')) return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 function readKeychainSecret(account, service, required = false) {
@@ -5249,7 +5239,9 @@ function serveConfig(req, res, store, configMutations, assertSetupRecoveryHealth
 }
 
 function setupRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
-  return req.method === 'POST' && requestOriginAllowed(req, allowedOrigins);
+  if (req.method !== 'POST') return false;
+  const origin = req.headers.origin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 function normalizeSetupServiceUrl(value) {
@@ -9176,7 +9168,8 @@ export function createHmiServer(
         && householdConfigRequestAllowed(req, allowedOrigins)) {
       serveHouseholdConfig(req, res, householdConfigReader, normalizedHouseholdConfigMode);
     } else if ((req.url || '') === '/api/household-config') {
-      if (requestOriginAllowed(req, allowedOrigins)) {
+      const origin = req.headers.origin;
+      if (!origin || allowedOrigins.has(origin)) {
         serveHouseholdConfig(req, res, householdConfigReader, normalizedHouseholdConfigMode);
       } else {
         jsonResponse(

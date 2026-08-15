@@ -156,12 +156,7 @@ describe('room-image-transform-policy-v1', () => {
     const jpeg = await providerPngToProviderJpeg(provider);
     const avif = await providerPngToFinalAvif(provider);
     expect(sha256(jpeg)).toBe(manifest.goldenOutputs['provider-provider.jpeg']);
-    // The qualified AVIF encoder bytes are pinned on the declared development
-    // platform. Linux CI still verifies format, geometry, metadata and pixels.
-    // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
-    if (`${process.platform}-${process.arch}` === manifest.developmentPlatform) {
-      expect(sha256(avif)).toBe(manifest.goldenOutputs['provider-final.avif']);
-    }
+    expect(sha256(avif)).toBe(manifest.goldenOutputs['provider-final.avif']);
 
     const jpegMetadata = await sharp(jpeg).metadata();
     expect(jpegMetadata).toMatchObject({

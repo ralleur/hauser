@@ -16,8 +16,7 @@
   import { pulse } from '../actions/pulse.ts';
   import { fmtTemp } from '../format.ts';
   import type { ClimateValue } from '../adapter/types.ts';
-  import { runtime } from '../adapter/runtime.svelte.ts';
-  import { climateEntityId, roomCameraEntityId } from '../state/entities.ts';
+  import { roomCameraEntityId } from '../state/entities.ts';
 
   import { m } from '../../paraglide/messages.js';
   let { room }: { room: Room } = $props();
@@ -27,9 +26,6 @@
      nichts) — kein Mock mehr. null wird explizit als nicht verfügbar gezeigt. */
   const temp = $derived(roomTemperature(room.id));
   const cameraEntityId = $derived(roomCameraEntityId(room.id));
-  const climateAvailable = $derived(
-    !climateEntityId(room.id) || runtime.isEntityAvailable(climateEntityId(room.id)),
-  );
 
   /* Klima-Widerspruch (docs/02): Ziel ist ein Stepper (diskret) → 300-ms-
      Korrektur als Opacity-Crossfade des Werts. */
@@ -85,16 +81,10 @@
   {#if climate}
     <section class="detail-section">
       <span class="caps-label">{m.climate_temperature()}</span>
-      <div class="climate-card" class:is-unavailable={!climateAvailable}>
+      <div class="climate-card">
         <div class="climate-warning" class:is-visible={room.windowOpen}>
           <Icon name="i-window" cls="icon icon-md" /><span>Fenster offen — Heizung pausiert</span>
         </div>
-        {#if !climateAvailable}
-          <p class="entity-unavailable-hint" role="status">
-            <strong>{m.media_unavailable()}</strong>
-            <span>{m.entity_unavailable_repair_hint()}</span>
-          </p>
-        {/if}
         <div class="climate-hero">
           <span class="climate-temp num" class:is-unavailable={temp === null}>
             {#if temp !== null}
@@ -107,21 +97,18 @@
             <!-- Zieltemperatur des Raums als Pille (identisch zum TabBar-Klima-Dock). -->
             <div class="climate-dock room-climate-pill" aria-label="Zieltemperatur {room.name}">
               <button class="cd-key cd-key-down pressable" type="button" aria-label="0,5 Grad kälter"
-                      disabled={!climateAvailable}
                       onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
               <div class="cd-readout">
                 <span class="cd-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
                 <span class="cd-sub">{m.climate_target()}</span>
               </div>
               <button class="cd-key cd-key-up pressable" type="button" aria-label="0,5 Grad wärmer"
-                      disabled={!climateAvailable}
                       onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
             </div>
             <!-- Modus als zweite Pille, gleiche Breite: 3 Segmente zur Auswahl. -->
             <div class="mode-pill" role="radiogroup" aria-label="Modus">
               {#each HVAC_MODES as m (m.id)}
                 <button class="mode-seg pressable" type="button" role="radio" data-mode={m.id}
-                        disabled={!climateAvailable}
                         aria-label={m.label} aria-checked={climate.hvac === m.id} class:is-active={climate.hvac === m.id}
                         onclick={() => setHvac(room.id, m.id)}>
                   <Icon name={m.icon} cls="icon icon-md" />

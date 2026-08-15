@@ -68,9 +68,9 @@ export function sortNotifications(items: readonly HmiNotification[]): HmiNotific
 
 export function relativeDuration(timestamp: number, now: number): string {
   const minutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
-  if (minutes < 1) return '< 1 min';
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 1) return '< 1 Min.';
+  if (minutes < 60) return `${minutes} Min.`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+  return rest ? `${hours} Std. ${rest} Min.` : `${hours} Std.`;
 }

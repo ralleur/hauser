@@ -18,18 +18,16 @@
   } from '../state/settings.svelte.ts';
 
   import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
+  import LaundrySection from '../components/settings/LaundrySection.svelte';
   import ServicesSection from '../components/settings/ServicesSection.svelte';
-  import OperatingModeSection from '../components/settings/OperatingModeSection.svelte';
-  import AiAccessSection from '../components/settings/AiAccessSection.svelte';
-  import AiFeaturesSection from '../components/settings/AiFeaturesSection.svelte';
   import AppearanceSection from '../components/settings/AppearanceSection.svelte';
-  import HomeLayoutSection from '../components/settings/HomeLayoutSection.svelte';
+  import LayoutSection from '../components/settings/LayoutSection.svelte';
   import AmbientSection from '../components/settings/AmbientSection.svelte';
   import CalendarSection from '../components/settings/CalendarSection.svelte';
   import ShoppingSection from '../components/settings/ShoppingSection.svelte';
+  import MediaSection from '../components/settings/MediaSection.svelte';
   import StatusSection from '../components/settings/StatusSection.svelte';
-  import UpdatesSection from '../components/settings/UpdatesSection.svelte';
-  import NotificationsSection from '../components/settings/NotificationsSection.svelte';
+  import AiCustomizingSection from '../components/settings/AiCustomizingSection.svelte';
   import MaintenanceSection from '../components/settings/MaintenanceSection.svelte';
 
   let { phone = false, titleAnchor = $bindable() }: { phone?: boolean; titleAnchor?: HTMLHeadingElement } = $props();
@@ -46,18 +44,16 @@
      — eine neue Sektion ohne Komponente fällt beim Typecheck auf. */
   const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
     'rooms-devices': RoomsDevicesSection,
-    'services': ServicesSection,
-    'operating-mode': OperatingModeSection,
-    'ai-access': AiAccessSection,
-    'ai-features': AiFeaturesSection,
+    'laundry': LaundrySection,
     'appearance': AppearanceSection,
-    'home-layout': HomeLayoutSection,
+    'layout': LayoutSection,
     'ambient': AmbientSection,
     'calendar': CalendarSection,
     'shopping': ShoppingSection,
+    'media': MediaSection,
+    'services': ServicesSection,
     'status': StatusSection,
-    'updates': UpdatesSection,
-    'notifications': NotificationsSection,
+    'ai-customizing': AiCustomizingSection,
     'maintenance': MaintenanceSection,
   } as const;
 
@@ -149,7 +145,7 @@
                         onclick={() => selectSection(s.id)}>
                   <span class="settings-icon-tile tint-{s.tint}"><Icon name={s.icon} cls="icon icon-md" /></span>
                   <span class="settings-nav-label">{s.label}</span>
-                  {#if s.id === 'updates' && appState.system.updates.length}
+                  {#if s.id === 'status' && appState.system.updates.length}
                     <span class="settings-badge num">{appState.system.updates.length}</span>
                   {/if}
                   <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
@@ -170,6 +166,10 @@
             <Icon name="i-back" cls="icon icon-md" />
           </button>
         {/if}
+        <!-- Sektions-Kachel im Kopf: dieselbe Farbe wie in der Sidebar, damit
+             der Detailbereich sichtbar zur angetippten Zeile gehört. Auf dem
+             Phone entfällt sie (die Überschrift trägt dort allein). -->
+        <span class="settings-icon-tile is-lg tint-{section.tint}"><Icon name={section.icon} cls="icon icon-lg" /></span>
         <div>
           <h2>{section.label}</h2>
           {#if section.description !== section.label}<p>{section.description}</p>{/if}

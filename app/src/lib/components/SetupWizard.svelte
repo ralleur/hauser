@@ -29,7 +29,6 @@
     localeState,
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
-  import { setupActivationErrorMessageKey } from './setup-activation-error.ts';
 
   let {
     mode = 'first-run',
@@ -303,6 +302,7 @@
       });
       const payload = await response.json() as {
         code?: string;
+        message?: string;
         issue?: { path?: string; message?: string };
       };
       if (!response.ok) {
@@ -312,16 +312,6 @@
         if (payload.code === 'SETUP_JELLYFIN_UNREACHABLE'
             || payload.code === 'SETUP_JELLYFIN_HTTP_ERROR') {
           throw new Error(m.setup_jellyfin_unreachable());
-        }
-        const activationMessageKey = setupActivationErrorMessageKey(payload.code);
-        if (activationMessageKey === 'setup_ha_activation_auth_failed') {
-          throw new Error(m.setup_ha_activation_auth_failed());
-        }
-        if (activationMessageKey === 'setup_ha_activation_unreachable') {
-          throw new Error(m.setup_ha_activation_unreachable());
-        }
-        if (activationMessageKey === 'setup_ha_activation_http_error') {
-          throw new Error(m.setup_ha_activation_http_error());
         }
         const issue = payload.issue?.path ? ` ${payload.issue.path}: ${payload.issue.message ?? ''}` : '';
         throw new Error(`${m.setup_activate_failed()}${issue}`.trim());

@@ -39,11 +39,7 @@ brand_roots = (
 third_party_roots = (
     Path('app/public/mdi-icons'),
 )
-brand_files = {
-    Path('hauser/icon.png'),
-    Path('hauser/logo.png'),
-    Path('website/favicon.png'),
-}
+brand_files = {Path('website/favicon.png')}
 third_party_files = {
     Path('app/public/fonts/InterVariable-subset.woff2'),
     Path('app/public/fonts/InstrumentSerif-subset.woff2'),
@@ -91,7 +87,7 @@ asset_suffixes = {
     '.mp4', '.ogg', '.otf', '.png', '.svg', '.ttf', '.wav', '.webm', '.webp',
     '.woff', '.woff2',
 }
-scan_roots = (Path('app/public'), Path('hauser'), Path('website'))
+scan_roots = (Path('app/public'), Path('website'))
 unknown = []
 
 

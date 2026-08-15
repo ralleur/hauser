@@ -10,43 +10,45 @@ import { IS_DEMO } from '../demo/demo-mode.ts';
    nicht klickbare Überschriften, darunter alle Sektionen sichtbar. Die Gruppe
    ist reine Gliederung — navigiert wird immer auf Sektionsebene.
 
+   Leitprinzip: Einsortiert wird nach dem Objekt, das die Einstellung betrifft —
+   niemals nach der Technik dahinter. Wer den Tageskommentar im Standby sucht,
+   sucht ihn beim Standby, nicht unter „KI“ — so wie niemand die Lautstärke
+   unter „Bluetooth“ sucht. Die Gruppe `ai` ist deshalb aufgelöst: KI-Zugang
+   und Modellwahl sind eine Dienstkarte neben Home Assistant und Jellyfin,
+   KI-gestützte Funktionen wohnen dort, wo der Nutzer sie sieht.
+
    Leitfragen der Gruppen:
      home         → Wie ist mein Zuhause in Hauser strukturiert?
-     connectivity → Was hängt dran und funktioniert es?
-     ai           → Was nutzt die KI und was kostet das?
      appearance   → Wie sieht es aus und verhält sich?
      content      → Was zeige ich aus den Diensten an?
+     connectivity → Was hängt dran und funktioniert es?
      system       → Diagnose und Notfallwerkzeuge.
    ============================================ */
 
 export type SettingsGroupId =
   | 'home'
-  | 'connectivity'
-  | 'ai'
   | 'appearance'
   | 'content'
+  | 'connectivity'
   | 'system';
 
 export type SettingsSectionId =
   /* Zuhause */
   | 'rooms-devices'
-  /* Verbindungen */
-  | 'services'
-  | 'operating-mode'
-  /* KI-Funktionen */
-  | 'ai-access'
-  | 'ai-features'
+  | 'laundry'
   /* Darstellung */
   | 'appearance'
-  | 'home-layout'
+  | 'layout'
   | 'ambient'
   /* Inhalte */
   | 'calendar'
   | 'shopping'
+  | 'media'
+  /* Verbindungen */
+  | 'services'
   /* System */
   | 'status'
-  | 'updates'
-  | 'notifications'
+  | 'ai-customizing'
   | 'maintenance';
 
 export type SettingsTint = 'success' | 'cool' | 'warm' | 'neutral';
@@ -75,10 +77,9 @@ export interface SettingsEntry {
 
 export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
   { id: 'home', get label() { return m.settings_group_home_label(); } },
-  { id: 'connectivity', get label() { return m.settings_group_connectivity_label(); } },
-  { id: 'ai', get label() { return m.settings_group_ai_label(); } },
   { id: 'appearance', get label() { return m.settings_group_appearance_label(); } },
   { id: 'content', get label() { return m.settings_group_content_label(); } },
+  { id: 'connectivity', get label() { return m.settings_group_connectivity_label(); } },
   { id: 'system', get label() { return m.settings_group_system_label(); } },
 ];
 
@@ -86,27 +87,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     id: 'rooms-devices', group: 'home',
     get label() { return m.settings_section_rooms_devices_label(); }, icon: 'i-home', tint: 'warm',
-    get description() { return m.settings_section_rooms_devices_label(); },
+    get description() { return m.settings_section_rooms_devices_desc(); },
   },
   {
-    id: 'services', group: 'connectivity',
-    get label() { return m.settings_section_services_label(); }, icon: 'i-lan-connect', tint: 'success',
-    get description() { return m.settings_section_services_desc(); },
-  },
-  {
-    id: 'operating-mode', group: 'connectivity',
-    get label() { return m.settings_section_operating_mode_label(); }, icon: 'i-television-play', tint: 'neutral',
-    get description() { return m.settings_section_operating_mode_desc(); },
-  },
-  {
-    id: 'ai-access', group: 'ai',
-    get label() { return m.settings_section_ai_access_label(); }, icon: 'i-key-variant', tint: 'cool',
-    get description() { return m.settings_section_ai_access_desc(); },
-  },
-  {
-    id: 'ai-features', group: 'ai',
-    get label() { return m.settings_section_ai_features_label(); }, icon: 'i-creation', tint: 'cool',
-    get description() { return m.settings_section_ai_features_desc(); },
+    id: 'laundry', group: 'home',
+    get label() { return m.settings_section_laundry_label(); }, icon: 'i-washing-machine', tint: 'warm',
+    get description() { return m.settings_section_laundry_desc(); },
   },
   {
     id: 'appearance', group: 'appearance',
@@ -114,9 +100,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_appearance_desc(); },
   },
   {
-    id: 'home-layout', group: 'appearance',
-    get label() { return m.settings_section_home_layout_label(); }, icon: 'i-view-dashboard', tint: 'neutral',
-    get description() { return m.settings_section_home_layout_desc(); },
+    id: 'layout', group: 'appearance',
+    get label() { return m.settings_section_layout_label(); }, icon: 'i-view-dashboard', tint: 'neutral',
+    get description() { return m.settings_section_layout_desc(); },
   },
   {
     id: 'ambient', group: 'appearance',
@@ -134,19 +120,24 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_shopping_desc(); },
   },
   {
+    id: 'media', group: 'content',
+    get label() { return m.settings_section_media_label(); }, icon: 'i-music-note', tint: 'cool',
+    get description() { return m.settings_section_media_desc(); },
+  },
+  {
+    id: 'services', group: 'connectivity',
+    get label() { return m.settings_section_services_label(); }, icon: 'i-lan-connect', tint: 'success',
+    get description() { return m.settings_section_services_desc(); },
+  },
+  {
     id: 'status', group: 'system',
     get label() { return m.settings_section_status_label(); }, icon: 'i-heart-pulse', tint: 'success',
     get description() { return m.settings_section_status_desc(); },
   },
   {
-    id: 'updates', group: 'system',
-    get label() { return m.settings_section_updates_label(); }, icon: 'i-update', tint: 'cool',
-    get description() { return m.settings_section_updates_desc(); },
-  },
-  {
-    id: 'notifications', group: 'system',
-    get label() { return m.settings_section_notifications_label(); }, icon: 'i-bell-outline', tint: 'warm',
-    get description() { return m.settings_section_notifications_desc(); },
+    id: 'ai-customizing', group: 'system',
+    get label() { return m.settings_section_ai_customizing_label(); }, icon: 'i-creation', tint: 'cool',
+    get description() { return m.settings_section_ai_customizing_desc(); },
   },
   {
     id: 'maintenance', group: 'system',
@@ -161,6 +152,50 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   /* ── Zuhause · Räume & Geräte ── */
   { id: 'household-setup', section: 'rooms-devices', label: 'Räume verwalten',
     keywords: ['räume', 'raum', 'zimmer', 'geräte', 'sortieren', 'umbenennen', 'löschen'] },
+  ...(ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO ? [{
+    id: 'room-image-wizard', section: 'rooms-devices' as const, label: 'Raumbilder erstellen',
+    keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
+  }] : []),
+  { id: 'reset-devices', section: 'rooms-devices', get label() { return m.settings_entry_reset_devices_label(); },
+    keywords: ['umbenennen', 'symbole', 'lampen', 'lichter', 'reset', 'standard'] },
+  { id: 'reset-scenes', section: 'rooms-devices', get label() { return m.settings_entry_reset_scenes_label(); },
+    keywords: ['scenes', 'presets', 'reset', 'standard'] },
+
+  /* ── Zuhause · Wäsche ── */
+  { id: 'laundry', section: 'laundry', get label() { return m.settings_laundry_title(); },
+    keywords: ['wäsche', 'waschmaschine', 'trockner', 'laundry', 'helper', 'blueprint', 'leistungssensor'] },
+
+  /* ── Darstellung ── */
+  { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },
+    keywords: ['theme', 'dunkel', 'hell', 'dark', 'light', 'nacht', 'tag', 'automatisch', 'sonne', 'design', 'farben'] },
+  { id: 'ui-language', section: 'appearance', get label() { return m.settings_entry_ui_language_label(); },
+    keywords: ['sprache', 'language', 'deutsch', 'englisch', 'locale', 'übersetzung'] },
+  { id: 'layout-config', section: 'layout', get label() { return m.settings_entry_layout_config_label(); },
+    keywords: ['layout', 'raum', 'kontext', 'breite', 'flächen', 'panel', 'hero', 'kacheln', 'energie'] },
+  { id: 'layout-reset', section: 'layout', get label() { return m.settings_entry_layout_reset_label(); },
+    keywords: ['standard', 'default', 'reset', 'werkseinstellung'] },
+  { id: 'off-confirm-before', section: 'layout', get label() { return m.settings_entry_off_confirm_before_label(); },
+    keywords: ['mobile', 'lichter', 'fernseher', 'tv', 'uhrzeit', 'bestätigung', 'nachfrage', 'deaktivieren'] },
+  { id: 'standby-now', section: 'ambient', get label() { return m.settings_entry_standby_now_label(); },
+    keywords: ['ruhezustand', 'idle', 'bildschirmschoner', 'screensaver', 'schlafen', 'aus'] },
+  { id: 'ambient-deep-night', section: 'ambient', get label() { return m.settings_entry_ambient_deep_night_label(); },
+    keywords: ['nacht', 'nachts', 'uhr', 'rot', 'dunkel', 'standby', 'lockscreen', '22', '06', 'iphone'] },
+  { id: 'ambient-hero-text', section: 'ambient', get label() { return m.settings_entry_ambient_hero_text_label(); },
+    keywords: ['llm', 'ki', 'ai', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
+
+  /* ── Inhalte ── */
+  { id: 'calendar-selection', section: 'calendar', get label() { return m.settings_entry_calendar_selection_label(); },
+    keywords: ['auswahl', 'familie', 'termine', 'agenda', 'entität', 'anzeigen', 'ausblenden'] },
+  { id: 'reminders-selection', section: 'calendar', get label() { return m.settings_entry_reminders_selection_label(); },
+    keywords: ['erinnerungen', 'reminders', 'todo', 'aufgaben', 'listen', 'einkaufsliste', 'post-it', 'apple', 'icloud'] },
+  { id: 'shopping-stores', section: 'shopping', get label() { return m.settings_entry_shopping_stores_label(); },
+    keywords: ['einkaufsliste', 'laden', 'aldi', 'rewe', 'dm', 'anlegen', 'löschen', 'reihenfolge'] },
+  { id: 'shopping-categories', section: 'shopping', get label() { return m.settings_entry_shopping_categories_label(); },
+    keywords: ['sortieren', 'warengruppen', 'laufweg', 'frische', 'kühlung', 'drogerie'] },
+  { id: 'library-mode', section: 'media', get label() { return m.settings_entry_library_mode_label(); },
+    keywords: ['live', 'demo', 'fake', 'mock', 'automatisch', 'testdaten', 'bibliothek', 'jellyfin'] },
+  ...(!IS_DEMO ? [{ id: 'ai-song-lyrics', section: 'media' as const, get label() { return m.settings_entry_ai_song_lyrics_label(); },
+    keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] }] : []),
 
   /* ── Verbindungen · Dienste (eine Integrationskarte je Dienst) ── */
   { id: 'connection-status', section: 'services', get label() { return m.settings_entry_connection_status_label(); },
@@ -169,7 +204,6 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['url', 'server', 'host', 'ip', 'websocket', 'adresse', 'home assistant'] },
   { id: 'ha-token', section: 'services', get label() { return m.settings_entry_ha_token_label(); },
     keywords: ['home assistant', 'login', 'anmelden', 'auth', 'schlüssel', 'access token'] },
-
   { id: 'jf-url', section: 'services', get label() { return m.settings_entry_jf_url_label(); },
     keywords: ['jellyfin', 'media', 'server', 'url', 'filme', 'serien', 'host', 'adresse'] },
   { id: 'jf-session', section: 'services', get label() { return m.settings_entry_jf_session_label(); },
@@ -182,89 +216,40 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['paperless', 'ablage', 'dokumente', 'pin', 'privat', 'archiv', 'scan'] },
   ...(!IS_DEMO ? [{ id: 'songs-status', section: 'services' as const, get label() { return m.settings_entry_songs_status_label(); },
     keywords: ['songwerkstatt', 'ace-step', 'acestep', 'musik', 'lieder', 'generator', 'audio'] }] : []),
-
-  /* ── Verbindungen · Betriebsmodus (die eine Wahrheit für Live/Demo) ── */
-  { id: 'demo-mode', section: 'operating-mode', get label() { return m.settings_entry_demo_mode_label(); },
-    keywords: ['fake', 'backend', 'mock', 'simulation', 'entwicklung', 'testdaten', 'live', 'echt'] },
-  { id: 'library-mode', section: 'operating-mode', get label() { return m.settings_entry_library_mode_label(); },
-    keywords: ['live', 'demo', 'fake', 'mock', 'automatisch', 'testdaten', 'bibliothek', 'jellyfin'] },
-
-  /* ── KI · Zugang & Modelle ── */
   ...(AI_CUSTOMIZING_ENABLED ? [{
-    id: 'ai-access-status', section: 'ai-access' as const,
+    id: 'ai-access-status', section: 'services' as const,
     get label() { return m.settings_entry_ai_access_status_label(); },
     keywords: ['api', 'key', 'schlüssel', 'zugang', 'hermes', 'verbindung', 'kosten', 'konfiguriert'],
   }] : []),
-  { id: 'ai-models', section: 'ai-access', get label() { return m.settings_entry_ai_models_label(); },
+  { id: 'ai-models', section: 'services', get label() { return m.settings_entry_ai_models_label(); },
     keywords: ['modell', 'model', 'gpt', 'luna', 'codex', 'llm', 'welches'] },
-  ...(AI_CUSTOMIZING_ENABLED ? [{
-    id: 'ai-debug', section: 'ai-access' as const,
-    get label() { return m.settings_entry_ai_debug_label(); },
-    keywords: ['debug', 'diagnose', 'werkzeugschritte', 'rohtext', 'fehler', 'details'],
-  }] : []),
-
-  /* ── KI · Funktionen (alles, was einen KI-Zugang voraussetzt) ── */
-  ...(AI_CUSTOMIZING_ENABLED ? [{
-    id: 'ai-chat', section: 'ai-features' as const,
-    get label() { return m.settings_entry_ai_chat_label(); },
-    keywords: ['ki', 'ai', 'chat', 'agent', 'feature', 'anpassen', 'customizing', 'hermes', 'wunsch'],
-  }, {
-    id: 'ai-history', section: 'ai-features' as const,
-    get label() { return m.settings_entry_ai_history_label(); },
-    keywords: ['verlauf', 'sessions', 'historie', 'zurückrollen', 'rückgängig', 'rollback', 'features'],
-  }] : []),
-  { id: 'ambient-hero-text', section: 'ai-features', get label() { return m.settings_entry_ambient_hero_text_label(); },
-    keywords: ['llm', 'ki', 'ai', 'gpt', 'luna', 'codex', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
-  ...(!IS_DEMO ? [{ id: 'ai-song-lyrics', section: 'ai-features' as const, get label() { return m.settings_entry_ai_song_lyrics_label(); },
-    keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] }] : []),
-  ...(ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO ? [{
-    id: 'room-image-wizard', section: 'ai-features' as const, label: 'Raumbilder erstellen',
-    keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
-  }] : []),
-
-  /* ── Darstellung ── */
-  { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },
-    keywords: ['theme', 'dunkel', 'hell', 'dark', 'light', 'nacht', 'tag', 'automatisch', 'sonne', 'design', 'farben'] },
-  { id: 'ui-language', section: 'appearance', get label() { return m.settings_entry_ui_language_label(); },
-    keywords: ['sprache', 'language', 'deutsch', 'englisch', 'locale', 'übersetzung'] },
-  { id: 'layout-config', section: 'home-layout', get label() { return m.settings_entry_layout_config_label(); },
-    keywords: ['layout', 'raum', 'kontext', 'breite', 'flächen', 'panel', 'hero', 'kacheln', 'energie'] },
-  { id: 'layout-reset', section: 'home-layout', get label() { return m.settings_entry_layout_reset_label(); },
-    keywords: ['standard', 'default', 'reset', 'werkseinstellung'] },
-  { id: 'off-confirm-before', section: 'home-layout', get label() { return m.settings_entry_off_confirm_before_label(); },
-    keywords: ['mobile', 'lichter', 'fernseher', 'tv', 'uhrzeit', 'bestätigung', 'nachfrage', 'deaktivieren'] },
-  { id: 'standby-now', section: 'ambient', get label() { return m.settings_entry_standby_now_label(); },
-    keywords: ['ruhezustand', 'idle', 'bildschirmschoner', 'screensaver', 'schlafen', 'aus'] },
-  { id: 'ambient-deep-night', section: 'ambient', get label() { return m.settings_entry_ambient_deep_night_label(); },
-    keywords: ['nacht', 'nachts', 'uhr', 'rot', 'dunkel', 'standby', 'lockscreen', '22', '06', 'iphone'] },
-
-  /* ── Inhalte ── */
-  { id: 'calendar-selection', section: 'calendar', get label() { return m.settings_entry_calendar_selection_label(); },
-    keywords: ['auswahl', 'familie', 'termine', 'agenda', 'entität', 'anzeigen', 'ausblenden'] },
-  { id: 'reminders-selection', section: 'calendar', get label() { return m.settings_entry_reminders_selection_label(); },
-    keywords: ['erinnerungen', 'reminders', 'todo', 'aufgaben', 'listen', 'einkaufsliste', 'post-it', 'apple', 'icloud'] },
-  { id: 'shopping-stores', section: 'shopping', get label() { return m.settings_entry_shopping_stores_label(); },
-    keywords: ['einkaufsliste', 'laden', 'aldi', 'rewe', 'dm', 'anlegen', 'löschen', 'reihenfolge'] },
-  { id: 'shopping-categories', section: 'shopping', get label() { return m.settings_entry_shopping_categories_label(); },
-    keywords: ['sortieren', 'warengruppen', 'laufweg', 'frische', 'kühlung', 'drogerie'] },
 
   /* ── System ── */
   { id: 'service-health', section: 'status', get label() { return m.settings_entry_service_health_label(); },
     keywords: ['zigbee', 'mqtt', 'broker', 'tunnel', 'cloudflared', 'adguard', 'services', 'gesundheit'] },
-  { id: 'update-list', section: 'updates', get label() { return m.settings_entry_update_list_label(); },
+  { id: 'update-list', section: 'status', get label() { return m.settings_entry_update_list_label(); },
     keywords: ['aktualisierung', 'version', 'software', 'core', 'os', 'esphome', 'matter'] },
-  { id: 'laundry', section: 'notifications', get label() { return m.settings_laundry_title(); },
-    keywords: ['wäsche', 'waschmaschine', 'trockner', 'laundry', 'helper', 'blueprint', 'leistungssensor'] },
+  ...(AI_CUSTOMIZING_ENABLED ? [{
+    id: 'ai-chat', section: 'ai-customizing' as const,
+    get label() { return m.settings_entry_ai_chat_label(); },
+    keywords: ['ki', 'ai', 'chat', 'agent', 'feature', 'anpassen', 'customizing', 'hermes', 'wunsch'],
+  }, {
+    id: 'ai-history', section: 'ai-customizing' as const,
+    get label() { return m.settings_entry_ai_history_label(); },
+    keywords: ['verlauf', 'sessions', 'historie', 'zurückrollen', 'rückgängig', 'rollback', 'features'],
+  }, {
+    id: 'ai-debug', section: 'ai-customizing' as const,
+    get label() { return m.settings_entry_ai_debug_label(); },
+    keywords: ['debug', 'diagnose', 'werkzeugschritte', 'rohtext', 'fehler', 'details'],
+  }] : []),
   { id: 'cache-ha', section: 'maintenance', get label() { return m.settings_entry_cache_ha_label(); },
     keywords: ['home assistant', 'zustand', 'states', 'zwischenspeicher', 'cache'] },
   { id: 'cache-calendar', section: 'maintenance', get label() { return m.settings_entry_cache_calendar_label(); },
     keywords: ['termine', 'familie', 'events', 'zwischenspeicher', 'cache'] },
   { id: 'cache-icons', section: 'maintenance', get label() { return m.settings_entry_cache_icons_label(); },
     keywords: ['zuletzt verwendet', 'symbole', 'picker', 'zwischenspeicher', 'cache'] },
-  { id: 'reset-devices', section: 'maintenance', get label() { return m.settings_entry_reset_devices_label(); },
-    keywords: ['umbenennen', 'symbole', 'lampen', 'lichter', 'reset', 'standard'] },
-  { id: 'reset-scenes', section: 'maintenance', get label() { return m.settings_entry_reset_scenes_label(); },
-    keywords: ['scenes', 'presets', 'reset', 'standard'] },
+  { id: 'demo-mode', section: 'maintenance', get label() { return m.settings_entry_demo_mode_label(); },
+    keywords: ['fake', 'backend', 'mock', 'simulation', 'entwicklung', 'testdaten', 'live', 'echt'] },
   { id: 'reload-app', section: 'maintenance', get label() { return m.settings_entry_reload_app_label(); },
     keywords: ['neustart', 'refresh', 'reload', 'browser', 'kiosk'] },
 ];
@@ -292,11 +277,17 @@ export function settingsEntry(id: string): SettingsEntry | undefined {
 }
 
 /* Sidebar-Reihenfolge: Gruppen in der Reihenfolge von SETTINGS_GROUPS, je
-   Gruppe ihre Sektionen in der Reihenfolge von SETTINGS_SECTIONS. Gruppen ohne
-   Sektionen fallen heraus, damit die Sidebar nie eine leere Überschrift zeigt. */
+   Gruppe ihre Sektionen in der Reihenfolge von SETTINGS_SECTIONS. Sektionen,
+   deren Einträge alle durch abgeschaltete Feature-Flags entfallen sind, werden
+   ausgeblendet, damit die Sidebar nie eine leere Überschrift zeigt — genauso
+   wie Gruppen ohne Sektionen herausfallen. */
 export function settingsSidebar(): readonly { group: SettingsGroup; sections: readonly SettingsSection[] }[] {
+  const entriesBySection = new Map<SettingsSectionId, number>();
+  for (const entry of SETTINGS_ENTRIES) {
+    entriesBySection.set(entry.section, (entriesBySection.get(entry.section) ?? 0) + 1);
+  }
   return SETTINGS_GROUPS
-    .map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((s) => s.group === group.id) }))
+    .map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((s) => s.group === group.id && (entriesBySection.get(s.id) ?? 0) > 0) }))
     .filter((entry) => entry.sections.length > 0);
 }
 

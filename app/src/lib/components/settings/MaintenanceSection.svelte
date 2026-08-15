@@ -1,14 +1,22 @@
 <script lang="ts">
-  /* ── System · Wartung ──
+  /* ── System · Wartung & Diagnose ──
      Caches (unkritisch, ohne Rückfrage) getrennt von destruktiven Resets
-     (zweistufige Bestätigung, danach Neuladen nötig). */
+     (zweistufige Bestätigung, danach Neuladen nötig).
+
+     Der Demo-Schalter steht hier: er ist ein Werkzeug für Entwicklung und
+     Vorführung, keine Alltagseinstellung — und die einzige Stelle, an der
+     „echte Dienste oder simulierte Daten?“ global entschieden wird. */
   import Icon from '../Icon.svelte';
-  import { clearCache, resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
+  import SettingsCardHead from './SettingsCardHead.svelte';
+  import { clearCache, isCleared } from '../../state/settings-actions.svelte.ts';
+  import { settingsValues, setDemoMode } from '../../state/settings.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 </script>
 
-<h3 class="caps-label settings-group-label">{m.sys_caches()}</h3>
 <div class="settings-group">
+  <SettingsCardHead icon="i-database-refresh" tint="neutral"
+                    title={m.sys_caches()} sub={m.sys_card_caches()} />
+
   <div class="settings-row" data-setting-id="cache-ha">
     <span class="settings-row-icon"><Icon name="i-database-refresh" cls="icon icon-md" /></span>
     <div class="settings-row-text">
@@ -24,7 +32,7 @@
   <div class="settings-row" data-setting-id="cache-calendar">
     <span class="settings-row-icon"><Icon name="i-database-refresh" cls="icon icon-md" /></span>
     <div class="settings-row-text">
-      <span class="settings-row-label">Kalender-Cache</span>
+      <span class="settings-row-label">{m.sys_calendar_cache()}</span>
       <span class="settings-row-sub">{m.sys_calendar_cache_hint()}</span>
     </div>
     <button class="secondary-btn pressable" type="button"
@@ -36,7 +44,7 @@
   <div class="settings-row" data-setting-id="cache-icons">
     <span class="settings-row-icon"><Icon name="i-database-refresh" cls="icon icon-md" /></span>
     <div class="settings-row-text">
-      <span class="settings-row-label">Icon-Verlauf</span>
+      <span class="settings-row-label">{m.sys_icon_cache()}</span>
       <span class="settings-row-sub">{m.sys_icon_cache_hint()}</span>
     </div>
     <button class="secondary-btn pressable" type="button"
@@ -46,34 +54,23 @@
   </div>
 </div>
 
-<h3 class="caps-label settings-group-label">{m.sys_reset()}</h3>
 <div class="settings-group">
-  <div class="settings-row" data-setting-id="reset-devices">
-    <span class="settings-row-icon"><Icon name="i-restore" cls="icon icon-md" /></span>
+  <SettingsCardHead icon="i-wrench" tint="neutral"
+                    title={m.sys_card_app()} sub={m.sys_card_app_hint()} />
+
+  <div class="settings-row" data-setting-id="demo-mode">
+    <span class="settings-row-icon"><Icon name="i-television-play" cls="icon icon-md" /></span>
     <div class="settings-row-text">
-      <span class="settings-row-label">{m.sys_device_names_icons()}</span>
-      <span class="settings-row-sub">{m.sys_device_names_hint()}</span>
+      <span class="settings-row-label">{m.sys_demo_mode()}</span>
+      <span class="settings-row-sub">{m.sys_backend_demo_hint()}</span>
     </div>
-    <button class="secondary-btn danger-btn pressable" type="button"
-            onclick={() => resetStored('reset-devices', ['hmi:device-config', 'hmi:light-icon-overrides'])}>
-      {isConfirming('reset-devices') ? m.sys_reset_confirm() : isCleared('reset-devices') ? m.sys_reset_done() : m.sys_reset()}
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.demoMode} aria-label={m.sys_demo_mode()}
+            onclick={() => setDemoMode(!settingsValues.demoMode)}>
+      <span class="settings-switch-knob"></span>
     </button>
   </div>
 
-  <div class="settings-row" data-setting-id="reset-scenes">
-    <span class="settings-row-icon"><Icon name="i-restore" cls="icon icon-md" /></span>
-    <div class="settings-row-text">
-      <span class="settings-row-label">{m.sys_scenes()}</span>
-      <span class="settings-row-sub">{m.sys_scenes_hint()}</span>
-    </div>
-    <button class="secondary-btn danger-btn pressable" type="button"
-            onclick={() => resetStored('reset-scenes', ['hmi:scene-config'])}>
-      {isConfirming('reset-scenes') ? m.sys_reset_confirm() : isCleared('reset-scenes') ? m.sys_reset_done() : m.sys_reset()}
-    </button>
-  </div>
-</div>
-
-<div class="settings-group">
   <div class="settings-row" data-setting-id="reload-app">
     <span class="settings-row-icon"><Icon name="i-refresh" cls="icon icon-md" /></span>
     <div class="settings-row-text">

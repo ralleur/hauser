@@ -49,17 +49,6 @@ jobs:
       - name: Verify license boundary
         run: ./scripts/verify-license-boundary.sh
 
-      - name: Test Home Assistant App workflow validator
-        run: python3 scripts/test-verify-ha-app-workflow.py
-
-      - name: Verify Home Assistant App contract
-        run: python3 scripts/verify-ha-app.py
-
-      - name: Lint Home Assistant App
-        uses: frenck/action-addon-linter@f995494fd84fae6310d23617e66d0e37de4f14eb # v2.21
-        with:
-          path: ./hauser
-
       - name: Build production application
         working-directory: app
         run: npm run build
@@ -149,7 +138,6 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           tags: |
             ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
-            ${{ steps.image.outputs.repository }}:${{ steps.image.outputs.version }}
             ${{ steps.image.outputs.repository }}:sha-${{ steps.image.outputs.short_sha }}
 
       - name: Report immutable manifest

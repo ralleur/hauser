@@ -393,7 +393,7 @@ describe('laundry settings client', () => {
 
   it('keeps the productive UI wired to all preview/apply routes and the global reload marker', () => {
     const clientSource = readFileSync(new URL('./laundry-settings.ts', import.meta.url), 'utf8');
-    const uiSource = readFileSync(new URL('../components/settings/NotificationsSection.svelte', import.meta.url), 'utf8');
+    const uiSource = readFileSync(new URL('../components/settings/LaundrySection.svelte', import.meta.url), 'utf8');
     for (const route of [
       '/api/laundry/existing/validate', '/api/laundry/existing/apply',
       '/api/laundry/disable/preview', '/api/laundry/disable/apply',

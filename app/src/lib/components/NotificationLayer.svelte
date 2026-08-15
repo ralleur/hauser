@@ -8,24 +8,18 @@
 
   let now = $state(Date.now());
 
-  function laundryValue(entityId: string | null): unknown {
-    return entityId && runtime.isEntityAvailable(entityId)
-      ? runtime.merged(entityId)
-      : undefined;
-  }
-
   $effect(() => {
     const washer = LAUNDRY_ENTITIES.washer;
     const dryer = LAUNDRY_ENTITIES.dryer;
     notifications.syncLaundry('washer', normalizeLaundryState(
       washer,
-      laundryValue(washer?.entityId ?? null),
-      laundryValue(washer?.cycleMarkerEntityId ?? null),
+      washer ? runtime.merged(washer.entityId) : undefined,
+      washer?.cycleMarkerEntityId ? runtime.merged(washer.cycleMarkerEntityId) : undefined,
     ));
     notifications.syncLaundry('dryer', normalizeLaundryState(
       dryer,
-      laundryValue(dryer?.entityId ?? null),
-      laundryValue(dryer?.cycleMarkerEntityId ?? null),
+      dryer ? runtime.merged(dryer.entityId) : undefined,
+      dryer?.cycleMarkerEntityId ? runtime.merged(dryer.cycleMarkerEntityId) : undefined,
     ));
   });
 

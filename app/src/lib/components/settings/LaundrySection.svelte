@@ -3,6 +3,7 @@
   import { LAUNDRY_ENTITIES } from '../../state/entities.ts';
   import { deviceManager } from '../../state/device-manager.svelte.ts';
   import { settingsUi } from '../../state/settings.svelte.ts';
+  import SettingsCardHead from './SettingsCardHead.svelte';
   import {
     LaundrySettingsController,
     type LaundryCardState,
@@ -318,8 +319,11 @@
 {/snippet}
 
 <section data-setting-id="laundry" aria-labelledby="settings-laundry-title">
-  <h3 id="settings-laundry-title" class="caps-label settings-group-label">{m.settings_laundry_title()}</h3>
-  <p class="settings-note laundry-intro">{m.settings_laundry_intro()}</p>
+  <div class="settings-group">
+    <SettingsCardHead icon="i-washing-machine" tint="warm"
+                      title={m.settings_laundry_title()} sub={m.settings_laundry_intro()} />
+  </div>
+  <span id="settings-laundry-title" hidden>{m.settings_laundry_title()}</span>
 
   <datalist id="laundry-compatible-sources">
     {#each compatibleSources() as source (source.entityId)}
@@ -339,8 +343,6 @@
 </section>
 
 <style>
-  .laundry-intro { margin-top: 0; }
-
   .laundry-cards {
     display: flex;
     flex-wrap: wrap;

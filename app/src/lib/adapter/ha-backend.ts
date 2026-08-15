@@ -86,7 +86,7 @@ export class HaBackend implements Backend {
   #seed: Map<string, unknown>;
   #laundryEntityIds: Set<string>;
 
-  #onUpdate: ((entityId: string, value: unknown, stale?: boolean, available?: boolean) => void) | null = null;
+  #onUpdate: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #onAuth: ((reason: AuthRequiredReason) => void) | null = null;
   #onCmdErr: ((entityId: string) => void) | null = null;
@@ -121,7 +121,7 @@ export class HaBackend implements Backend {
     void this.#start();
   }
 
-  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean, available?: boolean) => void): void {
+  subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void {
     this.#onUpdate = onUpdate;
     // Sofort-Render aus dem Cache (bzw. Seed) — kein Leerzustand/Spinner (docs/04).
     const cache = this.#loadCache();
@@ -405,7 +405,6 @@ export class HaBackend implements Backend {
   }
 
   #onDiff(diff: EntitiesDiff): void {
-    const initialSnapshot = this.#raw.size === 0;
     const changed = applyEntitiesDiff(this.#raw, diff);
     for (const id of changed) {
       const raw = this.#raw.get(id);
@@ -414,21 +413,12 @@ export class HaBackend implements Backend {
         this.#onUpdate?.(id, undefined);
         continue;
       }
-      if (raw.state === 'unavailable' && !this.#laundryEntityIds.has(id)) {
-        this.#onUpdate?.(id, this.#last.get(id), false, false);
-        continue;
-      }
       const value = this.#laundryEntityIds.has(id)
         ? haToLaundryState(raw)
         : haToValue(id, raw, this.#last.get(id));
       if (value === undefined) continue; // nicht steuerbare Domäne
       this.#last.set(id, value);
       this.#onUpdate?.(id, value);
-    }
-    if (initialSnapshot) {
-      for (const id of this.#entityIds) {
-        if (!this.#raw.has(id)) this.#onUpdate?.(id, this.#last.get(id), false, false);
-      }
     }
     if (!this.#receivedFreshData && changed.length > 0) {
       this.#receivedFreshData = true;

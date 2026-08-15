@@ -42,52 +42,69 @@ describe('settings registry', () => {
   it('jede Sektion ist genau einer Gruppe zugeordnet und keine Gruppe bleibt leer', () => {
     const sidebar = settingsSidebar();
     expect(sidebar.map((s) => s.group.id)).toEqual(SETTINGS_GROUPS.map((g) => g.id));
-    expect(sidebar.flatMap((s) => s.sections).length).toBe(SETTINGS_SECTIONS.length);
+    /* Nicht gegen SETTINGS_SECTIONS.length prüfen: im öffentlichen Produkt
+       fallen Sektionen weg, deren Einträge alle hinter einem Feature-Flag
+       liegen (ai-customizing). Erwartet wird genau die Menge mit Einträgen. */
+    const withEntries = SETTINGS_SECTIONS.filter((s) => SETTINGS_ENTRIES.some((e) => e.section === s.id));
+    expect(sidebar.flatMap((s) => s.sections).length).toBe(withEntries.length);
     for (const { sections } of sidebar) expect(sections.length).toBeGreaterThan(0);
+  });
+
+  it('blendet leere Sektionen aus der Sidebar aus (Feature-Flag-Fall)', () => {
+    const sidebarSectionIds = new Set(settingsSidebar().flatMap((s) => s.sections.map((sec) => sec.id)));
+    for (const section of SETTINGS_SECTIONS) {
+      const hasEntries = SETTINGS_ENTRIES.some((e) => e.section === section.id);
+      expect(sidebarSectionIds.has(section.id)).toBe(hasEntries);
+    }
   });
 });
 
-/* Die Umstrukturierung hat einen fachlichen Kern: Integrationen an einer
-   Stelle, alles mit KI-Zugang an einer zweiten. Diese Zuordnung ist der Zweck
-   der Registry und wird deshalb festgehalten. */
+/* Die Umstrukturierung hat einen fachlichen Kern: Einsortiert wird nach dem
+   Objekt, das die Einstellung betrifft — niemals nach der Technik dahinter.
+   Diese Zuordnung ist der Zweck der Registry und wird deshalb festgehalten. */
 describe('fachliche Gliederung', () => {
-  it('bündelt alle Integrationen unter Verbindungen · Dienste', () => {
-    for (const id of ['ha-url', 'ha-token', 'jf-url', 'jf-session', 'icloud-setup', 'ablage-status', 'songs-status']) {
+  it('bündelt alle Integrationen inklusive KI-Zugang unter Verbindungen · Dienste', () => {
+    for (const id of ['connection-status', 'ha-url', 'ha-token', 'jf-url', 'jf-session', 'jf-device', 'icloud-setup', 'ablage-status', 'ai-models']) {
       expect(settingsEntry(id)?.section).toBe('services');
+    }
+    /* Flag-abhängige Integrationen: wenn vorhanden, dann hier — im
+       öffentlichen Produkt entfallen sie ganz. */
+    for (const id of ['songs-status', 'ai-access-status']) {
+      const entry = settingsEntry(id);
+      if (entry) expect(entry.section).toBe('services');
     }
     expect(settingsSection('services').group).toBe('connectivity');
   });
 
-  it('führt öffentliche KI-Funktionen unter KI-Funktionen und Customizing nur im privaten Produkt', () => {
-    for (const id of ['ambient-hero-text', 'ai-song-lyrics']) {
-      expect(settingsEntry(id)?.section).toBe('ai-features');
-    }
+  it('führt KI-Customizing-Einträge nur im privaten Produkt', () => {
     for (const id of ['ai-access-status', 'ai-debug', 'ai-chat', 'ai-history']) {
       expect(settingsEntry(id) !== undefined).toBe(AI_CUSTOMIZING_ENABLED);
-      if (id === 'ai-chat' || id === 'ai-history') {
-        expect(settingsEntry(id)?.section === 'ai-features').toBe(AI_CUSTOMIZING_ENABLED);
-      }
     }
-    expect(settingsSection('ai-features').group).toBe('ai');
-    /* Der Zugang steht vor den Funktionen, die ihn voraussetzen. */
-    const aiSections = SETTINGS_SECTIONS.filter((s) => s.group === 'ai').map((s) => s.id);
-    expect(aiSections).toEqual(['ai-access', 'ai-features']);
   });
 
-  it('hält Live/Demo an einer einzigen Stelle zusammen', () => {
-    expect(settingsEntry('demo-mode')?.section).toBe('operating-mode');
-    expect(settingsEntry('library-mode')?.section).toBe('operating-mode');
+  it('hält alle drei Standby-Einstellungen zusammen unter Ambient & Standby', () => {
+    for (const id of ['standby-now', 'ambient-deep-night', 'ambient-hero-text']) {
+      expect(settingsEntry(id)?.section).toBe('ambient');
+    }
+    expect(settingsSection('ambient').group).toBe('appearance');
   });
 
-  it('führt die Haushaltsstruktur sichtbar unter Zuhause statt unter Dienste', () => {
-    expect(settingsEntry('household-setup')?.section).toBe('rooms-devices');
+  it('führt Geräte-Resets mit der Geräteverwaltung zusammen', () => {
+    for (const id of ['household-setup', 'reset-devices', 'reset-scenes']) {
+      expect(settingsEntry(id)?.section).toBe('rooms-devices');
+    }
     expect(settingsSection('rooms-devices').group).toBe('home');
-    expect(searchSettings('räume verwalten')[0]?.entry.id).toBe('household-setup');
   });
 
-  it('führt Wäsche direkt unter System · Benachrichtigungen', () => {
-    expect(settingsEntry('laundry')?.section).toBe('notifications');
-    expect(settingsSection('notifications').group).toBe('system');
+  it('hat keine Gruppen-Id ai mehr', () => {
+    expect(SETTINGS_GROUPS.map((g) => g.id)).not.toContain('ai');
+    expect(SETTINGS_SECTIONS.map((s) => s.id)).not.toContain('ai-access');
+    expect(SETTINGS_SECTIONS.map((s) => s.id)).not.toContain('ai-features');
+  });
+
+  it('hält Wäsche unter Zuhause statt unter System', () => {
+    expect(settingsEntry('laundry')?.section).toBe('laundry');
+    expect(settingsSection('laundry').group).toBe('home');
     expect(searchSettings('wäsche')[0]?.entry.id).toBe('laundry');
   });
 
@@ -133,13 +150,12 @@ describe('searchSettings', () => {
   it('liefert die Sektion zum Eintrag mit (Brotkrume der Trefferliste)', () => {
     const [first] = searchSettings('tageskommentar');
     expect(first.entry.id).toBe('ambient-hero-text');
-    expect(first.section.id).toBe('ai-features');
+    expect(first.section.id).toBe('ambient');
   });
 
-  /* Ein Modellname führt zuerst zur Modell-Übersicht, nicht zu einer einzelnen
-     Funktion — dort steht, was das Modell überhaupt kostet und aufruft. */
-  it('führt bei einem Modellnamen zuerst zum Zugang', () => {
+  /* Ein Modellname führt zuerst zur Dienstkarte, wo das Modell steht. */
+  it('führt bei einem Modellnamen zuerst zur Dienstkarte', () => {
     const [first] = searchSettings('luna');
-    expect(first.section.id).toBe('ai-access');
+    expect(first.section.id).toBe('services');
   });
 });

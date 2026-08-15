@@ -12,7 +12,7 @@ describe('notifications', () => {
   });
 
   it('formatiert laufende Dauern kompakt', () => {
-    expect(relativeDuration(1_000_000, 1_000_000 + 42 * 60_000)).toBe('42 min');
-    expect(relativeDuration(1_000_000, 1_000_000 + 125 * 60_000)).toBe('2 h 5 min');
+    expect(relativeDuration(1_000_000, 1_000_000 + 42 * 60_000)).toBe('42 Min.');
+    expect(relativeDuration(1_000_000, 1_000_000 + 125 * 60_000)).toBe('2 Std. 5 Min.');
   });
 });

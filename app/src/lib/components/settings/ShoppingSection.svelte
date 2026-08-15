@@ -9,6 +9,7 @@
   } from '../../state/shopping-settings.svelte.ts';
   import { confirmThen, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+  import SettingsCardHead from './SettingsCardHead.svelte';
 
   let shoppingDraft = $state('');
   let shoppingBusy = $state(false);
@@ -48,8 +49,8 @@
   }
 </script>
 
-<h3 class="caps-label settings-group-label">{m.sys_stores()}</h3>
 <div class="settings-group" data-setting-id="shopping-stores">
+  <SettingsCardHead icon="i-cart" tint="success" title={m.sys_stores()} />
   {#each shoppingConfig.stores as store, index (store.id)}
     <div class="settings-row shopping-store-row">
       <button class="shopping-expand pressable" type="button"

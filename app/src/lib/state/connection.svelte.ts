@@ -6,7 +6,6 @@
 
 import { runtime } from '../adapter/runtime.svelte.ts';
 import type { ConnectionStatus } from '../adapter/types.ts';
-import { m } from '../../paraglide/messages.js';
 
 interface ConnectionView {
   status: ConnectionStatus;
@@ -17,13 +16,14 @@ interface ConnectionView {
   banner: string | null; // schmales Banner, null = kein Banner
 }
 
+const VIEW: Record<ConnectionStatus, Omit<ConnectionView, 'status'>> = {
+  connected:    { online: true,  disconnected: false, label: 'Verbunden',      dot: 'dot-online',  banner: null },
+  connecting:   { online: false, disconnected: false, label: 'Verbindet…',     dot: 'dot-warning', banner: 'Verbindung wird aufgebaut…' },
+  reconnecting: { online: false, disconnected: false, label: 'Neu verbinden…', dot: 'dot-warning', banner: 'Neu verbinden…' },
+  disconnected: { online: false, disconnected: true,  label: 'Getrennt',       dot: 'dot-offline', banner: 'Verbindung unterbrochen' },
+};
+
 export function connection(): ConnectionView {
   const status = runtime.connectionStatus;
-  const view: Record<ConnectionStatus, Omit<ConnectionView, 'status'>> = {
-    connected:    { online: true,  disconnected: false, label: m.state_connected(),    dot: 'dot-online',  banner: null },
-    connecting:   { online: false, disconnected: false, label: m.state_connecting(),   dot: 'dot-warning', banner: m.state_connecting() },
-    reconnecting: { online: false, disconnected: false, label: m.state_reconnecting(), dot: 'dot-warning', banner: m.state_reconnecting() },
-    disconnected: { online: false, disconnected: true,  label: m.state_disconnected(), dot: 'dot-offline', banner: m.state_connection_interrupted() },
-  };
-  return { status, ...view[status] };
+  return { status, ...VIEW[status] };
 }

@@ -19,6 +19,7 @@
     setSelectedReminderListIds,
   } from '../../state/reminders.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+  import SettingsCardHead from './SettingsCardHead.svelte';
 
   let calSelection = $state<string[] | null>(selectedCalendarIds());
   let reminderSelection = $state<string[]>(selectedReminderListIds() ?? []);
@@ -57,8 +58,8 @@
   }
 </script>
 
-<h3 class="caps-label settings-group-label">{m.sys_shown_calendars()}</h3>
 <div class="settings-group" data-setting-id="calendar-selection">
+  <SettingsCardHead icon="i-calendar" tint="cool" title={m.sys_shown_calendars()} />
   {#if availableCalendars.sources.length === 0}
     <div class="settings-row">
       <span class="settings-row-icon"><Icon name="i-calendar" cls="icon icon-md" /></span>
@@ -97,8 +98,8 @@
 </div>
 <p class="settings-note">{m.sys_calendar_note()}</p>
 
-<h3 class="caps-label settings-group-label">{m.sys_shown_reminders()}</h3>
 <div class="settings-group" data-setting-id="reminders-selection">
+  <SettingsCardHead icon="i-check-circle-outline" tint="cool" title={m.sys_shown_reminders()} />
   {#if availableReminderLists.sources.length === 0}
     <div class="settings-row">
       <span class="settings-row-icon"><Icon name="i-check-circle-outline" cls="icon icon-md" /></span>

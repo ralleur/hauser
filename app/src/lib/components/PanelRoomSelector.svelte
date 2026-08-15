@@ -5,8 +5,6 @@
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomTemperature } from '../state/commands.ts';
-  import { runtime } from '../adapter/runtime.svelte.ts';
-  import { climateEntityId, lightEntityId } from '../state/entities.ts';
   import {
     clampPanelRoomPage,
     panelRoomPageForSelection,
@@ -67,14 +65,9 @@
       <div class="room-page" aria-hidden={multiPage && pageIndex !== currentPage} inert={multiPage && pageIndex !== currentPage}>
         {#each pageRooms as room (room.id)}
           {@const climate = mergedClimate(room.id)}
-          {@const climateId = climateEntityId(room.id)}
-          {@const climateAvailable = !climateId || runtime.isEntityAvailable(climateId)}
           {@const temp = roomTemperature(room.id)}
-          {@const lightsOn = room.lights.filter((light) =>
-            runtime.isEntityAvailable(light.entityId ?? lightEntityId(room.id, light.id))
-            && mergedLight(room.id, light.id)?.on
-          ).length}
-          {@const mode = climate && climateAvailable ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
+          {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
+          {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
           <button
             class="room-btn pressable"
             type="button"

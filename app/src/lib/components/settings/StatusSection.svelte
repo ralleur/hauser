@@ -5,10 +5,12 @@
      die Dienste hinter Home Assistant (Zigbee, MQTT, Tunnel, …). */
   import { appState, SERVICE_STATUS } from '../../state/app.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+  import Icon from '../Icon.svelte';
+  import SettingsCardHead from './SettingsCardHead.svelte';
 </script>
 
-<h3 class="caps-label settings-group-label">{m.sys_services()}</h3>
 <div class="settings-group" data-setting-id="service-health">
+  <SettingsCardHead icon="i-heart-pulse" tint="success" title={m.sys_services()} />
   {#each appState.system.services as svc (svc.id)}
     {@const st = SERVICE_STATUS[svc.status]}
     <div class="settings-row">
@@ -21,3 +23,17 @@
     </div>
   {/each}
 </div>
+
+<div class="settings-group" data-setting-id="update-list">
+  <SettingsCardHead icon="i-download" tint="neutral" title={m.sys_card_updates()} />
+  {#each appState.system.updates as u (u.name)}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-download" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{u.name}</span>
+      </div>
+      <span class="settings-row-value num">{u.from} <span class="settings-arrow">→</span> {u.to}</span>
+    </div>
+  {/each}
+</div>
+<p class="settings-note">{m.sys_updates_note()}</p>

@@ -37,10 +37,6 @@ function readShared(key: string): string | null {
 export function rehydrateSharedConfigConsumers(): void {
   deviceManager.config = loadDeviceConfig();
   appState.rooms = buildRuntimeRooms(ROOM_SEED, deviceManager.catalog, deviceManager.config);
-  if (import.meta.env.VITE_DEMO === '1') {
-    void import('../demo/demo-names.ts')
-      .then(({ applyDemoNames }) => applyDemoNames(appState.rooms));
-  }
   rehydrateLayoutManager();
   rehydrateImmersionLight();
   sceneManager.config = loadSceneConfig();

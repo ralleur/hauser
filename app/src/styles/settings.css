@@ -322,11 +322,166 @@
   100% { opacity: 0; }
 }
 
+/* ── Sektionskopf in der Karte (Standardmuster aller Sektionen) ──
+   Getönte Icon-Kachel + Titel + Erklärzeile sitzen *in* der Karte, statt als
+   freistehendes caps-Label darüber. Überschrift und Inhalt sind damit eine
+   Fläche — das trägt die Gliederung auch auf dem Phone, wo ein freistehendes
+   Mikro-Label zwischen zwei Karten verschwimmt. */
+.settings-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+.settings-card-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.settings-card-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-snug);
+  line-height: var(--leading-tight);
+}
+.settings-card-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-wrap: pretty;
+}
+/* Der Kopf ist keine Zeile — die erste echte Zeile darunter bekommt deshalb
+   keinen Trennstrich, sonst hinge er unter der Überschrift in der Luft. */
+.settings-card-head + .settings-row { border-top: 0; }
+
 /* ── Controls ── */
 
-/* Segment (Erscheinungsbild) — Muster .mode-segment, aber mit Text-Label */
+/* Auswahlkarten (Erscheinungsbild): Glyph, Label, Erklärung — das Muster für
+   „wenige, gleichrangige Optionen, die eine Erklärung brauchen“. Das Raster
+   bricht um, statt die Karten schmalzuquetschen; Beschreibungen umbrechen,
+   statt abgeschnitten zu werden. */
+.settings-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+.settings-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  text-align: center;
+  transition: border-color var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out);
+}
+.settings-option-glyph {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-text-secondary) 14%, transparent);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.settings-option-glyph .icon { width: var(--icon-lg); height: var(--icon-lg); }
+.settings-option-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-tight);
+}
+.settings-option-desc {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  text-wrap: pretty;
+}
+.settings-option.is-active {
+  border-color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 12%, var(--color-surface-2));
+}
+.settings-option.is-active .settings-option-label { color: var(--color-accent-warm); }
+.settings-option.is-active .settings-option-glyph {
+  background: color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
+  color: var(--color-accent-warm);
+}
+/* Auswahlhaken statt reinem Rahmenwechsel: die Auswahl bleibt auch dann
+   lesbar, wenn der Akzent im Hellmodus schwächer gegen die Fläche steht. */
+.settings-option-check {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-warm);
+  color: var(--color-text-on-accent);
+}
+.settings-option-check .icon { width: var(--icon-sm); height: var(--icon-sm); }
+/* Fortgeschrittene Optionen: sichtbar zurückgenommen, aber wählbar. */
+.settings-option.is-advanced:not(.is-active) .settings-option-label,
+.settings-option.is-advanced:not(.is-active) .settings-option-desc { color: var(--color-text-tertiary); }
+.settings-option-mark {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-text-secondary) 16%, transparent);
+  color: var(--color-text-tertiary);
+}
+.settings-option-mark .icon { width: var(--icon-sm); height: var(--icon-sm); }
+
+/* Chips (Sprache, Modus-Wahl): kompakte, gleichrangige Werte ohne Erklärung.
+   Umbruch statt Scroll — sechs Sprachen passen so auch auf ein Phone. */
+.settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.settings-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  transition: border-color var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.settings-chip.is-active {
+  border-color: var(--color-accent-warm);
+  background: var(--color-accent-warm);
+  color: var(--color-text-on-accent);
+}
+.settings-chip .icon { width: var(--icon-sm); height: var(--icon-sm); }
+
+/* Segment (Alt-Muster) — bleibt für zwei/drei kurze Textwerte. `flex: 1 1 auto`
+   plus `min-width: 0` statt `flex: 1`: Beschriftungen dürfen umbrechen, sonst
+   schneidet der Flex-Container sie auf schmalen Viewports ab. */
 .settings-seg {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 .settings-seg-btn {
@@ -334,15 +489,17 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: var(--touch-preferred);
-  padding: 0 var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
+  text-wrap: pretty;
 }
 .settings-seg-btn.is-active {
   background: var(--color-surface-inverse);
@@ -972,7 +1129,10 @@
   display: block;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4));
+  /* Muss die volle .phone-bottom-nav freihalten (touch-min + space-1 + Safe
+     Area), sonst endet die letzte Karte unter der Leiste. Plus space-5, damit
+     sie nicht bündig an der Kante klebt. */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-1) + var(--space-5));
 }
 .settings.is-phone .settings-sidebar,
 .settings.is-phone .settings-pane {
@@ -1000,3 +1160,14 @@
   gap: var(--space-3);
 }
 .settings.is-phone .settings-pane-head .settings-icon-tile.is-lg { display: none; }
+/* Phone: Zurück-Button über der Überschrift statt daneben — die Überschrift
+   bekommt so die volle Breite und der Untertitel bleibt zweizeilig. */
+.settings.is-phone .settings-pane-head { flex-direction: column; }
+.settings.is-phone .settings-pane-head h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+}
+.settings.is-phone .settings-card-head,
+.settings.is-phone .settings-row { padding-inline: var(--space-4); }
+/* Zwei Auswahlkarten pro Reihe statt vier gequetschten. */
+.settings.is-phone .settings-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
