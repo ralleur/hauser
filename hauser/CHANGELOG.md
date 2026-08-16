@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0-beta.5 - 2026-08-16
+
+### Fixed
+
+- The setup wizard now discovers switches and media players. Switches were
+  previously dropped entirely, and media players never became media targets.
+  Several switches in one room no longer collapse into a single entry.
+  Reported in #7.
+
+### Added
+
+- Vacuums appear as a start / return-to-base control. Built against Home
+  Assistant's documented `vacuum` services, not yet verified on real hardware.
+
 ## 0.4.0-beta.4 - 2026-08-16
 
 ### Fixed

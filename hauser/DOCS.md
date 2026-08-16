@@ -2,10 +2,10 @@
 
 ## Install
 
-> **Experimental beta:** `0.4.0-beta.4` passed installation, startup, setup
+> **Experimental beta:** the App path passed installation, startup, setup
 > against real Home Assistant, one real entity command and persistence across an
-> App restart on the maintainer's Home Assistant OS system. It is not yet a broad
-> compatibility or support promise.
+> App restart on the maintainer's Home Assistant OS system, last verified on
+> `0.4.0-beta.4`. It is not yet a broad compatibility or support promise.
 
 1. In Home Assistant, open **Settings → Apps → App Store → Repositories**.
 2. Add `https://github.com/ralleur/hauser`.
@@ -70,8 +70,9 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.4` is the current published App and Docker/Compose beta. It fixes
-  the start failure reported in #6, where the App required `/data/assets` for
-  room images without anything creating it. The focused maintainer-operated
-  Home Assistant OS smoke passed; an unrelated real-home installation remains
-  the next beta-stabilisation evidence gate.
+- `0.4.0-beta.5` is the current published App and Docker/Compose beta. It makes
+  the setup wizard discover switches, media players and vacuums that earlier
+  betas silently dropped (#7), and carries the `/data/assets` start fix from
+  `0.4.0-beta.4` (#6). The vacuum path follows the documented Home Assistant
+  service set and is not yet verified against real hardware. An unrelated
+  real-home installation remains the next beta-stabilisation evidence gate.

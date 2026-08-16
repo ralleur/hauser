@@ -3,6 +3,26 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.4.0-beta.5] - 2026-08-16
+
+### Fixed
+
+- The setup wizard discovered only lights, climate, temperature, presence,
+  window and camera entities. Switches were dropped without a trace — the
+  domain was never mapped, so room-assigned switches reached neither the
+  generated room configuration nor the ignored list. Media players were never
+  offered as media targets even though the runtime already supported them.
+  Reported in #7.
+- A room accepted only one entity per non-light role, so several switches in
+  the same room collapsed into a single entry. Switches may now appear as often
+  per room as lights do.
+
+### Added
+
+- Vacuums are discovered and exposed as a start / return-to-base control. This
+  path follows Home Assistant's documented `vacuum` service set and has not yet
+  been verified against physical hardware.
+
 ## [0.4.0-beta.4] - 2026-08-16
 
 ### Fixed
