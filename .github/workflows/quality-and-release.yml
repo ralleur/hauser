@@ -139,6 +139,7 @@ jobs:
           tags: |
             ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
             ${{ steps.image.outputs.repository }}:sha-${{ steps.image.outputs.short_sha }}
+            ${{ startsWith(github.ref, 'refs/tags/v') && format('{0}:{1}', steps.image.outputs.repository, steps.image.outputs.version) || '' }}
 
       - name: Report immutable manifest
         shell: bash

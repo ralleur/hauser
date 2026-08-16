@@ -35,6 +35,7 @@ body:
       options:
         - Docker Compose from source
         - Published container image
+        - Home Assistant OS App
         - Local developer build
         - Static demo
         - Other

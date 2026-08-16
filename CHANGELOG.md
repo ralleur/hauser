@@ -3,6 +3,27 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.4.0-beta.4] - 2026-08-16
+
+### Fixed
+
+- The Home Assistant App failed to start with
+  `RUNTIME_DIRECTORY_NOT_WRITABLE` on `/data/assets`. The App manifest
+  requires that directory for generated room images, but the container
+  entrypoint never created it. The entrypoint now derives the directories it
+  prepares from `HMI_REQUIRED_WRITABLE_DIRS` — the same list the readiness
+  check verifies — so a deployment cannot require a directory that nothing
+  creates. Reported in #6.
+- Startup and household-configuration diagnostics are reported in English.
+
+### Changed
+
+- The App manifest and the container entrypoint ship from the release
+  pipeline instead of being maintained by hand, and the release preflight
+  fails when the manifest version and the published image version drift apart.
+- Tagged releases publish the plain `<version>` image tag alongside `v<version>`,
+  which is the tag the Home Assistant Supervisor resolves from the manifest.
+
 ## [0.4.0-beta.1] - Unreleased
 
 This is the planned first public release. It remains a self-hosted hobby-project

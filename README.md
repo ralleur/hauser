@@ -42,8 +42,8 @@ automatic configuration migration, persistent volumes, backup/restore and a
 documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
-`v0.4.0-beta.1` will be the first public release. After publication, its
-versioned GHCR image is the normal installation path. A real installation by an
+`v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
+normal installation path; `v0.4.0-beta.4` is current. A real installation by an
 external person in a second household remains mandatory during beta
 stabilisation, before the release candidate — see [the roadmap](ROADMAP.md).
 
@@ -156,8 +156,10 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.4.0-beta.1` is published only after the
-matching public beta tag passes the release workflow. When deliberately building
+The image `ghcr.io/ralleur/hauser:v0.4.0-beta.4` is published only after the
+matching public beta tag passes the release workflow. Tagged releases also
+publish the plain `0.4.0-beta.4` tag, which the Home Assistant Supervisor
+resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 
 ```bash
@@ -267,8 +269,8 @@ All repository documentation intended for users and contributors is in English.
 Hauser is pre-release beta-stage software. The design system, Home Assistant and
 Jellyfin adapters, deterministic onboarding, HA-backed calendar path, optional Paperless
 bridge, companion-backed household data, panel shell and phone shell are
-implemented. `v0.4.0-beta.1` will be the first public beta; the repository,
-documentation, image and static demo are prepared as one release line.
+implemented. `v0.4.0-beta.1` was the first public beta; the repository,
+documentation, image and static demo move as one release line.
 
 This is a hobby project maintained by one person. There is no SLA and response
 times remain unpredictable, but focused bug fixes, installation evidence,

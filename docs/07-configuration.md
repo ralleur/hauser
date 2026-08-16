@@ -121,7 +121,6 @@ screens.
 The configuration core, source-built container, Compose file, persistent
 `/config`, `/data` and `/assets` volumes, deterministic setup wizard and automatic
 v1-to-v2 migration with rollback backup are implemented. The versioned registry
-image will be the normal public installation path after `v0.4.0-beta.1` is
-published. External real-home evidence remains
+image is the normal public installation path. External real-home evidence remains
 required during beta stabilisation before the release candidate; the first beta
 does not claim broad compatibility or a support promise.

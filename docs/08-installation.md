@@ -1,8 +1,8 @@
 # Installation and operation
 
-Hauser `v0.4.0-beta.1` is the prepared first public technical beta. After the
-matching tag passes the release workflow, the release package uses
-`ghcr.io/ralleur/hauser:v0.4.0-beta.1`. An explicit source-build overlay remains
+Hauser `v0.4.0-beta.4` is the current public technical beta. Once a tag passes
+the release workflow, the release package uses
+`ghcr.io/ralleur/hauser:v0.4.0-beta.4`. An explicit source-build overlay remains
 available for development and source-level verification. Neither path comes with
 a support promise.
 
@@ -143,6 +143,27 @@ in the image or Git. Manual config replacement does not alter those credentials.
 An active installation can reopen the guided editor from **System → Services →
 Edit setup**. Opening or cancelling does not write anything; only a confirmed,
 validated change atomically replaces `/config/household.json`.
+
+## Home Assistant OS App
+
+On Home Assistant OS the packaged App is the supported path; the Docker and
+Compose instructions above apply to Home Assistant Container and to plain Docker
+hosts. Add `https://github.com/ralleur/hauser` under **Settings → Apps → App
+Store → Repositories**, then install and start **Hauser**. `hauser/DOCS.md`
+documents that packaging in full.
+
+Two properties differ from the Compose path and matter when diagnosing a start
+failure:
+
+- The Supervisor provides a single persistent directory, `/data`, owned by root.
+  The container entrypoint therefore starts as root, creates every directory
+  named in `HMI_REQUIRED_WRITABLE_DIRS`, hands them to the unprivileged runtime
+  user and only then serves. Compose instead runs as `node` from the start,
+  because its named volumes already carry the right ownership.
+- The Supervisor resolves the image as `<image>:<version>` from the App
+  manifest. A manifest version without a matching published image tag makes the
+  App uninstallable, so `scripts/verify-release-metadata.sh` fails the release
+  when manifest and package version drift apart.
 
 ## Health and startup errors
 

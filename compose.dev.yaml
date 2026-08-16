@@ -30,6 +30,9 @@ services:
       dockerfile: Dockerfile
       args:
         HAUSER_VERSION: dev-pilot
+    # Named volumes carry the right ownership already — no root preparation
+    # needed, and cap_drop: ALL would not allow it (see compose.yaml).
+    user: node
     init: true
     restart: unless-stopped
     read_only: true

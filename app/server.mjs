@@ -4604,7 +4604,7 @@ export function createHouseholdConfigReader(
         ok: false,
         status: 503,
         code: 'HOUSEHOLD_CONFIG_NOT_CONFIGURED',
-        message: 'Der Pfad zur Haushaltskonfiguration ist nicht konfiguriert.',
+        message: 'The household configuration path is not configured.',
       };
     }
 
@@ -4617,7 +4617,7 @@ export function createHouseholdConfigReader(
           ok: false,
           status: 404,
           code: 'HOUSEHOLD_CONFIG_NOT_FOUND',
-          message: 'Die Haushaltskonfiguration wurde nicht gefunden.',
+          message: 'The household configuration was not found.',
         };
       }
       return {
@@ -4662,7 +4662,7 @@ export function createHouseholdConfigReader(
           ok: false,
           status: 404,
           code: 'HOUSEHOLD_CONFIG_NOT_FOUND',
-          message: 'Die Haushaltskonfiguration wurde nicht gefunden.',
+          message: 'The household configuration was not found.',
         };
       }
       return {
@@ -4718,7 +4718,7 @@ export function migrateHouseholdConfigFile(
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_INVALID_JSON',
-      message: 'Die Haushaltskonfiguration enthält kein gültiges JSON.',
+      message: 'The household configuration is not valid JSON.',
     };
   }
 
@@ -4733,7 +4733,7 @@ export function migrateHouseholdConfigFile(
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
-      message: 'Das migrierte Dokument erfüllt den aktuellen Haushaltsvertrag nicht.',
+      message: 'The migrated document does not satisfy the current household contract.',
       issue: parsed.issues[0] ?? null,
     };
   }
@@ -4745,7 +4745,7 @@ export function migrateHouseholdConfigFile(
       code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
       message: error instanceof Error
         ? error.message
-        : 'Das migrierte Dokument kann nicht in die produktive Runtime projiziert werden.',
+        : 'The migrated document cannot be projected into the production runtime.',
     };
   }
 
@@ -4764,7 +4764,7 @@ export function migrateHouseholdConfigFile(
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_MIGRATION_BACKUP_FAILED',
-      message: 'Die Haushaltskonfiguration konnte vor der Migration nicht gesichert werden.',
+      message: 'The household configuration could not be backed up before migration.',
     };
   }
 
@@ -4779,7 +4779,7 @@ export function migrateHouseholdConfigFile(
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_MIGRATION_WRITE_FAILED',
-      message: 'Die migrierte Haushaltskonfiguration konnte nicht atomar aktiviert werden.',
+      message: 'The migrated household configuration could not be activated atomically.',
       backupPath,
     };
   }
@@ -4834,7 +4834,7 @@ export function assessHmiReadiness({
   } catch {
     return notReady(
       'APP_BUNDLE_NOT_FOUND',
-      `Das gebaute Frontend fehlt unter ${indexPath}.`,
+      `The built frontend is missing at ${indexPath}.`,
     );
   }
 
@@ -4845,7 +4845,7 @@ export function assessHmiReadiness({
     } catch {
       return notReady(
         'RUNTIME_DIRECTORY_NOT_WRITABLE',
-        `Das Laufzeitverzeichnis ist nicht les- und schreibbar: ${directory}`,
+        `Runtime directory is not readable and writable: ${directory}`,
       );
     }
   }
@@ -4885,7 +4885,7 @@ export function assessHmiReadiness({
   } catch {
     return notReady(
       'HOUSEHOLD_CONFIG_INVALID_JSON',
-      'Die Haushaltskonfiguration enthält kein gültiges JSON.',
+      'The household configuration is not valid JSON.',
     );
   }
   const parsed = parseHouseholdConfig(document);
@@ -4893,7 +4893,7 @@ export function assessHmiReadiness({
     const issue = parsed.issues[0];
     return notReady(
       'HOUSEHOLD_CONFIG_INVALID',
-      `Die Haushaltskonfiguration ist ungültig (${parsed.issues.length} Problem${parsed.issues.length === 1 ? '' : 'e'}).`,
+      `The household configuration is invalid (${parsed.issues.length} Problem${parsed.issues.length === 1 ? '' : 'e'}).`,
       { issue: issue ? { code: issue.code, path: issue.path, message: issue.message } : null },
     );
   }
@@ -5303,7 +5303,7 @@ function setupPayloadError(payload) {
   if (!parsed.ok) {
     return {
       code: 'SETUP_INVALID_HOUSEHOLD_CONFIG',
-      message: `Die Haushaltskonfiguration ist ungültig (${parsed.issues.length} Probleme).`,
+      message: `The household configuration is invalid (${parsed.issues.length} Probleme).`,
       issue: parsed.issues[0] ?? null,
     };
   }
@@ -5663,7 +5663,7 @@ function readLaundryHouseholdSnapshot(path) {
   }
   let document;
   try { document = JSON.parse(bytes.toString('utf8')); } catch {
-    throw createLaundryError('LAUNDRY_CONFIG_INVALID', 500, 'Die Haushaltskonfiguration enthält kein gültiges JSON.');
+    throw createLaundryError('LAUNDRY_CONFIG_INVALID', 500, 'The household configuration is not valid JSON.');
   }
   const parsed = parseHouseholdConfig(document);
   if (!parsed.ok) throw createLaundryError('LAUNDRY_CONFIG_INVALID', 500, 'Die Haushaltskonfiguration ist ungültig.');

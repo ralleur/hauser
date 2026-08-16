@@ -1,6 +1,7 @@
 services:
   hauser:
     image: "hauser-source:${HAUSER_SOURCE_TAG:-local}"
+    user: node
     pull_policy: never
     build:
       context: .
