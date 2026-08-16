@@ -2,6 +2,7 @@ import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import type {
   EntityRole,
   HouseholdConfigV3,
+  MediaTargetConfig,
   RoomConfig,
   RoomHeroConfig,
   VisibleEntityConfig,
@@ -290,6 +291,8 @@ function entityRole(state: SetupState): EntityRole | null {
   if (domain === 'light') return 'light';
   if (domain === 'climate') return 'climate';
   if (domain === 'camera') return 'camera';
+  if (domain === 'switch') return 'switch';
+  if (domain === 'vacuum') return 'vacuum';
   if (domain === 'sensor' && deviceClass === 'temperature') return 'temperature';
   if (domain === 'binary_sensor' && ['occupancy', 'presence', 'motion'].includes(deviceClass)) return 'presence';
   if (domain === 'binary_sensor' && ['door', 'garage_door', 'opening', 'window'].includes(deviceClass)) return 'window';
@@ -318,7 +321,20 @@ export function buildSetupHouseholdSuggestion(
   const areaById = new Map(snapshot.areas.map((area) => [area.area_id, area] as const));
   const inferredRooms = snapshot.areas.length === 0;
   const grouped = new Map<string, Array<{ entry: SetupEntityRegistryEntry; state: SetupState; role: EntityRole }>>();
+  const mediaEntries: Array<{ entry: SetupEntityRegistryEntry; state: SetupState; areaKey: string | null }> = [];
   const ignored = new Set<string>();
+  // Rollen, die mehrfach im selben Raum auftreten dürfen (wie 'light'); alle
+  // anderen sind Singleton pro Raum (z. B. genau ein Klima-/Kamera-Entity).
+  const multiInstanceRoles = new Set<EntityRole>(['light', 'switch']);
+
+  function resolveAreaKey(entityId: string, areaId: string | null, deviceId: string | null): string | null {
+    const explicitAreaId = areaId ?? (deviceId ? deviceArea.get(deviceId) ?? null : null);
+    return explicitAreaId && areaById.has(explicitAreaId)
+      ? explicitAreaId
+      : inferredRooms
+        ? `inferred:${inferredRoomName(entityId)}`
+        : null;
+  }
 
   for (const entry of [...snapshot.entities].sort((left, right) => left.entity_id.localeCompare(right.entity_id))) {
     const state = stateById.get(entry.entity_id);
@@ -326,14 +342,14 @@ export function buildSetupHouseholdSuggestion(
       ignored.add(entry.entity_id);
       continue;
     }
+    const domain = entry.entity_id.slice(0, entry.entity_id.indexOf('.'));
+    if (domain === 'media_player') {
+      mediaEntries.push({ entry, state, areaKey: resolveAreaKey(entry.entity_id, entry.area_id, entry.device_id) });
+      continue;
+    }
     const role = entityRole(state);
     if (!role) continue;
-    const explicitAreaId = entry.area_id ?? (entry.device_id ? deviceArea.get(entry.device_id) ?? null : null);
-    const areaKey = explicitAreaId && areaById.has(explicitAreaId)
-      ? explicitAreaId
-      : inferredRooms
-        ? `inferred:${inferredRoomName(entry.entity_id)}`
-        : null;
+    const areaKey = resolveAreaKey(entry.entity_id, entry.area_id, entry.device_id);
     if (!areaKey) {
       ignored.add(entry.entity_id);
       continue;
@@ -346,6 +362,7 @@ export function buildSetupHouseholdSuggestion(
   for (const area of snapshot.areas) if (!grouped.has(area.area_id)) grouped.set(area.area_id, []);
 
   const usedRoomIds = new Set<string>();
+  const roomIdByAreaKey = new Map<string, string>();
   const rooms: RoomConfig[] = [...grouped.entries()]
     .map(([areaKey, items]) => {
       const configuredArea = areaById.get(areaKey);
@@ -354,11 +371,11 @@ export function buildSetupHouseholdSuggestion(
       const singletonRoles = new Set<EntityRole>();
       const visibleEntities: VisibleEntityConfig[] = [];
       for (const item of items) {
-        if (item.role !== 'light' && singletonRoles.has(item.role)) {
+        if (!multiInstanceRoles.has(item.role) && singletonRoles.has(item.role)) {
           ignored.add(item.entry.entity_id);
           continue;
         }
-        if (item.role !== 'light') singletonRoles.add(item.role);
+        if (!multiInstanceRoles.has(item.role)) singletonRoles.add(item.role);
         visibleEntities.push({
           id: uniqueSlug(item.entry.entity_id.slice(item.entry.entity_id.indexOf('.') + 1), item.role, usedEntityIds),
           name: displayName(item.entry, item.state),
@@ -366,14 +383,24 @@ export function buildSetupHouseholdSuggestion(
           role: item.role,
         });
       }
+      const roomId = uniqueSlug(roomName, 'room', usedRoomIds);
+      roomIdByAreaKey.set(areaKey, roomId);
       return {
-        id: uniqueSlug(roomName, 'room', usedRoomIds),
+        id: roomId,
         name: roomName,
         visibleEntities,
         hero: null,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
+
+  const usedMediaIds = new Set<string>();
+  const mediaTargets: MediaTargetConfig[] = mediaEntries.map(({ entry, state, areaKey }) => ({
+    id: uniqueSlug(entry.entity_id.slice(entry.entity_id.indexOf('.') + 1), 'media', usedMediaIds),
+    name: displayName(entry, state),
+    entityId: entry.entity_id,
+    roomId: areaKey ? roomIdByAreaKey.get(areaKey) ?? null : null,
+  }));
 
   const sun = [...snapshot.states]
     .map((state) => state.entity_id)
@@ -388,9 +415,9 @@ export function buildSetupHouseholdSuggestion(
         { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
         { id: 'system', name: 'System', order: 1, target: { type: 'module', id: 'system' } },
       ],
-      enabledModules: ['home', 'system'],
+      enabledModules: mediaTargets.length > 0 ? ['home', 'media', 'system'] : ['home', 'system'],
       energy: null,
-      mediaTargets: [],
+      mediaTargets,
       globalEntities: {
         sun,
         vacationMode: null,

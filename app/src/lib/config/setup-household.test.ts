@@ -77,6 +77,44 @@ describe('deterministic setup household suggestion', () => {
     expect(() => projectActiveHouseholdData(compileHouseholdConfig(parsed.value))).not.toThrow();
   });
 
+  it('exposes switches (plural per room), a vacuum and media players discovered alongside areas', () => {
+    const withDevices = snapshot();
+    withDevices.entities.push(
+      { entity_id: 'switch.living_lamp', area_id: 'living-area', device_id: null },
+      { entity_id: 'switch.living_fountain', area_id: 'living-area', device_id: null },
+      { entity_id: 'vacuum.living_roborock', area_id: 'living-area', device_id: null },
+      { entity_id: 'media_player.living_sonos', area_id: 'living-area', device_id: null },
+    );
+    withDevices.states.push(
+      { entity_id: 'switch.living_lamp', attributes: { friendly_name: 'Lamp switch' } },
+      { entity_id: 'switch.living_fountain', attributes: { friendly_name: 'Fountain switch' } },
+      { entity_id: 'vacuum.living_roborock', attributes: { friendly_name: 'Roborock' } },
+      { entity_id: 'media_player.living_sonos', attributes: { friendly_name: 'Sonos' } },
+    );
+
+    const suggestion = buildSetupHouseholdSuggestion(withDevices);
+    const livingRoom = suggestion.config.rooms.find(({ id }) => id === 'living_room');
+    expect(livingRoom?.visibleEntities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ entityId: 'switch.living_lamp', role: 'switch' }),
+      expect.objectContaining({ entityId: 'switch.living_fountain', role: 'switch' }),
+      expect.objectContaining({ entityId: 'vacuum.living_roborock', role: 'vacuum' }),
+    ]));
+    expect(suggestion.config.mediaTargets).toEqual([
+      expect.objectContaining({ entityId: 'media_player.living_sonos', roomId: 'living_room' }),
+    ]);
+    expect(suggestion.ignoredEntityIds).not.toEqual(expect.arrayContaining([
+      'switch.living_lamp',
+      'switch.living_fountain',
+      'vacuum.living_roborock',
+      'media_player.living_sonos',
+    ]));
+
+    const parsed = parseHouseholdConfig(suggestion.config);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
+    expect(() => projectActiveHouseholdData(compileHouseholdConfig(parsed.value))).not.toThrow();
+  });
+
   it('falls back deterministically to conservative name prefixes when HA has no areas', () => {
     const noAreas = snapshot();
     noAreas.areas = [];

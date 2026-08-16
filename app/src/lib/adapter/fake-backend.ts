@@ -199,11 +199,11 @@ export class FakeBackend implements Backend {
       }
       return v;
     }
-    if (domain === 'switch' || domain === 'fan' || domain === 'input_boolean') {
+    if (domain === 'switch' || domain === 'fan' || domain === 'input_boolean' || domain === 'vacuum') {
       const v = { ...(cur as SwitchValue) };
       const wasOn = v.on;
-      if (service === 'turn_off') v.on = false;
-      else if (service === 'turn_on') v.on = true;
+      if (service === 'turn_off' || service === 'return_to_base' || service === 'stop') v.on = false;
+      else if (service === 'turn_on' || service === 'start') v.on = true;
       else if (service === 'toggle') v.on = !v.on;
       if (contradict) v.on = !v.on;
       if (v.on !== wasOn) v.changedAt = Date.now();

@@ -171,6 +171,13 @@ export function haToCover(raw: RawEntity): SwitchValue {
   return { on: raw.state === 'open' || raw.state === 'opening' };
 }
 
+/* vacuum.* trägt state cleaning/returning/paused/docked/idle/error — für die
+   Switch-Kategorie (Stufe 1: Start/Rückkehr-zur-Basis als Toggle) zählt
+   „aktiv unterwegs" als an. */
+export function haToVacuum(raw: RawEntity): SwitchValue {
+  return { on: raw.state === 'cleaning' || raw.state === 'returning' };
+}
+
 export function haToMedia(raw: RawEntity, prevVolume?: number): MediaValue {
   const vol = raw.attributes.volume_level;
   const dur = raw.attributes.media_duration;
@@ -230,6 +237,9 @@ export function haToValue(entityId: string, raw: RawEntity, prev?: unknown): unk
   }
   if (entityId.startsWith('cover.')) {
     return haToCover(raw);
+  }
+  if (entityId.startsWith('vacuum.')) {
+    return haToVacuum(raw);
   }
   if (entityId.startsWith('climate.')) {
     return haToClimate(raw);

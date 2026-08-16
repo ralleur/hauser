@@ -12,7 +12,8 @@ export type LegacyManagedDomain =
   | 'media_player'
   | 'cover'
   | 'fan'
-  | 'input_boolean';
+  | 'input_boolean'
+  | 'vacuum';
 export type LegacyDeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media';
 
 export interface Light {

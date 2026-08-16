@@ -91,11 +91,13 @@ export function toggleDevice(roomId: string, device: Light): void {
   if (device.domain === 'light' || !device.domain) return toggleLight(roomId, device.id);
   const cur = runtime.merged(device.entityId) as SwitchValue | undefined;
   const next: SwitchValue = { on: !cur?.on };
-  // cover kennt kein turn_on/off — HA-Service ist open/close (docs/04-Semantik);
-  // switch/fan/input_boolean schalten in ihrer eigenen Domäne.
+  // cover kennt kein turn_on/off — HA-Service ist open/close; vacuum nutzt das
+  // moderne Service-Set (start/return_to_base) statt turn_on/off (docs/04-Semantik).
   const service = device.domain === 'cover'
     ? (next.on ? 'open_cover' : 'close_cover')
-    : (next.on ? 'turn_on' : 'turn_off');
+    : device.domain === 'vacuum'
+      ? (next.on ? 'start' : 'return_to_base')
+      : (next.on ? 'turn_on' : 'turn_off');
   runtime.dispatch(
     { entityId: device.entityId, domain: device.domain, service, data: {}, queuedAt: Date.now() },
     next,

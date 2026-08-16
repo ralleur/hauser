@@ -27,6 +27,7 @@ const MANAGED_CATALOG_DOMAINS = new Set([
   'cover',
   'fan',
   'input_boolean',
+  'vacuum',
 ]);
 
 export interface NeutralRuntimeReady {
@@ -226,7 +227,7 @@ function syntheticValue(
   if (context.energyKpi) return { value: 0, unit: 'kWh' } satisfies SensorValue;
   if (domain === 'sensor') return { value: 0, unit: null } satisfies SensorValue;
   if (context.role === 'presence' || context.role === 'window'
-      || ['switch', 'binary_sensor', 'input_boolean', 'fan', 'cover'].includes(domain)) {
+      || ['switch', 'binary_sensor', 'input_boolean', 'fan', 'cover', 'vacuum'].includes(domain)) {
     return { on: false } satisfies SwitchValue;
   }
   return { state: 'synthetic' };

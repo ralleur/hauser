@@ -35,7 +35,7 @@ export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
 export function categoryOf(domain: ManagedDomain): DeviceCategory {
   switch (domain) {
     case 'light': return 'light';
-    case 'switch': case 'fan': case 'cover': case 'input_boolean': return 'switch';
+    case 'switch': case 'fan': case 'cover': case 'input_boolean': case 'vacuum': return 'switch';
     case 'climate': return 'temp';
     case 'sensor': case 'binary_sensor': return 'info';
     case 'media_player': return 'media';

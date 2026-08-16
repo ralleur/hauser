@@ -22,6 +22,8 @@ export type EntityRole =
   | 'presence'
   | 'window'
   | 'camera'
+  | 'switch'
+  | 'vacuum'
   | 'other';
 
 export interface VisibleEntityConfig {
@@ -172,6 +174,8 @@ const ENTITY_ROLES: readonly EntityRole[] = [
   'presence',
   'window',
   'camera',
+  'switch',
+  'vacuum',
   'other',
 ];
 type EntityDomainConstraint = string | readonly string[];
@@ -182,6 +186,8 @@ const ENTITY_ROLE_DOMAINS: Partial<Record<EntityRole, EntityDomainConstraint>> =
   presence: ['binary_sensor', 'device_tracker'],
   window: 'binary_sensor',
   camera: 'camera',
+  switch: 'switch',
+  vacuum: 'vacuum',
 };
 const MISSING = Symbol('missing');
 type Missing = typeof MISSING;
@@ -882,7 +888,7 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
 
 export interface CommandContract {
   entityId: string;
-  domain: 'light' | 'climate' | 'media_player' | 'switch' | 'script';
+  domain: 'light' | 'climate' | 'media_player' | 'switch' | 'script' | 'vacuum';
   services: string[];
 }
 

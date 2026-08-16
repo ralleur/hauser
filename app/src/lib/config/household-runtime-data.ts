@@ -165,6 +165,18 @@ function projectLight(entity: VisibleEntityConfig): LightSeed {
   };
 }
 
+/* Nicht-Licht-Geräte (Schalter, Saugroboter) landen ebenfalls in
+   RoomSeed.lights (historischer Name, faktisch die generische Geräteliste
+   eines Raums, s. device-config.ts) — die Kategorie steuert die Kachel/das
+   Overlay, nicht der Feldname. */
+function projectManagedDevice(entity: VisibleEntityConfig, category: LightSeed['category']): LightSeed {
+  return {
+    ...projectLight(entity),
+    domain: entity.entityId.slice(0, entity.entityId.indexOf('.')) as LightSeed['domain'],
+    category,
+  };
+}
+
 function singleRole(
   roomId: string,
   entities: readonly VisibleEntityConfig[],
@@ -195,7 +207,12 @@ function projectRooms(model: HouseholdRuntimeModel): {
       name: room.name,
       presence: false,
       windowOpen: false,
-      lights: room.visibleEntities.filter(({ role }) => role === 'light').map(projectLight),
+      lights: [
+        ...room.visibleEntities.filter(({ role }) => role === 'light').map(projectLight),
+        ...room.visibleEntities
+          .filter(({ role }) => role === 'switch' || role === 'vacuum')
+          .map((entity) => projectManagedDevice(entity, 'switch')),
+      ],
       ...(climate ? { climateEntityId: climate.entityId, target: 20, hvac: 'off' as const } : {}),
       ...(temperature ? { tempSensorId: temperature.entityId } : {}),
     };

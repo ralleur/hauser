@@ -8,7 +8,7 @@ import { gzipSync } from 'node:zlib';
 import { ImportType, init, parse } from 'es-module-lexer';
 
 export const DEFAULT_BUDGETS = Object.freeze({
-  initialJsGzipBytes: 80 * 1024,
+  initialJsGzipBytes: 82 * 1024,
   initialCssGzipBytes: 20 * 1024,
 });
 

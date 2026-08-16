@@ -84,6 +84,10 @@ export function compileHouseholdConfig(config: HouseholdConfigV3): HouseholdRunt
         addCommand(entity.entityId, 'light', ['turn_on', 'turn_off']);
       } else if (entity.role === 'climate') {
         addCommand(entity.entityId, 'climate', ['set_temperature', 'set_hvac_mode']);
+      } else if (entity.role === 'switch') {
+        addCommand(entity.entityId, 'switch', ['turn_on', 'turn_off']);
+      } else if (entity.role === 'vacuum') {
+        addCommand(entity.entityId, 'vacuum', ['start', 'return_to_base']);
       }
     }
   }
