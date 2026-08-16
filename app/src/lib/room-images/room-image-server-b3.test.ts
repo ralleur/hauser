@@ -143,6 +143,13 @@ async function postMainPayload(base: string, payload: Record<string, any>) {
   });
 }
 
+/* Bildverarbeitungs-Budget: die CI-Maschine ist deutlich langsamer als eine
+   Entwickler-Workstation. `waitFor` wartet dort schon länger (attempts unten) —
+   ohne ein passendes Test-Budget läuft aber die Stoppuhr des Tests vorher ab,
+   und die längere Geduld bleibt wirkungslos. */
+// @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+const IMAGE_BUDGET_MS = process.env.CI === 'true' ? 90_000 : 15_000;
+
 async function waitFor(base: string, jobId: string, statuses: string[]) {
   // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
   const attempts = process.env.CI === 'true' ? 1_000 : 100;
@@ -466,7 +473,7 @@ describe('B-08E10 B3 persistent job flow', () => {
     const retryBeyondMaximum = structuredClone(retry);
     retryBeyondMaximum.expiresAt = retryBeyondMaximum.createdAt + 24 * 60 * 60 * 1000 + 1;
     expectStoredJobRejected(retryBeyondMaximum, 'retry expiry exceeds 24 hours', [superseded]);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('runs composition and two independent styles through the real runner and survives restart', async () => {
     const app = await start();
@@ -543,7 +550,7 @@ describe('B-08E10 B3 persistent job flow', () => {
     expect(parentBefore.temp.candidates.slice(1).every((candidate: any) => (
       !app.jobStore.tempExists(candidate.preview) && !app.jobStore.tempExists(candidate.providerInput)
     ))).toBe(true);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('recovers final-accept journals deterministically and resumes committed cleanup', async () => {
     const createFinalCrashFixture = async (crashStep: string) => {
@@ -706,7 +713,7 @@ describe('B-08E10 B3 persistent job flow', () => {
     await cleanupApp.runner.waitForIdle();
     expect(enqueued).toEqual([finalJobId]);
     expect(cleanupApp.provider.calls).toHaveLength(5);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('locks pending committed cleanup across lineage mutations, TTL cleanup and restart', async () => {
     let timestamp = 1_700_000_000_000;
@@ -1012,7 +1019,7 @@ describe('B-08E10 B3 persistent job flow', () => {
       metadataRoot: join(app.sandbox, 'jobs'), tempRoot: join(app.sandbox, 'private'),
     });
     expect(restarted.getOwn('fixture-user', accepted[0].jobId)?.status).toBe('cancelled');
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('makes retry supersede atomic at every journal/write step and recovers prepared or committed crashes', () => {
     const createFailedFixture = (transactionStep: ((step: string) => void) | undefined = undefined) => {
@@ -1823,7 +1830,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
       error: { code: 'PROVIDER_RESULT_INVALID' },
     });
     expect(app.jobStore.get(final.jobId).temp.finals).toEqual({});
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('fully validates source/candidate previews and loses them after cancel', async () => {
     const app = await start();
@@ -1870,7 +1877,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     expect(cancelled.status).toBe(200);
     expect((await fetch(`${app.base}${sourceUrl}`, { headers: headers() })).status).toBe(410);
     expect((await fetch(`${app.base}${candidateUrl}`, { headers: headers() })).status).toBe(404);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('rejects HEVC-in-HEIF as non-AVIF for candidate and final GET/HEAD while JPEG source stays valid', async () => {
     const emulateHevcMetadata = (bytes: Uint8Array, expectedFormat: string) => validateRoomImagePreviewBytes(
@@ -1913,7 +1920,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     for (const previewUrl of Object.values(final.temporaryVariants) as string[]) {
       await expectHevcRejected(previewUrl);
     }
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('returns CROP_POLICY_MISMATCH without handoff and expires previews after discard and TTL', async () => {
     const app = await start();
@@ -1945,7 +1952,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     ttl.jobStore.cleanup();
     expect((await fetch(`${ttl.base}${ttlCandidate}`, { headers: headers() })).status).toBe(404);
     expect((await fetch(`${ttl.base}/api/room-image-jobs/${ttlJob.jobId}/source-preview`, { headers: headers() })).status).toBe(410);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('inherits the absolute main-lineage deadline into final ownership and cleans every transferred temp there', async () => {
     let clock = Date.parse('2026-08-08T14:00:00.000Z');
@@ -2007,7 +2014,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     expect(readdirSync(join(app.sandbox, 'jobs'))
       .filter((name: string) => /^[A-Za-z0-9_-]{43}\.json$/.test(name))).toHaveLength(metadataCount);
     expect(app.provider.calls).toHaveLength(callsBeforeExpiredFinal);
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('inherits a failed jobs absolute deadline into retry and refuses an expired retry source without a successor', async () => {
     let clock = Date.parse('2026-08-08T15:00:00.000Z');
@@ -2072,7 +2079,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     for (const kind of ['sources', 'compositions', 'candidates', 'finals', 'partials']) {
       expect(readdirSync(join(app.sandbox, 'private', kind)), kind).toEqual([]);
     }
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 
   it('closes source-preview GET and HEAD while a started cancel remains visibly cancelling', async () => {
     const decodeGate = deferred();
@@ -2133,5 +2140,5 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     for (const kind of ['sources', 'compositions', 'candidates', 'finals', 'partials']) {
       expect(readdirSync(join(app.sandbox, 'private', kind)), kind).toEqual([]);
     }
-  }, 15_000);
+  }, IMAGE_BUDGET_MS);
 });

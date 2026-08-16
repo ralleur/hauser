@@ -23,8 +23,27 @@ const manifest = JSON.parse(readFileSync(fixtureUrl('golden-manifest.json'), 'ut
   libvips: string;
   fixtures: Record<string, string>;
   goldenOutputs: Record<string, string>;
+  platformGoldenOutputs: Record<string, Record<string, string>>;
 };
 const sha256 = (input: Uint8Array) => createHash('sha256').update(input).digest('hex');
+
+/* JPEG-Ausgaben sind über Plattformen hinweg bytegleich — libjpeg erzeugt aus
+   denselben Eingaben dasselbe Ergebnis, und diese Goldens stehen deshalb in
+   `goldenOutputs`.
+
+   AVIF nicht: der Encoder (libaom über libheif) liefert je nach Build und CPU
+   andere Bytes bei gleichem Bild. Ein einzelner gepinnter Wert kann deshalb
+   immer nur auf einer Plattform gelten — bisher auf darwin-arm64, womit in
+   der Linux-CI, also genau dort, wo das Produkt ausgeliefert wird, gar nichts
+   geprüft wurde. Deshalb pinnt `platformGoldenOutputs` je Plattform ihren
+   eigenen Wert.
+
+   Auf einer unbekannten Plattform bleibt die Determinismus-Prüfung (zweimal
+   kodieren → identische Bytes) als Zusicherung übrig; der Bytevergleich
+   entfällt, statt einen fremden Wert zu erzwingen. */
+// @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+const CURRENT_PLATFORM = `${process.platform}-${process.arch}`;
+const platformGoldens = manifest.platformGoldenOutputs[CURRENT_PLATFORM];
 
 const expectedOrientationCorners = [
   ['red', 'green', 'blue', 'yellow'],
@@ -72,6 +91,12 @@ describe('room-image-transform-policy-v1', () => {
     expect(manifest.developmentPlatform).toBe('darwin-arm64');
     expect(sharp.versions.sharp).toBe(manifest.sharp);
     expect(sharp.versions.vips).toBe(manifest.libvips);
+    /* In der CI läuft die Plattform, die auch ausgeliefert wird — dort darf der
+       AVIF-Bytevergleich nicht mangels Eintrag stillschweigend entfallen. */
+    // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+    if (process.env.CI === 'true') {
+      expect(platformGoldens, `AVIF-Golden fehlt für ${CURRENT_PLATFORM}`).toBeDefined();
+    }
     for (const [name, expectedHash] of Object.entries(manifest.fixtures)) {
       expect(sha256(fixture(name)), name).toBe(expectedHash);
     }
@@ -156,7 +181,14 @@ describe('room-image-transform-policy-v1', () => {
     const jpeg = await providerPngToProviderJpeg(provider);
     const avif = await providerPngToFinalAvif(provider);
     expect(sha256(jpeg)).toBe(manifest.goldenOutputs['provider-provider.jpeg']);
-    expect(sha256(avif)).toBe(manifest.goldenOutputs['provider-final.avif']);
+
+    /* Gleiche Eingabe, gleiche Bytes — gilt auf jeder Plattform und ist die
+       Zusicherung, die das Caching der Raumbilder trägt. */
+    expect(sha256(await providerPngToFinalAvif(provider))).toBe(sha256(avif));
+    if (platformGoldens) {
+      expect(sha256(avif), `AVIF-Golden für ${CURRENT_PLATFORM}`)
+        .toBe(platformGoldens['provider-final.avif']);
+    }
 
     const jpegMetadata = await sharp(jpeg).metadata();
     expect(jpegMetadata).toMatchObject({

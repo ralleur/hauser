@@ -20,7 +20,14 @@
   },
   "goldenOutputs": {
     "source-provider.jpeg": "e179536688963d2401a1ab09c6d8ebc4971a7694cebae9a720ea8e185785eaeb",
-    "provider-provider.jpeg": "3bd30b41825a6439b27b50f9da70fa7aeaa16652b0a718dee9148a1ab2a5b2bb",
-    "provider-final.avif": "68a6f5643a4e9a61e228b42528def20e8b7a7bc7ecd2b0072aa7583b255e406e"
+    "provider-provider.jpeg": "3bd30b41825a6439b27b50f9da70fa7aeaa16652b0a718dee9148a1ab2a5b2bb"
+  },
+  "platformGoldenOutputs": {
+    "linux-x64": {
+      "provider-final.avif": "2eb5a02c78b3d4036567140e7752e44b657a230ac1eaf11ce5284810784443b5"
+    },
+    "darwin-arm64": {
+      "provider-final.avif": "68a6f5643a4e9a61e228b42528def20e8b7a7bc7ecd2b0072aa7583b255e406e"
+    }
   }
 }
