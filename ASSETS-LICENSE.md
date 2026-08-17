@@ -43,6 +43,8 @@ The following project-branding assets are not licensed under CC BY 4.0 or MIT:
 - `app/public/brand/`
 - `app/public/icons/`
 - `website/favicon.png`
+- `website/apple-touch-icon.png`
+- `website/brand/`
 
 See [TRADEMARKS.md](TRADEMARKS.md) for permitted brand references and the rules
 for modified distributions. CC BY 4.0 reuse of screenshots does not grant any

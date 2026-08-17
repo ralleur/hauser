@@ -15,7 +15,11 @@
 <meta property="og:image" content="https://ralleur.github.io/hauser/media/social-preview.jpg">
 <meta name="twitter:card" content="summary_large_image">
 
+<link rel="icon" href="brand/hauser-icon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)">
 <link rel="stylesheet" href="site.css">
 <script type="application/ld+json">
 {
@@ -32,6 +36,26 @@
 </script>
 </head>
 <body>
+
+<!-- ── Navigation ────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="#" aria-label="Hauser — back to top">
+      <svg class="brand-mark" viewBox="0 0 512 512" width="26" height="26" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round">
+          <path d="M168 96 V416"/>
+          <path d="M168 300 C168 222 344 222 344 300 V416"/>
+        </g>
+        <circle cx="344" cy="140" r="44"/>
+      </svg>
+      <span class="brand-word">hauser</span>
+    </a>
+    <div class="nav-actions">
+      <a class="nav-link" href="https://github.com/ralleur/hauser">GitHub</a>
+      <a class="btn btn-sm btn-primary" href="https://github.com/ralleur/hauser#installation">Install</a>
+    </div>
+  </div>
+</nav>
 
 <!-- ── Hero ──────────────────────────────────────────────────────────── -->
 <header class="hero">
@@ -139,49 +163,41 @@
   </div>
 </section>
 
-<!-- ── Medien ────────────────────────────────────────────────────────── -->
+<!-- ── Medien & Audio ────────────────────────────────────────────────── -->
 <section id="media">
   <div class="wrap">
     <div class="showcase-head">
-      <p class="eyebrow">Media</p>
-        <h2>Your film library is part of the house.</h2>
+      <p class="eyebrow">Media &amp; Audio</p>
+        <h2>Your film library and your speakers are just more rooms.</h2>
         <p class="body-text">
           Jellyfin is integrated directly rather than embedded: the library, the
           shelves, the detail view and the player are all built in the same
-          design system as the light switches. No second application appears, no
-          visual seam gives it away.
+          design system as the light switches. Playback runs through HLS with
+          resume and progress, so you continue where you stopped.
         </p>
         <p class="body-text">
-          Playback runs through HLS with resume and progress, so you continue
-          where you stopped without thinking about which app owns the file.
+          Room audio runs through Home Assistant media players with the same
+          controls as everything else. Choosing what plays in the kitchen is no
+          different from turning on the kitchen light.
         </p>
     </div>
   </div>
   <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/library.webp" width="1696" height="1200" loading="lazy" decoding="async"
-             alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
-    </div>
-  </div>
-</section>
-
-<!-- ── Audio ─────────────────────────────────────────────────────────── -->
-<section id="audio">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">Audio</p>
-        <h2>Speakers are just more devices.</h2>
-        <p class="body-text">
-          Room audio runs through Home Assistant media players, presented with
-          the same controls as everything else. Choosing what plays in the
-          kitchen is no different from turning on the kitchen light.
-        </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/media.webp" width="1696" height="1200" loading="lazy" decoding="async"
-             alt="The media screen showing playback controls and volume for the living room and kitchen audio zones.">
+    <div class="pair">
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/library.webp" width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
+        </div>
+        <p class="device-caption">Library — shelves of cover art, not a file browser.</p>
+      </div>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/media.webp" width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The media screen showing playback controls and volume for the living room and kitchen audio zones.">
+        </div>
+        <p class="device-caption">Audio zones — one control language for every speaker.</p>
+      </div>
     </div>
   </div>
 </section>

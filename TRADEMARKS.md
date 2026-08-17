@@ -9,9 +9,9 @@ official release, endorsement or affiliation.
 The following are not licensed under MIT or CC BY 4.0:
 
 - the **Hauser** name when used to identify a software distribution or service;
-- the Hauser logos and marks in `app/public/brand/`;
+- the Hauser logos and marks in `app/public/brand/` and `website/brand/`;
 - the official application icons in `app/public/icons/`;
-- `website/favicon.png`.
+- `website/favicon.png` and `website/apple-touch-icon.png`.
 
 No claim is made here that Hauser is a registered trademark. This policy states
 the permissions granted by the project maintainer and distinguishes the freely

@@ -35,11 +35,12 @@ cc_roots = (
 brand_roots = (
     Path('app/public/brand'),
     Path('app/public/icons'),
+    Path('website/brand'),
 )
 third_party_roots = (
     Path('app/public/mdi-icons'),
 )
-brand_files = {Path('website/favicon.png')}
+brand_files = {Path('website/favicon.png'), Path('website/apple-touch-icon.png')}
 third_party_files = {
     Path('app/public/fonts/InterVariable-subset.woff2'),
     Path('app/public/fonts/InstrumentSerif-subset.woff2'),
