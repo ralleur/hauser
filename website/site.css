@@ -13,13 +13,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Instrument Serif';
-  src: url('fonts/InstrumentSerif-subset.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   --surface-0: #0b0e12;
   --surface-1: #141920;
@@ -35,7 +28,10 @@
   --border: #2c353f;
 
   --font-body: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+  /* Displaysatz ist dieselbe Familie in einem anderen Register: schwer, eng
+     laufend, kurze Zeilenabstände. Eine zweite Schriftfamilie würde hier nur
+     Ladezeit kosten und den Produktcharakter verwässern. */
+  --font-display: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -107,16 +103,28 @@ section {
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.015em;
-  line-height: 1.06;
+  font-weight: 680;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
   margin: 0;
   text-wrap: balance;
 }
 
-h1 { font-size: clamp(44px, 8.5vw, 88px); }
-h2 { font-size: clamp(32px, 5.5vw, 56px); }
-h3 { font-size: clamp(21px, 2.4vw, 26px); }
+h1 {
+  font-size: clamp(44px, 8vw, 92px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+}
+
+h2 { font-size: clamp(31px, 5vw, 54px); letter-spacing: -0.04em; }
+
+h3 {
+  font-size: clamp(19px, 2.1vw, 22px);
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+}
 
 p { margin: 0; text-wrap: pretty; }
 
@@ -128,6 +136,9 @@ p { margin: 0; text-wrap: pretty; }
 }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
@@ -135,6 +146,15 @@ p { margin: 0; text-wrap: pretty; }
   text-transform: uppercase;
   color: var(--accent-warm);
   margin: 0 0 20px;
+}
+
+.eyebrow::before {
+  content: '';
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 
 .body-text {
@@ -253,7 +273,25 @@ p { margin: 0; text-wrap: pretty; }
   transition: color 160ms var(--ease-out);
 }
 
+.nav-link {
+  position: relative;
+  padding-block-end: 2px;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background: var(--accent-warm);
+  scale: 0 1;
+  transform-origin: left;
+  transition: scale 220ms var(--ease-out);
+}
+
 .nav-link:hover { color: var(--text-primary); }
+.nav-link:hover::after { scale: 1 1; }
 
 .btn-sm { padding: 9px 20px; font-size: 14px; }
 
@@ -379,6 +417,36 @@ p { margin: 0; text-wrap: pretty; }
 
 .pair .device { margin-top: 0; }
 
+/* ── Vorher/Nachher-Beschriftung und nummerierte Schritte ─────────────── */
+
+.shot-label {
+  display: inline-block;
+  margin-inline-end: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-tertiary) 22%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shot-label-out {
+  background: color-mix(in srgb, var(--accent-warm) 20%, transparent);
+  color: var(--accent-warm);
+}
+
+.step-num {
+  display: inline-block;
+  margin-inline-end: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-warm);
+  vertical-align: 0.28em;
+}
+
 /* ── Kartenraster ──────────────────────────────────────────────────────── */
 
 .cards {
@@ -393,6 +461,16 @@ p { margin: 0; text-wrap: pretty; }
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface-1);
+  transition: transform 220ms var(--ease-out), border-color 220ms var(--ease-out);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent-warm) 45%, var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover { transform: none; }
 }
 
 .card h3 { margin-bottom: 12px; }
@@ -560,6 +638,160 @@ footer {
 footer p + p { margin-top: 12px; }
 
 footer a { color: var(--text-secondary); }
+
+/* ── Sprungmarke ───────────────────────────────────────────────────────── */
+
+.skip-link {
+  position: absolute;
+  inset-block-start: -100px;
+  inset-inline-start: var(--gutter);
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 0 0 12px 12px;
+  background: var(--accent-warm);
+  color: #0b0e12;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: inset-block-start 180ms var(--ease-out);
+}
+
+.skip-link:focus { inset-block-start: 0; }
+
+/* ── Handgezogene Markierung in der Hauptzeile ────────────────────────────
+   Der einzige nicht-geometrische Strich der Seite. Er sitzt bewusst unter
+   genau einer Wortgruppe; mehrere davon wären Dekoration statt Betonung. */
+
+.mark {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.mark-line {
+  position: absolute;
+  inset-inline: -0.06em;
+  inset-block-end: -0.14em;
+  inline-size: calc(100% + 0.12em);
+  block-size: 0.22em;
+  overflow: visible;
+  color: var(--accent-warm);
+  pointer-events: none;
+}
+
+.mark-line path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.has-js .mark-line path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: mark-draw 900ms var(--ease-out) 500ms forwards;
+}
+
+@keyframes mark-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .has-js .mark-line path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* ── Tag/Nacht-Vorführung ──────────────────────────────────────────────────
+   Dasselbe Panel, dieselbe Sekunde, einmal hell und einmal dunkel. Ohne
+   JavaScript bleibt die Tagfassung stehen und der Umschalter ist verborgen —
+   eine Sektion, die ohne Skript leer ist, wäre kaputt, nicht interaktiv. */
+
+.theme-demo {
+  position: relative;
+  isolation: isolate;
+}
+
+.theme-demo::before {
+  content: '';
+  position: absolute;
+  inset: -12% -6% 20%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-warm) 16%, transparent) 0%, transparent 66%);
+  transition: background 600ms var(--ease-out);
+  pointer-events: none;
+}
+
+.theme-demo[data-mode='night']::before {
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-cool) 20%, transparent) 0%, transparent 66%);
+}
+
+.theme-switch {
+  display: none;
+  gap: 4px;
+  padding: 4px;
+  margin-inline: auto;
+  inline-size: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.has-js .theme-switch { display: flex; }
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 240ms var(--ease-out), color 240ms var(--ease-out);
+}
+
+.theme-btn svg { inline-size: 15px; block-size: 15px; flex: none; }
+
+.theme-btn:hover { color: var(--text-primary); }
+
+.theme-btn[aria-pressed='true'] {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.theme-btn:focus-visible {
+  outline: 2px solid var(--accent-cool);
+  outline-offset: 2px;
+}
+
+.theme-stack { position: relative; }
+
+.theme-shot-night {
+  position: absolute;
+  inset: 12px;
+  inline-size: calc(100% - 24px);
+  opacity: 0;
+  transition: opacity 520ms var(--ease-out);
+}
+
+.theme-demo[data-mode='night'] .theme-shot-night { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-shot-night, .theme-demo::before { transition: none; }
+}
+
+/* ── Getönte Sektionsbahn ──────────────────────────────────────────────── */
+
+.band {
+  background: var(--surface-1);
+  border-block: 1px solid var(--border);
+}
 
 /* ── Scroll-Reveal ─────────────────────────────────────────────────────── */
 

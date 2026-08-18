@@ -95,8 +95,9 @@ notification channels remain later work.
 
 The first public beta ships the existing AI-generated project illustrations as
 its room-image defaults and fallbacks. They are licensed under the repository's
-CC BY 4.0 asset boundary. The private source photographs used during their
-creation are not included.
+CC BY 4.0 asset boundary. One of the source photographs is published on the
+project website to show what the room-image wizard takes as input; the remaining
+private source photographs are not included.
 
 Users can upload, replace and remove a local JPEG, PNG, WebP or AVIF background directly
 under room editing without changing files or JSON. The beta applies that image to

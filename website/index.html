@@ -37,6 +37,8 @@
 </head>
 <body>
 
+<a class="skip-link" href="#main">Skip to content</a>
+
 <!-- ── Navigation ────────────────────────────────────────────────────── -->
 <nav class="nav">
   <div class="wrap nav-row">
@@ -58,9 +60,9 @@
 </nav>
 
 <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-<header class="hero">
+<header class="hero" id="main">
   <div class="wrap">
-    <h1>Your home,<br>with an interface<br>worth touching.</h1>
+    <h1>Your home,<br>with an interface<br><span class="mark">worth touching.<svg class="mark-line" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M4 8.2 C 70 2.4, 140 3.6, 204 6.4 S 268 9.6, 296 4.2"/></svg></span></h1>
     <p class="lead">
       Hauser is a self-hosted, room-first Home Assistant frontend for the people
       who live in the home. Home Assistant remains the operator and admin
@@ -71,7 +73,7 @@
       <a class="btn btn-primary" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
       <a class="btn" href="demo/">Explore the live demo</a>
     </div>
-    <p class="hero-note">Technical beta v0.4.0-beta.3 · self-hosted · MIT code and docs</p>
+    <p class="hero-note">Technical beta v0.4.0-beta.5 · self-hosted · MIT code and docs</p>
   </div>
 
   <div class="showcase-wide">
@@ -131,13 +133,116 @@
         illustration. More space is available when needed, but it is not the
         first impression and it is not the everyday default.
       </p>
+      <p class="body-text">
+        The interface follows the sun through Home Assistant, so nobody in the
+        household ever reaches for a theme setting. Both pictures below are real
+        screenshots of the same panel in the same state — switch between them.
+      </p>
     </div>
   </div>
   <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/hero-home.webp" width="1696" height="960" loading="lazy" decoding="async"
-           alt="The Hauser home screen in light mode with a compact room-control panel on the left and the room illustration kept visible on the right.">
+    <div class="theme-demo" data-mode="day">
+      <div class="theme-switch" role="group" aria-label="Show the panel by day or by night">
+        <button type="button" class="theme-btn" data-mode="day" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/>
+          </svg>
+          Day
+        </button>
+        <button type="button" class="theme-btn" data-mode="night" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1Z"/>
+          </svg>
+          Night
+        </button>
+      </div>
+      <div class="device theme-stack reveal">
+        <img class="theme-shot-day" src="media/hero-home.webp" width="1696" height="960" loading="lazy" decoding="async"
+             alt="The Hauser home screen by day: a compact room-control panel on the left, the sunlit room illustration on the right.">
+        <img class="theme-shot-night" src="media/home-dark.webp" width="1696" height="960" loading="lazy" decoding="async"
+             alt="The same home screen after dark: identical layout, dark surfaces, and the room illustration lit only by its lamps.">
+      </div>
+      <p class="device-caption">The same panel, the same second — only the sun moved.</p>
     </div>
+  </div>
+</section>
+
+<!-- ── Raumbild-Wizard ───────────────────────────────────────────────── -->
+<section class="band" id="room-images">
+  <div class="wrap">
+    <div class="showcase-head">
+      <p class="eyebrow">Room images</p>
+      <h2>Photograph the room. That is the whole input.</h2>
+      <p class="body-text">
+        Every room in Hauser carries an illustration of itself in three lighting
+        states, and the picture follows the lights. The illustrations that ship
+        with the product are of this house, which is no use to yours — so the
+        room-image wizard makes yours from a photograph you take with your phone.
+      </p>
+      <p class="body-text">
+        The picture on the left is a real input, not a demonstration shot. Evening
+        light, a wide-angle phone lens, toys on the floor, the sofa half in
+        shadow. Nothing was tidied and nothing was staged. The illustration on the
+        right is what the pipeline made of it — and it is the living-room image
+        that ships in the product today.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="pair">
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/wizard-input-raw.webp" width="1400" height="1050" loading="lazy" decoding="async"
+               alt="An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.">
+        </div>
+        <p class="device-caption"><span class="shot-label">Input</span> Even this photo is enough.</p>
+      </div>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/wizard-output-room.webp" width="1400" height="1050" loading="lazy" decoding="async"
+               alt="The same living room redrawn as a warm Hauser-style illustration, with the balcony door, the grey sofa and the wooden dining table in their original positions.">
+        </div>
+        <p class="device-caption"><span class="shot-label shot-label-out">Output</span> The same room, in the daylight state.</p>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="cards">
+      <div class="card reveal">
+        <h3><span class="step-num">1</span> Your photo, your framing</h3>
+        <p>
+          Upload the picture, choose the crop and set the focus point that the
+          room screen will hold on to. A few closed options — calm the clutter a
+          little or a lot, keep this thing in particular — instead of a prompt box.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3><span class="step-num">2</span> One correction, then the style</h3>
+        <p>
+          The first pass may correct perspective and composition moderately. After
+          that, camera, geometry and object positions are frozen, and only the
+          style is applied — so what comes back is still your room, not a stock
+          living room that resembles it.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3><span class="step-num">3</span> A whole set, or nothing</h3>
+        <p>
+          Day, evening and lights-off are generated as one set, reviewed together
+          and published atomically to the image library. Assign it to a room from
+          there, or keep the bundled illustration.
+        </p>
+      </div>
+    </div>
+    <p class="body-text" style="margin-top:36px">
+      This is the one place where Hauser talks to a paid third party: the wizard
+      needs your own OpenAI access, through a connected ChatGPT account or an API
+      key, and your photo is sent there to be redrawn. That trade is stated
+      before anything is uploaded, every paid step is confirmed by hand, and a
+      running count of provider calls stays on screen. The wizard is not part of
+      the public demo.
+    </p>
   </div>
 </section>
 
@@ -271,13 +376,6 @@
           One or two compact control surfaces can keep independent room contexts
           while the full room illustration stays visible. Daily control does not
           turn the home screen into an administration grid.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Day and night</h3>
-        <p>
-          The interface follows the sun through Home Assistant, shifting between
-          light and dark without anyone reaching for a setting.
         </p>
       </div>
       <div class="card reveal">
@@ -451,6 +549,11 @@
             <td><span class="tag tag-live">Live</span></td>
           </tr>
           <tr>
+            <td>Room images</td>
+            <td>Guided wizard from one photo to a complete day/evening/off set</td>
+            <td><span class="tag tag-built">Built</span></td>
+          </tr>
+          <tr>
             <td>Everyday screens</td>
             <td>Calendar, notes, reminders, shopping, notifications</td>
             <td><span class="tag tag-built">Built</span></td>
@@ -510,12 +613,45 @@
     <p>
       Code, design tokens and technical documentation are under the MIT license.
       Original artwork and public screenshots are CC&nbsp;BY&nbsp;4.0. Official
-      Hauser branding is reserved. Typeset in Inter and Instrument Serif, both
-      under the SIL Open Font License.
+      Hauser branding is reserved. Typeset in Inter, under the SIL Open Font
+      License.
     </p>
     <p>Not affiliated with Home Assistant or Jellyfin.</p>
   </div>
 </footer>
+
+<script>
+  // Tag/Nacht-Vorführung. Startzustand folgt dem Farbschema des Besuchers —
+  // wer die Seite nachts dunkel öffnet, sieht das Panel zuerst nachts.
+  (function () {
+    var demo = document.querySelector('.theme-demo');
+    if (!demo) return;
+
+    var buttons = demo.querySelectorAll('.theme-btn');
+    var shots = {
+      day: demo.querySelector('.theme-shot-day'),
+      night: demo.querySelector('.theme-shot-night')
+    };
+
+    function apply(mode) {
+      demo.dataset.mode = mode;
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.mode === mode));
+      }
+      for (var key in shots) {
+        if (shots[key]) shots[key].setAttribute('aria-hidden', String(key !== mode));
+      }
+    }
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function (event) {
+        apply(event.currentTarget.dataset.mode);
+      });
+    }
+
+    apply(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
+  })();
+</script>
 
 <script>
   // Scroll-Reveal. `.has-js` schaltet den Effekt überhaupt erst scharf — ohne

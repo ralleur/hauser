@@ -45,7 +45,6 @@ third_party_files = {
     Path('app/public/fonts/InterVariable-subset.woff2'),
     Path('app/public/fonts/InstrumentSerif-subset.woff2'),
     Path('website/fonts/InterVariable-subset.woff2'),
-    Path('website/fonts/InstrumentSerif-subset.woff2'),
 }
 
 blueprint_root = Path('app/public/blueprints')
