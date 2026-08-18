@@ -35,7 +35,7 @@
     <div class="phone-calendar-days">
       {#each days as day (day.key)}
         <section aria-labelledby={`phone-calendar-day-${day.key}`}>
-          <h2 id={`phone-calendar-day-${day.key}`}>{day.today ? `Heute · ${day.label}` : day.label}</h2>
+          <h2 id={`phone-calendar-day-${day.key}`}>{day.today ? m.phone_today_prefix({ label: day.label }) : day.label}</h2>
           <ul>
             {#each day.events as event (event.renderKey)}
               <li class:is-running={event.running}>

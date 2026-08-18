@@ -760,5 +760,6 @@
   "phone_all_day": "Todo o dia",
   "scene_cozy": "Aconchegante",
   "scene_bright": "Claro",
-  "scene_off": "Desligado"
+  "scene_off": "Desligado",
+  "phone_today_prefix": "Hoje · {label}"
 }

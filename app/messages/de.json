@@ -772,5 +772,6 @@
   "phone_all_day": "Ganztägig",
   "scene_cozy": "Gemütlich",
   "scene_bright": "Hell",
-  "scene_off": "Aus"
+  "scene_off": "Aus",
+  "phone_today_prefix": "Heute · {label}"
 }

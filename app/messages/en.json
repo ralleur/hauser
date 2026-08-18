@@ -772,5 +772,6 @@
   "phone_all_day": "All day",
   "scene_cozy": "Cozy",
   "scene_bright": "Bright",
-  "scene_off": "Off"
+  "scene_off": "Off",
+  "phone_today_prefix": "Today · {label}"
 }
