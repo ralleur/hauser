@@ -702,5 +702,9 @@
   "settings_laundry_applying": "Zapisywanie w Home Assistant i weryfikowanie wyniku …",
   "phone_room_lights_on": "{count} wł.",
   "phone_room_window_open": "Okno otwarte",
-  "demo_badge": "Demo · dane symulowane"
+  "demo_badge": "Demo · dane symulowane",
+  "phone_vacation": "Urlop",
+  "phone_vacation_active": "Aktywny",
+  "phone_vacation_on_label": "Włącz tryb urlopowy",
+  "phone_vacation_off_label": "Wyłącz tryb urlopowy"
 }

@@ -1,3 +1,4 @@
+import { reapplyDemoNames } from '../demo/demo-mode.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { appState, ROOM_SEED } from './app.svelte.ts';
 import {
@@ -69,4 +70,5 @@ function updateConfig(config: DeviceConfig): void {
 
 function applyProjection(): void {
   appState.rooms = buildRuntimeRooms(ROOM_SEED, deviceManager.catalog, deviceManager.config);
+  reapplyDemoNames(appState.rooms);
 }

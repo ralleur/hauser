@@ -714,5 +714,9 @@
   "settings_laundry_applying": "Home Assistant wird geschrieben und anschließend verifiziert …",
   "phone_room_lights_on": "{count} an",
   "phone_room_window_open": "Fenster offen",
-  "demo_badge": "Demo · simulierte Daten"
+  "demo_badge": "Demo · simulierte Daten",
+  "phone_vacation": "Urlaub",
+  "phone_vacation_active": "Aktiv",
+  "phone_vacation_on_label": "Urlaubsmodus einschalten",
+  "phone_vacation_off_label": "Urlaubsmodus ausschalten"
 }

@@ -702,5 +702,9 @@
   "settings_laundry_applying": "Scrittura in Home Assistant e verifica del risultato …",
   "phone_room_lights_on": "{count} accese",
   "phone_room_window_open": "Finestra aperta",
-  "demo_badge": "Demo · dati simulati"
+  "demo_badge": "Demo · dati simulati",
+  "phone_vacation": "Vacanza",
+  "phone_vacation_active": "Attiva",
+  "phone_vacation_on_label": "Attivare la modalità vacanza",
+  "phone_vacation_off_label": "Disattivare la modalità vacanza"
 }

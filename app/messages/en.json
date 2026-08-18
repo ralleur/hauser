@@ -714,5 +714,9 @@
   "settings_laundry_applying": "Writing to Home Assistant and verifying the result …",
   "phone_room_lights_on": "{count} on",
   "phone_room_window_open": "Window open",
-  "demo_badge": "Demo · simulated data"
+  "demo_badge": "Demo · simulated data",
+  "phone_vacation": "Holiday",
+  "phone_vacation_active": "Active",
+  "phone_vacation_on_label": "Turn on holiday mode",
+  "phone_vacation_off_label": "Turn off holiday mode"
 }

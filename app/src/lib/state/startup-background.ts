@@ -1,5 +1,6 @@
 import { installHaRetryFactory } from '../adapter/ha-backend.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
+import { reapplyDemoNames } from '../demo/demo-mode.ts';
 import { appState, ROOM_SEED } from './app.svelte.ts';
 import { syncAuthState } from './auth.svelte.ts';
 import { initFamilyCalendar } from './calendar.svelte.ts';
@@ -37,6 +38,7 @@ function readShared(key: string): string | null {
 export function rehydrateSharedConfigConsumers(): void {
   deviceManager.config = loadDeviceConfig();
   appState.rooms = buildRuntimeRooms(ROOM_SEED, deviceManager.catalog, deviceManager.config);
+  reapplyDemoNames(appState.rooms);
   rehydrateLayoutManager();
   rehydrateImmersionLight();
   sceneManager.config = loadSceneConfig();

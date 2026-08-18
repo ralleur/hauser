@@ -702,5 +702,9 @@
   "settings_laundry_applying": "A escrever no Home Assistant e a verificar o resultado …",
   "phone_room_lights_on": "{count} acesas",
   "phone_room_window_open": "Janela aberta",
-  "demo_badge": "Demo · dados simulados"
+  "demo_badge": "Demo · dados simulados",
+  "phone_vacation": "Férias",
+  "phone_vacation_active": "Ativo",
+  "phone_vacation_on_label": "Ativar o modo de férias",
+  "phone_vacation_off_label": "Desativar o modo de férias"
 }

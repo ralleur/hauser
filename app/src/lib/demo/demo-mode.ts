@@ -233,6 +233,15 @@ function resetDemoState(): void {
   } catch { /* Storage nicht verfügbar — dann gibt es auch nichts zu räumen */ }
 }
 
+/* Räume werden nach dem ersten Paint und bei jeder Geräteänderung neu aus dem
+   Seed projiziert — dabei tragen sie wieder die deutschen Seed-Namen. Ohne
+   erneutes Anwenden bleibt die Demo in jeder Sprache deutsch beschriftet.
+   Der dynamische Import hält demo-names.ts aus dem Produktions-Bundle heraus. */
+export function reapplyDemoNames(rooms: Parameters<typeof import('./demo-names.ts').applyDemoNames>[0]): void {
+  if (!IS_DEMO) return;
+  void import('./demo-names.ts').then(({ applyDemoNames }) => applyDemoNames(rooms));
+}
+
 /* Dauerhafte Kennzeichnung: simulierte Daten, kein echtes Zuhause. */
 function addDemoBadge(): void {
   if (typeof document === 'undefined' || document.querySelector('.demo-badge')) return;
