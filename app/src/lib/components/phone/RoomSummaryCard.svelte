@@ -1,5 +1,6 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import { m } from '../../../paraglide/messages.js';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
@@ -70,10 +71,10 @@
   {#if summary.lightsOn > 0 || summary.windowOpen}
     <span class="phone-room-facts">
       {#if summary.lightsOn > 0}
-        <span><span aria-hidden="true">◉</span> {summary.lightsOn} an</span>
+        <span><span aria-hidden="true">◉</span> {m.phone_room_lights_on({ count: summary.lightsOn })}</span>
       {/if}
       {#if summary.windowOpen}
-        <span class="is-warning"><span aria-hidden="true">□</span> Fenster offen</span>
+        <span class="is-warning"><span aria-hidden="true">□</span> {m.phone_room_window_open()}</span>
       {/if}
     </span>
   {/if}

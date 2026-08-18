@@ -4,6 +4,7 @@
   import { PHONE_NAV_REORDERABLE, moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
+  import { m } from '../../../paraglide/messages.js';
 
   let {
     current,
@@ -106,7 +107,7 @@
 <div class="more-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
   <div class="more-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="more-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
     <header>
-      <h2 id="more-sheet-title">Mehr</h2>
+      <h2 id="more-sheet-title">{m.nav_more()}</h2>
       <div class="more-sheet-header-actions">
         {#if PHONE_NAV_REORDERABLE}
           <button class="more-sheet-action more-arrange-toggle pressable" type="button"

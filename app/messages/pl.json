@@ -699,5 +699,8 @@
   "settings_laundry_current_adapter": "Aktualnie wczytany adapter",
   "settings_laundry_current_disabled": "Obecnie nie skonfigurowano adaptera.",
   "settings_laundry_validating": "Serwer sprawdza podgląd …",
-  "settings_laundry_applying": "Zapisywanie w Home Assistant i weryfikowanie wyniku …"
+  "settings_laundry_applying": "Zapisywanie w Home Assistant i weryfikowanie wyniku …",
+  "phone_room_lights_on": "{count} wł.",
+  "phone_room_window_open": "Okno otwarte",
+  "demo_badge": "Demo · dane symulowane"
 }

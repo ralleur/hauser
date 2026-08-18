@@ -13,6 +13,7 @@
    Vorführung, auch nicht mit erfundenen Inhalten.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import demoHouseholdConfig from '../../../config/households/current-v1.json';
 import { HOUSEHOLD_SCHEMA_VERSION } from '../config/household-config-schema.ts';
 
@@ -237,6 +238,6 @@ function addDemoBadge(): void {
   if (typeof document === 'undefined' || document.querySelector('.demo-badge')) return;
   const badge = document.createElement('div');
   badge.className = 'demo-badge';
-  badge.textContent = 'Demo · simulierte Daten';
+  badge.textContent = m.demo_badge();
   document.body.append(badge);
 }

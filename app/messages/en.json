@@ -711,5 +711,8 @@
   "settings_laundry_current_adapter": "Currently loaded adapter",
   "settings_laundry_current_disabled": "No adapter is currently configured.",
   "settings_laundry_validating": "The server is validating the preview …",
-  "settings_laundry_applying": "Writing to Home Assistant and verifying the result …"
+  "settings_laundry_applying": "Writing to Home Assistant and verifying the result …",
+  "phone_room_lights_on": "{count} on",
+  "phone_room_window_open": "Window open",
+  "demo_badge": "Demo · simulated data"
 }

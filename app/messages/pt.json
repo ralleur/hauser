@@ -699,5 +699,8 @@
   "settings_laundry_current_adapter": "Adaptador atualmente carregado",
   "settings_laundry_current_disabled": "Atualmente não há adaptador configurado.",
   "settings_laundry_validating": "O servidor está a validar a pré-visualização …",
-  "settings_laundry_applying": "A escrever no Home Assistant e a verificar o resultado …"
+  "settings_laundry_applying": "A escrever no Home Assistant e a verificar o resultado …",
+  "phone_room_lights_on": "{count} acesas",
+  "phone_room_window_open": "Janela aberta",
+  "demo_badge": "Demo · dados simulados"
 }
