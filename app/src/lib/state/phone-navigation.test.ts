@@ -73,7 +73,7 @@ describe('phone navigation mapping', () => {
     expect(PHONE_MAIN_TARGETS.map(({ id, label }) => [id, label])).toEqual([
       ['home', 'Home'],
       ['calendar', 'Kalender'],
-      ['media', 'Medien'],
+      ['media', 'Media'],
       ['more', 'Mehr'],
     ]);
     expect(canonicalTargetForMain('home', 'library')).toBe('home');
@@ -569,7 +569,7 @@ describe('phone source and accessibility boundaries', () => {
     expect(moreSheet).toMatch(/event\.target\s*!==\s*event\.currentTarget/);
     expect(moreSheet).toMatch(/phoneNavOrder\.order\.slice\(3\)/);
     expect(moreSheet).toMatch(/\{#each phoneNavOrder\.order as id, index \(id\)\}/);
-    expect(moreSheet).toContain('Anordnen');
+    expect(moreSheet).toContain('m.phone_arrange_end() : m.phone_arrange_start()');
     expect(bottomNav).toContain('<PhoneNavIcon {id} />');
     expect(moreSheet).toContain('<PhoneNavIcon {id} />');
     expect(moreSheet).toMatch(/<header>[\s\S]*more-arrange-toggle[\s\S]*more-sheet-close[\s\S]*<\/header>/);

@@ -7,9 +7,14 @@ import { gzipSync } from 'node:zlib';
 
 import { ImportType, init, parse } from 'es-module-lexer';
 
+/* ADR-022: Der kombinierte Phone-Startup hat ein eigenes, höheres Limit als die
+   Initialroute. Die Initialroute steht wieder auf den dokumentierten 80 KiB —
+   sie hat dort reichlich Luft, und ein Gate, das großzügiger ist als sein
+   Dokument, ist kein Gate. */
 export const DEFAULT_BUDGETS = Object.freeze({
-  initialJsGzipBytes: 82 * 1024,
+  initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
+  combinedPhoneStartupJsGzipBytes: 86 * 1024,
 });
 
 function emptyReport(budgets) {
@@ -54,6 +59,15 @@ function validateBudgets(budgets) {
       throw new TypeError(`${key} must be a positive integer`);
     }
   }
+  // Optional: fällt auf das Initialroutenlimit zurück, wenn nicht gesetzt.
+  const combined = budgets.combinedPhoneStartupJsGzipBytes;
+  if (combined !== undefined && (!Number.isInteger(combined) || combined <= 0)) {
+    throw new TypeError('combinedPhoneStartupJsGzipBytes must be a positive integer');
+  }
+}
+
+function combinedStartupJsLimit(budgets) {
+  return budgets.combinedPhoneStartupJsGzipBytes ?? budgets.initialJsGzipBytes;
 }
 
 function readAttribute(attributes, name) {
@@ -628,7 +642,7 @@ export async function analyzeBuild({ distDir, budgets = DEFAULT_BUDGETS }) {
     report.shells.combinedPhoneStartup = {
       files: combinedFiles,
       total: combinedTotal,
-      budget: budgetResult(budgets.initialJsGzipBytes, combinedTotal.gzipBytes),
+      budget: budgetResult(combinedStartupJsLimit(budgets), combinedTotal.gzipBytes),
       css: {
         files: combinedCssFiles,
         total: combinedCssTotal,

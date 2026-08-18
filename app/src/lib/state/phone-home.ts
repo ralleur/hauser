@@ -1,3 +1,5 @@
+import { m } from '../../paraglide/messages.js';
+import { intlLocale, pluralCategory } from './locale.svelte.ts';
 import type { ClimateValue, LightValue } from '../adapter/types.ts';
 import type { RoomHeroConfig } from '../config/household-config.ts';
 import type {
@@ -85,15 +87,29 @@ export function projectPhoneRooms(
 }
 
 function temperatureLabel(value: number | null): string {
-  return value === null ? 'Keine Temperaturdaten' : `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Grad`;
+  if (value === null) return m.phone_temp_none();
+  return m.phone_temp_degrees({
+    value: value.toLocaleString(intlLocale(), { maximumFractionDigits: 1 }),
+  });
 }
 
+/* Plural nach der aktiven Sprache, nicht nach der deutschen Zweiform. */
+const LIGHTS_SUMMARY = {
+  one: m.phone_lights_summary_one, two: m.phone_lights_summary_other,
+  few: m.phone_lights_summary_other, many: m.phone_lights_summary_other,
+  other: m.phone_lights_summary_other,
+};
+
 function lightLabel(summary: PhoneRoomSummary): string {
-  if (summary.lightsTotal === 0) return 'Keine Lichter';
-  if (summary.lightsKnown === 0) return 'Lichter nicht verfügbar';
+  if (summary.lightsTotal === 0) return m.phone_lights_none();
+  if (summary.lightsKnown === 0) return m.phone_lights_unavailable();
   const unavailable = summary.lightsTotal - summary.lightsKnown;
-  const known = `${summary.lightsOn} von ${summary.lightsKnown} ${summary.lightsKnown === 1 ? 'Licht' : 'Lichtern'} an`;
-  return unavailable > 0 ? `${known}, ${unavailable} nicht verfügbar` : known;
+  const known = LIGHTS_SUMMARY[pluralCategory(summary.lightsKnown)]({
+    on: summary.lightsOn, known: summary.lightsKnown,
+  });
+  return unavailable > 0
+    ? m.phone_lights_unknown_extra({ summary: known, count: unavailable })
+    : known;
 }
 
 export function accessibleRoomSummary(summary: PhoneRoomSummary): string {
@@ -101,8 +117,8 @@ export function accessibleRoomSummary(summary: PhoneRoomSummary): string {
     summary.name,
     temperatureLabel(summary.temperature),
     lightLabel(summary),
-    summary.windowOpen ? '1 Fenster offen' : 'Fenster geschlossen',
-    summary.presence ? 'Präsenz erkannt' : 'Keine Präsenz',
+    summary.windowOpen ? m.status_window_open_one() : m.phone_window_closed(),
+    summary.presence ? m.phone_presence_yes() : m.phone_presence_no(),
   ].join(', ');
 }
 

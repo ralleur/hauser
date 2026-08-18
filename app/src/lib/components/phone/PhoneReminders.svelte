@@ -114,7 +114,7 @@
   {#if addError}<p class="notes-add-error" role="alert">{addError}</p>{/if}
 
   {#if reminders.error}
-    <p class="phone-calendar-status is-error" role="status">Letzte bekannte Erinnerungen</p>
+    <p class="phone-calendar-status is-error" role="status">{m.phone_reminders_stale()}</p>
   {/if}
 
   {#each PERSON_ORDER as person (person)}
@@ -150,7 +150,7 @@
           {#each row.done as item (item.id)}
             <div class="rem-card is-done postit-{person}" aria-label="Erledigt: {reminderDisplayTitle(item.title)}">
               <p class="rem-card-title">{reminderDisplayTitle(item.title)}</p>
-              <span class="rem-card-due">Erledigt ✓</span>
+              <span class="rem-card-due">{m.phone_done_check()}</span>
             </div>
           {/each}
         {/if}
@@ -188,7 +188,7 @@
               onclick={editSelected}>{m.notes_edit()}</button>
       <button class="rem-popout-btn pressable" type="button" disabled={popoutBusy}
               onclick={confirmComplete}>
-        {popoutBusy ? 'Wird abgehakt …' : 'Erledigt ✓'}
+        {popoutBusy ? m.phone_marking_done() : m.phone_done_check()}
       </button>
       {#if popoutError}<p class="rem-popout-error" role="alert">{popoutError}</p>{/if}
     </div>

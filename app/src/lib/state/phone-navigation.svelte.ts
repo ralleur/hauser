@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import { projectPhoneTarget, type ScreenId } from './nav.svelte.ts';
 
 export type PhoneMainTarget = 'home' | 'calendar' | 'media' | 'more';
@@ -5,12 +6,13 @@ export type MediaRootTarget = 'media' | 'library';
 export type LayerCloseReason = 'back' | 'escape' | 'scrim' | 'close' | 'toggle' | 'selection' | 'navigation' | 'unmount';
 export type LayerChangeReason = LayerCloseReason | 'open';
 
+/* `label` als Getter (ADR-021) — siehe nav.svelte.ts. */
 export const PHONE_MAIN_TARGETS = [
-  { id: 'home', label: 'Home' },
-  { id: 'calendar', label: 'Kalender' },
-  { id: 'media', label: 'Medien' },
-  { id: 'more', label: 'Mehr' },
-] as const satisfies readonly { id: PhoneMainTarget; label: string }[];
+  { id: 'home', get label() { return m.nav_home(); } },
+  { id: 'calendar', get label() { return m.nav_calendar(); } },
+  { id: 'media', get label() { return m.nav_media(); } },
+  { id: 'more', get label() { return m.nav_more(); } },
+] as const satisfies readonly { id: PhoneMainTarget; readonly label: string }[];
 
 export function mainAreaForScreen(screen: unknown): PhoneMainTarget {
   return projectPhoneTarget(screen).area;

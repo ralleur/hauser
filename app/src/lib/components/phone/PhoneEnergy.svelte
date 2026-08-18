@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../../paraglide/messages.js';
   import Icon from '../Icon.svelte';
   import { energyView, loadBreakdown } from '../../state/energy.svelte.ts';
   import {
@@ -15,8 +16,8 @@
   const panel = $derived(energyPanelData(e, period, page));
   const breakdown = $derived(loadBreakdown());
   const model = $derived(projectPhoneEnergy(e, breakdown, panel));
-  const periodLabel = $derived(ENERGY_PERIODS.find((option) => option.id === period)?.label ?? 'Heute');
-  const pageSwitchLabel = $derived(page === 'flow' ? 'Zur Verbrauchsseite wechseln' : 'Zur Energieseite wechseln');
+  const periodLabel = $derived(ENERGY_PERIODS.find((option) => option.id === period)?.label ?? m.period_today());
+  const pageSwitchLabel = $derived(page === 'flow' ? m.phone_energy_to_usage() : m.phone_energy_to_flow());
   let expanded = $state(false);
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
@@ -24,12 +25,12 @@
 
 <main class="phone-energy" aria-labelledby="phone-energy-title">
   <header class="phone-energy-header">
-    <h1 bind:this={titleAnchor} id="phone-energy-title" tabindex="-1">Energie</h1>
+    <h1 bind:this={titleAnchor} id="phone-energy-title" tabindex="-1">{m.phone_energy_title()}</h1>
     <p class:phone-energy-unavailable={model.status.kind !== 'available'} role="status">{model.status.text}</p>
   </header>
 
   <div class="energy-panel-top phone-energy-toolbar">
-    <div class="energy-period-row" role="radiogroup" aria-label="Energie-Zeitraum">
+    <div class="energy-period-row" role="radiogroup" aria-label={m.phone_energy_period()}>
       {#each ENERGY_PERIODS as option (option.id)}
         <button
           class="scene-btn energy-period-btn pressable"
@@ -56,7 +57,7 @@
   </div>
 
   <section class="phone-energy-section" aria-labelledby="phone-energy-live-title">
-    <h2 id="phone-energy-live-title">Aktuell</h2>
+    <h2 id="phone-energy-live-title">{m.phone_energy_now()}</h2>
     <dl class="phone-energy-live">
       {#each model.live as metric (metric.label)}
         <div>
@@ -81,7 +82,7 @@
   </section>
 
   <section class="phone-energy-section" aria-labelledby="phone-energy-load-title">
-    <h2 id="phone-energy-load-title">Verbrauch</h2>
+    <h2 id="phone-energy-load-title">{m.phone_energy_usage()}</h2>
     <button
       class="phone-energy-drilldown"
       type="button"
@@ -90,15 +91,15 @@
       disabled={!model.canExpand}
       onclick={() => (expanded = !expanded)}
     >
-      {expanded ? 'Aufteilung schließen' : 'Verbrauch aufteilen'}
+      {expanded ? m.phone_energy_split_close() : m.phone_energy_split_open()}
     </button>
     {#if !model.canExpand}
-      <p class="phone-energy-note">Die erfasste Last ist aktuell unbekannt. Eine Aufteilung ist deshalb nicht verfügbar.</p>
+      <p class="phone-energy-note">{m.phone_energy_unknown()}</p>
     {/if}
     {#if expanded}
       <div class="phone-energy-breakdown" id="phone-energy-breakdown">
         {#if model.breakdown.length === 0}
-          <p class="phone-energy-note">Für die erfasste Last sind aktuell keine aktiven Segmente vorhanden.</p>
+          <p class="phone-energy-note">{m.phone_energy_no_segments()}</p>
         {:else}
           <ul>
             {#each model.breakdown as segment (segment.key)}

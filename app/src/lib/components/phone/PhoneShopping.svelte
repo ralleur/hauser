@@ -74,7 +74,7 @@
       <button class="secondary-btn pressable" type="button" disabled={shoppingSort.loading}
               aria-label={shoppingSort.active ? m.shopping_undo_label() : m.shopping_sort_label()}
               onclick={() => shoppingSort.active ? undoShoppingSort() : sortShoppingList(shopping.sections)}>
-        {shoppingSort.loading ? 'Sortiert …' : shoppingSort.active ? m.notes_undo() : m.shopping_sort()}
+        {shoppingSort.loading ? m.phone_sorting() : shoppingSort.active ? m.notes_undo() : m.shopping_sort()}
       </button>
       <button class="notes-refresh pressable" type="button" aria-label={m.notes_shopping_refresh()}
               disabled={shopping.loading} onclick={() => refreshShopping()}>

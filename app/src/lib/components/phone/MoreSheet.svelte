@@ -111,12 +111,12 @@
       <div class="more-sheet-header-actions">
         {#if PHONE_NAV_REORDERABLE}
           <button class="more-sheet-action more-arrange-toggle pressable" type="button"
-                  aria-label={arranging ? 'Anordnen beenden' : 'Navigation anordnen'}
+                  aria-label={arranging ? m.phone_arrange_end() : m.phone_arrange_start()}
                   aria-pressed={arranging} onclick={() => (arranging = !arranging)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5-5 5 5M17 15l-5 5-5-5" /></svg>
           </button>
         {/if}
-        <button class="more-sheet-action more-sheet-close pressable" type="button" aria-label="Mehr schließen" onclick={() => onclose('close')}>
+        <button class="more-sheet-action more-sheet-close pressable" type="button" aria-label={m.phone_more_close()} onclick={() => onclose('close')}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg>
         </button>
       </div>
@@ -132,7 +132,7 @@
         {/each}
       </div>
     {:else}
-      <div class="more-sheet-list" aria-label="Reihenfolge der Navigation">
+      <div class="more-sheet-list" aria-label={m.phone_nav_order()}>
         {#each phoneNavOrder.order as id, index (id)}
           <div class="more-arrange-row">
             <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>

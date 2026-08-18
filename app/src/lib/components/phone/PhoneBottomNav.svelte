@@ -16,7 +16,7 @@
   } = $props();
 </script>
 
-<nav class="phone-bottom-nav" aria-label="Hauptnavigation">
+<nav class="phone-bottom-nav" aria-label={m.nav_main()}>
   {#each phoneNavOrder.order.slice(0, 3) as id (id)}
     <button class="phone-nav-target pressable" class:is-active={active === id} type="button" aria-current={active === id ? 'page' : undefined} onclick={(event) => onselect(id, event.currentTarget)}>
       <PhoneNavIcon {id} />

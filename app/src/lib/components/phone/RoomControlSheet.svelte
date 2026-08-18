@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../../paraglide/messages.js';
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
   import type { Room } from '../../state/app.svelte.ts';
@@ -123,13 +124,13 @@
 {#snippet nestedLayerLoadState(id: NestedLayerId, failed: boolean)}
   <div class="light-detail is-open">
     <div class="overlay-scrim" role="presentation"></div>
-    <div class="light-detail-panel overlay-panel" role="dialog" aria-modal="true" aria-label="Bereich laden">
+    <div class="light-detail-panel overlay-panel" role="dialog" aria-modal="true" aria-label={m.phone_area_loading_label()}>
       {#if failed}
-        <p role="alert">Bereich konnte nicht geladen werden.</p>
-        <button class="secondary-btn pressable" type="button" onclick={() => retryNestedLayer(id)}>Erneut versuchen</button>
-        <button class="secondary-btn pressable" type="button" onclick={() => closeNestedLayer(id)}>Schließen</button>
+        <p role="alert">{m.phone_area_failed()}</p>
+        <button class="secondary-btn pressable" type="button" onclick={() => retryNestedLayer(id)}>{m.library_retry()}</button>
+        <button class="secondary-btn pressable" type="button" onclick={() => closeNestedLayer(id)}>{m.common_close()}</button>
       {:else}
-        <p role="status" aria-live="polite">Bereich wird geladen …</p>
+        <p role="status" aria-live="polite">{m.phone_area_loading()}</p>
       {/if}
     </div>
   </div>
@@ -139,10 +140,10 @@
   <div class="room-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="room-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
     <header class="room-sheet-header">
       <div>
-        <p class="phone-home-kicker">Raumsteuerung</p>
+        <p class="phone-home-kicker">{m.phone_room_control()}</p>
         <h2 bind:this={title} id="room-sheet-title" tabindex="-1">{room.name}</h2>
       </div>
-      <button class="room-sheet-close pressable" type="button" aria-label={`${room.name} schließen`} onclick={() => onclose('close')}>
+      <button class="room-sheet-close pressable" type="button" aria-label={m.phone_close_room({ room: room.name })} onclick={() => onclose('close')}>
         <span aria-hidden="true">×</span>
       </button>
     </header>

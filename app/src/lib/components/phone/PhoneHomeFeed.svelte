@@ -9,6 +9,15 @@
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
 
   import { m } from '../../../paraglide/messages.js';
+  import { pluralCategory } from '../../state/locale.svelte.ts';
+
+  /* Plusamorm je Sprache — dieselben Katalogfassungen wie in der Tab-Leiste. */
+  const WINDOWS_OPEN = {
+    one: m.status_window_open_one, two: m.status_window_open_two,
+    few: m.status_window_open_few, many: m.status_window_open_many,
+    other: m.status_window_open_other,
+  };
+
   let {
     rooms,
     currentRoom,
@@ -33,7 +42,7 @@
 
   function finishHomeOff(confirmBefore: string | null): void {
     if (shouldConfirmHomeOff(new Date(), confirmBefore)
-      && !window.confirm('Wirklich alle Lichter und den Fernseher außerhalb des Schlafzimmers ausschalten?')) return;
+      && !window.confirm(m.phone_off_confirm())) return;
     turnOffHomeExceptBedroom();
   }
 
@@ -44,7 +53,7 @@
       // Kann die optionale Einstellungs-Closure nicht geladen werden, bleibt die
       // destruktive Aktion fail-safe bestätigt. Der nächste Tap startet einen
       // echten neuen Ladeversuch; eine Rejection wird nicht dauerhaft gecacht.
-      if (window.confirm('Einstellungen konnten nicht geladen werden. Zuhause trotzdem ausschalten?')) {
+      if (window.confirm(m.phone_off_confirm_nocfg())) {
         turnOffHomeExceptBedroom();
       }
     });
@@ -56,7 +65,7 @@
 
   {#if openWindows > 0}
     <aside class="phone-home-notice is-warning" aria-label={m.phone_security_note()}>
-      <strong>{openWindows} {openWindows === 1 ? 'Fenster ist' : 'Fenster sind'} offen</strong>
+      <strong>{WINDOWS_OPEN[pluralCategory(openWindows)]({ count: openWindows })}</strong>
       <span>{online ? m.phone_details_at_rooms() : m.phone_last_known()}</span>
     </aside>
   {/if}
@@ -79,8 +88,8 @@
         <Icon name="i-power" cls="icon icon-md" />
         <span>{m.phone_off()}</span>
       </button>
-      <div class="climate-dock phone-climate-dock" aria-label="Zentrale Klimasteuerung, alle Räume">
-        <button class="cd-key cd-key-down pressable" type="button" aria-label="Alle Räume 0,5 Grad kälter"
+      <div class="climate-dock phone-climate-dock" aria-label={m.phone_climate_central()}>
+        <button class="cd-key cd-key-down pressable" type="button" aria-label={m.phone_climate_colder()}
                 onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
         <div class="cd-readout phone-climate-readout">
           <div class="phone-climate-reading">
@@ -95,7 +104,7 @@
             <span class="phone-climate-label">{m.climate_target()}</span>
           </div>
         </div>
-        <button class="cd-key cd-key-up pressable" type="button" aria-label="Alle Räume 0,5 Grad wärmer"
+        <button class="cd-key cd-key-up pressable" type="button" aria-label={m.phone_climate_warmer()}
                 onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
       </div>
       <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}

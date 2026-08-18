@@ -10,6 +10,7 @@
    device-config.ts. Reine Logik + Persistenz, keine Runes — der reaktive
    Zustand lebt in scene-manager.svelte.ts. */
 
+import { m } from '../../paraglide/messages.js';
 import type { Command, LightValue, SwitchValue } from '../adapter/types.ts';
 import { sharedStorage } from './shared-config.ts';
 
@@ -17,17 +18,19 @@ export type SceneId = 'gemuetlich' | 'hell' | 'aus';
 
 export interface SceneDef {
   id: SceneId;
-  label: string;
+  readonly label: string;
   /** false = Szene schaltet alle Mitglieder aus */
   on: boolean;
   /** Ziel-Helligkeit dimmbarer Lichter in % (nur bei on-Szenen relevant) */
   brightness: number;
 }
 
+/* `label` als Getter (ADR-021): die drei eingebauten Szenen sind Produkttext,
+   kein Nutzerinhalt — sie müssen der Oberflächensprache folgen. */
 export const SCENES: readonly SceneDef[] = [
-  { id: 'gemuetlich', label: 'Gemütlich', on: true, brightness: 20 },
-  { id: 'hell', label: 'Hell', on: true, brightness: 100 },
-  { id: 'aus', label: 'Aus', on: false, brightness: 0 },
+  { id: 'gemuetlich', get label() { return m.scene_cozy(); }, on: true, brightness: 20 },
+  { id: 'hell', get label() { return m.scene_bright(); }, on: true, brightness: 100 },
+  { id: 'aus', get label() { return m.scene_off(); }, on: false, brightness: 0 },
 ];
 
 export function sceneDef(id: SceneId): SceneDef {

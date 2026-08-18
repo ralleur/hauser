@@ -247,10 +247,10 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneCalendar).toMatch(/familyCalendar/);
     expect(phoneCalendar).toMatch(/refreshFamilyCalendar\(\)/);
     expect(phoneCalendar).toMatch(/disabled=\{familyCalendar\.loading\}/);
-    expect(phoneCalendar).toContain('Kalender aktualisieren');
-    expect(phoneCalendar).toContain('Letzte bekannte Termine');
-    expect(phoneCalendar).toContain('Keine kommenden Termine');
-    expect(phoneCalendar).toContain('Noch nicht aktualisiert');
+    expect(phoneCalendar).toContain('m.phone_calendar_refresh()');
+    expect(phoneCalendar).toContain('m.phone_calendar_stale()');
+    expect(phoneCalendar).toContain('m.phone_calendar_empty()');
+    expect(phoneCalendar).toContain('m.phone_not_updated_yet()');
   });
 
   it('provides one main, one h1, day sections and event lists with non-color-only running state', () => {
@@ -259,7 +259,7 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneCalendar).toMatch(/<section[^>]*aria-labelledby=/);
     expect(phoneCalendar).toMatch(/<ul\b/);
     expect(phoneCalendar).toMatch(/<li\b/);
-    expect(phoneCalendar).toContain('Läuft jetzt');
+    expect(phoneCalendar).toContain('m.phone_event_running()');
     expect(phoneCalendar).not.toContain('description');
   });
 

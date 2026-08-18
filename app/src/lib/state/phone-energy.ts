@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import { fmtKw } from '../format.ts';
 import type { EnergyView } from './energy.svelte.ts';
 import type { LoadBreakdown } from './energy-load.ts';
@@ -42,10 +43,10 @@ export function projectPhoneEnergy(
   panel: EnergyPanelData = energyPanelData(view, 'today', 'flow'),
 ): PhoneEnergyModel {
   const status = !view.configured
-    ? { kind: 'unconfigured' as const, text: 'Keine Energie-Sensoren konfiguriert.' }
+    ? { kind: 'unconfigured' as const, text: m.energy_no_sensors() }
     : view.pv === null && view.load === null
-      ? { kind: 'unavailable' as const, text: 'Energie-Sensoren konfiguriert, aber aktuell nicht verfügbar.' }
-      : { kind: 'available' as const, text: 'Aktuelle Energiewerte verfügbar.' };
+      ? { kind: 'unavailable' as const, text: m.phone_energy_sensors_unavailable() }
+      : { kind: 'available' as const, text: m.phone_energy_available() };
 
   return {
     status,

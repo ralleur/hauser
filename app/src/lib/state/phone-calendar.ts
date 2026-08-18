@@ -1,3 +1,5 @@
+import { m } from '../../paraglide/messages.js';
+import { intlLocale } from './locale.svelte.ts';
 import type { CalendarEvent } from './calendar.ts';
 
 export interface PhoneAgendaEvent {
@@ -21,15 +23,31 @@ export interface PhoneAgendaDay {
 const dayKeyFormatter = new Intl.DateTimeFormat('sv-SE', {
   year: 'numeric', month: '2-digit', day: '2-digit',
 });
-const dayLabelFormatter = new Intl.DateTimeFormat('de-DE', {
-  weekday: 'long', day: 'numeric', month: 'long',
-});
-const spanDateFormatter = new Intl.DateTimeFormat('de-DE', {
-  day: 'numeric', month: 'long',
-});
-const timeFormatter = new Intl.DateTimeFormat('de-DE', {
-  hour: '2-digit', minute: '2-digit',
-});
+/* Wochentag, Monat und Uhrzeit folgen der Oberfläche. Die Formatierer dürfen
+   deshalb nicht beim Import einfrieren — ein Sprachwechsel ohne Neuladen muss
+   durchschlagen. Gecacht wird je Sprache, damit die Projektion sie nicht pro
+   Termin neu baut. `dayKeyFormatter` bleibt bewusst bei sv-SE: das ist ein
+   sortierbarer Schlüssel, keine Anzeige. */
+interface AgendaFormatters {
+  dayLabel: Intl.DateTimeFormat;
+  spanDate: Intl.DateTimeFormat;
+  time: Intl.DateTimeFormat;
+}
+
+const formatterCache = new Map<string, AgendaFormatters>();
+
+function agendaFormatters(): AgendaFormatters {
+  const tag = intlLocale();
+  const cached = formatterCache.get(tag);
+  if (cached) return cached;
+  const built: AgendaFormatters = {
+    dayLabel: new Intl.DateTimeFormat(tag, { weekday: 'long', day: 'numeric', month: 'long' }),
+    spanDate: new Intl.DateTimeFormat(tag, { day: 'numeric', month: 'long' }),
+    time: new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit' }),
+  };
+  formatterCache.set(tag, built);
+  return built;
+}
 
 export function projectPhoneAgenda(
   events: readonly CalendarEvent[] | null | undefined,
@@ -45,7 +63,7 @@ export function projectPhoneAgenda(
   for (const item of projected) {
     const day = days.get(item.groupKey) ?? {
       key: item.groupKey,
-      label: dayLabelFormatter.format(item.groupDate),
+      label: agendaFormatters().dayLabel.format(item.groupDate),
       today: item.groupKey === todayKey,
       events: [],
     };
@@ -81,11 +99,15 @@ function projectEvent(item: CalendarEvent, index: number, now: Date, todayKey: s
       id: item.id,
       renderKey: `${item.id}\u001f${item.start}\u001f${item.end}\u001f${index}`,
       title: item.title,
-      time: item.allDay ? 'Ganztägig' : `${timeFormatter.format(start)}–${timeFormatter.format(end)}`,
+      time: item.allDay
+        ? m.phone_all_day()
+        : `${agendaFormatters().time.format(start)}–${agendaFormatters().time.format(end)}`,
       location: item.location,
       running,
       multiDay,
-      span: multiDay ? `${spanDateFormatter.format(start)}–${spanDateFormatter.format(lastDate)}` : null,
+      span: multiDay
+        ? `${agendaFormatters().spanDate.format(start)}–${agendaFormatters().spanDate.format(lastDate)}`
+        : null,
     },
   };
 }
