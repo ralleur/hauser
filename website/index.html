@@ -76,9 +76,9 @@
     </div>
     <p class="hero-note">Technical beta v0.4.0-beta.5 · self-hosted · MIT code and docs</p>
     <ul class="badge-row" aria-label="What installing Hauser involves">
-      <li>Docker Compose</li>
+      <li>Home Assistant App</li>
+      <li>or Docker Compose</li>
       <li>Guided setup</li>
-      <li>Home Assistant</li>
       <li>Jellyfin optional</li>
     </ul>
   </div>
@@ -475,16 +475,53 @@
 
 <!-- ── Install ───────────────────────────────────────────────────────── -->
 <section id="install">
-  <div class="wrap section-narrow centered">
-    <p class="eyebrow">Install</p>
-    <h2>Docker Compose, then a guided setup.</h2>
-    <p class="lead centered-lead">
-      The wizard scans Home Assistant, proposes rooms and devices, lets you
-      correct the result and activates a validated configuration atomically. No
-      source edits, no YAML.
-    </p>
+  <div class="wrap">
+    <div class="section-narrow centered">
+      <p class="eyebrow">Install</p>
+      <h2>One click on Home Assistant OS. Compose everywhere else.</h2>
+      <p class="lead centered-lead">
+        Both paths end in the same guided setup: it scans Home Assistant,
+        proposes rooms and devices, lets you correct the result and activates a
+        validated configuration atomically. No source edits, no YAML.
+      </p>
+    </div>
+
+    <div class="install-paths">
+      <div class="card path-preferred reveal">
+        <p class="path-tag">Home Assistant OS &amp; Supervised</p>
+        <h3>As a Home Assistant App</h3>
+        <ol class="path-steps">
+          <li>Add <code>github.com/ralleur/hauser</code> as an App repository.</li>
+          <li>Select Hauser, install it, start it.</li>
+          <li>Open the web UI and run the setup wizard.</li>
+        </ol>
+        <a class="btn btn-primary" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser">Add the repository</a>
+        <p class="path-note">
+          A thin wrapper around the same image, with all state in Home
+          Assistant's persistent storage — so App backups cover your household
+          configuration. The packaging is marked experimental and has been
+          verified on the maintainer's Home Assistant OS system so far.
+        </p>
+      </div>
+
+      <div class="card reveal">
+        <p class="path-tag">Container, Docker hosts, NAS</p>
+        <h3>With Docker Compose</h3>
+        <ol class="path-steps">
+          <li>Copy <code>.env.example</code> to <code>.env</code>.</li>
+          <li>Run <code>docker compose up -d</code>.</li>
+          <li>Open port 4173 and run the setup wizard.</li>
+        </ol>
+        <a class="btn" href="https://github.com/ralleur/hauser#installation">Read the install guide</a>
+        <p class="path-note">
+          Home Assistant Container has no App system, so this is the path there —
+          and the one the first external installation confirmed. Backup, restore,
+          update and rollback are documented end to end.
+        </p>
+      </div>
+    </div>
+
     <div class="actions centered-actions">
-      <a class="btn btn-primary" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
       <a class="btn" href="https://github.com/ralleur/hauser/releases">Release notes</a>
     </div>
   </div>

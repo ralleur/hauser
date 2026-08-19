@@ -8,7 +8,7 @@
 
 **A calm, visual Home Assistant frontend for the people who live in the home.**
 
-[**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation-and-troubleshooting) · [Roadmap](ROADMAP.md)
+[**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -149,7 +149,38 @@ shipped to the browser. The core —
 rooms, lights, climate, calendar, media and energy — runs without the companion.
 The public demo has no Notion dependency.
 
-## Install with Docker Compose
+## Installation
+
+Two supported paths. On Home Assistant OS and Supervised installations the
+packaged App is the short one; Home Assistant Container, plain Docker hosts and
+NAS systems use Docker Compose. Both end in the same guided setup wizard.
+
+### As a Home Assistant App
+
+[![Add app repository to your Home Assistant.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser)
+
+1. Use the button above, or open **Settings → Apps → App Store → Repositories**
+   and add `https://github.com/ralleur/hauser` by hand.
+2. Select **Hauser**, choose **Install**, then **Start**.
+3. Choose **Open Web UI** and run the setup wizard.
+
+The App is a thin packaging layer around the same multi-architecture image
+(`aarch64`, `amd64`) and stores all state in Home Assistant's persistent `/data`
+directory, so App backups cover the household configuration. This first
+packaging deliberately uses a direct LAN port instead of Ingress — keep it on a
+trusted network.
+
+The manifest declares `stage: experimental`: installation, startup, setup
+against real Home Assistant, one real entity command and persistence across an
+App restart have been verified on the maintainer's Home Assistant OS system, not
+yet across other people's installations.
+[`hauser/DOCS.md`](hauser/DOCS.md) documents the packaging, persistence,
+backup/restore and current limitations in full.
+
+Apps require Home Assistant OS or a Supervised installation. Home Assistant
+Container has no App system — use Compose below.
+
+### With Docker Compose
 
 The release Compose file pulls the versioned public image and starts it with
 persistent config, data and asset volumes:

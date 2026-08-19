@@ -1117,3 +1117,65 @@ footer a { color: var(--text-secondary); }
   .opt-fast .opt-glow { opacity: 1; }
   .opt-now { opacity: 1; }
 }
+
+/* ── Installationswege ────────────────────────────────────────────────────
+   Zwei Karten statt einer Liste: der App-Pfad ist auf Home Assistant OS der
+   kürzere und trägt deshalb den warmen Rand und den Primary-Button, Compose
+   bleibt der Weg für Container-, Docker- und NAS-Installationen. */
+
+.install-paths {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+  margin-top: clamp(36px, 5vw, 56px);
+}
+
+@media (min-width: 760px) {
+  .install-paths { grid-template-columns: 1fr 1fr; }
+}
+
+.install-paths .card { display: flex; flex-direction: column; }
+
+.path-preferred { border-color: color-mix(in srgb, var(--accent-warm) 42%, var(--border)); }
+
+.path-tag {
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.path-preferred .path-tag { color: var(--accent-warm); }
+
+.path-steps {
+  margin: 0 0 24px;
+  padding-inline-start: 22px;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.path-steps li + li { margin-top: 8px; }
+
+.path-steps code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--text-tertiary) 18%, transparent);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.install-paths .card .btn {
+  margin-block-start: auto;
+  align-self: start;
+}
+
+.path-note {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+#install > .wrap > .actions { justify-content: center; margin-top: 32px; }
