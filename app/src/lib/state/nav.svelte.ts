@@ -5,6 +5,7 @@
    App.svelte setzt die Klassen und beendet die Transition. */
 
 import { m } from '../../paraglide/messages.js';
+import { IS_DEMO } from '../demo/demo-mode.ts';
 import {
   HOUSEHOLD_DATA_SOURCE,
   NAV_SCREENS,
@@ -39,6 +40,12 @@ function tabLabel(id: RuntimeTab['id']): string {
 export const TABS = NAV_TABS.map((tab) => ({
   ...tab,
   get label() {
+    /* In der öffentlichen Demo stammt die Konfiguration aus diesem Haushalt und
+       trägt deutsche Tabnamen. Sie sind dort kein Nutzerinhalt, sondern
+       Beispieldaten — englische Besucher sahen sonst „Energie" und „Notizen"
+       in einer sonst englischen Oberfläche. Ein echter Haushalt behält seine
+       selbst vergebenen Namen. */
+    if (IS_DEMO) return tabLabel(tab.id);
     return HOUSEHOLD_DATA_SOURCE === 'active' ? tab.configName : tabLabel(tab.id);
   },
 }));
