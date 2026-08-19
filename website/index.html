@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — a simple, room-first Home Assistant dashboard for the whole household</title>
+<title>Hauser — Room-first Home Assistant Dashboard</title>
 <meta name="description" content="Hauser is a self-hosted, room-first Home Assistant frontend for wall panels, tablets and phones — a calm everyday interface for the whole household.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://ralleur.github.io/hauser/">
@@ -54,7 +54,8 @@
     </a>
     <div class="nav-actions">
       <a class="nav-link" href="https://github.com/ralleur/hauser">GitHub</a>
-      <a class="btn btn-sm btn-primary" href="https://github.com/ralleur/hauser#installation">Install</a>
+      <a class="nav-link" href="https://github.com/ralleur/hauser#installation">Install</a>
+      <a class="btn btn-sm btn-primary" href="demo/">Demo</a>
     </div>
   </div>
 </nav>
@@ -70,20 +71,44 @@
       and phones.
     </p>
     <div class="actions">
-      <a class="btn btn-primary" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
-      <a class="btn" href="demo/">Explore the live demo</a>
+      <a class="btn btn-primary" href="demo/">Explore the live demo</a>
+      <a class="btn" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
     </div>
     <p class="hero-note">Technical beta v0.4.0-beta.5 · self-hosted · MIT code and docs</p>
+    <ul class="badge-row" aria-label="What installing Hauser involves">
+      <li>Docker Compose</li>
+      <li>Guided setup</li>
+      <li>Home Assistant</li>
+      <li>Jellyfin optional</li>
+    </ul>
   </div>
 
   <div class="showcase-wide">
     <div class="device reveal">
-      <img src="media/lockscreen.webp" width="1696" height="1200" fetchpriority="high"
-           alt="The Hauser ambient lock screen with a large clock, date, household context, upcoming events and notes arranged for glanceable use on a wall panel.">
+      <img src="media/hero-home.webp"
+           srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
+           sizes="(min-width: 1360px) 1296px, 100vw"
+           width="1696" height="960" fetchpriority="high"
+           alt="The Hauser home screen: a compact room-control panel on the left and a warm illustration of the living room on the right, with the room's lights, climate and scenes reachable in one touch.">
     </div>
-    <p class="device-caption">The resting screen: useful from across the room, one touch from the household.</p>
+    <p class="device-caption">The room comes first. Controls stay to the side, where they belong.</p>
   </div>
 </header>
+
+<!-- ── Live-Demo (früh, weil sie am meisten überzeugt) ────────────────── -->
+<section class="band" id="demo">
+  <div class="wrap section-narrow centered">
+    <p class="eyebrow">Live demo</p>
+    <h2>Open it before you install it.</h2>
+    <p class="lead centered-lead">
+      The real interface runs in your browser against simulated devices — no
+      Home Assistant, no account, no private household data behind it.
+    </p>
+    <div class="actions centered-actions">
+      <a class="btn btn-primary" href="demo/">Explore the live demo</a>
+    </div>
+  </div>
+</section>
 
 <!-- ── Warum ─────────────────────────────────────────────────────────── -->
 <section id="why">
@@ -99,10 +124,7 @@
     <p class="body-text">
       Hauser takes the other path. Everything on screen comes from a single set
       of design tokens, a documented interaction contract, and a performance
-      budget that is treated as a requirement rather than an aspiration. The
-      reasoning behind every structural choice is written down in the
-      current architecture documentation, including the boundaries and trade-offs
-      that keep the product coherent.
+      budget that is treated as a requirement rather than an aspiration.
     </p>
 
     <div class="stats">
@@ -122,11 +144,11 @@
   </div>
 </section>
 
-<!-- ── Home ──────────────────────────────────────────────────────────── -->
+<!-- ── Room UI ───────────────────────────────────────────────────────── -->
 <section id="home">
   <div class="wrap">
     <div class="showcase-head">
-      <p class="eyebrow">Home</p>
+      <p class="eyebrow">Room UI</p>
       <h2>Controls stay compact. The room stays visible.</h2>
       <p class="body-text">
         The default panel keeps one narrow control surface beside the room
@@ -158,9 +180,15 @@
         </button>
       </div>
       <div class="device theme-stack reveal">
-        <img class="theme-shot-day" src="media/hero-home.webp" width="1696" height="960" loading="lazy" decoding="async"
+        <img class="theme-shot-day" src="media/hero-home.webp"
+             srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
              alt="The Hauser home screen by day: a compact room-control panel on the left, the sunlit room illustration on the right.">
-        <img class="theme-shot-night" src="media/home-dark.webp" width="1696" height="960" loading="lazy" decoding="async"
+        <img class="theme-shot-night" src="media/home-dark.webp"
+             srcset="media/home-dark-700.webp 700w, media/home-dark-1100.webp 1100w, media/home-dark.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
              alt="The same home screen after dark: identical layout, dark surfaces, and the room illustration lit only by its lamps.">
       </div>
       <p class="device-caption">The same panel, the same second — only the sun moved.</p>
@@ -193,14 +221,20 @@
     <div class="pair">
       <div class="pair-item reveal">
         <div class="device">
-          <img src="media/wizard-input-raw.webp" width="1400" height="1050" loading="lazy" decoding="async"
+          <img src="media/wizard-input-raw.webp"
+               srcset="media/wizard-input-raw-700.webp 700w, media/wizard-input-raw-1100.webp 1100w, media/wizard-input-raw.webp 1400w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1400" height="1050" loading="lazy" decoding="async"
                alt="An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.">
         </div>
         <p class="device-caption"><span class="shot-label">Input</span> Even this photo is enough.</p>
       </div>
       <div class="pair-item reveal">
         <div class="device">
-          <img src="media/wizard-output-room.webp" width="1400" height="1050" loading="lazy" decoding="async"
+          <img src="media/wizard-output-room.webp"
+               srcset="media/wizard-output-room-700.webp 700w, media/wizard-output-room-1100.webp 1100w, media/wizard-output-room.webp 1400w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1400" height="1050" loading="lazy" decoding="async"
                alt="The same living room redrawn as a warm Hauser-style illustration, with the balcony door, the grey sofa and the wooden dining table in their original positions.">
         </div>
         <p class="device-caption"><span class="shot-label shot-label-out">Output</span> The same room, in the daylight state.</p>
@@ -237,28 +271,63 @@
     </div>
     <p class="body-text" style="margin-top:36px">
       This is the one place where Hauser talks to a paid third party: the wizard
-      needs your own OpenAI access, through a connected ChatGPT account or an API
-      key, and your photo is sent there to be redrawn. That trade is stated
-      before anything is uploaded, every paid step is confirmed by hand, and a
-      running count of provider calls stays on screen. The wizard is not part of
-      the public demo.
+      needs your own OpenAI access, and your photo is sent there to be redrawn.
+      That trade is stated before anything is uploaded, every paid step is
+      confirmed by hand, and a running count of provider calls stays on screen.
+      The wizard is not part of the public demo.
     </p>
   </div>
 </section>
 
-<!-- ── Optimistische UI ──────────────────────────────────────────────── -->
-<!-- Hier gehört später der Split-Screen-Clip hin (optimistische UI gegen
-     Warten auf das Backend). Bis dahin trägt die Sektion allein durch Text. -->
+<!-- ── Optimistische UI ──────────────────────────────────────────────────
+     Der Split-Screen läuft rein in CSS: zwei identische Panels, zwei
+     Zeitpläne. Links wartet die Oberfläche auf das Backend, rechts reagiert
+     sie sofort und lässt die Bestätigung leise nachkommen. -->
 <section id="interaction">
-  <div class="wrap section-narrow" style="margin-inline:auto;text-align:center">
+  <div class="wrap section-narrow centered">
     <p class="eyebrow">Interaction</p>
     <h2>It answers before the house does.</h2>
-    <p class="lead" style="margin:28px auto 0">
+    <p class="lead centered-lead">
       Tap a light and it turns on — on screen, immediately. The command travels
       to Home Assistant afterwards. When the house confirms, nothing visible
       happens, because the interface was already right.
     </p>
-    <p class="body-text" style="margin:24px auto 0;text-align:start">
+  </div>
+
+  <div class="wrap">
+    <div class="opt reveal">
+      <div class="opt-panel opt-slow">
+        <p class="opt-title">The usual way <span>tap · wait for the backend · redraw</span></p>
+        <div class="opt-stage" aria-hidden="true">
+          <div class="opt-room"><span class="opt-lamp"></span><span class="opt-glow"></span></div>
+          <div class="opt-row">
+            <span class="opt-name">Living room</span>
+            <span class="opt-switch"><span class="opt-knob"></span><span class="opt-tap"></span></span>
+          </div>
+          <p class="opt-status">
+            <span class="opt-line opt-wait"><span class="opt-spin"></span>Waiting for Home Assistant…</span>
+            <span class="opt-line opt-done">On — after 2.4&nbsp;s</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="opt-panel opt-fast">
+        <p class="opt-title">Hauser <span>tap · redraw · tell the backend</span></p>
+        <div class="opt-stage" aria-hidden="true">
+          <div class="opt-room"><span class="opt-lamp"></span><span class="opt-glow"></span></div>
+          <div class="opt-row">
+            <span class="opt-name">Living room</span>
+            <span class="opt-switch"><span class="opt-knob"></span><span class="opt-tap"></span></span>
+          </div>
+          <p class="opt-status">
+            <span class="opt-line opt-now">On — immediately</span>
+            <span class="opt-line opt-confirm">✓ Home Assistant agrees</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="body-text opt-note">
       When the house disagrees, the control animates back to the true state
       instead of quietly lying to you. Every intent is tracked, reconciled
       against the incoming state, and abandoned after a timeout. That
@@ -268,137 +337,62 @@
   </div>
 </section>
 
-<!-- ── Medien & Audio ────────────────────────────────────────────────── -->
-<section id="media">
+<!-- ── Medien, Energie, Alltag — kompakt ─────────────────────────────── -->
+<section id="more">
   <div class="wrap">
     <div class="showcase-head">
-      <p class="eyebrow">Media &amp; Audio</p>
-        <h2>Your film library and your speakers are just more rooms.</h2>
-        <p class="body-text">
-          Jellyfin is integrated directly rather than embedded: the library, the
-          shelves, the detail view and the player are all built in the same
-          design system as the light switches. Playback runs through HLS with
-          resume and progress, so you continue where you stopped.
-        </p>
-        <p class="body-text">
-          Room audio runs through Home Assistant media players with the same
-          controls as everything else. Choosing what plays in the kitchen is no
-          different from turning on the kitchen light.
-        </p>
+      <p class="eyebrow">The rest of the house</p>
+      <h2>Media, energy and the screens a household actually opens.</h2>
+      <p class="body-text">
+        Jellyfin is integrated rather than embedded: shelves, detail view and
+        HLS playback with resume, built in the same design system as the light
+        switches. Energy plots what real sensors measure and leaves the rest
+        blank instead of estimating it into existence. Shopping lists, notes and
+        the calendar are designed like screens, not like settings pages.
+      </p>
     </div>
   </div>
   <div class="showcase-wide">
     <div class="pair">
       <div class="pair-item reveal">
         <div class="device">
-          <img src="media/library.webp" width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
+          <img src="media/lockscreen.webp"
+               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The Hauser ambient lock screen with a large clock, date, household context, upcoming events and notes arranged for glanceable use on a wall panel.">
         </div>
-        <p class="device-caption">Library — shelves of cover art, not a file browser.</p>
+        <p class="device-caption">At rest — the ambient screen, one touch from the room above.</p>
       </div>
       <div class="pair-item reveal">
         <div class="device">
-          <img src="media/media.webp" width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The media screen showing playback controls and volume for the living room and kitchen audio zones.">
+          <img src="media/library.webp"
+               srcset="media/library-700.webp 700w, media/library-1100.webp 1100w, media/library.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
         </div>
-        <p class="device-caption">Audio zones — one control language for every speaker.</p>
+        <p class="device-caption">Media — shelves of cover art, not a file browser.</p>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Energie ───────────────────────────────────────────────────────── -->
-<section id="energy">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">Energy</p>
-        <h2>Honest about what it cannot measure.</h2>
-        <p class="body-text">
-          Live load and daily consumption come from real power sensors, broken
-          down per device and plotted across the day.
-        </p>
-        <p class="body-text">
-          The house behind this screenshot has no solar array and no grid meter,
-          so those figures stay empty rather than being estimated into
-          existence. An interface that invents numbers is worse than one that
-          admits a gap.
-        </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/energy.webp" width="1696" height="1200" loading="lazy" decoding="async"
-             alt="The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.">
-    </div>
-  </div>
-</section>
-
-<!-- ── Alltag ────────────────────────────────────────────────────────── -->
-<section id="everyday">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">Everyday</p>
-        <h2>The things a household actually opens.</h2>
-        <p class="body-text">
-          A shopping list split by shop, reminders laid out as notes on a board
-          and colour-coded per person, and a calendar that stays readable from
-          across the room. These are the screens that get touched most, so they
-          were designed like screens rather than like settings pages.
-        </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/notes.webp" width="1696" height="1200" loading="lazy" decoding="async"
-             alt="The notes screen with a shopping list on the left, grouped by shop, and reminders as coloured sticky notes grouped per person on the right.">
-    </div>
-  </div>
-</section>
-
-<!-- ── Alltag ────────────────────────────────────────────────────────── -->
-<section id="details">
-  <div class="wrap">
-    <p class="eyebrow">Details</p>
-    <h2 style="max-width:16ch">The parts you notice later.</h2>
-
-    <div class="cards">
-      <div class="card reveal">
-        <h3>Rooms that show their light</h3>
-        <p>
-          Every room carries an illustration of itself in three lighting states.
-          Switch the lights and the picture follows, which turns a list of
-          entities into somewhere you recognise.
-        </p>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/energy.webp"
+               srcset="media/energy-700.webp 700w, media/energy-1100.webp 1100w, media/energy.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.">
+        </div>
+        <p class="device-caption">Energy — measured, and honest about the gaps.</p>
       </div>
-      <div class="card reveal">
-        <h3>Controls where you are</h3>
-        <p>
-          One or two compact control surfaces can keep independent room contexts
-          while the full room illustration stays visible. Daily control does not
-          turn the home screen into an administration grid.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Notifications</h3>
-        <p>
-          Washer and dryer report when they finish. The notification core is
-          generic; laundry was simply the first thing worth being told about.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Devices without YAML</h3>
-        <p>
-          Entities can be added, hidden, renamed, assigned to a room and
-          reordered from inside the interface.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Setup without source edits</h3>
-        <p>
-          Docker Compose starts a guided setup for Home Assistant, rooms and
-          optional Jellyfin. The resulting configuration is versioned, validated
-          and stored outside the application image.
-        </p>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/notes.webp"
+               srcset="media/notes-700.webp 700w, media/notes-1100.webp 1100w, media/notes.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The notes screen with a shopping list on the left, grouped by shop, and reminders as coloured sticky notes grouped per person on the right.">
+        </div>
+        <p class="device-caption">Everyday — lists and reminders, readable from across the room.</p>
       </div>
     </div>
   </div>
@@ -420,21 +414,23 @@
       </div>
       <div class="device reveal" style="max-width:340px;margin-inline:auto">
         <img src="media/phone.webp" width="390" height="844" loading="lazy" decoding="async"
+             sizes="(min-width: 880px) 316px, 316px"
              alt="The phone layout showing room cards stacked vertically with a four-item bottom navigation bar.">
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Ehrlichkeit ───────────────────────────────────────────────────── -->
-<section class="honest" id="honest">
+<!-- ── Beta-Hinweis ──────────────────────────────────────────────────── -->
+<section class="honest" id="beta">
   <div class="wrap">
-    <p class="eyebrow">Before you get excited</p>
-    <h2 style="max-width:18ch">What this is, and what it isn't.</h2>
+    <p class="eyebrow">Beta status</p>
+    <h2 style="max-width:17ch">A technical beta, in the open.</h2>
     <p class="lead" style="margin-top:26px">
-      Hauser is an installable product in technical beta, built and maintained as
-      a personal open-source project. It is not a commercial service and it does
-      not come with a support promise.
+      Hauser installs and runs today. Compatibility with the enormous range of
+      Home Assistant setups is still growing, there is no support SLA, and it is
+      built for trusted deployments on your own network rather than for the
+      public internet.
     </p>
 
     <div class="honest-grid">
@@ -442,158 +438,54 @@
         <h3>What you get</h3>
         <ul class="honest-list honest-yes">
           <li>A complete, working interface you can run and read</li>
-          <li>A documented design system with tokens and a component catalog</li>
-          <li>Current architecture documentation and explicit system boundaries</li>
-          <li>An interaction contract and a written performance budget</li>
+          <li>A documented design system, interaction contract and performance budget</li>
           <li>A guided Home Assistant setup with versioned external configuration</li>
           <li>MIT licensed — fork it, ship it, sell it, no permission needed</li>
         </ul>
       </div>
       <div class="honest-col">
-        <h3>What you don't</h3>
+        <h3>Worth knowing</h3>
         <ul class="honest-list honest-no">
-          <li>No SLA, guaranteed support or promised response time</li>
-          <li>No claim of broad device and Home Assistant compatibility yet</li>
-          <li>No external real-home installation evidence until the beta provides it</li>
-          <li>No external Linux amd64 installation evidence yet</li>
-          <li>Not hardened for exposure to the public internet</li>
+          <li>No SLA and no promised response time</li>
+          <li>Device and Home Assistant coverage is still growing release by release</li>
+          <li>Intended for trusted local networks, not for internet exposure</li>
+          <li>Versions move fast; read the release notes before upgrading</li>
         </ul>
       </div>
     </div>
 
-    <p class="body-text" style="margin-top:44px">
-      The normal path is Docker Compose followed by the setup wizard. It scans
-      Home Assistant, proposes rooms and devices, lets you correct the result and
-      activates a validated configuration atomically. The clean-room gate proves
-      that technical path; the beta still has to prove it with external people,
-      different homes and release-to-release upgrades.
+    <p class="body-text" style="margin-top:40px">
+      The first installation outside this household is confirmed: Hauser was set
+      up on an <a href="https://github.com/ralleur/hauser/issues/7">Asustor NAS
+      running Linux on x86_64</a> with Docker Compose against Home Assistant
+      Container — roughly eight areas and 370 entities, discovered automatically,
+      with the first light under control ten minutes in. That report also found
+      the current edge: media players, vacuums and some room-assigned switches
+      were not picked up by discovery yet. Both halves of that are what a beta
+      is for.
+    </p>
+    <p class="body-text" style="margin-top:20px">
+      The full picture — supported entity domains, known limitations and what
+      changed in each release — lives in the
+      <a href="https://github.com/ralleur/hauser/releases">release notes</a> and
+      the <a href="https://github.com/ralleur/hauser#readme">README</a>.
     </p>
   </div>
 </section>
 
-<!-- ── FAQ ────────────────────────────────────────────────────────────── -->
-<section id="faq">
-  <div class="wrap">
-    <p class="eyebrow">FAQ</p>
-    <h2 style="max-width:14ch">The short version.</h2>
-
-    <div class="cards">
-      <div class="card">
-        <h3>What is Hauser?</h3>
-        <p>A self-hosted, room-first frontend for Home Assistant, designed as a calm everyday interface for the household.</p>
-      </div>
-      <div class="card">
-        <h3>Is Hauser a replacement for Home Assistant?</h3>
-        <p>No. Home Assistant remains the automation engine and operator interface. Hauser connects to it for daily household use.</p>
-      </div>
-      <div class="card">
-        <h3>Is Hauser a Lovelace theme?</h3>
-        <p>No. It is a standalone Svelte PWA that connects to Home Assistant through its WebSocket API.</p>
-      </div>
-      <div class="card">
-        <h3>Can I use Hauser on a wall-mounted tablet?</h3>
-        <p>Yes. The landscape panel shell is designed for wall-mounted tablets and kiosk use.</p>
-      </div>
-      <div class="card">
-        <h3>Is it intended for non-technical household members?</h3>
-        <p>Yes. Hauser keeps everyday controls room-first and leaves administration to Home Assistant.</p>
-      </div>
-      <div class="card">
-        <h3>Does Hauser work on phones and tablets?</h3>
-        <p>Yes. It includes separate panel and one-handed phone layouts that share the same design system.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Status ────────────────────────────────────────────────────────── -->
-<section id="status">
-  <div class="wrap">
-    <p class="eyebrow">Status</p>
-    <h2 style="max-width:14ch">Where things stand.</h2>
-
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr><th>Area</th><th>What works</th><th>State</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Design system</td>
-            <td>Tokens, motion spec, component catalog</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Home Assistant</td>
-            <td>WebSocket, optimistic commands, reconnect handling</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Rooms &amp; lighting</td>
-            <td>Climate, lights, scenes, presence, window state</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Jellyfin</td>
-            <td>Library, detail view, HLS playback with resume</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Energy</td>
-            <td>Live load, daily consumption, graceful empty states</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Device management</td>
-            <td>Add, hide, assign to room, reorder — in the UI</td>
-            <td><span class="tag tag-live">Live</span></td>
-          </tr>
-          <tr>
-            <td>Room images</td>
-            <td>Guided wizard from one photo to a complete day/evening/off set</td>
-            <td><span class="tag tag-built">Built</span></td>
-          </tr>
-          <tr>
-            <td>Everyday screens</td>
-            <td>Calendar, notes, reminders, shopping, notifications</td>
-            <td><span class="tag tag-built">Built</span></td>
-          </tr>
-          <tr>
-            <td>Phone shell</td>
-            <td>Compact layout with reorderable navigation</td>
-            <td><span class="tag tag-built">Built</span></td>
-          </tr>
-          <tr>
-            <td>Onboarding</td>
-            <td>HA connection test, entity discovery, room editing and optional Jellyfin</td>
-            <td><span class="tag tag-built">Built</span></td>
-          </tr>
-          <tr>
-            <td>Languages</td>
-            <td>German, English, French, Italian, Portuguese, Polish</td>
-            <td><span class="tag tag-built">Built</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="actions">
-      <a class="btn" href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">Read the full roadmap</a>
-    </div>
-  </div>
-</section>
-
-<!-- ── Abschluss ─────────────────────────────────────────────────────── -->
-<section id="demo-link">
-  <div class="wrap section-narrow" style="text-align:center;margin-inline:auto">
-    <h2>Try the public demo.</h2>
-    <p class="lead" style="margin:26px auto 0">
-      The real interface runs here against simulated devices, with no Home
-      Assistant, Jellyfin or private household data behind it.
+<!-- ── Install ───────────────────────────────────────────────────────── -->
+<section id="install">
+  <div class="wrap section-narrow centered">
+    <p class="eyebrow">Install</p>
+    <h2>Docker Compose, then a guided setup.</h2>
+    <p class="lead centered-lead">
+      The wizard scans Home Assistant, proposes rooms and devices, lets you
+      correct the result and activates a validated configuration atomically. No
+      source edits, no YAML.
     </p>
-    <div class="actions" style="justify-content:center">
+    <div class="actions centered-actions">
       <a class="btn btn-primary" href="https://github.com/ralleur/hauser#installation">Install the beta</a>
-      <a class="btn" href="demo/">Explore the live demo</a>
+      <a class="btn" href="https://github.com/ralleur/hauser/releases">Release notes</a>
     </div>
   </div>
 </section>
@@ -603,6 +495,7 @@
   <div class="wrap">
     <div class="footer-links">
       <a href="https://github.com/ralleur/hauser">GitHub</a>
+      <a href="demo/">Live demo</a>
       <a href="https://github.com/ralleur/hauser/blob/main/docs/00-architecture.md">Architecture</a>
       <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">Design system</a>
       <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">Roadmap</a>

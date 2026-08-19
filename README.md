@@ -8,7 +8,7 @@
 
 **A calm, visual Home Assistant frontend for the people who live in the home.**
 
-[**Try the live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation-and-troubleshooting) · [Roadmap](ROADMAP.md)
+[**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation-and-troubleshooting) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -43,9 +43,15 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.4.0-beta.5` is current. A real installation by an
-external person in a second household remains mandatory during beta
-stabilisation, before the release candidate — see [the roadmap](ROADMAP.md).
+normal installation path; `v0.4.0-beta.5` is current. The first installation by
+an external person in a second household is confirmed: Docker Compose on an
+Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
+area discovery and the first light under control ten minutes in — see
+[issue #7](https://github.com/ralleur/hauser/issues/7). That report also marks
+the current edge: media players, vacuums and some room-assigned switches were
+not yet picked up by discovery. Further external installations and
+release-to-release upgrades remain part of beta stabilisation — see
+[the roadmap](ROADMAP.md).
 
 The hosted static demo runs the real interface against simulated devices. It
 never connects to a visitor's Home Assistant or to the maintainer's private

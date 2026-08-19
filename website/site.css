@@ -816,3 +816,300 @@ footer a { color: var(--text-secondary); }
     transition: none;
   }
 }
+
+/* ── Zentrierte Schmalsektionen ────────────────────────────────────────── */
+
+.centered { margin-inline: auto; text-align: center; }
+.centered-lead { margin: 28px auto 0; }
+.centered-actions { justify-content: center; }
+
+/* ── Installations-Kurzinfo unter dem Hero ─────────────────────────────────
+   Vier Wörter, die „Install the beta" entschärfen: was man braucht, bevor
+   man auf den Knopf drückt. */
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge-row li {
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Optimistische UI: Split-Screen ────────────────────────────────────────
+   Zwei identische Panels auf einer gemeinsamen 8-Sekunden-Schleife. Beide
+   werden zur selben Zeit angetippt; links wartet die Oberfläche auf das
+   Backend, rechts reagiert sie sofort und lässt die Bestätigung leise
+   nachkommen. Reine CSS-Keyframes — kein Video, kein Skript.
+
+   Zeitplan (8 s = 100 %):
+     12,5 %  Tipp auf beiden Seiten        → rechts sofort an
+     42,5 %  links reagiert (2,4 s später) → rechts kommt die Bestätigung
+     82,5 %  beide zurück auf Aus, kurze Ruhe bis zum nächsten Durchlauf */
+
+.opt {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+  margin-top: clamp(40px, 6vw, 64px);
+}
+
+@media (min-width: 760px) {
+  .opt { grid-template-columns: 1fr 1fr; gap: clamp(20px, 3vw, 32px); }
+}
+
+.opt-panel {
+  --opt-off: color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-1);
+}
+
+.opt-fast { border-color: color-mix(in srgb, var(--accent-warm) 42%, var(--border)); }
+
+.opt-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.opt-title span {
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-tertiary);
+}
+
+.opt-stage { margin-top: 20px; }
+
+/* Der Raum: eine Fläche, eine Lampe, ein Lichtkegel. Mehr braucht es nicht,
+   damit „das Zimmer geht an" lesbar ist. */
+
+.opt-room {
+  position: relative;
+  block-size: clamp(88px, 13vw, 116px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-0);
+  overflow: hidden;
+}
+
+.opt-lamp {
+  position: absolute;
+  inset-block-start: 22%;
+  inset-inline-end: 24%;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.opt-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 76% 26%, color-mix(in srgb, var(--accent-warm) 78%, transparent) 0%, transparent 58%);
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.opt-name { font-size: 15px; color: var(--text-secondary); }
+
+.opt-switch {
+  position: relative;
+  flex: none;
+  inline-size: 46px;
+  block-size: 26px;
+  border-radius: 999px;
+  background: var(--opt-off);
+}
+
+.opt-knob {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  /* Bewusst kein Token: der Knopf muss auf der grauen wie auf der warmen
+     Schiene und in beiden Farbschemata hell bleiben. */
+  background: #f4f7fa;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+
+.opt-tap {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 46px;
+  block-size: 46px;
+  border: 2px solid var(--accent-cool);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opt-status {
+  position: relative;
+  min-block-size: 21px;
+  margin-top: 16px;
+}
+
+.opt-line {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  opacity: 0;
+}
+
+.opt-done, .opt-now { color: var(--text-secondary); }
+
+/* Die Backend-Bestätigung sitzt bewusst am rechten Rand: sie kommt leise
+   nach und darf die schon gültige Aussage links nicht überschreiben. */
+.opt-confirm {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  color: var(--accent-cool);
+}
+
+.opt-spin {
+  inline-size: 12px;
+  block-size: 12px;
+  border: 2px solid var(--opt-off);
+  border-block-start-color: var(--text-secondary);
+  border-radius: 50%;
+  flex: none;
+}
+
+.opt-note { margin: clamp(28px, 4vw, 40px) auto 0; }
+
+/* Der Ablauf selbst */
+
+.opt-tap { animation: opt-tap 8s linear infinite; }
+.opt-spin { animation: opt-spin 900ms linear infinite; }
+
+.opt-slow .opt-knob   { animation: opt-knob-slow 8s var(--ease-out) infinite; }
+.opt-slow .opt-switch { animation: opt-track-slow 8s var(--ease-out) infinite; }
+.opt-slow .opt-glow   { animation: opt-glow-slow 8s var(--ease-out) infinite; }
+.opt-wait             { animation: opt-wait 8s linear infinite; }
+.opt-done             { animation: opt-done 8s linear infinite; }
+
+.opt-fast .opt-knob   { animation: opt-knob-fast 8s var(--ease-out) infinite; }
+.opt-fast .opt-switch { animation: opt-track-fast 8s var(--ease-out) infinite; }
+.opt-fast .opt-glow   { animation: opt-glow-fast 8s var(--ease-out) infinite; }
+.opt-now              { animation: opt-now 8s linear infinite; }
+.opt-confirm          { animation: opt-confirm 8s linear infinite; }
+
+@keyframes opt-tap {
+  0%, 11.5% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+  12.5%     { opacity: 0.85; transform: translate(-50%, -50%) scale(0.45); }
+  20%       { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+  20.01%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+}
+
+@keyframes opt-spin { to { transform: rotate(360deg); } }
+
+@keyframes opt-knob-fast {
+  0%, 12.5%  { transform: translateX(0); }
+  14%, 82.5% { transform: translateX(20px); }
+  84%, 100%  { transform: translateX(0); }
+}
+
+@keyframes opt-knob-slow {
+  0%, 42.5%  { transform: translateX(0); }
+  44%, 82.5% { transform: translateX(20px); }
+  84%, 100%  { transform: translateX(0); }
+}
+
+@keyframes opt-track-fast {
+  0%, 12.5%  { background-color: var(--opt-off); }
+  14%, 82.5% { background-color: var(--accent-warm); }
+  84%, 100%  { background-color: var(--opt-off); }
+}
+
+@keyframes opt-track-slow {
+  0%, 42.5%  { background-color: var(--opt-off); }
+  44%, 82.5% { background-color: var(--accent-warm); }
+  84%, 100%  { background-color: var(--opt-off); }
+}
+
+@keyframes opt-glow-fast {
+  0%, 12.5%  { opacity: 0; }
+  16%, 82.5% { opacity: 1; }
+  86%, 100%  { opacity: 0; }
+}
+
+@keyframes opt-glow-slow {
+  0%, 42.5%  { opacity: 0; }
+  46%, 82.5% { opacity: 1; }
+  86%, 100%  { opacity: 0; }
+}
+
+@keyframes opt-wait {
+  0%, 12.5%  { opacity: 0; }
+  15%, 41%   { opacity: 1; }
+  43%, 100%  { opacity: 0; }
+}
+
+@keyframes opt-done {
+  0%, 43%    { opacity: 0; }
+  45%, 82.5% { opacity: 1; }
+  84%, 100%  { opacity: 0; }
+}
+
+@keyframes opt-now {
+  0%, 12.5%  { opacity: 0; }
+  14.5%, 82.5% { opacity: 1; }
+  84%, 100%  { opacity: 0; }
+}
+
+@keyframes opt-confirm {
+  0%, 43%   { opacity: 0; }
+  46%, 60%  { opacity: 1; }
+  64%, 100% { opacity: 0; }
+}
+
+/* Ohne Bewegung wird derselbe Vergleich als Standbild gezeigt: links wartet
+   die Oberfläche noch, rechts ist das Licht schon an. */
+@media (prefers-reduced-motion: reduce) {
+  .opt-tap, .opt-spin,
+  .opt-slow .opt-knob, .opt-slow .opt-switch, .opt-slow .opt-glow,
+  .opt-fast .opt-knob, .opt-fast .opt-switch, .opt-fast .opt-glow,
+  .opt-wait, .opt-done, .opt-now, .opt-confirm { animation: none; }
+
+  .opt-slow .opt-glow { opacity: 0; }
+  .opt-wait { opacity: 1; }
+
+  .opt-fast .opt-switch { background: var(--accent-warm); }
+  .opt-fast .opt-knob { transform: translateX(20px); }
+  .opt-fast .opt-glow { opacity: 1; }
+  .opt-now { opacity: 1; }
+}
