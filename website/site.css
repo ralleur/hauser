@@ -772,7 +772,11 @@ footer a { color: var(--text-secondary); }
 
 .theme-stack { position: relative; }
 
-.theme-shot-night {
+/* `.device img` setzt `width: 100%` und ist spezifischer als eine einzelne
+   Klasse — logische und physische Größenangaben kaskadieren gemeinsam, also
+   muss die Nachtaufnahme hier mitziehen, sonst steht sie 24 px zu breit im
+   Rahmen und ragt über dessen Kanten hinaus. */
+.device img.theme-shot-night {
   position: absolute;
   inset: 12px;
   inline-size: calc(100% - 24px);
