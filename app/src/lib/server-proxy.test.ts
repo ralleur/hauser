@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -360,11 +360,94 @@ describe('HMI-Backend-Proxy', () => {
     expect(await response.json()).toEqual({ error: 'Route nicht gefunden' });
   });
 
+  it('erlaubt direkte Browserzugriffe nur bei exaktem effektiven Request-Origin', () => {
+    const req = (origin: string | undefined, host = 'haos.local:4173', encrypted = false) => ({
+      headers: { ...(origin === undefined ? {} : { origin }), host },
+      socket: { encrypted },
+    });
+    const explicit = new Set(['https://dashboard.example.com']);
+
+    expect(requestOriginAllowed(req(undefined), explicit)).toBe(true);
+    expect(requestOriginAllowed(req('http://haos.local:4173'), explicit)).toBe(true);
+    expect(requestOriginAllowed(req('https://haos.local:4173', 'haos.local:4173', true), explicit)).toBe(true);
+    expect(requestOriginAllowed(req('https://dashboard.example.com'), explicit)).toBe(true);
+
+    expect(requestOriginAllowed(req('http://haos.local'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('http://haos.local:4174'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('https://haos.local:4173'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('http://evil.invalid'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('null'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('http://haos.local:4173/path'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('not an origin'), explicit)).toBe(false);
+    expect(requestOriginAllowed(req('http://haos.local:4173', 'bad host/value'), explicit)).toBe(false);
+  });
+
+  it('wendet die Same-Origin-Grenze auf Config-PUT und Setup-POST an', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-app-origin-'));
+    tempDirs.push(root);
+    writeFileSync(join(root, 'index.html'), '<!doctype html><title>Origin harness</title>');
+    const common = {
+      staticRoot: root,
+      familyDataPath: join(root, 'family-data.json'),
+      songLibrary: createSongLibrary(join(root, 'songs'), join(root, 'songs', 'library.json'), root),
+      paperlessPin: '',
+      paperlessToken: '',
+      allowedOrigins: new Set<string>(),
+    };
+
+    const configServer = createHmiServer('', {
+      ...common,
+      configPath: join(root, 'config.json'),
+      householdConfigMode: 'shadow',
+    });
+    servers.push(configServer);
+    await new Promise<void>((resolve) => configServer.listen(0, '127.0.0.1', resolve));
+    const configOrigin = `http://127.0.0.1:${(configServer.address() as { port: number }).port}`;
+    const configBody = JSON.stringify({ updates: { 'hmi:backend': 'fake' } });
+    const configEtag = (await fetch(`${configOrigin}/api/config`)).headers.get('etag')!;
+
+    const configPut = await fetch(`${configOrigin}/api/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Origin: configOrigin, 'If-Match': configEtag },
+      body: configBody,
+    });
+    expect(configPut.status).toBe(200);
+    const crossOriginConfig = await fetch(`${configOrigin}/api/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://evil.invalid', 'If-Match': configEtag },
+      body: configBody,
+    });
+    expect(crossOriginConfig.status).toBe(403);
+
+    const setupServer = createHmiServer('', {
+      ...common,
+      configPath: join(root, 'setup-config.json'),
+      householdConfigPath: join(root, 'household.json'),
+      householdConfigMode: 'active',
+    });
+    servers.push(setupServer);
+    await new Promise<void>((resolve) => setupServer.listen(0, '127.0.0.1', resolve));
+    const setupOrigin = `http://127.0.0.1:${(setupServer.address() as { port: number }).port}`;
+
+    const setupPost = await fetch(`${setupOrigin}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: setupOrigin },
+      body: '{}',
+    });
+    expect(setupPost.status).toBe(400);
+    const crossOriginSetup = await fetch(`${setupOrigin}/api/setup/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://evil.invalid' },
+      body: '{}',
+    });
+    expect(crossOriginSetup.status).toBe(403);
+  });
+
   it('weist fremde Browser-Origins und unbekannte Methoden ab', () => {
     const allowed = new Set(['http://localhost:4173']);
     expect(proxyRequestAllowed({ method: 'GET', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);
     expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'localhost:4173', origin: 'http://localhost:4173' } }, allowed)).toBe(true);
-    expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'attacker.example', origin: 'http://attacker.example' } }, allowed)).toBe(false);
+    expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'attacker.example', origin: 'http://evil.invalid' } }, allowed)).toBe(false);
     expect(proxyRequestAllowed({ method: 'POST', headers: { host: 'localhost:4173', origin: 'https://evil.invalid' } }, allowed)).toBe(false);
     expect(proxyRequestAllowed({ method: 'PATCH', headers: { host: 'localhost:4173' } }, allowed)).toBe(true);
     expect(proxyRequestAllowed({ method: 'PUT', headers: { host: 'localhost:4173' } }, allowed)).toBe(false);
