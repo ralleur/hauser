@@ -337,53 +337,23 @@
   </div>
 </section>
 
-<!-- ── Medien, Energie, Alltag — kompakt ─────────────────────────────── -->
-<section id="more">
+<!-- ── Alltag ────────────────────────────────────────────────────────── -->
+<section id="everyday">
   <div class="wrap">
     <div class="showcase-head">
-      <p class="eyebrow">The rest of the house</p>
-      <h2>Media, energy and the screens a household actually opens.</h2>
+      <p class="eyebrow">Everyday</p>
+      <h2>The screens a household opens most.</h2>
       <p class="body-text">
-        Jellyfin is integrated rather than embedded: shelves, detail view and
-        HLS playback with resume, built in the same design system as the light
-        switches. Energy plots what real sensors measure and leaves the rest
-        blank instead of estimating it into existence. Shopping lists, notes and
-        the calendar are designed like screens, not like settings pages.
+        Lights and rooms are what a home dashboard gets sold on. What a
+        household actually touches every day is smaller than that: who still has
+        to do what, and what is missing from the fridge. Those two got the same
+        care as the room screens — and they are the reason people who never open
+        Home Assistant open this.
       </p>
     </div>
   </div>
   <div class="showcase-wide">
     <div class="pair">
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/lockscreen.webp"
-               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The Hauser ambient lock screen with a large clock, date, household context, upcoming events and notes arranged for glanceable use on a wall panel.">
-        </div>
-        <p class="device-caption">At rest — the ambient screen, one touch from the room above.</p>
-      </div>
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/library.webp"
-               srcset="media/library-700.webp 700w, media/library-1100.webp 1100w, media/library.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
-        </div>
-        <p class="device-caption">Media — shelves of cover art, not a file browser.</p>
-      </div>
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/energy.webp"
-               srcset="media/energy-700.webp 700w, media/energy-1100.webp 1100w, media/energy.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.">
-        </div>
-        <p class="device-caption">Energy — measured, and honest about the gaps.</p>
-      </div>
       <div class="pair-item reveal">
         <div class="device">
           <img src="media/notes.webp"
@@ -392,7 +362,98 @@
                width="1696" height="1200" loading="lazy" decoding="async"
                alt="The notes screen with a shopping list on the left, grouped by shop, and reminders as coloured sticky notes grouped per person on the right.">
         </div>
-        <p class="device-caption">Everyday — lists and reminders, readable from across the room.</p>
+        <p class="device-caption">Shopping list grouped by shop, reminders as post-its per person.</p>
+      </div>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/lockscreen.webp"
+               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The Hauser ambient lock screen with a large clock, the date, the week's appointments, reminder post-its and the shopping list arranged for glanceable use on a wall panel.">
+        </div>
+        <p class="device-caption">The same lists on the resting screen — touch one and you are in it.</p>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="cards">
+      <div class="card reveal">
+        <h3>A colour per person</h3>
+        <p>
+          Reminders are post-its grouped by family member, each in their own
+          colour. Adding one is a tap beside that person's name — no form, no
+          separate assignment step, nothing to explain to anyone.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3>Ticked off in the shop</h3>
+        <p>
+          On the phone the list stays grouped by shop, so it reads in the order
+          you walk. Checking an item off takes a double tap — deliberate enough
+          that a pocket cannot do it, and done items stay visible for a while,
+          so a wrong one is never a loss.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3>Already on the resting screen</h3>
+        <p>
+          The ambient screen carries the week's appointments, the post-its and
+          the shopping list without anyone unlocking anything. Touch the list
+          and you land in the list; touch the week and you land in the calendar.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Energie ───────────────────────────────────────────────────────── -->
+<section class="band" id="energy">
+  <div class="wrap">
+    <div class="split">
+      <div class="split-text">
+        <p class="eyebrow">Energy</p>
+        <h2>Honest about what it cannot measure.</h2>
+        <p class="body-text">
+          Live load and daily consumption come from real power sensors, broken
+          down per device and plotted across the day. The house behind this
+          screenshot has no solar array and no grid meter, so those figures stay
+          empty rather than being estimated into existence. An interface that
+          invents numbers is worse than one that admits a gap.
+        </p>
+      </div>
+      <div class="device reveal">
+        <img src="media/energy.webp"
+             srcset="media/energy-700.webp 700w, media/energy-1100.webp 1100w, media/energy.webp 1696w"
+             sizes="(min-width: 880px) 540px, 100vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Medien ────────────────────────────────────────────────────────── -->
+<section id="media">
+  <div class="wrap">
+    <div class="split">
+      <div class="split-text">
+        <p class="eyebrow">Media</p>
+        <h2>The film library is just another room.</h2>
+        <p class="body-text">
+          Jellyfin is integrated rather than embedded: the shelves, the detail
+          view and HLS playback with resume are built in the same design system
+          as the light switches. Room audio runs through Home Assistant media
+          players with the same controls — choosing what plays in the kitchen is
+          no different from turning on the kitchen light.
+        </p>
+      </div>
+      <div class="device reveal">
+        <img src="media/library.webp"
+             srcset="media/library-700.webp 700w, media/library-1100.webp 1100w, media/library.webp 1696w"
+             sizes="(min-width: 880px) 540px, 100vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The library screen with horizontal shelves of cover art under the headings Continue watching and Recently added.">
       </div>
     </div>
   </div>

@@ -1185,3 +1185,8 @@ footer a { color: var(--text-secondary); }
    den Seitenanfang; auf Telefonen reicht der eigene Innenabstand der Sektion
    sonst nur um 3 px an ihr vorbei. */
 section[id] { scroll-margin-block-start: 20px; }
+
+/* In einer zweispaltigen Sektion sind die Spalten mittig ausgerichtet — der
+   Vorsprung, den `.device` sonst über sich trägt, verschiebt das Bild dort
+   nach unten statt Luft zu schaffen. */
+.split .device { margin-top: 0; }
