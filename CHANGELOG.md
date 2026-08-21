@@ -3,6 +3,18 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.4.0-beta.6] - 2026-08-21
+
+### Fixed
+
+- `POST /api/setup/activate` and other API routes rejected direct browser
+  requests with `403 SETUP_REQUEST_FORBIDDEN` whenever the App was reached
+  through a hostname absent from the static `HMI_ALLOWED_ORIGINS` allowlist —
+  for example the Home Assistant App's default `homeassistant.local:4173`.
+  A request is now also accepted when its Origin header exactly matches the
+  effective request host, independent of hostname, so installs no longer need
+  manual origin configuration. Reported in #8.
+
 ## [0.4.0-beta.5] - 2026-08-16
 
 ### Fixed

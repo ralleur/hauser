@@ -43,7 +43,7 @@ RUN npm run build && \
     npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.4.0-beta.5
+ARG HAUSER_VERSION=0.4.0-beta.6
 LABEL org.opencontainers.image.title="Hauser" \
       org.opencontainers.image.description="Local-first smart home control surface" \
       org.opencontainers.image.source="https://github.com/ralleur/hauser" \

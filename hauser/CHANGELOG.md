@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0-beta.6 - 2026-08-21
+
+### Fixed
+
+- Setup activation no longer fails with `403 SETUP_REQUEST_FORBIDDEN` when the
+  App is reached through a local hostname that isn't in the static allowed-
+  origins list, such as `homeassistant.local:4173`. A direct browser request
+  is now also accepted when its Origin exactly matches the effective request
+  host. Reported in #8.
+
 ## 0.4.0-beta.5 - 2026-08-16
 
 ### Fixed

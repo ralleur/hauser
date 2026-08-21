@@ -70,9 +70,14 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.5` is the current published App and Docker/Compose beta. It makes
-  the setup wizard discover switches, media players and vacuums that earlier
-  betas silently dropped (#7), and carries the `/data/assets` start fix from
-  `0.4.0-beta.4` (#6). The vacuum path follows the documented Home Assistant
-  service set and is not yet verified against real hardware. An unrelated
-  real-home installation remains the next beta-stabilisation evidence gate.
+- `0.4.0-beta.6` is the current published App and Docker/Compose beta. It fixes
+  setup activation failing with `403 SETUP_REQUEST_FORBIDDEN` when the App is
+  reached through a local hostname (e.g. `homeassistant.local:4173`) that
+  is not in the static allowed-origins list (#8): a direct browser request is
+  now also accepted whenever its Origin exactly matches the effective request
+  host, independent of hostname. It also carries the setup-wizard discovery
+  fixes for switches, media players and vacuums from `0.4.0-beta.5` (#7) and
+  the `/data/assets` start fix from `0.4.0-beta.4` (#6). The vacuum path
+  follows the documented Home Assistant service set and is not yet verified
+  against real hardware. An unrelated real-home installation remains the next
+  beta-stabilisation evidence gate.
