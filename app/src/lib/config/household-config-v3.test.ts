@@ -149,14 +149,14 @@ describe('canonical household schema v3 hero contract', () => {
     expect(compiled.entityIds).toBe(compiled.subscriptionEntityIds);
   });
 
-  it('keeps SetupWizard on v3 preservation only, without the later ETag cutover', () => {
+  it('keeps SetupWizard on v3 preservation and sends the reconfigure ETag preconditions', () => {
     const source = readFileSync(new URL('../components/SetupWizard.svelte', import.meta.url), 'utf8');
 
     expect(source).toContain('type HouseholdConfigV3');
     expect(source).toContain('preserveSetupRoomHeroes(previousSuggestion.config, discovered.config)');
     expect(source).not.toContain('HouseholdConfigV2');
-    expect(source).not.toContain('If-Match');
-    expect(source).not.toContain('CONFIG_PRECONDITION_FAILED');
+    expect(source).toContain("headers['If-Match'] = householdEtag");
+    expect(source).toContain("headers['X-Hauser-Shared-Config-If-Match'] = sharedEtag");
   });
 
   it.each(['washer', 'dryer'] as const)('rejects scalar v3 Laundry binding for %s fail-closed', (device) => {

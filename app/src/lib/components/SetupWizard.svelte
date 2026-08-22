@@ -52,6 +52,8 @@
   let jellyfinStatus = $state<'idle' | 'testing' | 'ready' | 'error'>('idle');
   let jellyfinMessage = $state('');
   let jellyfinSession = $state<{ accessToken: string; userId: string } | null>(null);
+  let householdEtag = $state<string | null>(null);
+  let sharedEtag = $state<string | null>(null);
   let expandedRoomId = $state<string | null>(null);
   let pendingDeleteRoomId = $state<string | null>(null);
   let deleteDestination = $state('');
@@ -124,6 +126,8 @@
       }
       const parsed = parseHouseholdConfig(await householdResponse.json());
       if (!parsed.ok) throw new Error(m.setup_config_invalid());
+      householdEtag = householdResponse.headers.get('etag');
+      sharedEtag = sharedResponse.headers.get('etag');
       const shared = await sharedResponse.json() as { values?: Record<string, unknown> };
       const values = shared.values ?? {};
       if (typeof values['hmi:ha-url'] === 'string') haUrl = values['hmi:ha-url'];
@@ -283,9 +287,14 @@
     status = 'activating';
     message = '';
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (reconfigure) {
+        if (householdEtag) headers['If-Match'] = householdEtag;
+        if (sharedEtag) headers['X-Hauser-Shared-Config-If-Match'] = sharedEtag;
+      }
       const response = await fetch('/api/setup/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           haUrl: haUrl.trim(),
           haToken: token,
