@@ -2,6 +2,7 @@
   "name": "smart-home-hmi",
   "private": true,
   "version": "0.4.0-beta.6",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "description": "Smart Home HMI — Phase 3 App (Svelte 5 + Vite, ADR-013/014)",
   "scripts": {

@@ -36,7 +36,7 @@ function expectIssue(input: unknown, code: ConfigIssue['code'], path: string): v
   ]));
 }
 
-describe('canonical household schema v3 hero contract', () => {
+describe('canonical household schema v4 hero contract', () => {
   it('accepts the closed nullable hero shape and preserves it through compile and compare', () => {
     const input = v3Fixture();
     input.rooms[0].hero = {
@@ -61,7 +61,7 @@ describe('canonical household schema v3 hero contract', () => {
     if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
     const compiled = compileHouseholdConfig(parsed.value);
 
-    expect(parsed.value.schemaVersion).toBe(3);
+    expect(parsed.value.schemaVersion).toBe(4);
     expect(compiled.rooms[0].hero).toEqual(input.rooms[0].hero);
     expect(compiled.rooms[0].hero).not.toBe(input.rooms[0].hero);
     const projected = projectActiveHouseholdData(compiled);
@@ -139,11 +139,11 @@ describe('canonical household schema v3 hero contract', () => {
     expect(dryer.cycleMarkerEntityId).toBe('automation.fixture_dryer_cycle');
   });
 
-  it('projects every legacy room as schema-v3 project fallback without changing subscriptions', () => {
+  it('projects every legacy room as schema-v4 project fallback without changing subscriptions', () => {
     const legacy = projectLegacyHouseholdConfig();
     const compiled = compileHouseholdConfig(legacy);
 
-    expect(legacy.schemaVersion).toBe(3);
+    expect(legacy.schemaVersion).toBe(4);
     expect(legacy.rooms.every(({ hero }) => hero === null)).toBe(true);
     expect(compiled.rooms.every(({ hero }) => hero === null)).toBe(true);
     expect(compiled.entityIds).toBe(compiled.subscriptionEntityIds);
@@ -152,7 +152,7 @@ describe('canonical household schema v3 hero contract', () => {
   it('keeps SetupWizard on v3 preservation and sends the reconfigure ETag preconditions', () => {
     const source = readFileSync(new URL('../components/SetupWizard.svelte', import.meta.url), 'utf8');
 
-    expect(source).toContain('type HouseholdConfigV3');
+    expect(source).toContain('type HouseholdConfigV4');
     expect(source).toContain('preserveSetupRoomHeroes(previousSuggestion.config, discovered.config)');
     expect(source).not.toContain('HouseholdConfigV2');
     expect(source).toContain("headers['If-Match'] = householdEtag");
@@ -203,7 +203,7 @@ describe('canonical household schema v3 hero contract', () => {
   });
 });
 
-describe('sequential household v1/v2 to v3 migration', () => {
+describe('sequential household v1/v2/v3 to v4 migration', () => {
   it.each([1, 2])('migrates v%s without mutation and adds exactly hero null in room order', (version) => {
     const input = v2Fixture();
     input.schemaVersion = version;
@@ -214,8 +214,8 @@ describe('sequential household v1/v2 to v3 migration', () => {
     expect(result.ok).toBe(true);
     if (!result.ok || result.status !== 'migrated') throw new Error('Expected migrated config');
     expect(result.fromVersion).toBe(version);
-    expect(result.toVersion).toBe(3);
-    expect(result.document.schemaVersion).toBe(3);
+    expect(result.toVersion).toBe(4);
+    expect(result.document.schemaVersion).toBe(4);
     expect((result.document.rooms as Array<Record<string, unknown>>).map((room) => ({
       id: room.id,
       hero: room.hero,
@@ -230,7 +230,7 @@ describe('sequential household v1/v2 to v3 migration', () => {
       ok: true,
       status: 'current',
       document: result.document,
-      version: 3,
+      version: 4,
     });
   });
 
@@ -241,7 +241,7 @@ describe('sequential household v1/v2 to v3 migration', () => {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_MIGRATION_INVALID',
     });
-    expect(migrateHouseholdConfigDocument({ ...v3Fixture(), schemaVersion: 4 })).toMatchObject({
+    expect(migrateHouseholdConfigDocument({ ...v3Fixture(), schemaVersion: 5 })).toMatchObject({
       ok: false,
       code: 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW',
     });

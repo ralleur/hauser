@@ -1,6 +1,6 @@
 import type {
   CommandContract,
-  HouseholdConfigV3,
+  HouseholdConfigV4,
   HouseholdRuntimeModel,
 } from './household-config.ts';
 
@@ -17,7 +17,7 @@ function commandKey(contract: Pick<CommandContract, 'entityId' | 'domain'>): str
 }
 
 /** Compiles a validated v3 configuration into a canonical runtime representation. */
-export function compileHouseholdConfig(config: HouseholdConfigV3): HouseholdRuntimeModel {
+export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRuntimeModel {
   // Room order is installation semantics. Entities inside a room are keyed and
   // canonicalized so object/fixture construction order cannot create noise.
   const rooms = config.rooms.map((room) => ({

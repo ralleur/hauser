@@ -8,12 +8,26 @@ COPY app/package.json app/package-lock.json ./
 RUN npm ci
 COPY app/ ./
 COPY design-tokens/ /build/design-tokens/
+# AGPL section 13: the built frontend embeds the exact revision it was built
+# from and the URL of its corresponding source. There is no .git inside the
+# build context, so both arrive as build arguments; HAUSER_RELEASE=1 turns a
+# missing or unusable value into a build failure instead of a published image
+# that claims a source it cannot back. Declared after `npm ci` so a new
+# revision does not invalidate the dependency layer.
+ARG HAUSER_REVISION=""
+ARG HAUSER_SOURCE_URL=""
+ARG HAUSER_RELEASE=""
+ENV HAUSER_REVISION=${HAUSER_REVISION} \
+    HMI_SOURCE_URL=${HAUSER_SOURCE_URL} \
+    HAUSER_RELEASE=${HAUSER_RELEASE}
 RUN npm run build && \
     ./node_modules/.bin/tsc \
       --ignoreConfig \
+      src/lib/config/build-info.ts \
       src/lib/config/household-config.ts \
       src/lib/config/household-config-migration.ts \
       src/lib/config/household-runtime-data.ts \
+      src/lib/config/hotel-mode-policy.ts \
       src/lib/config/legacy-household-config.ts \
       src/lib/config/legacy-household-data.ts \
       --outDir /build/server-contract \
@@ -44,15 +58,20 @@ RUN npm run build && \
 
 FROM ${NODE_IMAGE} AS runtime
 ARG HAUSER_VERSION=0.4.0-beta.6
+ARG HAUSER_REVISION=""
+ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \
       org.opencontainers.image.description="Local-first smart home control surface" \
       org.opencontainers.image.source="https://github.com/ralleur/hauser" \
-      org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.version="${HAUSER_VERSION}"
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.version="${HAUSER_VERSION}" \
+      org.opencontainers.image.revision="${HAUSER_REVISION}"
 
 ENV NODE_ENV=production \
     HMI_HOST=0.0.0.0 \
     HMI_PORT=4173 \
+    HMI_REVISION=${HAUSER_REVISION} \
+    HMI_SOURCE_URL=${HAUSER_SOURCE_URL} \
     HMI_AI_CUSTOMIZING_ENABLED=0 \
     HMI_HOUSEHOLD_CONFIG_PATH=/config/household.json \
     HMI_HOUSEHOLD_CONFIG_MODE=active \

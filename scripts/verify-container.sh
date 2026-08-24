@@ -48,6 +48,22 @@ docker compose exec -T hauser node -e '
       if (health.status !== "setup_required") process.exit(1);
     });
 '
+# AGPL section 13: the license and the source of exactly this build must be
+# readable before any configuration exists and without authentication.
+docker compose exec -T hauser node -e '
+  fetch("http://127.0.0.1:4173/api/build-info")
+    .then((response) => response.json())
+    .then((build) => {
+      const complete = build.license === "AGPL-3.0-or-later"
+        && /^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(build.revision || "")
+        && /^\d+\.\d+\.\d+/.test(build.version || "")
+        && String(build.sourceUrl || "").startsWith("https://");
+      if (!complete) {
+        console.error("incomplete build provenance", build);
+        process.exit(1);
+      }
+    });
+'
 node -e '
   const fs = require("node:fs");
   const config = JSON.parse(fs.readFileSync("app/config/examples/neutral-small.json", "utf8"));
@@ -62,7 +78,7 @@ docker compose exec -T hauser node -e '
   fetch("http://127.0.0.1:4173/api/health")
     .then((response) => response.json())
     .then((health) => {
-      if (health.status !== "ready" || health.schemaVersion !== 3) process.exit(1);
+      if (health.status !== "ready" || health.schemaVersion !== 4) process.exit(1);
     });
 '
 docker compose exec -T hauser sh -c '
@@ -126,10 +142,10 @@ run_invalid_probe() {
   printf '%s' "$output" | grep -q "$expected_code"
 }
 
-printf '%s\n' '{"schemaVersion":3,"rooms":[]}' > "$tmp/invalid-v3.json"
+printf '%s\n' '{"schemaVersion":4,"rooms":[]}' > "$tmp/invalid-v4.json"
 printf '%s\n' '{"schemaVersion":1,"rooms":[]}' > "$tmp/invalid-v1.json"
-run_invalid_probe "$tmp/invalid-v3.json" HOUSEHOLD_CONFIG_INVALID
+run_invalid_probe "$tmp/invalid-v4.json" HOUSEHOLD_CONFIG_INVALID
 run_invalid_probe "$tmp/invalid-v1.json" HOUSEHOLD_CONFIG_MIGRATION_INVALID
 
-printf 'project=%s\nimage=%s\nconfig_hash=%s\nsetup_required=PASS\nmigration_v1_to_v3=PASS\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\ninvalid_migration=PASS\n' \
+printf 'project=%s\nimage=%s\nconfig_hash=%s\nsetup_required=PASS\nmigration_v1_to_v4=PASS\ncycles=2\nbackup_restore=PASS\ninvalid_config=PASS\ninvalid_migration=PASS\n' \
   "$project" "$image" "$config_hash_after"

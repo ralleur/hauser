@@ -7,7 +7,7 @@
     JELLYFIN_URL_DEFAULT,
     jellyfin,
   } from '../adapter/jellyfin.ts';
-  import { parseHouseholdConfig, type HouseholdConfigV3 } from '../config/household-config.ts';
+  import { parseHouseholdConfig, type HouseholdConfigV4 } from '../config/household-config.ts';
   import {
     addSetupRoom,
     buildSetupHouseholdSuggestion,
@@ -145,7 +145,7 @@
         jellyfinMessage = m.setup_jellyfin_existing();
       }
       suggestion = {
-        config: structuredClone(parsed.value) as HouseholdConfigV3,
+        config: structuredClone(parsed.value) as HouseholdConfigV4,
         ignoredEntityIds: [],
         inferredRooms: false,
       };

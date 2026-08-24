@@ -9,9 +9,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 // @ts-expect-error Nativer Node-Test ohne @types/node.
 import { join } from 'node:path';
+import neutralApartment from '../../config/examples/neutral-apartment.json';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, hotelAdminOnlyRoute, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -950,3 +951,87 @@ function invokeHouseholdConfigMode(mode = 'shadow', method = 'GET') {
   serveHouseholdConfigMode({ method, headers: {} }, response, mode);
   return { status, headers, body, json: JSON.parse(body) as Record<string, unknown> };
 }
+
+/* ── H06: Adminschranke sensitiver Routen bei eingerichtetem Hotel Mode ── */
+
+function neutralApartmentFixture(): any {
+  return JSON.parse(JSON.stringify(neutralApartment));
+}
+
+describe('Hotel-Mode-Adminschranke', () => {
+  it('listet genau die sensitiven Pfade und keine öffentlichen', () => {
+    for (const url of [
+      '/api/config', '/api/config?x=1', '/api/setup/activate', '/api/room-images/access',
+      '/api/room-image-assets', '/api/ablage/documents', '/api/laundry/existing/apply',
+      '/api/reminders', '/api/songs/health', '/notion-bridge/x', '/notion-shopping.json',
+      '/hermes/v1/chat', '/ambient-llm/v1/chat/completions', '/shopping-llm/v1/chat/completions',
+    ]) {
+      expect(hotelAdminOnlyRoute(url), url).toBe(true);
+    }
+    for (const url of [
+      '/', '/index.html', '/legal/agpl-3.0.txt', '/api/health', '/api/build-info',
+      '/api/household-config', '/api/household-config-mode',
+      '/api/hotel-mode/status', '/api/hotel-mode/entities', '/api/hotel-mode/command',
+      '/api/configuration-guide', '/api/setups',
+    ]) {
+      expect(hotelAdminOnlyRoute(url), url).toBe(false);
+    }
+  });
+
+  async function hotelServer(hotelMode: unknown) {
+    const root = mkdtempSync(join(tmpdir(), 'hmi-hotel-gate-'));
+    tempDirs.push(root);
+    const staticRoot = join(root, 'dist');
+    mkdirSync(staticRoot);
+    writeFileSync(join(staticRoot, 'index.html'), '<!doctype html><title>gate</title>');
+    const householdConfigPath = join(root, 'household.json');
+    writeFileSync(householdConfigPath, JSON.stringify(
+      hotelMode === undefined ? neutralApartmentFixture() : { ...neutralApartmentFixture(), hotelMode },
+    ));
+    const configPath = join(root, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ 'hmi:ha-url': 'http://ha.fixture', 'hmi:ha-token': 'secret-token' }));
+    const server = createHmiServer('', {
+      staticRoot,
+      configPath,
+      householdConfigPath,
+      householdConfigMode: 'active',
+      householdConfigMigrationResult: { ok: true, status: 'current' },
+      familyDataPath: join(root, 'family-data.json'),
+      allowedOrigins: new Set<string>(),
+      paperlessPin: '',
+      paperlessToken: '',
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  }
+
+  it('lässt sensitive Routen ohne Hotel Mode unverändert erreichbar', async () => {
+    const base = await hotelServer(undefined);
+
+    expect((await fetch(`${base}/api/config`)).status).toBe(200);
+  });
+
+  it('verlangt bei eingerichtetem Hotel Mode eine Adminsitzung', async () => {
+    const base = await hotelServer({
+      ...neutralApartmentFixture().hotelMode, enabled: true, kioskAcknowledged: true,
+    });
+
+    const response = await fetch(`${base}/api/config`);
+    expect(response.status).toBe(401);
+    expect((await response.json()).code).toBe('HOTEL_ADMIN_REQUIRED');
+    // Kein Credential im Antwortkörper, auch nicht als Fehlermeldung.
+    expect(JSON.stringify(await (await fetch(`${base}/api/config`)).json())).not.toContain('secret-token');
+  });
+
+  it('hält Gesundheit, Herkunft, Lizenztext und Gastpfad öffentlich', async () => {
+    const base = await hotelServer({
+      ...neutralApartmentFixture().hotelMode, enabled: true, kioskAcknowledged: true,
+    });
+
+    expect((await fetch(`${base}/api/health`)).status).toBe(200);
+    expect((await fetch(`${base}/api/build-info`)).status).toBe(200);
+    expect((await fetch(`${base}/api/household-config`)).status).toBe(200);
+    expect((await fetch(`${base}/api/hotel-mode/status`)).status).toBe(200);
+  });
+});

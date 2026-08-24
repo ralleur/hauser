@@ -36,6 +36,8 @@ export type SettingsSectionId =
   /* Zuhause */
   | 'rooms-devices'
   | 'laundry'
+  | 'hotel-mode'
+  | 'hotel-guest-access'
   /* Darstellung */
   | 'appearance'
   | 'layout'
@@ -93,6 +95,16 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'laundry', group: 'home',
     get label() { return m.settings_section_laundry_label(); }, icon: 'i-washing-machine', tint: 'warm',
     get description() { return m.settings_section_laundry_desc(); },
+  },
+  {
+    id: 'hotel-mode', group: 'home',
+    get label() { return m.settings_section_hotel_mode_label(); }, icon: 'i-bed', tint: 'cool',
+    get description() { return m.settings_section_hotel_mode_desc(); },
+  },
+  {
+    id: 'hotel-guest-access', group: 'home',
+    get label() { return m.settings_section_hotel_access_label(); }, icon: 'i-account-key', tint: 'warm',
+    get description() { return m.settings_section_hotel_access_desc(); },
   },
   {
     id: 'appearance', group: 'appearance',
@@ -165,6 +177,26 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   { id: 'laundry', section: 'laundry', get label() { return m.settings_laundry_title(); },
     keywords: ['wäsche', 'waschmaschine', 'trockner', 'laundry', 'helper', 'blueprint', 'leistungssensor'] },
 
+  /* ── Zuhause · Hotel Mode ── */
+  { id: 'hotel-activation', section: 'hotel-mode', get label() { return m.settings_hotel_activation(); },
+    keywords: ['hotel', 'ferienwohnung', 'apartment', 'gast', 'aktivieren', 'kiosk', 'vermietung'] },
+  { id: 'hotel-pin', section: 'hotel-mode', get label() { return m.settings_hotel_pin(); },
+    keywords: ['pin', 'admin', 'code', 'sperren', 'verwaltung', 'hotel'] },
+  { id: 'hotel-calendar', section: 'hotel-mode', get label() { return m.settings_hotel_calendar(); },
+    keywords: ['kalender', 'aufenthalt', 'anreise', 'abreise', 'zeitzone', 'buchung', 'hotel'] },
+  { id: 'hotel-checkout', section: 'hotel-mode', get label() { return m.settings_hotel_checkout(); },
+    keywords: ['checkout', 'abreise', 'szene', 'scene', 'benachrichtigung', 'hotel'] },
+  { id: 'hotel-override', section: 'hotel-mode', get label() { return m.settings_hotel_override(); },
+    keywords: ['manuell', 'override', 'aufenthalt', 'früh', 'verlängern', 'hotel'] },
+
+  /* ── Zuhause · Gastfreigaben ── */
+  { id: 'hotel-guest-access', section: 'hotel-guest-access', get label() { return m.settings_hotel_access(); },
+    keywords: ['freigabe', 'gast', 'geräte', 'räume', 'allowlist', 'erlaubt', 'hotel'] },
+  { id: 'hotel-scenes', section: 'hotel-guest-access', get label() { return m.settings_hotel_scenes(); },
+    keywords: ['szene', 'scene', 'skript', 'script', 'freigabe', 'hotel'] },
+  { id: 'hotel-preview', section: 'hotel-guest-access', get label() { return m.settings_hotel_preview(); },
+    keywords: ['vorschau', 'gast', 'preview', 'freigabe', 'hotel'] },
+
   /* ── Darstellung ── */
   { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },
     keywords: ['theme', 'dunkel', 'hell', 'dark', 'light', 'nacht', 'tag', 'automatisch', 'sonne', 'design', 'farben'] },
@@ -229,6 +261,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['zigbee', 'mqtt', 'broker', 'tunnel', 'cloudflared', 'adguard', 'services', 'gesundheit'] },
   { id: 'update-list', section: 'status', get label() { return m.settings_entry_update_list_label(); },
     keywords: ['aktualisierung', 'version', 'software', 'core', 'os', 'esphome', 'matter'] },
+  { id: 'license-source', section: 'status', get label() { return m.settings_entry_license_source_label(); },
+    keywords: ['lizenz', 'license', 'agpl', 'quellcode', 'source', 'open source', 'commit', 'revision', 'version', 'copyright'] },
   ...(AI_CUSTOMIZING_ENABLED ? [{
     id: 'ai-chat', section: 'ai-customizing' as const,
     get label() { return m.settings_entry_ai_chat_label(); },

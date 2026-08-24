@@ -19,6 +19,8 @@
 
   import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
   import LaundrySection from '../components/settings/LaundrySection.svelte';
+  import HotelModeSection from '../components/settings/HotelModeSection.svelte';
+  import HotelAllowlistSection from '../components/settings/HotelAllowlistSection.svelte';
   import ServicesSection from '../components/settings/ServicesSection.svelte';
   import AppearanceSection from '../components/settings/AppearanceSection.svelte';
   import LayoutSection from '../components/settings/LayoutSection.svelte';
@@ -45,6 +47,8 @@
   const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
     'rooms-devices': RoomsDevicesSection,
     'laundry': LaundrySection,
+    'hotel-mode': HotelModeSection,
+    'hotel-guest-access': HotelAllowlistSection,
     'appearance': AppearanceSection,
     'layout': LayoutSection,
     'ambient': AmbientSection,

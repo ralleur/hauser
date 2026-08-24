@@ -11,10 +11,10 @@ function expectMigrated(result: HouseholdConfigMigrationResult) {
   return result;
 }
 
-function legacyFixture(version: 1 | 2): Record<string, any> {
+function legacyFixture(version: 1 | 2 | 3): Record<string, any> {
   const source = structuredClone(neutralSmall) as Record<string, any>;
   source.schemaVersion = version;
-  for (const room of source.rooms) delete room.hero;
+  if (version !== 3) for (const room of source.rooms) delete room.hero;
   return source;
 }
 
@@ -36,16 +36,16 @@ const typedDryer = {
 };
 
 describe('household config document migration', () => {
-  it.each([1, 2] as const)('migrates deployed scalar v%s data to typed Laundry plus Hero v3 without mutation', (version) => {
+  it.each([1, 2] as const)('migrates deployed scalar v%s data to typed Laundry plus Hero v4 without mutation', (version) => {
     const source = legacyFixture(version);
     const before = JSON.stringify(source);
 
     const result = expectMigrated(migrateHouseholdConfigDocument(source));
 
     expect(result.fromVersion).toBe(version);
-    expect(result.toVersion).toBe(3);
+    expect(result.toVersion).toBe(4);
     expect(result.document).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       rooms: (source.rooms as Array<Record<string, unknown>>).map((room) => ({ ...room, hero: null })),
       globalEntities: {
         laundry: {
@@ -69,7 +69,7 @@ describe('household config document migration', () => {
     expect(JSON.stringify(source)).toBe(before);
   });
 
-  it('adds only hero null in the v2-to-v3 step and preserves rich typed Laundry data exactly', () => {
+  it('adds only hero null on the way to v4 and preserves rich typed Laundry data exactly', () => {
     const source = legacyFixture(2);
     source.globalEntities.laundry = {
       washer: structuredClone(typedWasher),
@@ -81,13 +81,25 @@ describe('household config document migration', () => {
 
     expect(result.document).toEqual({
       ...source,
-      schemaVersion: 3,
+      schemaVersion: 4,
       rooms: source.rooms.map((room: Record<string, unknown>) => ({ ...room, hero: null })),
     });
     expect(JSON.stringify(source)).toBe(before);
   });
 
-  it('rejects an invalid current v3 document without reporting a migration failure', () => {
+  it('lifts a v3 document to v4 without touching anything else', () => {
+    const source = legacyFixture(3);
+    const before = JSON.stringify(source);
+
+    const result = expectMigrated(migrateHouseholdConfigDocument(source));
+
+    expect(result.fromVersion).toBe(3);
+    expect(result.document).toEqual({ ...source, schemaVersion: 4 });
+    expect(Object.hasOwn(result.document, 'hotelMode')).toBe(false);
+    expect(JSON.stringify(source)).toBe(before);
+  });
+
+  it('rejects an invalid current v4 document without reporting a migration failure', () => {
     const source = structuredClone(neutralSmall) as Record<string, any>;
     source.globalEntities.laundry.washer = 'input_boolean.washer_running';
 
@@ -107,11 +119,11 @@ describe('household config document migration', () => {
     const second = migrateHouseholdConfigDocument(first.document);
 
     expect(expectMigrated(migrateHouseholdConfigDocument(source)).document).toEqual(first.document);
-    expect(second).toEqual({ ok: true, status: 'current', document: first.document, version: 3 });
+    expect(second).toEqual({ ok: true, status: 'current', document: first.document, version: 4 });
   });
 
   it.each([
-    [{ ...neutralSmall, schemaVersion: 4 }, 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW'],
+    [{ ...neutralSmall, schemaVersion: 5 }, 'HOUSEHOLD_CONFIG_VERSION_TOO_NEW'],
     [{ ...neutralSmall, schemaVersion: 0 }, 'HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED'],
     [{ ...neutralSmall, schemaVersion: '1' }, 'HOUSEHOLD_CONFIG_VERSION_INVALID'],
     [Object.fromEntries(Object.entries(neutralSmall).filter(([key]) => key !== 'schemaVersion')), 'HOUSEHOLD_CONFIG_VERSION_INVALID'],

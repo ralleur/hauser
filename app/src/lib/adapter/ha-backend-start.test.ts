@@ -337,6 +337,32 @@ describe('HaBackend deferred startup', () => {
     warn.mockRestore();
   });
 
+  /* Credential-Cutover (H12): nach dem Wechsel in eine Gastoberfläche liegen
+     weder Token noch Entity-Cache lokal — dieses Backend darf dann weder eine
+     Verbindung öffnen noch alte Haushaltszustände wiederbeleben. */
+  it('opens no connection and hydrates nothing after the hotel credential purge', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem('hmi:ha-token', 'admin-token');
+    localStorage.setItem('hmi:ha-cache', JSON.stringify({ 'light.private': { on: true } }));
+    const { purgeHotelSensitiveValues } = await import('../hotel-mode-activation.ts');
+
+    expect(purgeHotelSensitiveValues(localStorage).sort()).toEqual(['hmi:ha-cache', 'hmi:ha-token']);
+
+    const backend = new HaBackend({ url: 'http://ha:8123', entityIds: ['light.private'] });
+    const update = vi.fn();
+    const reasons: string[] = [];
+    backend.onAuthError((reason) => reasons.push(reason));
+    backend.subscribe(update);
+    backend.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(update).not.toHaveBeenCalled();
+    expect(websocket.createConnection).not.toHaveBeenCalled();
+    expect(reasons).toEqual(['missing-token']);
+    // Die Serverzugangsdaten in /data/config.json bleiben davon unberührt.
+    expect(localStorage.getItem('hmi:ha-url')).toBeNull();
+  });
+
   it('reports a missing token as setup and retries neither missing nor invalid auth', async () => {
     vi.useFakeTimers();
     localStorage.removeItem('hmi:ha-token');

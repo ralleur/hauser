@@ -8,3 +8,6 @@ services:
       dockerfile: Dockerfile
       args:
         HAUSER_VERSION: "${HAUSER_SOURCE_TAG:-local}"
+        HAUSER_REVISION: "${HAUSER_REVISION:-}"
+        HAUSER_SOURCE_URL: "${HAUSER_SOURCE_URL:-}"
+        HAUSER_RELEASE: "${HAUSER_RELEASE:-}"

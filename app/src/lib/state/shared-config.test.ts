@@ -581,6 +581,31 @@ describe('zentrale HMI-Konfiguration', () => {
     await bootstrapSharedConfig(recoveryFetcher as typeof fetch, storage);
   });
 
+  /* Credential-Cutover (H12): der Wechsel in eine Gastoberfläche löscht die
+     lokalen Zugangsdaten — aber ausdrücklich nur lokal. Ein Weg über
+     `sharedStorage` würde ein Outbox-Ereignis schreiben und den Wert damit auch
+     zentral in /data/config.json löschen; der Admin wäre danach ausgesperrt. */
+  it('löscht sensible Werte lokal, ohne sie zentral zu entfernen', async () => {
+    const storage = new MemoryStorage();
+    storage.setItem('hmi:ha-token', 'admin-token');
+    storage.setItem('hmi:jf-token', 'jellyfin-token');
+    vi.stubGlobal('localStorage', storage);
+    const fetcher = vi.fn().mockResolvedValue(jsonResponse({ 'hmi:ha-token': 'admin-token' }));
+    await bootstrapSharedConfig(fetcher as typeof fetch, storage);
+    expect(storage.getItem(SHARED_CONFIG_OUTBOX_KEY)).toBeNull();
+    const callsBeforePurge = fetcher.mock.calls.length;
+
+    const { purgeHotelSensitiveValues } = await import('../hotel-mode-activation.ts');
+    const removed = purgeHotelSensitiveValues(storage);
+    await Promise.resolve();
+
+    expect(removed.sort()).toEqual(['hmi:ha-token', 'hmi:jf-token']);
+    expect(storage.getItem('hmi:ha-token')).toBeNull();
+    // Entscheidend: kein Outbox-Ereignis und damit kein zentraler Write.
+    expect(storage.getItem(SHARED_CONFIG_OUTBOX_KEY)).toBeNull();
+    expect(fetcher.mock.calls.length).toBe(callsBeforePurge);
+  });
+
   it('führt ausschließlich explizit gemeinsame Schlüssel', () => {
     expect(SHARED_CONFIG_KEYS).toContain('hmi:device-config:v1');
     expect(SHARED_CONFIG_KEYS).toContain('hmi:ha-token');

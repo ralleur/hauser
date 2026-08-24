@@ -104,8 +104,8 @@ function migrateV1ToV2(document: JsonObject): JsonObject {
 function migrateV2ToV3(document: JsonObject): JsonObject | HouseholdConfigMigrationResult {
   const rooms = document.rooms;
   if (!Array.isArray(rooms)) {
-    const candidate = { ...document, schemaVersion: HOUSEHOLD_SCHEMA_VERSION };
-    return validateCurrent(candidate) ?? candidate;
+    const candidate = { ...document, schemaVersion: 3 };
+    return candidate;
   }
 
   for (let index = 0; index < rooms.length; index += 1) {
@@ -121,7 +121,7 @@ function migrateV2ToV3(document: JsonObject): JsonObject | HouseholdConfigMigrat
 
   return {
     ...document,
-    schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
+    schemaVersion: 3,
     rooms: rooms.map((room) => (
       typeof room === 'object' && room !== null && !Array.isArray(room)
         ? { ...room, hero: null }
@@ -130,13 +130,18 @@ function migrateV2ToV3(document: JsonObject): JsonObject | HouseholdConfigMigrat
   };
 }
 
+/** Hotel mode is opt-in, so v4 stays behaviourally identical to a v3 install. */
+function migrateV3ToV4(document: JsonObject): JsonObject {
+  return { ...document, schemaVersion: HOUSEHOLD_SCHEMA_VERSION };
+}
+
 function isMigrationFailure(
   value: JsonObject | HouseholdConfigMigrationResult,
 ): value is Extract<HouseholdConfigMigrationResult, { ok: false }> {
   return Object.hasOwn(value, 'ok') && value.ok === false;
 }
 
-/** Pure, deterministic and non-mutating v1 -> v2 -> v3 migration boundary. */
+/** Pure, deterministic and non-mutating v1 -> v2 -> v3 -> v4 migration boundary. */
 export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigMigrationResult {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return {
@@ -171,7 +176,7 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
       version: HOUSEHOLD_SCHEMA_VERSION,
     } : invalidCurrent(parsed.issues[0]);
   }
-  if (version !== 1 && version !== 2) {
+  if (version !== 1 && version !== 2 && version !== 3) {
     return {
       ok: false,
       code: 'HOUSEHOLD_CONFIG_VERSION_UNSUPPORTED',
@@ -180,10 +185,17 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
   }
 
   const fromVersion = version;
-  const v2 = version === 1 ? migrateV1ToV2(document) : document;
-  const typedV2 = migrateLaundryBindings(v2).document;
-  const migrated = migrateV2ToV3(typedV2);
-  if (isMigrationFailure(migrated)) return migrated;
+  let v3: JsonObject;
+  if (version === 3) {
+    v3 = document;
+  } else {
+    const v2 = version === 1 ? migrateV1ToV2(document) : document;
+    const typedV2 = migrateLaundryBindings(v2).document;
+    const stepped = migrateV2ToV3(typedV2);
+    if (isMigrationFailure(stepped)) return stepped;
+    v3 = stepped;
+  }
+  const migrated = migrateV3ToV4(v3);
   const invalid = validateCurrent(migrated);
   if (invalid) return invalid;
 

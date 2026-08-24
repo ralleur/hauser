@@ -73,6 +73,11 @@
 
 .phone-screen-transition:last-child { pointer-events: auto; }
 
+.phone-screen-content {
+  height: 100%;
+  min-height: 0;
+}
+
 .phone-skeleton {
   height: 100%;
   display: grid;
@@ -129,9 +134,13 @@
   flex-direction: column;
   min-height: 0;
 }
-.phone-media-area > .phone-page {
+.phone-media-area > .phone-screen-content {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.phone-media-area > .phone-screen-content > .phone-page {
+  height: 100%;
   padding-top: var(--space-3);
 }
 .phone-media-switcher {
@@ -928,15 +937,26 @@
   transition: transform var(--duration-quick) var(--ease-spring), opacity var(--duration-fast) var(--ease-out);
 }
 
-.phone-nav-target::after {
+.phone-nav-indicator-track {
+  position: relative;
+  z-index: 1;
+  grid-row: 1;
+  grid-column: 1;
+  align-self: stretch;
+  pointer-events: none;
+  transform: translateX(calc(var(--phone-nav-active-index) * 100%));
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.phone-nav-indicator {
+  position: absolute;
+  bottom: var(--space-1);
+  left: 50%;
   width: var(--space-5);
   height: calc(var(--space-1) - 1px);
-  flex: none;
-  margin-top: calc(var(--space-1) * -1);
   border-radius: var(--radius-full);
   background: var(--color-accent-warm);
-  content: '';
-  opacity: 0;
+  transform: translateX(-50%);
 }
 
 .phone-nav-target svg {
@@ -951,10 +971,6 @@
 
 .phone-nav-target.is-active {
   color: var(--color-text-primary);
-}
-
-.phone-nav-target.is-active::after {
-  opacity: 1;
 }
 
 .phone-nav-target:hover {

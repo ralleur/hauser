@@ -1,1 +1,1 @@
-export const HOUSEHOLD_SCHEMA_VERSION = 3 as const;
+export const HOUSEHOLD_SCHEMA_VERSION = 4 as const;

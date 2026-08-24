@@ -203,4 +203,11 @@ configuration, not from the interface.
 | Cloud accounts or hosted service | Local-first is a design constraint, not a stage |
 | Telemetry or analytics in the app | Same |
 | Support for backends the author cannot test against | Cannot be maintained honestly |
-| A paid tier, sponsorship-gated features, or an "enterprise" edition | It is MIT and it stays MIT |
+| Gating features behind a paid tier in the public build | Every feature in the public repository stays available under the AGPL |
+
+> **Changed after v0.4.0-beta.6:** an earlier version of this table promised that Hauser
+> would stay MIT licensed. It moved to AGPL-3.0-or-later instead. AGPL is still
+> an OSI-approved open source license and everything released up to
+> v0.4.0-beta.6 remains MIT, but the earlier wording was a commitment and
+> withdrawing it belongs in the open rather than in a quiet edit. The reasoning
+> is in ADR-025.

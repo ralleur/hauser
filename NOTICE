@@ -1,9 +1,10 @@
 Hauser — third-party notices
 ============================
 
-The MIT license in LICENSE covers this project's source code, tests, scripts,
-configuration examples, design tokens and technical documentation. The
-components below are included or depended upon under their own terms.
+The AGPL-3.0-or-later license in LICENSE covers this project's source code,
+tests, scripts, configuration examples, design tokens and technical
+documentation. The components below are included or depended upon under their
+own terms.
 
 
 Fonts (bundled in app/public/fonts/)

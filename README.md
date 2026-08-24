@@ -27,7 +27,7 @@ room, quiet until touched, and a direct path into the relevant household view.
 ## Beta status
 
 Hauser is an **installable, self-hosted smart home interface in its first public
-technical beta**. It is an MIT-licensed hobby project, not a commercial service
+technical beta**. It is an AGPL-licensed hobby project, not a commercial service
 and not a promise of support.
 
 The portable product deliberately excludes the author's private code-modifying
@@ -97,6 +97,7 @@ deliberately omits superseded plans and rejected alternatives.
 | **Documents** | PIN-gated Paperless-ngx search, preview, download and import through the optional companion server |
 | **Devices** | Add, hide, rename, assign to a room and reorder entities from inside the UI |
 | **Two shells** | A landscape wall panel and a one-handed phone layout, sharing one design system |
+| **Hotel mode** | Optional, off by default: turns a dedicated panel into a guest surface for one holiday apartment — stays from a Home Assistant calendar, a default-deny device release, a PIN-gated admin session and a guest checkout ([details](docs/07-configuration.md#hotel-mode-holiday-apartment)) |
 
 ### Integration status
 
@@ -317,14 +318,33 @@ are explicitly welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 ## License
 
-Source code, tests, scripts, configuration examples, design tokens and technical
-documentation are licensed under the [MIT license](LICENSE). Original room
-illustrations, background artwork and public screenshots are licensed
-[CC BY 4.0](ASSETS-LICENSE.md).
+Hauser is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See [LICENSE](LICENSE).
 
-The Hauser name, logos, brand marks, official application icons and favicon are
-not licensed under MIT or CC BY. See the [brand and trademark policy](TRADEMARKS.md).
-Fonts, Material Design Icons and other third-party components remain under their
-own terms and are listed in [NOTICE](NOTICE).
+If you modify Hauser and let other people use it over a network, the AGPL asks
+you to offer those users the source of your modified version. Running Hauser
+unmodified in your own home creates no obligation at all.
+
+### Licensing history
+
+Hauser was MIT licensed up to and including **v0.4.0-beta.6**. Those releases
+stay MIT and can be used and forked under those terms forever — this change
+applies to later versions only. Nothing has been withdrawn or retagged. The
+reasoning is in ADR-025.
+
+### Commercial licensing
+
+The AGPL does not suit every setting. If you want to build on Hauser without its
+source disclosure requirement, a commercial license is available — open an issue
+or contact the maintainer through the repository.
+
+Original room illustrations, background artwork and public screenshots are
+licensed [CC BY 4.0](ASSETS-LICENSE.md). The Hauser name, logos, brand marks,
+official application icons and favicon are not licensed under AGPL or CC BY.
+See the [brand and trademark policy](TRADEMARKS.md). Fonts, Material Design
+Icons and other third-party components remain under their own terms and are
+listed in [NOTICE](NOTICE).
 
 Not affiliated with Home Assistant or Jellyfin.

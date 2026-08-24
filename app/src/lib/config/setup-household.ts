@@ -1,7 +1,7 @@
 import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import type {
   EntityRole,
-  HouseholdConfigV3,
+  HouseholdConfigV4,
   MediaTargetConfig,
   RoomConfig,
   RoomHeroConfig,
@@ -41,7 +41,7 @@ export interface SetupDiscoverySnapshot {
 }
 
 export interface SetupHouseholdSuggestion {
-  config: HouseholdConfigV3;
+  config: HouseholdConfigV4;
   ignoredEntityIds: string[];
   inferredRooms: boolean;
 }
@@ -60,7 +60,7 @@ function cloneRoomHero(hero: RoomHeroConfig | null): RoomHeroConfig | null {
   };
 }
 
-function cloneHouseholdConfig(config: HouseholdConfigV3): HouseholdConfigV3 {
+function cloneHouseholdConfig(config: HouseholdConfigV4): HouseholdConfigV4 {
   return {
     ...config,
     rooms: config.rooms.map((room) => ({
@@ -96,7 +96,7 @@ function cloneHouseholdConfig(config: HouseholdConfigV3): HouseholdConfigV3 {
   };
 }
 
-export function addSetupRoom(config: HouseholdConfigV3, name: string): HouseholdConfigV3 {
+export function addSetupRoom(config: HouseholdConfigV4, name: string): HouseholdConfigV4 {
   const next = cloneHouseholdConfig(config);
   const normalizedName = name.trim() || 'Room';
   const usedRoomIds = new Set(next.rooms.map(({ id }) => id));
@@ -110,10 +110,10 @@ export function addSetupRoom(config: HouseholdConfigV3, name: string): Household
 }
 
 export function cloneSetupRoom(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   roomId: string,
   name?: string,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   const source = config.rooms.find((room) => room.id === roomId);
   if (!source) return config;
   const next = cloneHouseholdConfig(config);
@@ -129,10 +129,10 @@ export function cloneSetupRoom(
 }
 
 export function renameSetupRoom(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   roomId: string,
   name: string,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   if (!config.rooms.some((room) => room.id === roomId)) return config;
   const next = cloneHouseholdConfig(config);
   next.rooms.find((room) => room.id === roomId)!.name = name;
@@ -140,9 +140,9 @@ export function renameSetupRoom(
 }
 
 export function preserveSetupRoomHeroes(
-  previous: HouseholdConfigV3,
-  discovered: HouseholdConfigV3,
-): HouseholdConfigV3 {
+  previous: HouseholdConfigV4,
+  discovered: HouseholdConfigV4,
+): HouseholdConfigV4 {
   const heroes = new Map(previous.rooms.map((room) => [room.id, room.hero] as const));
   const next = cloneHouseholdConfig(discovered);
   for (const room of next.rooms) {
@@ -152,10 +152,10 @@ export function preserveSetupRoomHeroes(
 }
 
 export function moveSetupRoom(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   roomId: string,
   direction: -1 | 1,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   const index = config.rooms.findIndex((room) => room.id === roomId);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= config.rooms.length) return config;
@@ -176,7 +176,7 @@ function compatibleRoomMerge(source: RoomConfig, target: RoomConfig): boolean {
 }
 
 export function canRemoveSetupRoom(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   roomId: string,
   removal: SetupRoomRemoval,
 ): boolean {
@@ -189,10 +189,10 @@ export function canRemoveSetupRoom(
 }
 
 export function removeSetupRoom(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   roomId: string,
   removal: SetupRoomRemoval,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   if (!canRemoveSetupRoom(config, roomId, removal)) return config;
   const next = cloneHouseholdConfig(config);
   const source = next.rooms.find((room) => room.id === roomId)!;
@@ -223,7 +223,7 @@ export function removeSetupRoom(
 }
 
 export function canMoveSetupEntity(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   entityId: string,
   targetRoomId: string,
 ): boolean {
@@ -236,10 +236,10 @@ export function canMoveSetupEntity(
 }
 
 export function moveSetupEntity(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   entityId: string,
   targetRoomId: string,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   if (!canMoveSetupEntity(config, entityId, targetRoomId)) return config;
   const next = cloneHouseholdConfig(config);
   const source = next.rooms.find((room) => room.visibleEntities.some((entity) => entity.entityId === entityId));
@@ -255,9 +255,9 @@ export function moveSetupEntity(
 }
 
 export function omitSetupEntity(
-  config: HouseholdConfigV3,
+  config: HouseholdConfigV4,
   entityId: string,
-): HouseholdConfigV3 {
+): HouseholdConfigV4 {
   if (!config.rooms.some((room) => room.visibleEntities.some((entity) => entity.entityId === entityId))) {
     return config;
   }

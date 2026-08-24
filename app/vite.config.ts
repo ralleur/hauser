@@ -1,11 +1,54 @@
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { execFileSync } from 'node:child_process';
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { VitePWA } from 'vite-plugin-pwa';
 import type { Plugin } from 'vite';
+import { buildProvenanceProblems, resolveBuildInfo } from './src/lib/config/build-info.ts';
 
 // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
-const CI_TEST_TIMEOUT = process.env.CI === 'true' ? 60_000 : 5_000;
+const BUILD_ENV: Record<string, string | undefined> = process.env;
+
+const CI_TEST_TIMEOUT = BUILD_ENV.CI === 'true' ? 60_000 : 5_000;
+
+/* Herkunft der gebauten Fassung (AGPL §13): die vollständige Commit-SHA wird
+   eingebettet, damit die Oberfläche auf den Corresponding Source genau dieser
+   Revision zeigen kann. Im Container gibt es kein `.git`, dort liefert der
+   Build-Arg `HAUSER_REVISION` den Wert. */
+function gitRevision(): string {
+  try {
+    return String(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' })).trim();
+  } catch {
+    return '';
+  }
+}
+
+const packageVersion = JSON.parse(
+  String(readFileSync(new URL('./package.json', import.meta.url), 'utf8')),
+).version;
+
+const BUILD_INFO = resolveBuildInfo({
+  version: packageVersion,
+  revision: BUILD_ENV.HAUSER_REVISION || gitRevision(),
+  sourceUrl: BUILD_ENV.HMI_SOURCE_URL,
+});
+
+/* Ein publizierbares Artefakt ohne vollständige Revision oder ohne öffentliche
+   Source-URL wäre AGPL-widrig — der Build bricht dann ab, statt eine erfundene
+   Upstream-Herkunft auszuliefern. Entwicklungsbuilds laufen ohne
+   `HAUSER_RELEASE` weiter und zeigen einfach weniger an. */
+if (BUILD_ENV.HAUSER_RELEASE === '1') {
+  const problems = buildProvenanceProblems(BUILD_INFO);
+  if (problems.length > 0) {
+    throw new Error(
+      `Release-Build ohne belastbare Herkunft: ${problems.join(', ')}. `
+      + 'HAUSER_REVISION (vollständige Commit-SHA) und HMI_SOURCE_URL (https) setzen.',
+    );
+  }
+}
 
 const START_SCREEN_HERO_ROOMS = [
   'wohnzimmer',
@@ -219,6 +262,9 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    __HAUSER_BUILD_INFO__: JSON.stringify(BUILD_INFO),
+  },
   server: {
     fs: {
       // design-tokens/ liegt außerhalb des App-Roots (Single Source of Truth,

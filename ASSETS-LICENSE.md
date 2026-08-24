@@ -1,8 +1,9 @@
 # Asset license
 
-The MIT license in [LICENSE](LICENSE) applies to the source code, tests, scripts,
-configuration examples, design tokens and technical documentation in this
-repository. Original visual assets are licensed separately as described here.
+The AGPL-3.0-or-later license in [LICENSE](LICENSE) applies to the source code,
+tests, scripts, configuration examples, design tokens and technical
+documentation in this repository. Original visual assets are licensed
+separately as described here.
 
 ## CC BY 4.0 assets
 
@@ -38,7 +39,8 @@ may not be suitable and should be replaced.
 
 ## Not covered by CC BY 4.0
 
-The following project-branding assets are not licensed under CC BY 4.0 or MIT:
+The following project-branding assets are not licensed under CC BY 4.0 or
+AGPL-3.0-or-later:
 
 - `app/public/brand/`
 - `app/public/icons/`

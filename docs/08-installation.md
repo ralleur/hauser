@@ -68,8 +68,8 @@ Compose creates three project-scoped named volumes:
 
 | Container path | Content | Backup requirement |
 |---|---|---|
-| `/config` | Active `household.json` (`schemaVersion: 2`) plus migration backups | Required |
-| `/data` | Home Assistant/Jellyfin connection settings, shared household data and generated song catalogue/audio | Required; may contain credentials |
+| `/config` | Active `household.json` (`schemaVersion: 4`) plus migration backups | Required |
+| `/data` | Home Assistant/Jellyfin connection settings, shared household data, generated song catalogue/audio and — when hotel mode is used — the private `hotel-mode.json` with the admin PIN verifier | Required; contains credentials |
 | `/assets` | User-owned assets reserved for installation-specific media | Required when used |
 
 The image does not seed a household configuration. A missing
@@ -175,7 +175,7 @@ is HTTP 200:
   "ok": true,
   "status": "ready",
   "householdConfigMode": "active",
-  "schemaVersion": 2
+  "schemaVersion": 4
 }
 ```
 

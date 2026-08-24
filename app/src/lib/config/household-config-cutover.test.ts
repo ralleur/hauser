@@ -9,7 +9,7 @@ import neutralStudio from '../../../config/examples/neutral-studio.json';
 import {
   compileHouseholdConfig,
   parseHouseholdConfig,
-  type HouseholdConfigV3,
+  type HouseholdConfigV4,
   type HouseholdRuntimeModel,
 } from './household-config.ts';
 import { legacyHouseholdRuntimeModel } from './legacy-household-config.ts';
@@ -47,7 +47,7 @@ function compileValid(input: unknown): HouseholdRuntimeModel {
   return compileHouseholdConfig(parsed.value);
 }
 
-function cloneValidConfig(input: unknown): HouseholdConfigV3 {
+function cloneValidConfig(input: unknown): HouseholdConfigV4 {
   const parsed = parseHouseholdConfig(input);
   expect(parsed.ok).toBe(true);
   if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
@@ -74,7 +74,7 @@ class MemoryStorage {
   }
 }
 
-function syntheticActiveConfig(): HouseholdConfigV3 {
+function syntheticActiveConfig(): HouseholdConfigV4 {
   const config = cloneValidConfig(neutralStudio);
   config.navigation = [
     { id: 'start', name: 'Startseite', order: 0, target: { type: 'module', id: 'home' } },
@@ -628,10 +628,10 @@ describe('productive household bootstrap cutover', () => {
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');
     const config = demoResponse('/api/household-config', 'GET');
     expect(config?.headers.get('x-hmi-household-config-mode')).toBe('active');
-    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 3 });
+    await expect(config?.json()).resolves.toMatchObject({ schemaVersion: 4 });
     const health = demoResponse('/api/health', 'GET');
     expect(health?.headers.get('cache-control')).toBe('no-store');
-    await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 3 });
+    await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 4 });
     expect(demoResponse('/api/health', 'POST')?.status).toBe(405);
     const shopping = demoResponse('/notion-shopping.json', 'GET');
     expect(shopping?.headers.get('cache-control')).toBe('no-store');

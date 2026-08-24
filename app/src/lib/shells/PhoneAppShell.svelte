@@ -6,6 +6,7 @@
   import '../../styles/phone-shell.css';
   import '../../styles/demo.css';
   import { onMount, tick, type Component } from 'svelte';
+  import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
@@ -142,12 +143,31 @@
     if (moreLoadFailed) ensureMoreSheet();
   }
 
-  function phoneScreenTransition(_node: Element): TransitionConfig {
-    const reduced = typeof window !== 'undefined'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function tokenValue(node: Element, token: string): string {
+    return getComputedStyle(node).getPropertyValue(token).trim();
+  }
+
+  function tokenDuration(node: Element, token: string): number {
+    const value = tokenValue(node, token);
+    if (value.endsWith('ms')) return Number.parseFloat(value) || 0;
+    if (value.endsWith('s')) return (Number.parseFloat(value) || 0) * 1000;
+    return 0;
+  }
+
+  function phoneScreenTransition(node: Element): TransitionConfig {
+    const shift = Number.parseFloat(tokenValue(node, '--space-3')) || 0;
     return {
-      duration: reduced ? 0 : 180,
-      css: (t) => `opacity:${t};transform:translate3d(0,${(1 - t) * 4}px,0)`,
+      duration: tokenDuration(node, '--duration-normal'),
+      easing: cubicOut,
+      css: (t) => `opacity:${t};transform:translate3d(${(1 - t) * shift}px,0,0)`,
+    };
+  }
+
+  function phoneContentTransition(node: Element): TransitionConfig {
+    return {
+      duration: tokenDuration(node, '--duration-normal'),
+      easing: cubicOut,
+      css: (t) => `opacity:${t}`,
     };
   }
 
@@ -351,7 +371,9 @@
 
 {#snippet phoneScreenState()}
   {#if PhoneScreenComponent}
-    <PhoneScreenComponent phone bind:titleAnchor />
+    <div class="phone-screen-content" in:phoneContentTransition>
+      <PhoneScreenComponent phone bind:titleAnchor />
+    </div>
   {:else}
     <main class="phone-skeleton" aria-labelledby="phone-target-title">
       <section>
@@ -411,7 +433,9 @@
           {/if}
         {:else if featureStylesReady && target.area === 'more' && target.subtarget === 'system'}
           {#if SystemScreenComponent}
-            <SystemScreenComponent phone bind:titleAnchor />
+            <div class="phone-screen-content" in:phoneContentTransition>
+              <SystemScreenComponent phone bind:titleAnchor />
+            </div>
           {:else}
             <main class="phone-skeleton" aria-labelledby="phone-target-title">
               <section>

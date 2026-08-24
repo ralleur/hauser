@@ -23,8 +23,19 @@ version="$(node -p 'require("./app/package.json").version')"
 dirty=no
 [[ -n "$(git status --porcelain)" ]] && dirty=yes
 
-printf 'candidate_revision=%s\ncandidate_version=%s\nworking_tree_dirty=%s\n' \
-  "$revision" "$version" "$dirty"
+# Everything below builds a *publishable* candidate, so it runs with the same
+# provenance a release would carry: full revision, https source URL for exactly
+# that revision, and the release gate armed. A missing value must fail the
+# preflight rather than surface as an image that cannot point at its source.
+export HAUSER_REVISION="$revision"
+export HAUSER_SOURCE_URL="${HAUSER_SOURCE_URL:-https://github.com/ralleur/hauser/tree/${revision}}"
+# HAUSER_SOURCE_URL is the Docker build argument; the plain npm build and the
+# server both read the deployment variable HMI_SOURCE_URL.
+export HMI_SOURCE_URL="$HAUSER_SOURCE_URL"
+export HAUSER_RELEASE=1
+
+printf 'candidate_revision=%s\ncandidate_version=%s\ncandidate_source_url=%s\nworking_tree_dirty=%s\n' \
+  "$revision" "$version" "$HAUSER_SOURCE_URL" "$dirty"
 
 ./scripts/verify-release-metadata.sh
 ./scripts/verify-license-boundary.sh
@@ -45,8 +56,8 @@ except UnicodeDecodeError as error:
     raise SystemExit(f'Laundry blueprint is not UTF-8 text: {blueprint}: {error}') from error
 
 blueprint_lines = blueprint_text.splitlines()
-if not blueprint_lines or blueprint_lines[0] != '# SPDX-License-Identifier: MIT':
-    raise SystemExit('Laundry blueprint must start with the exact MIT SPDX header.')
+if not blueprint_lines or blueprint_lines[0] != '# SPDX-License-Identifier: AGPL-3.0-or-later':
+    raise SystemExit('Laundry blueprint must start with the exact AGPL SPDX header.')
 if '# Version: 1' not in blueprint_lines:
     raise SystemExit('Laundry blueprint does not declare the required # Version: 1 contract.')
 
@@ -184,7 +195,7 @@ if len(forms) < 5:
 
 print(f'private_capability_boundary=PASS')
 print('laundry_blueprint_required_artifact=PASS')
-print('laundry_blueprint_contract=MIT/version-1/automation/idle-running-done/running-to-done-guard PASS')
+print('laundry_blueprint_contract=AGPL-3.0-or-later/version-1/automation/idle-running-done/running-to-done-guard PASS')
 print('laundry_blueprint_private_data=ABSENT')
 print(f'local_markdown_links={len(markdown)} files PASS')
 print(f'community_yaml_inventory={len(forms)} files PASS')

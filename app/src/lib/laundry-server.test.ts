@@ -206,7 +206,7 @@ class StrictHa {
     }
     if (type === 'blueprint/save' && body.domain === 'automation'
         && body.path === 'hauser/laundry-power-cycle-v1.yaml' && body.allow_override === false
-        && typeof body.yaml === 'string' && body.yaml.includes('SPDX-License-Identifier: MIT')) {
+        && typeof body.yaml === 'string' && body.yaml.includes('SPDX-License-Identifier: AGPL-3.0-or-later')) {
       this.blueprintCreated = true;
       this.blueprintYaml = body.yaml;
       this.writes.push('blueprint:create');

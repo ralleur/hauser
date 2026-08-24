@@ -99,7 +99,26 @@ if (reconfigureRequested) {
     return app;
   };
 
+  const startHotelNeutralShell = async () => {
+    const { default: HotelNeutralScreen } = await import('./lib/components/HotelNeutralScreen.svelte');
+    if (mountedApp) await unmount(mountedApp);
+    return mountedApp = mount(HotelNeutralScreen, { target: document.body });
+  };
+
   const startAuthorizedApp = async () => {
+    // Hotel Mode entscheidet vor den produktiven Modulen, welche Oberfläche
+    // überhaupt entsteht: außerhalb eines Aufenthalts wird gar keine Steuerung
+    // geladen, während eines Aufenthalts stehen Gastmodell und Hotel-Runtime
+    // danach bereits. Ohne Hotel Mode ist das ein reiner Statusabruf.
+    const { applyHotelBootstrap, mountHotelAdminLayer, mountHotelGuestLayer } =
+      await import('./lib/hotel-mode-bootstrap.ts');
+    const hotel = await applyHotelBootstrap();
+    if (hotel.surface === 'inactive') {
+      const neutral = await startHotelNeutralShell();
+      await mountHotelAdminLayer(hotel.surface);
+      return neutral;
+    }
+
     // Erst die validierte Projektion darf produktive State-/Shell-Module laden.
     // App.svelte initialisiert Theme und DeviceManager genau einmal und startet
     // den Backendpfad weiterhin erst post-paint in onMount.
@@ -126,10 +145,13 @@ if (reconfigureRequested) {
     }
 
     if (mountedApp) await unmount(mountedApp);
-    return mountedApp = mount(appModule.default, {
+    mountedApp = mount(appModule.default, {
       target: document.body,
       props: { shellLoaders, initialShell },
     });
+    await mountHotelGuestLayer(hotel);
+    await mountHotelAdminLayer(hotel.surface);
+    return mountedApp;
   };
 
   const firstPaint = await householdRuntime.bootstrapHouseholdConfigFirstPaint({

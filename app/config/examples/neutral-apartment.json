@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 4,
+  "rooms": [
+    {
+      "id": "living",
+      "name": "Living room",
+      "visibleEntities": [
+        { "id": "ceiling", "name": "Ceiling", "entityId": "light.living_ceiling", "role": "light" },
+        { "id": "thermostat", "name": "Thermostat", "entityId": "climate.living", "role": "climate" },
+        { "id": "temperature", "name": "Temperature", "entityId": "sensor.living_temperature", "role": "temperature" }
+      ],
+      "hero": null
+    },
+    {
+      "id": "bath",
+      "name": "Bathroom",
+      "visibleEntities": [
+        { "id": "mirror_light", "name": "Mirror light", "entityId": "light.bath_mirror", "role": "light" }
+      ],
+      "hero": null
+    },
+    {
+      "id": "utility",
+      "name": "Utility",
+      "visibleEntities": [
+        { "id": "boiler", "name": "Boiler", "entityId": "switch.utility_boiler", "role": "switch" }
+      ],
+      "hero": null
+    }
+  ],
+  "navigation": [
+    { "id": "start", "name": "Start", "order": 0, "target": { "type": "module", "id": "home" } }
+  ],
+  "enabledModules": ["home", "system"],
+  "energy": null,
+  "mediaTargets": [],
+  "globalEntities": {
+    "sun": "sun.fixture_neutral_apartment",
+    "vacationMode": null,
+    "homeOffScript": null,
+    "laundry": { "washer": null, "dryer": null }
+  },
+  "hotelMode": {
+    "enabled": false,
+    "calendar": {
+      "entityId": "calendar.apartment_stays",
+      "timeZone": "Europe/Berlin",
+      "allDayCheckIn": "15:00",
+      "allDayCheckOut": "11:00",
+      "useDescriptionAsWelcome": true
+    },
+    "guestAccess": {
+      "rooms": [
+        {
+          "roomId": "living",
+          "entities": [
+            {
+              "entityId": "light.living_ceiling",
+              "actions": ["turn_on", "turn_off"],
+              "temperatureRange": null
+            },
+            {
+              "entityId": "climate.living",
+              "actions": ["set_temperature", "set_hvac_mode"],
+              "temperatureRange": { "min": 18, "max": 24 }
+            }
+          ]
+        },
+        {
+          "roomId": "bath",
+          "entities": [
+            {
+              "entityId": "light.bath_mirror",
+              "actions": ["turn_on", "turn_off"],
+              "temperatureRange": null
+            }
+          ]
+        }
+      ],
+      "scenes": ["scene.apartment_evening"],
+      "scripts": []
+    },
+    "checkout": {
+      "enabled": true,
+      "sceneEntityId": "scene.apartment_after_checkout"
+    },
+    "adminIdleTimeoutMinutes": 15,
+    "kioskAcknowledged": false
+  }
+}

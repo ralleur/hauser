@@ -3,6 +3,30 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+### License change
+
+Starting with this release, Hauser is licensed under **AGPL-3.0-or-later**
+instead of MIT.
+
+Everything released up to and including v0.4.0-beta.6 stays MIT licensed and can
+be forked from there. This change applies going forward only; no release has
+been withdrawn or retagged.
+
+**If you run Hauser at home, nothing changes for you.** The AGPL only creates
+obligations for someone who modifies Hauser and then offers it to other people
+over a network — they have to make their modified source available to those
+users.
+
+The reason is straightforward: Hauser is growing features that make it
+attractive to install commercially for other people to use. The AGPL keeps
+improvements flowing back instead of disappearing into closed forks. A
+commercial license is available for settings where the AGPL does not fit.
+
+Contributions now require agreement to a [CLA](CLA.md). See ADR-025 for the full
+reasoning.
+
 ## [0.4.0-beta.6] - 2026-08-21
 
 ### Fixed

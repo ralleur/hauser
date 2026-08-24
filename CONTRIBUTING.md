@@ -128,11 +128,15 @@ in [`SECURITY.md`](SECURITY.md).
 
 ## Licensing and conduct
 
-There is no CLA. By opening a pull request, you agree that contributions to
-source code, tests, scripts, configuration examples, design tokens and technical
-documentation are licensed under the [MIT license](LICENSE). Original visual
-assets added to the paths listed in [ASSETS-LICENSE.md](ASSETS-LICENSE.md) are
-contributed under CC BY 4.0.
+Contributions require agreement to the [Contributor License Agreement](CLA.md).
+A bot asks you to confirm it on your first pull request. You keep the copyright
+in your work; the agreement gives the maintainer the rights needed to license
+the project as a whole, including under a future different or commercial
+license. The CLA explains why, and what it does not take away from you.
+
+The project's public license is the [GNU Affero General Public License v3.0 or
+later](LICENSE). Original visual assets added to the paths listed in
+[ASSETS-LICENSE.md](ASSETS-LICENSE.md) are contributed under CC BY 4.0.
 
 The Hauser name and official branding are governed by
 [TRADEMARKS.md](TRADEMARKS.md). Do not add or replace logos, app icons, brand

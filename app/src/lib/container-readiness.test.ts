@@ -13,7 +13,7 @@ const servers: Array<{ close: (callback: () => void) => void }> = [];
 
 function validConfig() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     rooms: [{
       id: 'living',
       name: 'Living room',
@@ -100,7 +100,7 @@ afterEach(async () => {
 });
 
 describe('household config file migration', () => {
-  it('backs up the exact v1 bytes before atomically activating validated v3', () => {
+  it('backs up the exact v1 bytes before atomically activating validated v4', () => {
     const files = fixture();
     const legacy = legacyConfig();
     const original = JSON.stringify(legacy);
@@ -114,7 +114,7 @@ describe('household config file migration', () => {
       ok: true,
       status: 'migrated',
       fromVersion: 1,
-      toVersion: 3,
+      toVersion: 4,
       backupPath: `${files.householdConfigPath}.backup-v1-20260729T094500000Z`,
     });
     expect(readFileSync(result.backupPath, 'utf8')).toBe(original);
@@ -125,7 +125,7 @@ describe('household config file migration', () => {
     expect(migrateHouseholdConfigFile(files.householdConfigPath)).toEqual({
       ok: true,
       status: 'current',
-      version: 3,
+      version: 4,
     });
     expect(readdirSync(files.configDir).filter((name: string) => name.includes('.backup-'))).toHaveLength(1);
   });
@@ -144,7 +144,7 @@ describe('household config file migration', () => {
     expect(readdirSync(files.configDir).filter((name: string) => name.includes('.backup-'))).toEqual([]);
   });
 
-  it('rejects a persisted invalid v3 Laundry binding for readiness without rewriting it', () => {
+  it('rejects a persisted invalid v4 Laundry binding for readiness without rewriting it', () => {
     const files = fixture();
     const partial = validConfig() as Record<string, any>;
     partial.globalEntities.laundry.washer = 'input_boolean.washer_done';
@@ -215,12 +215,12 @@ describe('container readiness contract', () => {
         ok: true,
         status: 'ready',
         householdConfigMode: 'active',
-        schemaVersion: 3,
+        schemaVersion: 4,
       },
     });
   });
 
-  it('migrates v1 once at active server startup and exposes ready only after v3 is active', async () => {
+  it('migrates v1 once at active server startup and exposes ready only after v4 is active', async () => {
     const files = fixture();
     const original = JSON.stringify(legacyConfig());
     writeFileSync(files.householdConfigPath, original);
@@ -244,7 +244,7 @@ describe('container readiness contract', () => {
     const port = (server.address() as { port: number }).port;
     const health = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(health.status).toBe(200);
-    expect(await health.json()).toMatchObject({ status: 'ready', schemaVersion: 3 });
+    expect(await health.json()).toMatchObject({ status: 'ready', schemaVersion: 4 });
   });
 
   it('keeps invalid migrated input byte-identical and exposes only a not-ready server', async () => {
@@ -291,7 +291,7 @@ describe('container readiness contract', () => {
       payload: { code: 'HOUSEHOLD_CONFIG_INVALID_JSON' },
     });
 
-    writeFileSync(files.householdConfigPath, '{"schemaVersion":3,"rooms":[]}');
+    writeFileSync(files.householdConfigPath, '{"schemaVersion":4,"rooms":[]}');
     expect(assessHmiReadiness({
       staticRoot: files.staticRoot,
       householdConfigPath: files.householdConfigPath,
@@ -412,7 +412,7 @@ describe('container readiness contract', () => {
       }),
     });
     expect(activated.status).toBe(201);
-    expect(await activated.json()).toEqual({ ok: true, status: 'activated', schemaVersion: 3 });
+    expect(await activated.json()).toEqual({ ok: true, status: 'activated', schemaVersion: 4 });
     expect(JSON.parse(readFileSync(files.householdConfigPath, 'utf8'))).toEqual(validConfig());
     expect(statSync(files.householdConfigPath).mode & 0o777).toBe(0o600);
     expect(JSON.parse(readFileSync(centralConfigPath, 'utf8'))).toMatchObject({
@@ -426,7 +426,7 @@ describe('container readiness contract', () => {
     });
 
     const ready = await fetch(`http://127.0.0.1:${port}/api/health`);
-    expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 3 });
+    expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 4 });
   });
 
   it('reconfigures an active installation atomically without deleting the current setup', async () => {
@@ -482,7 +482,7 @@ describe('container readiness contract', () => {
       }),
     });
     expect(activated.status).toBe(200);
-    expect(await activated.json()).toEqual({ ok: true, status: 'reconfigured', schemaVersion: 3 });
+    expect(await activated.json()).toEqual({ ok: true, status: 'reconfigured', schemaVersion: 4 });
     expect(verified).toEqual([{
       haUrl: 'http://new-home-assistant.local:8123',
       haToken: 'new-token',
@@ -577,7 +577,7 @@ describe('container readiness contract', () => {
       headers: { origin: 'https://untrusted.example' },
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true, status: 'ready', schemaVersion: 3 });
+    expect(await response.json()).toMatchObject({ ok: true, status: 'ready', schemaVersion: 4 });
 
     const head = await fetch(`http://127.0.0.1:${port}/api/health`, { method: 'HEAD' });
     expect(head.status).toBe(200);

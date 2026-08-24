@@ -6,9 +6,12 @@ cd "$ROOT"
 
 python3 - <<'PY'
 from pathlib import Path
+import hashlib
 
 required = [
     Path('LICENSE'),
+    Path('COPYRIGHT'),
+    Path('CLA.md'),
     Path('ASSETS-LICENSE.md'),
     Path('TRADEMARKS.md'),
     Path('NOTICE'),
@@ -17,9 +20,24 @@ missing = [str(path) for path in required if not path.is_file() or path.stat().s
 if missing:
     raise SystemExit(f'Missing required license files: {missing}')
 
-license_text = Path('LICENSE').read_text(encoding='utf-8')
-if not license_text.startswith('MIT License\n') or 'Copyright (c) 2026 ralleur' not in license_text:
-    raise SystemExit('LICENSE is not the expected MIT license for this project.')
+license_bytes = Path('LICENSE').read_bytes()
+license_sha256 = hashlib.sha256(license_bytes).hexdigest()
+expected_agpl_sha256 = '0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0'
+if license_sha256 != expected_agpl_sha256:
+    raise SystemExit('LICENSE is not the unchanged GNU AGPL-3.0 license text.')
+
+# AGPL section 13 only works if the running instance can show its own license.
+# The copy below app/public/ is what the built frontend serves same-origin, so
+# it must be byte-identical to the project LICENSE.
+served_license = Path('app/public/legal/agpl-3.0.txt')
+if not served_license.is_file():
+    raise SystemExit(f'Missing in-app license text served with the build: {served_license}')
+if hashlib.sha256(served_license.read_bytes()).hexdigest() != expected_agpl_sha256:
+    raise SystemExit(f'{served_license} is not the unchanged GNU AGPL-3.0 license text.')
+
+copyright_text = Path('COPYRIGHT').read_text(encoding='utf-8')
+if copyright_text != 'Copyright (C) 2026 ralleur\n':
+    raise SystemExit('COPYRIGHT is not the expected exact project notice.')
 
 asset_text = Path('ASSETS-LICENSE.md').read_text(encoding='utf-8')
 trademark_text = Path('TRADEMARKS.md').read_text(encoding='utf-8')
@@ -62,9 +80,9 @@ for path in blueprint_yaml:
         first_line = path.read_text(encoding='utf-8').splitlines()[0]
     except (UnicodeDecodeError, IndexError) as error:
         raise SystemExit(f'Invalid technical Blueprint YAML: {path}: {error}') from error
-    if first_line != '# SPDX-License-Identifier: MIT':
+    if first_line != '# SPDX-License-Identifier: AGPL-3.0-or-later':
         raise SystemExit(
-            f'Technical Blueprint YAML lacks the exact first-line MIT SPDX header: {path}'
+            f'Technical Blueprint YAML lacks the exact first-line AGPL SPDX header: {path}'
         )
 
 for path in cc_roots:
@@ -116,6 +134,6 @@ if unknown:
 
 print('license_files=PASS')
 print('media_asset_boundary=PASS')
-print(f'blueprint_yaml_mit_technical={len(blueprint_yaml)} files PASS')
+print(f'blueprint_yaml_agpl_technical={len(blueprint_yaml)} files PASS')
 print('blueprint_yaml_cc_by_media_classification=NOT_APPLICABLE')
 PY

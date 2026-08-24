@@ -6,10 +6,10 @@ import {
   compileHouseholdConfig,
   parseHouseholdConfig,
   type ConfigIssue,
-  type HouseholdConfigV3,
+  type HouseholdConfigV4,
 } from './household-config.ts';
 
-function parseValid(input: unknown): HouseholdConfigV3 {
+function parseValid(input: unknown): HouseholdConfigV4 {
   const result = parseHouseholdConfig(input);
   expect(result.ok).toBe(true);
   if (!result.ok) throw new Error(JSON.stringify(result.issues));
@@ -29,7 +29,7 @@ function expectIssue(input: unknown, code: ConfigIssue['code'], path: string): v
   ]));
 }
 
-describe('household config v3', () => {
+describe('household config v4', () => {
   it('accepts two independent configurations and compiles different runtime models', () => {
     const first = compileHouseholdConfig(parseValid(neutralSmall));
     const second = compileHouseholdConfig(parseValid(neutralStudio));
@@ -126,7 +126,7 @@ describe('household config v3', () => {
   });
 
   it('rejects unknown schema versions, duplicate IDs and duplicate HA entity IDs', () => {
-    expectIssue({ ...neutralSmall, schemaVersion: 4 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
+    expectIssue({ ...neutralSmall, schemaVersion: 5 }, 'UNKNOWN_SCHEMA_VERSION', '$.schemaVersion');
 
     const duplicateRoom = structuredClone(neutralSmall);
     duplicateRoom.rooms[1].id = duplicateRoom.rooms[0].id;

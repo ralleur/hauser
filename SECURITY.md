@@ -40,5 +40,18 @@ achieve. I will confirm receipt when I can, but I cannot promise a timeline.
 - `GET /api/health` deliberately requires no authentication so the container
   runtime can probe it. It returns readiness metadata and the first config issue,
   never credentials or configuration values.
+- **Hotel mode** (optional, off by default) is the one place where Hauser makes a
+  permission claim about other people. Its boundary is the server, not the
+  browser: the Home Assistant token stays in `/data`, a guest client never
+  receives one, and guest reads and commands run through a narrow proxy that
+  projects only explicitly released entities and validates every action and
+  value. Settings, setup, upload, files, maintenance, AI and family data require
+  an active admin session while it is enabled. The admin PIN is a salted scrypt
+  verifier in a private `/data` document with rate limiting and a 15-minute
+  inactivity timeout.
+  The tablet kiosk mode is mandatory device hardening and is confirmed by
+  checklist before activation — a browser cannot verify it, and it is explicitly
+  not the permission boundary. Hotel mode is designed for a dedicated tablet in a
+  single holiday apartment, not for guest access from personal phones.
 - There is no telemetry, no analytics, and no outbound connection other than to
   the backends you configure yourself.

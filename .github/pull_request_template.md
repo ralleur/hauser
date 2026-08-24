@@ -6,6 +6,8 @@
 
 <!-- Link the issue or explain why this focused fix does not need one. -->
 
+By opening this pull request, I agree to follow the [Contributor License Agreement](../CLA.md) signing process.
+
 ## Scope
 
 **Included**

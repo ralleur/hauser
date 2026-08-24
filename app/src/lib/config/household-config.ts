@@ -116,7 +116,61 @@ export interface GlobalEntitiesConfig {
   };
 }
 
-export interface HouseholdConfigV3 {
+export type HotelGuestAction =
+  | 'turn_on'
+  | 'turn_off'
+  | 'set_temperature'
+  | 'set_hvac_mode'
+  | 'start'
+  | 'return_to_base';
+
+export interface HotelTemperatureRange {
+  min: number;
+  max: number;
+}
+
+export interface HotelGuestEntityConfig {
+  entityId: string;
+  actions: HotelGuestAction[];
+  /** Required whenever set_temperature is allowed; guests never get an open range. */
+  temperatureRange: HotelTemperatureRange | null;
+}
+
+export interface HotelGuestRoomConfig {
+  roomId: string;
+  entities: HotelGuestEntityConfig[];
+}
+
+export interface HotelCalendarConfig {
+  entityId: string;
+  timeZone: string;
+  /** Local wall-clock "HH:MM" applied to all-day calendar events. */
+  allDayCheckIn: string;
+  allDayCheckOut: string;
+  useDescriptionAsWelcome: boolean;
+}
+
+export interface HotelGuestAccessConfig {
+  rooms: HotelGuestRoomConfig[];
+  scenes: string[];
+  scripts: string[];
+}
+
+export interface HotelCheckoutConfig {
+  enabled: boolean;
+  sceneEntityId: string | null;
+}
+
+export interface HotelModeConfig {
+  enabled: boolean;
+  calendar: HotelCalendarConfig;
+  guestAccess: HotelGuestAccessConfig;
+  checkout: HotelCheckoutConfig;
+  adminIdleTimeoutMinutes: number;
+  kioskAcknowledged: boolean;
+}
+
+export interface HouseholdConfigV4 {
   schemaVersion: typeof HOUSEHOLD_SCHEMA_VERSION;
   rooms: RoomConfig[];
   navigation: NavigationItemConfig[];
@@ -124,6 +178,8 @@ export interface HouseholdConfigV3 {
   energy: EnergyConfig | null;
   mediaTargets: MediaTargetConfig[];
   globalEntities: GlobalEntitiesConfig;
+  /** Absent on every installation that never opted into hotel mode. */
+  hotelMode?: HotelModeConfig;
 }
 
 export type ConfigIssueCode =
@@ -146,7 +202,7 @@ export interface ConfigIssue {
 }
 
 export type HouseholdConfigParseResult =
-  | { ok: true; value: HouseholdConfigV3 }
+  | { ok: true; value: HouseholdConfigV4 }
   | { ok: false; issues: ConfigIssue[] };
 
 const LOCAL_ID = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
@@ -189,6 +245,18 @@ const ENTITY_ROLE_DOMAINS: Partial<Record<EntityRole, EntityDomainConstraint>> =
   switch: 'switch',
   vacuum: 'vacuum',
 };
+const HOTEL_TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+/** Guest actions are limited to what Hauser's existing room controls really send. */
+export const HOTEL_GUEST_ROLE_ACTIONS: Partial<Record<EntityRole, readonly HotelGuestAction[]>> = {
+  light: ['turn_on', 'turn_off'],
+  climate: ['set_temperature', 'set_hvac_mode'],
+  switch: ['turn_on', 'turn_off'],
+  vacuum: ['start', 'return_to_base'],
+};
+export const HOTEL_HVAC_MODES: readonly ['heat', 'cool', 'off'] = ['heat', 'cool', 'off'];
+const HOTEL_ADMIN_IDLE_MIN_MINUTES = 1;
+const HOTEL_ADMIN_IDLE_MAX_MINUTES = 120;
+
 const MISSING = Symbol('missing');
 type Missing = typeof MISSING;
 type JsonObject = Record<string, unknown>;
@@ -334,6 +402,26 @@ class ConfigValidator {
     if (value === MISSING) return null;
     if (value === null) return null;
     return this.entityId(value, path, expectedDomain);
+  }
+
+  /** Entity references point at entities declared elsewhere, so they never
+   * participate in the single-declaration duplicate inventory. */
+  entityIdRef(value: unknown | Missing, path: string, expectedDomains?: EntityDomainConstraint): string {
+    if (value === MISSING) return '';
+    if (typeof value !== 'string') {
+      this.issue('TYPE_MISMATCH', path, 'Expected a Home Assistant entity ID string.');
+      return '';
+    }
+    if (!HA_ENTITY_ID.test(value)) {
+      this.issue('INVALID_ENTITY_ID', path, 'Expected a lower-case Home Assistant entity ID in domain.object form.');
+      return value;
+    }
+    const allowedDomains = typeof expectedDomains === 'string' ? [expectedDomains] : expectedDomains;
+    const actualDomain = value.slice(0, value.indexOf('.'));
+    if (allowedDomains !== undefined && !allowedDomains.includes(actualDomain)) {
+      this.issue('INVALID_ENTITY_ID', path, `Expected a Home Assistant ${allowedDomains.join(' or ')} entity ID.`);
+    }
+    return value;
   }
 
   boolean(value: unknown | Missing, path: string): boolean {
@@ -752,6 +840,367 @@ function parseGlobalEntities(
   };
 }
 
+type RoomEntityRoles = ReadonlyMap<string, ReadonlyMap<string, EntityRole>>;
+
+function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function parseHotelCalendar(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): HotelCalendarConfig {
+  const fallback: HotelCalendarConfig = {
+    entityId: '',
+    timeZone: '',
+    allDayCheckIn: '',
+    allDayCheckOut: '',
+    useDescriptionAsWelcome: false,
+  };
+  if (value === MISSING) return fallback;
+  const object = validator.object(value, path);
+  if (!object) return fallback;
+  validator.exactKeys(
+    object,
+    ['entityId', 'timeZone', 'allDayCheckIn', 'allDayCheckOut', 'useDescriptionAsWelcome'],
+    path,
+  );
+
+  const timeZoneValue = validator.required(object, 'timeZone', path);
+  let timeZone = '';
+  if (timeZoneValue !== MISSING) {
+    if (typeof timeZoneValue !== 'string') {
+      validator.issue('TYPE_MISMATCH', `${path}.timeZone`, 'Expected an IANA time zone string.');
+    } else if (!isValidTimeZone(timeZoneValue)) {
+      validator.issue('INVALID_VALUE', `${path}.timeZone`, `Unknown IANA time zone "${timeZoneValue}".`);
+    } else {
+      timeZone = timeZoneValue;
+    }
+  }
+
+  const timeOfDay = (key: 'allDayCheckIn' | 'allDayCheckOut'): string => {
+    const raw = validator.required(object, key, path);
+    if (raw === MISSING) return '';
+    if (typeof raw !== 'string') {
+      validator.issue('TYPE_MISMATCH', `${path}.${key}`, 'Expected a "HH:MM" time string.');
+      return '';
+    }
+    if (!HOTEL_TIME_OF_DAY.test(raw)) {
+      validator.issue('INVALID_VALUE', `${path}.${key}`, 'Expected a 24-hour "HH:MM" time string.');
+      return '';
+    }
+    return raw;
+  };
+
+  return {
+    entityId: validator.entityIdRef(
+      validator.required(object, 'entityId', path),
+      `${path}.entityId`,
+      'calendar',
+    ),
+    timeZone,
+    allDayCheckIn: timeOfDay('allDayCheckIn'),
+    allDayCheckOut: timeOfDay('allDayCheckOut'),
+    useDescriptionAsWelcome: validator.boolean(
+      validator.required(object, 'useDescriptionAsWelcome', path),
+      `${path}.useDescriptionAsWelcome`,
+    ),
+  };
+}
+
+function parseHotelTemperatureRange(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): HotelTemperatureRange | null {
+  if (value === MISSING || value === null) return null;
+  const object = validator.object(value, path);
+  if (!object) return null;
+  validator.exactKeys(object, ['min', 'max'], path);
+  const bound = (key: 'min' | 'max'): number => {
+    const raw = validator.required(object, key, path);
+    if (raw === MISSING) return Number.NaN;
+    if (typeof raw !== 'number') {
+      validator.issue('TYPE_MISMATCH', `${path}.${key}`, 'Expected a number.');
+      return Number.NaN;
+    }
+    if (!Number.isFinite(raw)) {
+      validator.issue('INVALID_VALUE', `${path}.${key}`, 'Expected a finite number.');
+      return Number.NaN;
+    }
+    return raw;
+  };
+  const min = bound('min');
+  const max = bound('max');
+  if (Number.isFinite(min) && Number.isFinite(max) && min >= max) {
+    validator.issue('INVALID_VALUE', `${path}.min`, 'The allowed range minimum must be lower than its maximum.');
+  }
+  return { min: Number.isFinite(min) ? min : 0, max: Number.isFinite(max) ? max : 0 };
+}
+
+function parseHotelGuestEntity(
+  validator: ConfigValidator,
+  value: unknown,
+  path: string,
+  role: EntityRole | undefined,
+): HotelGuestEntityConfig {
+  const object = validator.object(value, path);
+  if (!object) return { entityId: '', actions: [], temperatureRange: null };
+  validator.exactKeys(object, ['entityId', 'actions', 'temperatureRange'], path);
+
+  const entityId = validator.entityIdRef(validator.required(object, 'entityId', path), `${path}.entityId`);
+  const supported = role === undefined ? undefined : HOTEL_GUEST_ROLE_ACTIONS[role];
+  if (role !== undefined && supported === undefined) {
+    validator.issue(
+      'INVALID_VALUE',
+      `${path}.entityId`,
+      `Entity role "${role}" has no guest-controllable actions in Hauser.`,
+    );
+  }
+
+  const actionsValue = validator.required(object, 'actions', path);
+  const actionItems = actionsValue === MISSING ? undefined : validator.array(actionsValue, `${path}.actions`);
+  const actions: HotelGuestAction[] = [];
+  const seenActions = new Set<string>();
+  for (const [index, item] of (actionItems ?? []).entries()) {
+    const itemPath = `${path}.actions[${index}]`;
+    if (typeof item !== 'string') {
+      validator.issue('TYPE_MISMATCH', itemPath, 'Expected a guest action string.');
+      continue;
+    }
+    if (seenActions.has(item)) {
+      validator.issue('INVALID_VALUE', itemPath, `Duplicate guest action "${item}".`);
+      continue;
+    }
+    seenActions.add(item);
+    if (supported === undefined || !supported.includes(item as HotelGuestAction)) {
+      validator.issue('INVALID_VALUE', itemPath, `Guest action "${item}" is not supported by this control.`);
+      continue;
+    }
+    actions.push(item as HotelGuestAction);
+  }
+  if (actionItems !== undefined && actionItems.length === 0) {
+    validator.issue('INVALID_VALUE', `${path}.actions`, 'At least one guest action is required.');
+  }
+
+  const temperatureRange = parseHotelTemperatureRange(
+    validator,
+    validator.required(object, 'temperatureRange', path),
+    `${path}.temperatureRange`,
+  );
+  if (actions.includes('set_temperature') && temperatureRange === null) {
+    validator.issue(
+      'INVALID_VALUE',
+      `${path}.temperatureRange`,
+      'A temperature range is required whenever guests may set a temperature.',
+    );
+  }
+  if (!actions.includes('set_temperature') && temperatureRange !== null) {
+    validator.issue(
+      'INVALID_VALUE',
+      `${path}.temperatureRange`,
+      'A temperature range is only allowed together with the set_temperature action.',
+    );
+  }
+  return { entityId, actions, temperatureRange };
+}
+
+function parseHotelGuestRoom(
+  validator: ConfigValidator,
+  value: unknown,
+  path: string,
+  roomEntityRoles: RoomEntityRoles,
+): HotelGuestRoomConfig {
+  const object = validator.object(value, path);
+  if (!object) return { roomId: '', entities: [] };
+  validator.exactKeys(object, ['roomId', 'entities'], path);
+
+  const roomId = validator.localId(validator.required(object, 'roomId', path), `${path}.roomId`);
+  const roomEntities = roomEntityRoles.get(roomId);
+  if (LOCAL_ID.test(roomId) && roomEntities === undefined) {
+    validator.issue('UNKNOWN_REFERENCE', `${path}.roomId`, `Guest room "${roomId}" does not exist.`);
+  }
+
+  const entitiesValue = validator.required(object, 'entities', path);
+  const entityItems = entitiesValue === MISSING ? undefined : validator.array(entitiesValue, `${path}.entities`);
+  const entities: HotelGuestEntityConfig[] = [];
+  const seenEntityIds = new Map<string, string>();
+  for (const [index, item] of (entityItems ?? []).entries()) {
+    const itemPath = `${path}.entities[${index}]`;
+    const declaredEntityId = typeof item === 'object' && item !== null && !Array.isArray(item)
+      ? (item as JsonObject).entityId
+      : undefined;
+    const role = typeof declaredEntityId === 'string' ? roomEntities?.get(declaredEntityId) : undefined;
+    const entity = parseHotelGuestEntity(validator, item, itemPath, role);
+    if (roomEntities !== undefined && entity.entityId !== '' && role === undefined) {
+      validator.issue(
+        'UNKNOWN_REFERENCE',
+        `${itemPath}.entityId`,
+        `Entity "${entity.entityId}" is not a visible entity of room "${roomId}".`,
+      );
+    }
+    const firstPath = seenEntityIds.get(entity.entityId);
+    if (entity.entityId !== '' && firstPath !== undefined) {
+      validator.issue(
+        'DUPLICATE_ENTITY_ID',
+        `${itemPath}.entityId`,
+        `Entity ID "${entity.entityId}" is already released at ${firstPath}.`,
+      );
+    } else if (entity.entityId !== '') {
+      seenEntityIds.set(entity.entityId, `${itemPath}.entityId`);
+    }
+    entities.push(entity);
+  }
+  return { roomId, entities };
+}
+
+function parseHotelEntityList(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+  domain: string,
+): string[] {
+  if (value === MISSING) return [];
+  const items = validator.array(value, path) ?? [];
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const [index, item] of items.entries()) {
+    const itemPath = `${path}[${index}]`;
+    const entityId = validator.entityIdRef(item, itemPath, domain);
+    if (entityId === '') continue;
+    if (seen.has(entityId)) {
+      validator.issue('DUPLICATE_ENTITY_ID', itemPath, `Entity ID "${entityId}" is already released at ${path}.`);
+      continue;
+    }
+    seen.add(entityId);
+    result.push(entityId);
+  }
+  return result;
+}
+
+function parseHotelGuestAccess(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+  roomEntityRoles: RoomEntityRoles,
+): HotelGuestAccessConfig {
+  if (value === MISSING) return { rooms: [], scenes: [], scripts: [] };
+  const object = validator.object(value, path);
+  if (!object) return { rooms: [], scenes: [], scripts: [] };
+  validator.exactKeys(object, ['rooms', 'scenes', 'scripts'], path);
+
+  const roomsValue = validator.required(object, 'rooms', path);
+  const roomItems = roomsValue === MISSING ? undefined : validator.array(roomsValue, `${path}.rooms`);
+  const rooms = (roomItems ?? []).map((room, index) =>
+    parseHotelGuestRoom(validator, room, `${path}.rooms[${index}]`, roomEntityRoles));
+  duplicateIds(validator, rooms.map((room, index) => ({
+    id: room.roomId,
+    path: `${path}.rooms[${index}].roomId`,
+  })));
+
+  return {
+    rooms,
+    scenes: parseHotelEntityList(
+      validator,
+      validator.required(object, 'scenes', path),
+      `${path}.scenes`,
+      'scene',
+    ),
+    scripts: parseHotelEntityList(
+      validator,
+      validator.required(object, 'scripts', path),
+      `${path}.scripts`,
+      'script',
+    ),
+  };
+}
+
+function parseHotelCheckout(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+): HotelCheckoutConfig {
+  if (value === MISSING) return { enabled: false, sceneEntityId: null };
+  const object = validator.object(value, path);
+  if (!object) return { enabled: false, sceneEntityId: null };
+  validator.exactKeys(object, ['enabled', 'sceneEntityId'], path);
+  const sceneValue = validator.required(object, 'sceneEntityId', path);
+  return {
+    enabled: validator.boolean(validator.required(object, 'enabled', path), `${path}.enabled`),
+    sceneEntityId: sceneValue === MISSING || sceneValue === null
+      ? null
+      : validator.entityIdRef(sceneValue, `${path}.sceneEntityId`, 'scene'),
+  };
+}
+
+function parseHotelMode(
+  validator: ConfigValidator,
+  value: unknown,
+  path: string,
+  roomEntityRoles: RoomEntityRoles,
+): HotelModeConfig | undefined {
+  const object = validator.object(value, path);
+  if (!object) return undefined;
+  validator.exactKeys(
+    object,
+    ['enabled', 'calendar', 'guestAccess', 'checkout', 'adminIdleTimeoutMinutes', 'kioskAcknowledged'],
+    path,
+  );
+
+  const idleValue = validator.required(object, 'adminIdleTimeoutMinutes', path);
+  let adminIdleTimeoutMinutes = 15;
+  if (idleValue !== MISSING) {
+    if (typeof idleValue !== 'number') {
+      validator.issue('TYPE_MISMATCH', `${path}.adminIdleTimeoutMinutes`, 'Expected a number.');
+    } else if (
+      !Number.isSafeInteger(idleValue)
+      || idleValue < HOTEL_ADMIN_IDLE_MIN_MINUTES
+      || idleValue > HOTEL_ADMIN_IDLE_MAX_MINUTES
+    ) {
+      validator.issue(
+        'INVALID_VALUE',
+        `${path}.adminIdleTimeoutMinutes`,
+        `The admin idle timeout must be an integer between ${HOTEL_ADMIN_IDLE_MIN_MINUTES} and ${HOTEL_ADMIN_IDLE_MAX_MINUTES} minutes.`,
+      );
+    } else {
+      adminIdleTimeoutMinutes = idleValue;
+    }
+  }
+
+  const enabled = validator.boolean(validator.required(object, 'enabled', path), `${path}.enabled`);
+  const kioskAcknowledged = validator.boolean(
+    validator.required(object, 'kioskAcknowledged', path),
+    `${path}.kioskAcknowledged`,
+  );
+  if (enabled && !kioskAcknowledged) {
+    validator.issue(
+      'INCONSISTENT_MODULE',
+      `${path}.kioskAcknowledged`,
+      'Hotel mode must not be enabled before the kiosk checklist is confirmed.',
+    );
+  }
+
+  return {
+    enabled,
+    calendar: parseHotelCalendar(validator, validator.required(object, 'calendar', path), `${path}.calendar`),
+    guestAccess: parseHotelGuestAccess(
+      validator,
+      validator.required(object, 'guestAccess', path),
+      `${path}.guestAccess`,
+      roomEntityRoles,
+    ),
+    checkout: parseHotelCheckout(validator, validator.required(object, 'checkout', path), `${path}.checkout`),
+    adminIdleTimeoutMinutes,
+    kioskAcknowledged,
+  };
+}
+
 /**
  * Validates an unknown value without mutating it. No installation-specific value
  * is defaulted: every required field must be present, and disabled optional
@@ -763,7 +1212,10 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
   if (!root) return { ok: false, issues: validator.issues };
   validator.exactKeys(
     root,
-    ['schemaVersion', 'rooms', 'navigation', 'enabledModules', 'energy', 'mediaTargets', 'globalEntities'],
+    [
+      'schemaVersion', 'rooms', 'navigation', 'enabledModules', 'energy', 'mediaTargets',
+      'globalEntities', 'hotelMode',
+    ],
     '$',
   );
 
@@ -832,6 +1284,16 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
     '$.globalEntities',
   );
 
+  const roomEntityRoles = new Map<string, Map<string, EntityRole>>();
+  for (const room of rooms) {
+    const entityRoles = new Map<string, EntityRole>();
+    for (const entity of room.visibleEntities) entityRoles.set(entity.entityId, entity.role);
+    roomEntityRoles.set(room.id, entityRoles);
+  }
+  const hotelMode = Object.hasOwn(root, 'hotelMode')
+    ? parseHotelMode(validator, root.hotelMode, '$.hotelMode', roomEntityRoles)
+    : undefined;
+
   const roomIds = new Set(rooms.map((room) => room.id));
   const moduleIds = new Set(enabledModules);
   for (const [index, item] of navigation.entries()) {
@@ -882,6 +1344,7 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
       energy,
       mediaTargets,
       globalEntities,
+      ...(hotelMode === undefined ? {} : { hotelMode }),
     },
   };
 }
