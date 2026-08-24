@@ -945,14 +945,14 @@
   align-self: stretch;
   pointer-events: none;
   transform: translateX(calc(var(--phone-nav-active-index) * 100%));
-  transition: transform var(--duration-fast) var(--ease-out);
+  transition: transform var(--duration-normal) var(--ease-out);
 }
 
 .phone-nav-indicator {
   position: absolute;
   bottom: var(--space-1);
   left: 50%;
-  width: var(--space-5);
+  width: var(--space-8);
   height: calc(var(--space-1) - 1px);
   border-radius: var(--radius-full);
   background: var(--color-accent-warm);

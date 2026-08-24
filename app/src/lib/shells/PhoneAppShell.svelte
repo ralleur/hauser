@@ -6,7 +6,7 @@
   import '../../styles/phone-shell.css';
   import '../../styles/demo.css';
   import { onMount, tick, type Component } from 'svelte';
-  import { cubicOut } from 'svelte/easing';
+  import { cubicInOut, cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
@@ -154,12 +154,25 @@
     return 0;
   }
 
-  function phoneScreenTransition(node: Element): TransitionConfig {
-    const shift = Number.parseFloat(tokenValue(node, '--space-3')) || 0;
+  let phoneScreenDirection = $state<1 | -1>(1);
+
+  function phoneScreenEnter(node: Element): TransitionConfig {
+    const direction = phoneScreenDirection;
+    const shift = Number.parseFloat(tokenValue(node, '--space-6')) || 0;
     return {
-      duration: tokenDuration(node, '--duration-normal'),
-      easing: cubicOut,
-      css: (t) => `opacity:${t};transform:translate3d(${(1 - t) * shift}px,0,0)`,
+      duration: tokenDuration(node, '--duration-slow'),
+      easing: cubicInOut,
+      css: (t, u) => `opacity:${t};transform:translate3d(${direction * u * shift}px,0,0)`,
+    };
+  }
+
+  function phoneScreenExit(node: Element): TransitionConfig {
+    const direction = phoneScreenDirection;
+    const shift = Number.parseFloat(tokenValue(node, '--space-6')) || 0;
+    return {
+      duration: tokenDuration(node, '--duration-slow'),
+      easing: cubicInOut,
+      css: (t, u) => `opacity:${t};transform:translate3d(${-direction * u * shift}px,0,0)`,
     };
   }
 
@@ -340,12 +353,26 @@
       return;
     }
     if (activeLayer) closeLayer('navigation');
-    showScreen(target === 'media' ? lastMediaTarget : target);
+    navigatePhoneScreen(target === 'media' ? lastMediaTarget : target);
   }
 
   function selectMore(target: PhoneNavTarget) {
     closeLayer('selection');
-    showScreen(target === 'media' ? lastMediaTarget : target);
+    navigatePhoneScreen(target === 'media' ? lastMediaTarget : target);
+  }
+
+  function phoneScreenRank(screen: typeof nav.screen): number {
+    const navTarget = navTargetForScreen(screen);
+    const targetIndex = phoneNavOrder.order.indexOf(navTarget);
+    const mediaDepth = navTarget === 'media' && screen !== 'media' ? 1 : 0;
+    return Math.max(targetIndex, 0) * 2 + mediaDepth;
+  }
+
+  function navigatePhoneScreen(screen: typeof nav.screen): void {
+    const currentRank = phoneScreenRank(nav.screen);
+    const nextRank = phoneScreenRank(screen);
+    if (nextRank !== currentRank) phoneScreenDirection = nextRank < currentRank ? -1 : 1;
+    showScreen(screen);
   }
 
   onMount(() => {
@@ -414,7 +441,7 @@
   </div>
   <div class="phone-content-frame">
     {#key nav.screen}
-      <div class="phone-screen-transition" transition:phoneScreenTransition onoutroend={endTransition}>
+      <div class="phone-screen-transition" in:phoneScreenEnter out:phoneScreenExit onoutroend={endTransition}>
         {#if target.area === 'home'}
           <PhoneHomeFeed rooms={roomSummaries} currentRoom={roomOpen ? appState.currentRoom : null} online={conn.online} onopen={openRoom} bind:titleAnchor />
         {:else if featureStylesReady && activePhoneScreenId}
@@ -422,8 +449,8 @@
             <div class="phone-media-area">
               {#if nav.screen !== 'library-detail'}
                 <nav class="phone-media-switcher" aria-label="Medienbereich">
-                  {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => showScreen('media')}>Audio</button>{/if}
-                  {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => showScreen('library')}>Bibliothek</button>{/if}
+                  {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => navigatePhoneScreen('media')}>Audio</button>{/if}
+                  {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => navigatePhoneScreen('library')}>Bibliothek</button>{/if}
                 </nav>
               {/if}
               {@render phoneScreenState()}
