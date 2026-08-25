@@ -149,6 +149,11 @@ async function postMainPayload(base: string, payload: Record<string, any>) {
    und die längere Geduld bleibt wirkungslos. */
 // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
 const IMAGE_BUDGET_MS = process.env.CI === 'true' ? 90_000 : 15_000;
+/* CI-Runner brauchen fuer die AVIF-Encodes dieser Datei ein Vielfaches der
+   lokalen Zeit (b3 laeuft dort ueber 400 s). Der Wait auf den Validierungs-
+   start skaliert deshalb mit, bleibt aber unter dem 60-s-Testtimeout. */
+// @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+const VALIDATION_WAIT_ATTEMPTS = process.env.CI === 'true' ? 6_000 : 2_000;
 
 async function waitFor(base: string, jobId: string, statuses: string[]) {
   // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
@@ -1818,7 +1823,7 @@ describe('B-08E10 B3 spec follow-up evidence', () => {
     });
     const final = await finalResponse.json();
     try {
-      await waitUntil(() => validationStarted, 'joint final validation', 2_000);
+      await waitUntil(() => validationStarted, 'joint final validation', VALIDATION_WAIT_ATTEMPTS);
       const visible = await (await fetch(`${app.base}/api/room-image-jobs/${final.jobId}`, { headers: headers() })).json();
       expect(visible).toMatchObject({ status: 'running', phase: 'validating_set', asset: null });
       expect(visible.temporaryVariants).toBeUndefined();
