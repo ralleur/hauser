@@ -4,9 +4,10 @@
 
 ### Changed
 
-- Hauser is now licensed under AGPL-3.0-or-later (was MIT). Releases up to and
-  including v0.4.0-beta.6 stay MIT. Nothing changes for people running Hauser
-  at home. See the main [CHANGELOG](https://github.com/ralleur/hauser/blob/main/CHANGELOG.md)
+- Hauser is now licensed under the GNU Affero General Public License (was MIT).
+  Releases up to and including v0.4.0-beta.6 stay MIT. Nothing changes for
+  people running Hauser at home. See the main
+  [CHANGELOG](https://github.com/ralleur/hauser/blob/main/CHANGELOG.md)
   for the full reasoning.
 
 ### Fixed

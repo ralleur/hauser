@@ -1,3 +1,4 @@
+import { m } from '../../../paraglide/messages.js';
 import type {
   RoomImageCanonicalCropPixels,
   RoomImageCrop,
@@ -129,16 +130,16 @@ export function viewForRoomImageJob(job: RoomImageJob): RoomImageWizardView {
 
 export function roomImagePhaseLabel(job: RoomImageJob): string {
   const labels: Record<RoomImageJob['phase'], string> = {
-    queued: 'Auftrag wartet',
-    generating_composition: 'Komposition wird optimiert',
-    generating_style_1: 'Erste Stilvariante wird erstellt',
-    generating_style_2: 'Zweite Stilvariante wird erstellt',
-    generating_dark: 'Nachtvariante mit Licht wird erstellt',
-    generating_dark_off: 'Nachtvariante ohne Licht wird erstellt',
-    validating_set: 'Bildset wird geprüft',
-    awaiting_confirmation: 'Bildset wartet auf deine Prüfung',
-    publishing_set: 'Bildset wird übernommen',
-    complete: 'Fertig',
+    queued: m.rimg_phase_queued(),
+    generating_composition: m.rimg_phase_composition(),
+    generating_style_1: m.rimg_phase_style_1(),
+    generating_style_2: m.rimg_phase_style_2(),
+    generating_dark: m.rimg_phase_dark(),
+    generating_dark_off: m.rimg_phase_dark_off(),
+    validating_set: m.rimg_phase_validating(),
+    awaiting_confirmation: m.rimg_phase_awaiting(),
+    publishing_set: m.rimg_phase_publishing(),
+    complete: m.rimg_phase_complete(),
   };
   return labels[job.phase];
 }

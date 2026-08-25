@@ -1,12 +1,12 @@
 # Hauser brand and trademark policy
 
-The AGPL-3.0-or-later license and CC BY 4.0 asset license grant copyright
+The AGPL-3.0-only license and CC BY 4.0 asset license grant copyright
 permissions. They do not grant a license to use the Hauser project identity in a
 way that suggests an official release, endorsement or affiliation.
 
 ## Reserved project identity
 
-The following are not licensed under AGPL-3.0-or-later or CC BY 4.0:
+The following are not licensed under AGPL-3.0-only or CC BY 4.0:
 
 - the **Hauser** name when used to identify a software distribution or service;
 - the Hauser logos and marks in `app/public/brand/` and `website/brand/`;

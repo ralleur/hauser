@@ -1,6 +1,6 @@
 # Asset license
 
-The AGPL-3.0-or-later license in [LICENSE](LICENSE) applies to the source code,
+The AGPL-3.0-only license in [LICENSE](LICENSE) applies to the source code,
 tests, scripts, configuration examples, design tokens and technical
 documentation in this repository. Original visual assets are licensed
 separately as described here.
@@ -40,7 +40,7 @@ may not be suitable and should be replaced.
 ## Not covered by CC BY 4.0
 
 The following project-branding assets are not licensed under CC BY 4.0 or
-AGPL-3.0-or-later:
+AGPL-3.0-only:
 
 - `app/public/brand/`
 - `app/public/icons/`

@@ -59,7 +59,7 @@ accepts invalid public configuration.
 
 ## License and source of the running build
 
-Hauser is licensed under `AGPL-3.0-or-later`. Every running instance shows its
+Hauser is licensed under `AGPL-3.0-only`. Every running instance shows its
 license, app version, full commit revision and a link to the corresponding
 source under *System → Status & updates → License and source*, next to the
 bundled license text at `/legal/agpl-3.0.txt`. The information needs no

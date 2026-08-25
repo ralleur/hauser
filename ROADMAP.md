@@ -205,8 +205,9 @@ configuration, not from the interface.
 | Gating features behind a paid tier in the public build | Every feature in the public repository stays available under the AGPL |
 
 > **Changed after v0.4.0-beta.6:** an earlier version of this table promised that Hauser
-> would stay MIT licensed. It moved to AGPL-3.0-or-later instead, starting with
-> v0.4.0-beta.7. AGPL is still an OSI-approved open source license and
-> everything released up to and including v0.4.0-beta.6 remains MIT, but the
-> earlier wording was a commitment and withdrawing it belongs in the open
-> rather than in a quiet edit. The reasoning is in ADR-025.
+> would stay MIT licensed. It moved to the GNU Affero General Public License
+> instead, starting with v0.4.0-beta.7, and the project's license identifier is
+> `AGPL-3.0-only` from the release after that one. AGPL is still an
+> OSI-approved open source license and everything released up to and including
+> v0.4.0-beta.6 remains MIT, but the earlier wording was a commitment and
+> withdrawing it belongs in the open rather than in a quiet edit.

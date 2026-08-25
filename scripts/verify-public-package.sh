@@ -56,7 +56,7 @@ except UnicodeDecodeError as error:
     raise SystemExit(f'Laundry blueprint is not UTF-8 text: {blueprint}: {error}') from error
 
 blueprint_lines = blueprint_text.splitlines()
-if not blueprint_lines or blueprint_lines[0] != '# SPDX-License-Identifier: AGPL-3.0-or-later':
+if not blueprint_lines or blueprint_lines[0] != '# SPDX-License-Identifier: AGPL-3.0-only':
     raise SystemExit('Laundry blueprint must start with the exact AGPL SPDX header.')
 if '# Version: 1' not in blueprint_lines:
     raise SystemExit('Laundry blueprint does not declare the required # Version: 1 contract.')
@@ -195,7 +195,7 @@ if len(forms) < 5:
 
 print(f'private_capability_boundary=PASS')
 print('laundry_blueprint_required_artifact=PASS')
-print('laundry_blueprint_contract=AGPL-3.0-or-later/version-1/automation/idle-running-done/running-to-done-guard PASS')
+print('laundry_blueprint_contract=AGPL-3.0-only/version-1/automation/idle-running-done/running-to-done-guard PASS')
 print('laundry_blueprint_private_data=ABSENT')
 print(f'local_markdown_links={len(markdown)} files PASS')
 print(f'community_yaml_inventory={len(forms)} files PASS')

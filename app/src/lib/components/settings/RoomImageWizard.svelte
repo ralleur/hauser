@@ -1,8 +1,12 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
+  import '../../../styles/room-images.css';
+  import { m } from '../../../paraglide/messages.js';
   import RoomImageAccess from './RoomImageAccess.svelte';
-  import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImagePreserveFeature, type RoomImageUpload } from '../../state/room-image-client.ts';
+  import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
+  import { appState } from '../../state/app.svelte.ts';
+  import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
   import {
     initialRoomImageFocus,
     pointFromPointer,
@@ -30,16 +34,18 @@
   let centerY = $state(0.5);
   let focus = $state<RoomImageFocus>(initialRoomImageFocus());
   let focusTarget = $state<'panel' | 'phone'>('panel');
-  let declutter = $state<'none' | 'light' | 'strong'>('light');
-  let tone = $state<'neutral' | 'warm'>('neutral');
-  let preserveFeatures = $state<RoomImagePreserveFeature[]>(['windows', 'doors', 'built_ins']);
-  let candidateCount = $state<1 | 2>(2);
+  const candidateCount = 1 as const; // 1 Stilvariante + Komposition = 2 Kandidaten
+
   let privacyConfirmed = $state(false);
   let costConfirmed = $state(false);
   let selectedCandidateId = $state<string | null>(null);
   let finalCostConfirmed = $state(false);
   let retryConfirmed = $state(false);
   let fullscreenUrl = $state<string | null>(null);
+  let assignRoomId = $state('');
+  let assignBusy = $state(false);
+  let assignError = $state<string | null>(null);
+  let assignNotice = $state<string | null>(null);
   let wasOpen = false;
 
   const unsubscribe = controller.subscribe((next) => {
@@ -51,15 +57,16 @@
   const currentPreview = $derived(wizardState.sourcePreviewUrl ?? objectUrl);
   const capabilityEnabled = $derived(wizardState.capability.public?.enabled === true);
   const busy = $derived(uploadBusy || wizardState.lifecycle === 'loading');
+  const roomOptions = $derived(appState.rooms.map((room) => ({ id: room.id, name: room.name })));
   let accessConfigured = $state(false);
 
-  const preservationOptions: readonly { id: RoomImagePreserveFeature; label: string; hint: string }[] = [
-    { id: 'windows', label: 'Fenster', hint: 'Position, Form und sichtbare Außenansicht erhalten' },
-    { id: 'doors', label: 'Türen', hint: 'Öffnungen und räumliche Verbindungen erhalten' },
-    { id: 'built_ins', label: 'Feste Einbauten', hint: 'Küche, Schränke und feste Elemente erhalten' },
-    { id: 'signature_furniture', label: 'Prägende Möbel', hint: 'Charakteristische Möbel und ihre Position erhalten' },
-    { id: 'wall_art', label: 'Wandbilder', hint: 'Vorhandene Kunst erhalten, nichts neu erfinden' },
-  ];
+  /* Der Prompt folgt der erprobten Vorlage und wertet diese Felder nicht aus;
+     der Contract verlangt sie weiterhin. */
+  const roomImageFixedAdjustments = () => ({
+    declutter: 'light' as const,
+    tone: 'neutral' as const,
+    preserveFeatures: ['windows' as const, 'doors' as const, 'built_ins' as const],
+  });
 
   $effect(() => {
     if (open && !wasOpen) {
@@ -92,15 +99,15 @@
     centerY = 0.5;
     focus = initialRoomImageFocus();
     focusTarget = 'panel';
-    declutter = 'light';
-    tone = 'neutral';
-    preserveFeatures = ['windows', 'doors', 'built_ins'];
-    candidateCount = 2;
     privacyConfirmed = false;
     costConfirmed = false;
     selectedCandidateId = null;
     finalCostConfirmed = false;
     retryConfirmed = false;
+    assignRoomId = '';
+    assignBusy = false;
+    assignError = null;
+    assignNotice = null;
     view = wizardState.job ? viewForRoomImageJob(wizardState.job) : 'upload';
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = null;
@@ -141,11 +148,11 @@
     input.value = '';
     if (!selected || uploadBusy || !capabilityEnabled) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
-      localError = 'Bitte ein JPEG-, PNG- oder WebP-Bild wählen.';
+      localError = m.rimg_err_format();
       return;
     }
     if (selected.size > 12 * 1024 * 1024) {
-      localError = 'Das Bild darf höchstens 12 MiB groß sein.';
+      localError = m.rimg_err_size();
       return;
     }
     uploadBusy = true;
@@ -161,7 +168,7 @@
       centerY = 0.5;
       focus = initialRoomImageFocus();
     } catch (error) {
-      localError = error instanceof Error ? error.message : 'Das Foto konnte nicht vorbereitet werden.';
+      localError = error instanceof Error ? error.message : m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }
@@ -178,28 +185,30 @@
     focus = { ...focus, [focusTarget]: point };
   }
 
-  function togglePreservation(feature: RoomImagePreserveFeature) {
-    preserveFeatures = preserveFeatures.includes(feature)
-      ? preserveFeatures.filter((entry) => entry !== feature)
-      : [...preserveFeatures, feature];
-  }
-
   async function startMainJob() {
-    if (!upload || !cropProjection || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled) return;
+    if (!upload || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled) return;
+    if (!cropProjection) {
+      localError = m.rimg_err_crop();
+      return;
+    }
     localError = null;
-    await controller.createMainJob({
-      kind: 'main_candidates',
-      uploadId: upload.uploadId,
-      crop: cropProjection.crop,
-      canonicalCropPixels: cropProjection.canonicalCropPixels,
-      focus,
-      stylePreset: 'hauser-room-v1',
-      adjustments: { declutter, tone, preserveFeatures },
-      candidateCount,
-      noticeVersion: 'room-image-v1',
-      costConfirmed: true,
-      confirmedProviderCalls: candidateCount === 1 ? 2 : 3,
-    });
+    try {
+      await controller.createMainJob({
+        kind: 'main_candidates',
+        uploadId: upload.uploadId,
+        crop: cropProjection.crop,
+        canonicalCropPixels: cropProjection.canonicalCropPixels,
+        focus,
+        stylePreset: 'hauser-room-v1',
+        adjustments: roomImageFixedAdjustments(),
+        candidateCount,
+        noticeVersion: 'room-image-v1',
+        costConfirmed: true,
+        confirmedProviderCalls: 2,
+      });
+    } catch (error) {
+      localError = error instanceof Error ? error.message : m.rimg_err_start();
+    }
   }
 
   async function startFinalJob() {
@@ -227,8 +236,32 @@
     resetLocalDraft();
   }
 
+  /* Punkt 4+5: optional zuweisen, danach den Wizard vollstaendig zuruecksetzen,
+     damit direkt ein neues Bildset erstellt werden kann. */
+  async function finishWizard(asset: { assetId: string; focus: RoomImageFocus } | null) {
+    if (assignBusy) return;
+    if (asset && assignRoomId) {
+      assignBusy = true;
+      assignError = null;
+      try {
+        const library = await loadRoomImageLibrary();
+        await assignRoomImage(assignRoomId, { assetId: asset.assetId, focus: asset.focus }, library.householdEtag);
+        assignNotice = m.rimg_assigned();
+      } catch (error) {
+        assignError = error instanceof Error ? error.message : m.rimg_err_assign();
+        assignBusy = false;
+        return;
+      }
+      assignBusy = false;
+    }
+    controller.forget();
+    resetLocalDraft();
+    view = 'upload';
+    requestClose();
+  }
+
   function counterText(planned: number, started: number, completed: number, unknown: number) {
-    return `${planned} geplant · ${started} gestartet · ${completed} abgeschlossen · ${unknown} Ausgang unbekannt`;
+    return m.rimg_counter_text({ planned, started, completed, unknown });
   }
 </script>
 
@@ -239,11 +272,11 @@
     <div class="room-image-wizard" role="dialog" aria-modal="true" aria-labelledby="room-image-wizard-title" tabindex="-1" bind:this={dialog}>
       <header class="room-image-wizard-head">
         <div>
-          <span class="caps-label">KI · Raumbilder</span>
-          <h2 id="room-image-wizard-title">Raumbild erstellen</h2>
-          <p>Foto vorbereiten, Varianten prüfen, Bildset bewusst übernehmen.</p>
+          <span class="caps-label">{m.rimg_eyebrow()}</span>
+          <h2 id="room-image-wizard-title">{m.rimg_title()}</h2>
+          <p>{m.rimg_subtitle()}</p>
         </div>
-        <button class="dialog-close pressable" type="button" aria-label="Raumbild-Wizard schließen" onclick={requestClose}>×</button>
+        <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
       </header>
 
       <RoomImageAccess onchange={(status) => {
@@ -254,95 +287,67 @@
       {#if wizardState.capability.error}
         <p class="room-image-alert is-error" role="alert">{wizardState.capability.error.message}</p>
       {:else if wizardState.capability.public?.imageCapability === 'disabled'}
-        <p class="room-image-alert" role="status">Die Raumbild-Erstellung ist auf diesem System nicht freigegeben.</p>
+        <p class="room-image-alert" role="status">{m.rimg_cap_disabled()}</p>
       {:else if wizardState.capability.public?.imageCapability === 'unverified'}
-        <p class="room-image-alert" role="status">OpenAI ist konfiguriert, ein echter Bildabruf wurde in dieser Laufzeit aber noch nicht bestätigt.</p>
+        <p class="room-image-alert" role="status">{m.rimg_cap_unverified()}</p>
       {/if}
 
-      {#if wizardState.lifecycle === 'error' && wizardState.error}
+      {#if wizardState.lifecycle === 'error' && wizardState.error && view !== 'upload'}
         <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
       {/if}
 
       {#if !accessConfigured}
-        <p class="room-image-alert" role="status">Verbinde zuerst ChatGPT oder hinterlege einen API-Key. Danach wird die Bildauswahl freigeschaltet.</p>
+        <p class="room-image-alert" role="status">{m.rimg_need_access()}</p>
       {:else if view === 'upload'}
         <div class="room-image-wizard-grid">
           <section class="room-image-wizard-main">
-            <h3>1 · Foto, Ausschnitt und Fokus</h3>
-            <p>Ein Querformat ohne Personen ist ideal. Unaufgeräumte Räume sind ausdrücklich okay.</p>
+            <h3>{m.rimg_step_photo()}</h3>
+            <p>{m.rimg_photo_hint()}</p>
             <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
             <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
-              {uploadBusy ? 'Foto wird vorbereitet …' : file ? 'Anderes Foto wählen' : 'Foto wählen'}
+              {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
             </button>
 
             {#if upload && objectUrl && cropProjection}
-              <div class="room-image-crop" role="img" aria-label="Gewählter Bildausschnitt" onpointerdown={setCropCenter}
+              <div class="room-image-crop" role="img" aria-label={m.rimg_crop_label()} onpointerdown={setCropCenter}
                    style:background-image={`url("${objectUrl}")`} style:background-size={cropProjection.backgroundSize}
                    style:background-position={cropProjection.backgroundPosition}></div>
               <label class="room-image-range">
-                <span>Ausschnitt vergrößern</span>
+                <span>{m.rimg_crop_zoom()}</span>
                 <input type="range" min="1" max="3" step="0.05" bind:value={zoom} />
               </label>
-              <div class="room-image-focus-tabs" role="group" aria-label="Fokus für Geräteformat">
-                <button type="button" class:is-active={focusTarget === 'panel'} onclick={() => focusTarget = 'panel'}>Panel</button>
-                <button type="button" class:is-active={focusTarget === 'phone'} onclick={() => focusTarget = 'phone'}>Phone</button>
+              <div class="room-image-focus-tabs" role="group" aria-label={m.rimg_focus_group()}>
+                <button type="button" class:is-active={focusTarget === 'panel'} onclick={() => focusTarget = 'panel'}>{m.rimg_focus_panel()}</button>
+                <button type="button" class:is-active={focusTarget === 'phone'} onclick={() => focusTarget = 'phone'}>{m.rimg_focus_phone()}</button>
               </div>
-              <button class="room-image-focus-preview" type="button" aria-label="Fokuspunkt für {focusTarget} setzen" onpointerdown={setFocus}
+              <button class="room-image-focus-preview" type="button" aria-label={m.rimg_focus_set({ target: focusTarget === 'panel' ? m.rimg_focus_panel() : m.rimg_focus_phone() })} onpointerdown={setFocus}
                       style:background-image={`url("${objectUrl}")`} style:background-size={cropProjection.backgroundSize}
                       style:background-position={cropProjection.backgroundPosition}>
                 <span style:left={`${focus[focusTarget].x * 100}%`} style:top={`${focus[focusTarget].y * 100}%`}></span>
               </button>
-              <small>Tippe in die Vorschau, wo der wichtigste Bildbereich für {focusTarget === 'panel' ? 'das Panel' : 'das Phone'} liegen soll.</small>
+              <small>{focusTarget === 'panel' ? m.rimg_focus_hint_panel() : m.rimg_focus_hint_phone()}</small>
             {/if}
           </section>
 
           <aside class="room-image-wizard-side">
-            <h3>2 · Geschlossene Vorgaben</h3>
-            <label>Aufräumen
-              <select bind:value={declutter}>
-                <option value="none">Nichts entfernen</option>
-                <option value="light">Leicht beruhigen</option>
-                <option value="strong">Stark beruhigen</option>
-              </select>
-            </label>
-            <label>Farbton
-              <select bind:value={tone}>
-                <option value="neutral">Neutral</option>
-                <option value="warm">Warm</option>
-              </select>
-            </label>
-            <fieldset class="room-image-preservation">
-              <legend>Besonders erhalten</legend>
-              {#each preservationOptions as option (option.id)}
-                <label>
-                  <input type="checkbox" checked={preserveFeatures.includes(option.id)} onchange={() => togglePreservation(option.id)} />
-                  <span><strong>{option.label}</strong><small>{option.hint}</small></span>
-                </label>
-              {/each}
-            </fieldset>
-            <p class="room-image-policy">Raumidentität, Architektur und räumliche Beziehungen bleiben immer erhalten. Nur die erste Stufe darf Perspektive und Komposition moderat korrigieren; danach sind Kamera, Geometrie, Layout und Objektpositionen eingefroren.</p>
-
-            <h3>3 · Übertragung und mögliche Kosten</h3>
+            <h3>{m.rimg_step_cost()}</h3>
             <label class="room-image-check"><input type="checkbox" bind:checked={privacyConfirmed} />
-              <span>Ich bestätige, dass das normalisierte Foto an OpenAI übertragen wird und habe Personen sowie sensible Inhalte geprüft.</span>
+              <span>{m.rimg_privacy_confirm()}</span>
             </label>
-            <label>Anzahl Stilvarianten
-              <select bind:value={candidateCount}>
-                <option value={1}>Eine</option>
-                <option value={2}>Zwei</option>
-              </select>
-            </label>
-            <p>Geplant sind {candidateCount + 1} Providerabrufe: eine Kompositionsoptimierung und {candidateCount} unabhängige Stilvariante{candidateCount === 1 ? '' : 'n'}. Preise werden nicht geschätzt; es gelten die laufenden OpenAI-Bedingungen.</p>
-            <a href="https://developers.openai.com/api/docs/pricing#image-generation" target="_blank" rel="noreferrer">Aktuelle OpenAI-Preise öffnen</a>
+            <p>{m.rimg_cost_intro()}</p>
+            <a href="https://developers.openai.com/api/docs/pricing#image-generation" target="_blank" rel="noreferrer">{m.rimg_prices_link()}</a>
             <label class="room-image-check"><input type="checkbox" bind:checked={costConfirmed} />
-              <span>Ich bestätige die möglichen Kosten für diese {candidateCount + 1} Abrufe.</span>
+              <span>{m.rimg_cost_confirm_2()}</span>
             </label>
           </aside>
         </div>
         {#if localError}<p class="room-image-alert is-error" role="alert">{localError}</p>{/if}
+        {#if wizardState.lifecycle === 'error' && wizardState.error}
+          <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
+        {/if}
         <footer class="room-image-wizard-actions">
-          <button class="secondary-btn pressable" type="button" onclick={requestClose}>Schließen</button>
-          <button class="primary-btn pressable" type="button" disabled={!upload || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>Varianten erstellen</button>
+          <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_close()}</button>
+          <button class="primary-btn pressable" type="button" disabled={!upload || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>{m.rimg_start()}</button>
         </footer>
 
       {:else if wizardState.job}
@@ -351,100 +356,116 @@
           <section class="room-image-progress" aria-live="polite">
             <span class="room-image-progress-mark" aria-hidden="true"></span>
             <h3>{roomImagePhaseLabel(job)}</h3>
-            <p>Der Auftrag läuft serverseitig weiter, auch wenn du dieses Fenster schließt.</p>
+            <p>{m.rimg_job_background()}</p>
             <div class="room-image-counter-grid">
-              <div><strong>Dieser Versuch</strong><span>{counterText(job.providerCalls.attempt.plannedCount, job.providerCalls.attempt.startedCount, job.providerCalls.attempt.completedCount, job.providerCalls.attempt.outcomeUnknownCount)}</span></div>
-              <div><strong>Diese Linie</strong><span>{counterText(job.providerCalls.lineage.plannedCount, job.providerCalls.lineage.startedCount, job.providerCalls.lineage.completedCount, job.providerCalls.lineage.outcomeUnknownCount)}</span></div>
-              <div><strong>Gesamter Wizard</strong><span>{counterText(job.providerCalls.wizard.plannedCount, job.providerCalls.wizard.startedCount, job.providerCalls.wizard.completedCount, job.providerCalls.wizard.outcomeUnknownCount)}</span></div>
+              <div><strong>{m.rimg_counter_attempt()}</strong><span>{counterText(job.providerCalls.attempt.plannedCount, job.providerCalls.attempt.startedCount, job.providerCalls.attempt.completedCount, job.providerCalls.attempt.outcomeUnknownCount)}</span></div>
+              <div><strong>{m.rimg_counter_lineage()}</strong><span>{counterText(job.providerCalls.lineage.plannedCount, job.providerCalls.lineage.startedCount, job.providerCalls.lineage.completedCount, job.providerCalls.lineage.outcomeUnknownCount)}</span></div>
+              <div><strong>{m.rimg_counter_wizard()}</strong><span>{counterText(job.providerCalls.wizard.plannedCount, job.providerCalls.wizard.startedCount, job.providerCalls.wizard.completedCount, job.providerCalls.wizard.outcomeUnknownCount)}</span></div>
             </div>
             <footer class="room-image-wizard-actions">
-              <button class="secondary-btn pressable" type="button" onclick={requestClose}>Im Hintergrund weiterlaufen lassen</button>
-              {#if job.cancellable}<button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>Auftrag abbrechen</button>{/if}
+              <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_run_background()}</button>
+              {#if job.cancellable}<button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>{m.rimg_cancel_job()}</button>{/if}
             </footer>
           </section>
 
         {:else if view === 'candidates'}
           <section>
-            <h3>Vorher und Stilvarianten</h3>
-            <p>Wähle genau eine Variante. Das realistische Kompositionszwischenbild bleibt privat und wird nicht als Asset angeboten.</p>
+            <h3>{m.rimg_candidates_title()}</h3>
+            <p>{m.rimg_candidates_hint()}</p>
             <div class="room-image-compare">
               {#if currentPreview}
-                <figure><button type="button" onclick={() => fullscreenUrl = currentPreview}><img src={currentPreview} alt="Normalisierter Ausgangsausschnitt" /></button><figcaption>Vorher</figcaption></figure>
+                <figure><button type="button" onclick={() => fullscreenUrl = currentPreview}><img src={currentPreview} alt={m.rimg_before_alt()} /></button><figcaption>{m.rimg_before()}</figcaption></figure>
               {/if}
               {#each job.candidates as candidate, index (candidate.candidateId)}
                 <figure class:is-selected={selectedCandidateId === candidate.candidateId}>
-                  <button type="button" onclick={() => selectedCandidateId = candidate.candidateId}><img src={candidate.previewUrl} alt="Stilvariante {index + 1}" /></button>
-                  <figcaption><label><input type="radio" name="room-image-candidate" checked={selectedCandidateId === candidate.candidateId} onchange={() => selectedCandidateId = candidate.candidateId} /> Variante {index + 1}</label></figcaption>
+                  <button type="button" onclick={() => selectedCandidateId = candidate.candidateId}><img src={candidate.previewUrl} alt={index === 0 ? m.rimg_variant_realistic_alt() : m.rimg_variant_illustration_alt()} /></button>
+                  <figcaption><label><input type="radio" name="room-image-candidate" checked={selectedCandidateId === candidate.candidateId} onchange={() => selectedCandidateId = candidate.candidateId} /> {index === 0 ? m.rimg_variant_realistic() : m.rimg_variant_illustration()}</label></figcaption>
                 </figure>
               {/each}
             </div>
             <div class="room-image-final-confirm">
-              <h3>Nachtvarianten erzeugen</h3>
-              <p>Für die gewählte Light-Variante folgen zwei weitere, unabhängige Providerabrufe: <strong>dark</strong> und <strong>dark-off</strong>.</p>
+              <h3>{m.rimg_night_title()}</h3>
+              <p>{m.rimg_night_hint()}</p>
               <label class="room-image-check"><input type="checkbox" bind:checked={finalCostConfirmed} />
-                <span>Ich bestätige die möglichen Kosten für diese 2 weiteren Abrufe.</span>
+                <span>{m.rimg_cost_confirm_2_more()}</span>
               </label>
             </div>
             <footer class="room-image-wizard-actions">
-              <button class="secondary-btn pressable" type="button" onclick={() => controller.cancel()}>Varianten verwerfen</button>
-              <button class="primary-btn pressable" type="button" disabled={!selectedCandidateId || !finalCostConfirmed || busy || !capabilityEnabled} onclick={startFinalJob}>Bildset erstellen</button>
+              <button class="secondary-btn pressable" type="button" onclick={() => controller.cancel()}>{m.rimg_discard_variants()}</button>
+              <button class="primary-btn pressable" type="button" disabled={!selectedCandidateId || !finalCostConfirmed || busy || !capabilityEnabled} onclick={startFinalJob}>{m.rimg_create_set()}</button>
             </footer>
           </section>
 
         {:else if view === 'set-review' && job.temporaryVariants}
           <section>
-            <h3>Bildset gemeinsam prüfen</h3>
-            <p>Technische Prüfung ersetzt nicht deine Entscheidung. Kontrolliere, ob Raum, Geometrie und Beleuchtungszustände wirklich zusammenpassen.</p>
+            <h3>{m.rimg_review_title()}</h3>
+            <p>{m.rimg_review_hint()}</p>
             <div class="room-image-set-grid">
-              {#each [['Light', job.temporaryVariants.light], ['Dark · Licht an', job.temporaryVariants.dark], ['Dark · Licht aus', job.temporaryVariants.darkOff]] as variant (variant[0])}
+              {#each [[m.rimg_variant_light(), job.temporaryVariants.light], [m.rimg_variant_dark_on(), job.temporaryVariants.dark], [m.rimg_variant_dark_off(), job.temporaryVariants.darkOff]] as variant (variant[0])}
                 <figure><button type="button" onclick={() => fullscreenUrl = variant[1]}><img src={variant[1]} alt={variant[0]} /></button><figcaption>{variant[0]}</figcaption></figure>
               {/each}
             </div>
             <footer class="room-image-wizard-actions">
-              <button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>Set ablehnen</button>
-              <button class="primary-btn pressable" type="button" disabled={busy || !capabilityEnabled} onclick={() => controller.publish(true)}>Set übernehmen</button>
+              <button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>{m.rimg_reject_set()}</button>
+              <button class="primary-btn pressable" type="button" disabled={busy || !capabilityEnabled} onclick={() => controller.publish(true)}>{m.rimg_accept_set()}</button>
             </footer>
           </section>
 
         {:else if view === 'done' && job.asset}
           <section class="room-image-done">
-            <h3>Bildset ist in der Bibliothek gespeichert</h3>
+            <h3>{m.rimg_saved_title()}</h3>
             <div class="room-image-set-grid">
-              {#each [['Light', job.asset.variants.light], ['Dark · Licht an', job.asset.variants.dark], ['Dark · Licht aus', job.asset.variants.darkOff]] as variant (variant[0])}
+              {#each [[m.rimg_variant_light(), job.asset.variants.light], [m.rimg_variant_dark_on(), job.asset.variants.dark], [m.rimg_variant_dark_off(), job.asset.variants.darkOff]] as variant (variant[0])}
                 <figure><button type="button" onclick={() => fullscreenUrl = variant[1]}><img src={variant[1]} alt={variant[0]} /></button><figcaption>{variant[0]}</figcaption></figure>
               {/each}
             </div>
-            <p>Es wurde noch keinem Raum zugewiesen. Die Zuordnung und Bibliotheksverwaltung folgen getrennt unter „Räume &amp; Geräte“.</p>
+            <div class="room-image-final-confirm">
+              <h3>{m.rimg_assign_title()}</h3>
+              <p>{m.rimg_assign_hint()}</p>
+              <label>{m.rimg_room()}
+                <select bind:value={assignRoomId} disabled={assignBusy}>
+                  <option value="">{m.rimg_assign_none()}</option>
+                  {#each roomOptions as room (room.id)}
+                    <option value={room.id}>{room.name}</option>
+                  {/each}
+                </select>
+              </label>
+              {#if assignError}<p class="room-image-alert is-error" role="alert">{assignError}</p>{/if}
+              {#if assignNotice}<p class="room-image-alert" role="status">{assignNotice}</p>{/if}
+            </div>
             <footer class="room-image-wizard-actions">
-              <button class="primary-btn pressable" type="button" onclick={requestClose}>Fertig</button>
+              <button class="primary-btn pressable" type="button" disabled={assignBusy}
+                      onclick={() => finishWizard(job.asset)}>
+                {assignBusy ? m.rimg_assigning() : assignRoomId ? m.rimg_assign_and_done() : m.rimg_done()}
+              </button>
             </footer>
           </section>
 
         {:else}
           <section class="room-image-terminal">
-            <h3>{job.status === 'cancelled' ? 'Auftrag abgebrochen' : job.status === 'expired' ? 'Zwischendaten abgelaufen' : 'Auftrag konnte nicht abgeschlossen werden'}</h3>
+            <h3>{job.status === 'cancelled' ? m.rimg_term_cancelled() : job.status === 'expired' ? m.rimg_term_expired() : m.rimg_term_failed()}</h3>
             {#if job.error}<p class="room-image-alert is-error" role="alert">{job.error.message}</p>{/if}
             {#if job.retryable && job.retry}
-              <p>Ein neuer Versuch benötigt eine neue Bestätigung für {job.retry.requiredProviderCalls} mögliche Providerabrufe.</p>
-              <label class="room-image-check"><input type="checkbox" bind:checked={retryConfirmed} /> <span>Erneuten kostenpflichtigen Versuch bestätigen</span></label>
+              <p>{m.rimg_retry_hint({ count: job.retry.requiredProviderCalls })}</p>
+              <label class="room-image-check"><input type="checkbox" bind:checked={retryConfirmed} /> <span>{m.rimg_retry_confirm()}</span></label>
             {/if}
             <footer class="room-image-wizard-actions">
-              {#if job.discardable}<button class="secondary-btn pressable" type="button" onclick={discardJob}>Zwischendaten verwerfen</button>{/if}
-              {#if job.retryable}<button class="primary-btn pressable" type="button" disabled={!retryConfirmed || busy || !capabilityEnabled} onclick={retryJob}>Neu versuchen</button>{/if}
-              <button class="secondary-btn pressable" type="button" onclick={requestClose}>Schließen</button>
+              {#if job.discardable}<button class="secondary-btn pressable" type="button" onclick={discardJob}>{m.rimg_discard_temp()}</button>{/if}
+              {#if job.retryable}<button class="primary-btn pressable" type="button" disabled={!retryConfirmed || busy || !capabilityEnabled} onclick={retryJob}>{m.rimg_retry()}</button>{/if}
+              <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_close()}</button>
             </footer>
           </section>
         {/if}
       {:else if wizardState.lifecycle === 'loading'}
-        <p class="room-image-alert" role="status">Vorherigen Auftrag prüfen …</p>
+        <p class="room-image-alert" role="status">{m.rimg_checking_previous()}</p>
       {/if}
     </div>
   </div>
 
   {#if fullscreenUrl}
-    <div class="room-image-fullscreen" role="dialog" aria-modal="true" aria-label="Bildvorschau">
-      <button type="button" aria-label="Vollbildvorschau schließen" onclick={() => fullscreenUrl = null}>×</button>
-      <img src={fullscreenUrl} alt="Große Raumbildvorschau" />
+    <div class="room-image-fullscreen" role="dialog" aria-modal="true" aria-label={m.rimg_fullscreen_label()}>
+      <button type="button" aria-label={m.rimg_fullscreen_close()} onclick={() => fullscreenUrl = null}>×</button>
+      <img src={fullscreenUrl} alt={m.rimg_fullscreen_alt()} />
     </div>
   {/if}
 {/if}

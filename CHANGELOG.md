@@ -3,12 +3,27 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+### License
+
+The project's license identifier is now **AGPL-3.0-only** instead of
+`AGPL-3.0-or-later`. The license text in [LICENSE](LICENSE) is unchanged: it
+remains the unmodified GNU Affero General Public License, version 3. What
+changes is that the project no longer offers the option of using it under a
+later version of the AGPL should the Free Software Foundation publish one.
+Releases up to and including v0.4.0-beta.7 keep the terms they were published
+under.
+
+Contributions are made under [CLA.md](CLA.md), now at version 2. Contributors
+keep the copyright in their work.
+
 ## [0.4.0-beta.7] - 2026-08-24
 
 ### License change
 
-Starting with this release, Hauser is licensed under **AGPL-3.0-or-later**
-instead of MIT.
+Starting with this release, Hauser is licensed under the GNU Affero General
+Public License instead of MIT.
 
 Everything released up to and including v0.4.0-beta.6 stays MIT licensed and can
 be forked from there. This change applies going forward only; no release has
@@ -19,13 +34,11 @@ obligations for someone who modifies Hauser and then offers it to other people
 over a network — they have to make their modified source available to those
 users.
 
-The reason is straightforward: Hauser is growing features that make it
-attractive to install commercially for other people to use. The AGPL keeps
-improvements flowing back instead of disappearing into closed forks. A
-commercial license is available for settings where the AGPL does not fit.
+The reason is straightforward: the AGPL keeps improvements to a networked
+application flowing back to the people who use it, instead of disappearing into
+closed forks.
 
-Contributions now require agreement to a [CLA](CLA.md). See ADR-025 for the full
-reasoning.
+Contributions now require agreement to a [CLA](CLA.md).
 
 ### Fixed
 

@@ -519,7 +519,11 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect(listing.status).toBe(200);
     const body = await listing.json();
     expect(body).toEqual({
-      assets: [{ ...asset, createdAt: expect.any(String), assignedRoomIds: [] }],
+      assets: [{
+        ...asset, createdAt: expect.any(String), assignedRoomIds: [],
+        byteLength: expect.any(Number),
+      }],
+      totalByteLength: expect.any(Number),
       householdEtag: expect.stringMatching(/^"[0-9a-f]{64}"$/),
     });
     expect(JSON.stringify(body)).not.toMatch(/fixture-user|source|prompt|provider|job|\/tmp\//i);

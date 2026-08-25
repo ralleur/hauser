@@ -6,7 +6,7 @@
 
 <!-- Link the issue or explain why this focused fix does not need one. -->
 
-By opening this pull request, I agree to follow the [Contributor License Agreement](../CLA.md) signing process.
+By opening this pull request, I agree to follow the [Contributor License Agreement](../CLA.md) acceptance process. The CLA check must be recorded before this pull request can be merged.
 
 ## Scope
 

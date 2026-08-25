@@ -1,1 +1,29 @@
-Copyright (C) 2026 ralleur
+Hauser
+Copyright (C) 2026 Ralf Hauser and the Hauser contributors
+
+SPDX-License-Identifier: AGPL-3.0-only
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of version 3 of the GNU Affero General Public License as published by
+the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>.
+
+Authorship
+----------
+
+Each contributor holds the copyright in their own contributions. Contributions
+are not assigned to the maintainer; the rights the maintainer receives are
+described in CLA.md. Ralf Hauser maintains the project.
+
+The license document
+--------------------
+
+The text of the GNU Affero General Public License in LICENSE is
+Copyright (C) 2007 Free Software Foundation, Inc. That copyright covers the
+license document itself and is separate from the copyright in this project.

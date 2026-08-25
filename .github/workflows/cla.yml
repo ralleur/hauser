@@ -13,10 +13,10 @@ permissions:
   statuses: write
 
 jobs:
-  cla-v1:
+  cla-v2:
     runs-on: ubuntu-latest
     steps:
-      - name: Check CLA v1
+      - name: Check CLA v2
         if: |
           (
             github.event_name == 'pull_request_target' &&
@@ -31,7 +31,7 @@ jobs:
             github.event.issue.pull_request &&
             (
               github.event.comment.body == 'recheck' ||
-              github.event.comment.body == 'I have read the Hauser Contributor License Agreement v1 and I hereby sign it'
+              github.event.comment.body == 'I have read the Hauser Contributor License Agreement v2 and I hereby sign it'
             )
           )
         uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
@@ -39,9 +39,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           path-to-document: https://github.com/ralleur/hauser/blob/main/CLA.md
-          path-to-signatures: .github/cla-signatures-v1.json
+          path-to-signatures: .github/cla-signatures-v2.json
           branch: cla-signatures
           allowlist: 'ralleur,dependabot[bot],github-actions[bot]'
-          custom-pr-sign-comment: I have read the Hauser Contributor License Agreement v1 and I hereby sign it
-          custom-notsigned-prcomment: Thank you for contributing. Please read $pathToCLADocument and reply with the exact CLA v1 signing comment shown below.
-          custom-allsigned-prcomment: All contributors have signed the Hauser CLA v1.
+          custom-pr-sign-comment: I have read the Hauser Contributor License Agreement v2 and I hereby sign it
+          custom-notsigned-prcomment: Thank you for contributing. Please read $pathToCLADocument and reply with the exact CLA v2 signing comment shown below.
+          custom-allsigned-prcomment: All contributors have signed the Hauser CLA v2.

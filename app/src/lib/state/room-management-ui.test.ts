@@ -41,8 +41,18 @@ describe('room management UI contracts', () => {
   it('shows rooms as one compact expandable list instead of permanent cards', () => {
     expect(setupWizard).toContain("let expandedRoomId = $state<string | null>(null)");
     expect(setupWizard).toContain('class:expanded={expandedRoomId === room.id}');
-    expect(setupWizard).toContain('{#if expandedRoomId === room.id}');
+    // Der Ersteinrichtungs-Wizard klappt weiter auf; eingebettet in den
+    // Einstellungen bleibt nur die Löschbestätigung.
+    expect(setupWizard).toContain('embedded ? pendingDeleteRoomId === room.id : expandedRoomId === room.id');
     expect(setupWizard).toMatch(/\.room-list \{[^}]*overflow: hidden;[^}]*border:/);
     expect(setupWizard).toMatch(/\.room-card \+ \.room-card \{ border-top:/);
+  });
+
+  it('opens the shared room overlay from the embedded settings list', () => {
+    // In den Einstellungen führt der Tap auf einen Raum in dasselbe Overlay wie
+    // der Longpress vom Home-Screen; Entitätenpflege gibt es dort nicht mehr.
+    expect(setupWizard).toContain("import { openRoomEdit } from '../state/overlay.svelte.ts'");
+    expect(setupWizard).toContain('? openRoomEdit(room.id)');
+    expect(setupWizard).toContain('{#if embedded}');
   });
 });

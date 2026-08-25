@@ -227,6 +227,28 @@ export async function sourceCropToProviderJpeg(
   ).toBuffer();
 }
 
+/** Ganzes Foto statt des gewählten Ausschnitts für die Kompositionsphase: das
+    Modell soll Rahmen und Perspektive selbst wählen. Die Zielgeometrie bleibt
+    exakt 3392×2400, damit Quellvorschau und Provider-Prüfungen unverändert
+    greifen; ein 4:3-Foto verliert dabei nur wenige Prozent oben und unten. */
+export async function sourceFullToProviderJpeg(normalizedSource: Uint8Array): Promise<Uint8Array> {
+  const metadata = await decoder(normalizedSource).metadata();
+  assertFormat(metadata, 'png');
+  assertSingleFrame(metadata);
+  assertDimensions(metadata.width, metadata.height);
+
+  return jpegOutput(
+    decoder(normalizedSource)
+      .flatten({ background: ROOM_IMAGE_TRANSFORM_POLICY_V1.alphaBackground })
+      .toColourspace('srgb')
+      .resize(ROOM_IMAGE_TRANSFORM_POLICY_V1.target.width, ROOM_IMAGE_TRANSFORM_POLICY_V1.target.height, {
+        fit: ROOM_IMAGE_TRANSFORM_POLICY_V1.resize.providerFit,
+        position: ROOM_IMAGE_TRANSFORM_POLICY_V1.resize.providerPosition,
+        kernel: sharp.kernel.lanczos3,
+      }),
+  ).toBuffer();
+}
+
 function providerOutputGeometry(input: Uint8Array) {
   return decoder(input)
     .flatten({ background: ROOM_IMAGE_TRANSFORM_POLICY_V1.alphaBackground })

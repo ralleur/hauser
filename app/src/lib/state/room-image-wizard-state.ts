@@ -103,8 +103,17 @@ function defaultStorage(): ResumeStorage | null {
   return typeof localStorage === 'undefined' ? null : localStorage;
 }
 
+/** Das Panel wird auch über http:// im LAN ausgeliefert. Dort fehlt
+    crypto.randomUUID (nur Secure Context), deshalb der Fallback über
+    getRandomValues — analog zu randomUuid() im Jellyfin-Adapter. */
 function defaultUuid(): string {
-  return crypto.randomUUID();
+  const source = globalThis.crypto;
+  if (source?.randomUUID) return source.randomUUID();
+  const bytes = source.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 function initialState(): RoomImageWizardState {

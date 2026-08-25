@@ -71,8 +71,9 @@ migration remains fail-closed and makes the internal health probe fail.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
 - `0.4.0-beta.7` is the current published App and Docker/Compose beta. Hauser
-  is now licensed under AGPL-3.0-or-later instead of MIT; everything up to and
-  including `0.4.0-beta.6` stays MIT, and nothing changes for people running
+  is now licensed under the GNU Affero General Public License instead of MIT;
+  everything up to and including `0.4.0-beta.6` stays MIT, and nothing changes
+  for people running
   Hauser at home. This release also fixes the setup wizard's reconfigure flow
   (Settings → Rooms & Devices): **Save changes** silently failed every time
   because the activation request never carried the ETag preconditions the

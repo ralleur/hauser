@@ -744,6 +744,7 @@ describe('B-08E10 Lane C runner classification and counters', () => {
     expect(stored.providerCalls.attempt).toMatchObject({ plannedCount: 2, startedCount: 2, completedCount: 2, outcomeUnknownCount: 0 });
     expect(stored.providerCalls.lineage).toEqual(stored.providerCalls.wizard);
     expect(stored.providerCalls.wizard).toMatchObject({ plannedCount: 2, startedCount: 2, completedCount: 2, outcomeUnknownCount: 0 });
-    expect(stored.temp.candidates).toHaveLength(1);
+    // Komposition + eine Stilvariante ergeben zwei wählbare Kandidaten.
+    expect(stored.temp.candidates).toHaveLength(2);
   }, 30_000);
 });

@@ -9,6 +9,7 @@
   import SettingsCardHead from './SettingsCardHead.svelte';
   import SetupWizard from '../SetupWizard.svelte';
   import RoomImageWizard from './RoomImageWizard.svelte';
+  import RoomImageLibrary from './RoomImageLibrary.svelte';
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../../config/product-capabilities.ts';
   import { settingsValues } from '../../state/settings.svelte.ts';
   import { resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
@@ -16,6 +17,7 @@
   import { m } from '../../../paraglide/messages.js';
 
   let roomImageWizardOpen = $state(false);
+  let roomImageLibraryOpen = $state(false);
 </script>
 
 <div data-setting-id="household-setup">
@@ -36,6 +38,15 @@
       <span class="settings-row-text">
         <span class="settings-row-label">{m.sys_room_images()}</span>
         <span class="settings-row-sub">{m.sys_room_images_hint()}</span>
+      </span>
+      <Icon name="i-chevron-right" cls="icon icon-md settings-arrow" />
+    </button>
+    <button class="settings-row settings-action-row pressable" data-setting-id="room-image-library" type="button"
+            onclick={() => roomImageLibraryOpen = true}>
+      <span class="settings-row-icon"><Icon name="i-image" cls="icon icon-md" /></span>
+      <span class="settings-row-text">
+        <span class="settings-row-label">{m.rimg_lib_title()}</span>
+        <span class="settings-row-sub">{m.rimg_lib_hint()}</span>
       </span>
       <Icon name="i-chevron-right" cls="icon icon-md settings-arrow" />
     </button>
@@ -73,4 +84,5 @@
 
 {#if ROOM_IMAGE_WIZARD_ENABLED}
   <RoomImageWizard open={roomImageWizardOpen} onclose={() => roomImageWizardOpen = false} />
+  <RoomImageLibrary open={roomImageLibraryOpen} onclose={() => roomImageLibraryOpen = false} />
 {/if}

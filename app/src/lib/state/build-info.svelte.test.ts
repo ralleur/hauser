@@ -23,7 +23,7 @@ describe('loadBuildInfo', () => {
       json: async () => ({
         version: '9.9.9',
         revision: SHA,
-        license: 'AGPL-3.0-or-later',
+        license: 'AGPL-3.0-only',
         sourceUrl: 'https://fork.example/tree/head',
       }),
     })));
@@ -38,7 +38,7 @@ describe('loadBuildInfo', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
     const { buildInfo, loadBuildInfo } = await freshBuildInfo();
     await loadBuildInfo();
-    expect(buildInfo.license).toBe('AGPL-3.0-or-later');
+    expect(buildInfo.license).toBe('AGPL-3.0-only');
     expect(buildInfo.sourceUrl === null || buildInfo.sourceUrl.startsWith('http')).toBe(true);
   });
 

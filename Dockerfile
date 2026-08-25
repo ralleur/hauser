@@ -63,7 +63,7 @@ ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \
       org.opencontainers.image.description="Local-first smart home control surface" \
       org.opencontainers.image.source="https://github.com/ralleur/hauser" \
-      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.version="${HAUSER_VERSION}" \
       org.opencontainers.image.revision="${HAUSER_REVISION}"
 

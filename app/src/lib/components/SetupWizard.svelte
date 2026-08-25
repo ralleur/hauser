@@ -29,6 +29,7 @@
     localeState,
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
+  import { openRoomEdit } from '../state/overlay.svelte.ts';
 
   let {
     mode = 'first-run',
@@ -418,8 +419,10 @@
                   class="room-expand"
                   type="button"
                   aria-label={room.name}
-                  aria-expanded={expandedRoomId === room.id}
-                  onclick={() => (expandedRoomId = expandedRoomId === room.id ? null : room.id)}
+                  aria-expanded={embedded ? undefined : expandedRoomId === room.id}
+                  onclick={() => (embedded
+                    ? openRoomEdit(room.id)
+                    : (expandedRoomId = expandedRoomId === room.id ? null : room.id))}
                 >
                   <span class="room-index num">{roomIndex + 1}</span>
                   <span class="room-chevron" aria-hidden="true">›</span>
@@ -450,7 +453,7 @@
                     onclick={() => beginDeleteRoom(room.id)}>{m.setup_delete_room()}</button>
                 </div>
               </div>
-              {#if expandedRoomId === room.id}
+              {#if embedded ? pendingDeleteRoomId === room.id : expandedRoomId === room.id}
                 <div class="room-details">
                   {#if pendingDeleteRoomId === room.id}
                     <div class="room-delete-confirm" role="group" aria-labelledby={`delete-room-${room.id}`}>
@@ -474,7 +477,9 @@
                       </div>
                     </div>
                   {/if}
-                  {#if room.visibleEntities.length > 0}
+                  {#if embedded}
+                    <!-- Entitaetenpflege laeuft ueber das Raum-Overlay. -->
+                  {:else if room.visibleEntities.length > 0}
                     <div class="entity-list">
                       {#each room.visibleEntities as entity (entity.entityId)}
                         <div class="entity-editor">

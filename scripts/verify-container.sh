@@ -54,7 +54,7 @@ docker compose exec -T hauser node -e '
   fetch("http://127.0.0.1:4173/api/build-info")
     .then((response) => response.json())
     .then((build) => {
-      const complete = build.license === "AGPL-3.0-or-later"
+      const complete = build.license === "AGPL-3.0-only"
         && /^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(build.revision || "")
         && /^\d+\.\d+\.\d+/.test(build.version || "")
         && String(build.sourceUrl || "").startsWith("https://");

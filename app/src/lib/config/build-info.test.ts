@@ -89,7 +89,7 @@ describe('parseBuildInfo', () => {
   it('rejects payloads that do not declare this project license', () => {
     expect(parseBuildInfo({ version: '1.0.0', license: 'MIT' })).toBeNull();
     expect(parseBuildInfo(null)).toBeNull();
-    expect(parseBuildInfo('AGPL-3.0-or-later')).toBeNull();
+    expect(parseBuildInfo('AGPL-3.0-only')).toBeNull();
   });
 });
 

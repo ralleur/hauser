@@ -484,7 +484,8 @@ describe('B-08E10 B3 persistent job flow', () => {
     expect(job.status).toBe('succeeded');
     expect(job.phase).toBe('complete');
     expect(job.providerCalls.attempt).toMatchObject({ confirmedCount: 3, plannedCount: 3, startedCount: 3, completedCount: 3, outcomeUnknownCount: 0 });
-    expect(job.candidates).toHaveLength(2);
+    // Kandidaten = Komposition + je Stilvariante einer.
+    expect(job.candidates).toHaveLength(3);
     expect(app.provider.calls.map((call: any) => call.phase)).toEqual(['composition', 'style-light', 'style-light']);
     expect(app.provider.calls[1].inputHash).toBe(app.provider.calls[2].inputHash);
 
@@ -582,7 +583,7 @@ describe('B-08E10 B3 persistent job flow', () => {
     });
     const preparedParent = preparedRecovered.get(prepared.parent.jobId);
     expect(preparedParent.status).toBe('succeeded');
-    expect(preparedParent.temp.candidates).toHaveLength(2);
+    expect(preparedParent.temp.candidates).toHaveLength(3);
     expect(readdirSync(join(prepared.app.sandbox, 'jobs')).filter((name: string) => /^[A-Za-z0-9_-]{43}\.json$/.test(name))).toHaveLength(1);
 
     const committed = await createFinalCrashFixture('journal_committed');

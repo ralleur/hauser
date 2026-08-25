@@ -80,14 +80,14 @@ describe('readBuildInfo', () => {
       .toEqual({
         version: '0.4.0-beta.6',
         revision: SHA,
-        license: 'AGPL-3.0-or-later',
+        license: 'AGPL-3.0-only',
         sourceUrl: 'https://fork.example/tree/x',
       });
   });
 
   it('never invents a source url from an unusable configuration', () => {
     expect(readBuildInfo({ version: '0.4.0-beta.6', revision: '', sourceUrl: 'ftp://example.com/src' }))
-      .toEqual({ version: '0.4.0-beta.6', revision: null, license: 'AGPL-3.0-or-later', sourceUrl: null });
+      .toEqual({ version: '0.4.0-beta.6', revision: null, license: 'AGPL-3.0-only', sourceUrl: null });
   });
 
   it('reads the shipped package version by default', () => {
@@ -107,7 +107,7 @@ describe('GET /api/build-info', () => {
     expect(await response.json()).toEqual({
       version: '0.4.0-beta.6',
       revision: SHA,
-      license: 'AGPL-3.0-or-later',
+      license: 'AGPL-3.0-only',
       sourceUrl: `https://github.com/example/hauser/tree/${SHA}`,
     });
   });
@@ -118,7 +118,7 @@ describe('GET /api/build-info', () => {
     expect(payload).toEqual({
       version: '0.4.0-beta.6',
       revision: null,
-      license: 'AGPL-3.0-or-later',
+      license: 'AGPL-3.0-only',
       sourceUrl: null,
     });
   });

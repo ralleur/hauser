@@ -4,6 +4,8 @@
      und einer Suche, die Katalog-Vorschläge zum Hinzufügen einblendet — nie
      die komplette Entity-Liste. Reuse des overlay-scrim/modal-Musters. */
   import Icon from './Icon.svelte';
+  import '../../styles/room-images.css';
+  import { longpress } from '../actions/longpress.ts';
   import { appState } from '../state/app.svelte.ts';
   import { roomEdit, closeRoomEdit, finishRoomEditClose } from '../state/overlay.svelte.ts';
   import {
@@ -21,6 +23,7 @@
   } from '../state/immersion-light.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
+  import RoomImageLibrary from './settings/RoomImageLibrary.svelte';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
 
@@ -32,6 +35,8 @@
   let backgroundBusy = $state(false);
   let backgroundMessage = $state<string | null>(null);
   let backgroundError = $state(false);
+  let libraryOpen = $state(false);
+  let moveDeviceId = $state<string | null>(null);
   const roomLights = $derived((room?.lights ?? []).filter((device) => (device.category ?? 'light') === 'light'));
   const placements = $derived(roomLightPlacements(room?.id));
   const selectedPlacement = $derived(placements[selectedLightId]);
@@ -141,6 +146,16 @@
     }
   }
 
+  /* Longpress auf eine Geraetezeile verschiebt das Geraet in einen anderen Raum.
+     addDeviceToRoom haengt es ans Ende der Zielraum-Reihenfolge. */
+  function moveDeviceToRoom(targetRoomId: string) {
+    const entityId = moveDeviceId;
+    moveDeviceId = null;
+    if (!entityId) return;
+    const targetOrder = appState.rooms.find((entry) => entry.id === targetRoomId)?.lights.map((light) => light.entityId) ?? [];
+    addDeviceToRoom(entityId, targetRoomId, targetOrder);
+  }
+
   function placeSelected(event: MouseEvent) {
     if (!room || !selectedLightId) return;
     const rect = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
@@ -225,7 +240,7 @@
             {:else}
               <ul class="re-list">
                 {#each room.lights as device, i (device.entityId)}
-                  <li class="re-row">
+                  <li class="re-row" use:longpress={{ onLongPress: () => moveDeviceId = device.entityId }}>
                     <span class="re-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
                     <span class="re-label">
                       <span class="re-name">{device.name}</span>
@@ -339,6 +354,8 @@
                         onclick={() => backgroundInput?.click()}>
                   {backgroundBusy ? m.room_background_saving() : background ? m.room_background_replace() : m.room_background_choose()}
                 </button>
+                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
+                        onclick={() => libraryOpen = true}>{m.rimg_lib_from_library()}</button>
                 {#if background}
                   <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
                           onclick={restoreBackground}>{m.room_background_restore()}</button>
@@ -354,3 +371,26 @@
     {/if}
   </div>
 </div>
+
+{#if room && moveDeviceId}
+  {@const moving = room.lights.find((entry) => entry.entityId === moveDeviceId)}
+  <div class="re-move-layer" role="presentation" onclick={(event) => { if (event.target === event.currentTarget) moveDeviceId = null; }}>
+    <div class="re-move-sheet" role="dialog" aria-modal="true" aria-label={m.rimg_move_label()}>
+      <h3>{m.rimg_move_title({ device: moving?.name ?? '' })}</h3>
+      <p>{m.rimg_move_question()}</p>
+      <div class="re-move-rooms">
+        {#each appState.rooms.filter((entry) => entry.id !== room.id) as target (target.id)}
+          <button class="secondary-btn pressable" type="button"
+                  onclick={() => moveDeviceToRoom(target.id)}>{target.name}</button>
+        {/each}
+      </div>
+      <button class="secondary-btn pressable" type="button" onclick={() => moveDeviceId = null}>{m.rimg_cancel()}</button>
+    </div>
+  </div>
+{/if}
+
+{#if room}
+  <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}
+                    onclose={() => libraryOpen = false}
+                    onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
+{/if}

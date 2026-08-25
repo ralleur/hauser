@@ -46,6 +46,7 @@ const {
   providerPngToProviderJpeg,
   snapRoomImageCrop,
   sourceCropToProviderJpeg,
+  sourceFullToProviderJpeg,
 } = await import(`${roomImageContractBase}/room-image-transform-policy-v1.${roomImageContractExtension}`);
 const {
   ROOM_IMAGE_PROMPT_POLICY_V1,
@@ -709,7 +710,9 @@ export function createRoomImageUploadStore({
             try {
               const sourcePath = roomImageUploadPaths(uploadRoot, uploadId).source;
               if (!lstatSync(sourcePath).isFile()) throw new Error('Upload source is not a regular file');
-              const jpeg = await sourceCropToProviderJpeg(readFileSync(sourcePath), crop);
+              /* Die Kompositionsphase bekommt das ungeschnittene Foto: sie soll
+                 Rahmen und Perspektive selbst waehlen (siehe Prompt-Policy). */
+              const jpeg = await sourceFullToProviderJpeg(readFileSync(sourcePath));
               assertProviderInputSize(jpeg);
               result = await handoff(jpeg);
             } catch (error) {
@@ -1022,10 +1025,10 @@ function validStoredRoomImageTemp(record) {
     if (!validRoomImageTempReference(value.composition, 'compositions', 'jpg', `composition-${record.lineageId}`)
         || value.selectedProvider !== null || value.selectedPreview !== null
         || !roomImageExactObject(value.finals, [])
-        || value.candidates.length > record.request.candidateCount) return false;
+        || value.candidates.length > record.request.candidateCount + 1) return false;
     if (record.status === 'succeeded') {
       const ownsCompletedCandidates = value.source !== null && value.candidates.length >= 1
-        && value.candidates.length <= record.request.candidateCount;
+        && value.candidates.length <= record.request.candidateCount + 1;
       const transferredToFinal = value.source === null && value.composition === null && value.candidates.length === 0;
       if (!ownsCompletedCandidates && !transferredToFinal) return false;
     }
@@ -1657,9 +1660,15 @@ export function createRoomImageJobStore({
     }
   }
   function clearTemps(record, { keepSource = false, keepComposition = false, keepSelected = false } = {}) {
+    /* Der Kompositionskandidat hängt am Kompositionsbild und überlebt einen
+       Retry, der die Komposition behält — sonst fehlt er im fertigen Set. */
+    const compositionCandidates = keepComposition && record.temp.composition
+      ? record.temp.candidates.filter((entry) => entry.providerInput === record.temp.composition)
+      : [];
     const retained = new Set([
       ...(keepSource ? [record.temp.source] : []),
       ...(keepComposition ? [record.temp.composition] : []),
+      ...compositionCandidates.map((entry) => entry.preview),
       ...(keepSelected ? [record.temp.selectedProvider, record.temp.selectedPreview] : []),
     ].filter(Boolean));
     for (const name of allTempNames(record)) if (!retained.has(name)) deleteTemp(name);
@@ -1669,7 +1678,7 @@ export function createRoomImageJobStore({
       record.temp.selectedProvider = null;
       record.temp.selectedPreview = null;
     }
-    record.temp.candidates = [];
+    record.temp.candidates = compositionCandidates;
     record.temp.finals = {};
   }
 
@@ -1870,7 +1879,18 @@ export function createRoomImageJobStore({
     if (result.type === 'composition' && result.bytes instanceof Uint8Array && result.bytes.byteLength > 0) {
       const targetRef = `compositions/composition-${record.lineageId}.jpg`;
       record.temp.composition = targetRef;
-      return [{ targetRef, bytes: result.bytes }];
+      const writes = [{ targetRef, bytes: result.bytes }];
+      /* Die Komposition wird zusätzlich als erster Kandidat angeboten. Sie
+         bekommt eigene Candidate-Refs, damit die Temp-Formprüfung greift. */
+      if (ROOM_IMAGE_ID_PATTERN.test(result.candidateId || '')
+          && result.previewBytes instanceof Uint8Array && result.previewBytes.byteLength > 0) {
+        const preview = `candidates/candidate-${result.candidateId}.avif`;
+        const providerInput = `candidates/candidate-${result.candidateId}.jpg`;
+        record.temp.candidates.push({ candidateId: result.candidateId, preview, providerInput });
+        writes.push({ targetRef: preview, bytes: result.previewBytes });
+        writes.push({ targetRef: providerInput, bytes: result.bytes });
+      }
+      return writes;
     }
     if (result.type === 'candidate' && ROOM_IMAGE_ID_PATTERN.test(result.candidateId || '')
         && result.previewBytes instanceof Uint8Array && result.previewBytes.byteLength > 0
@@ -2756,7 +2776,9 @@ export function createRoomImageAssetStore({
     const document = readCatalog();
     return document.assets.filter((entry) => entry.status === 'active').map((entry) => {
       if (!verifyEntryFiles(entry)) throw roomImageAssetStoreError('Ein katalogisiertes Asset ist unvollständig.');
-      return { ...roomImageAssetPublic(entry.assetId, entry.focus), createdAt: entry.createdAt };
+      const byteLength = Object.values(entry.files)
+        .reduce((total, info) => total + info.byteLength, 0);
+      return { ...roomImageAssetPublic(entry.assetId, entry.focus), createdAt: entry.createdAt, byteLength };
     });
   }
   function publish(assetId, focus, variants) {
@@ -3667,7 +3689,14 @@ export function createRoomImageJobRunner({
     const providerInputJpeg = await providerPngToProviderJpeg(image);
     assertProviderInputSize(providerInputJpeg);
     if (attempt.phase === 'composition') {
-      return { type: 'composition', bytes: providerInputJpeg };
+      /* Die Komposition ist zugleich der realistische Kandidat: der Nutzer
+         wählt zwischen korrigierter Perspektive und Illustrationslook. */
+      const compositionPreview = await providerPngToFinalAvif(image);
+      await validateRoomImagePreviewBytes(compositionPreview, 'heif');
+      return {
+        type: 'composition', bytes: providerInputJpeg,
+        candidateId: roomImageOpaqueId(), previewBytes: compositionPreview,
+      };
     }
     const preview = await providerPngToFinalAvif(image);
     await validateRoomImagePreviewBytes(preview, 'heif');
@@ -3873,7 +3902,7 @@ export function createRoomImageJobRunner({
     if (!record) return;
     if (record.status === 'succeeded' || record.status === 'awaiting_confirmation') return;
     if (record.kind === 'main_candidates') {
-      if (record.temp.candidates.length !== record.request.candidateCount) {
+      if (record.temp.candidates.length !== record.request.candidateCount + 1) {
         failJob(jobId, 'PROVIDER_RESULT_INVALID', 'Die Candidateanzahl ist unvollständig.');
         return;
       }
@@ -9267,7 +9296,8 @@ async function serveRoomImageAssetListing(req, res, context) {
     const assets = context.assetStore.list().map((asset) => ({
       ...asset, assignedRoomIds: assignedRoomIds(snapshot.document, asset.assetId),
     }));
-    roomImageJsonResponse(req, res, 200, { assets, householdEtag: snapshot.etag });
+    const totalByteLength = assets.reduce((total, asset) => total + (asset.byteLength || 0), 0);
+    roomImageJsonResponse(req, res, 200, { assets, totalByteLength, householdEtag: snapshot.etag });
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }
 

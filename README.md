@@ -319,27 +319,25 @@ are explicitly welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 ## License
 
-Hauser is free software: you can redistribute it and/or modify it under the
-terms of the GNU Affero General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version. See [LICENSE](LICENSE).
+Hauser is open source under `AGPL-3.0-only`: you can redistribute it and/or
+modify it under the terms of version 3 of the GNU Affero General Public License
+as published by the Free Software Foundation. See [LICENSE](LICENSE).
 
 If you modify Hauser and let other people use it over a network, the AGPL asks
 you to offer those users the source of your modified version. Running Hauser
 unmodified in your own home creates no obligation at all.
 
+Contributions are welcome and are made under the
+[Contributor License Agreement](CLA.md); see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### Licensing history
 
 Hauser was MIT licensed up to and including **v0.4.0-beta.6**. Those releases
-stay MIT and can be used and forked under those terms forever — this change
-applies to later versions only. Nothing has been withdrawn or retagged. The
-reasoning is in ADR-025.
-
-### Commercial licensing
-
-The AGPL does not suit every setting. If you want to build on Hauser without its
-source disclosure requirement, a commercial license is available — open an issue
-or contact the maintainer through the repository.
+stay MIT and can be used and forked under those terms forever — the change to
+the AGPL applies to later versions only. Nothing has been withdrawn or retagged.
+Release `v0.4.0-beta.7` was published as `AGPL-3.0-or-later`; from the next
+release onwards the project is `AGPL-3.0-only`.
 
 Original room illustrations, background artwork and public screenshots are
 licensed [CC BY 4.0](ASSETS-LICENSE.md). The Hauser name, logos, brand marks,

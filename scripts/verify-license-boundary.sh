@@ -36,8 +36,19 @@ if hashlib.sha256(served_license.read_bytes()).hexdigest() != expected_agpl_sha2
     raise SystemExit(f'{served_license} is not the unchanged GNU AGPL-3.0 license text.')
 
 copyright_text = Path('COPYRIGHT').read_text(encoding='utf-8')
-if copyright_text != 'Copyright (C) 2026 ralleur\n':
-    raise SystemExit('COPYRIGHT is not the expected exact project notice.')
+# The project notice must declare the current license, keep the project
+# copyright separate from the FSF's copyright on the license document, and
+# never re-assert a superseded license identifier.
+for phrase in (
+    'SPDX-License-Identifier: AGPL-3.0-only',
+    'Free Software Foundation',
+    'CLA.md',
+):
+    if phrase not in copyright_text:
+        raise SystemExit(f'COPYRIGHT is missing the required statement: {phrase}')
+for phrase in ('MIT', 'AGPL-3.0-or-later'):
+    if phrase in copyright_text:
+        raise SystemExit(f'COPYRIGHT states a superseded license: {phrase}')
 
 asset_text = Path('ASSETS-LICENSE.md').read_text(encoding='utf-8')
 trademark_text = Path('TRADEMARKS.md').read_text(encoding='utf-8')
@@ -80,7 +91,7 @@ for path in blueprint_yaml:
         first_line = path.read_text(encoding='utf-8').splitlines()[0]
     except (UnicodeDecodeError, IndexError) as error:
         raise SystemExit(f'Invalid technical Blueprint YAML: {path}: {error}') from error
-    if first_line != '# SPDX-License-Identifier: AGPL-3.0-or-later':
+    if first_line != '# SPDX-License-Identifier: AGPL-3.0-only':
         raise SystemExit(
             f'Technical Blueprint YAML lacks the exact first-line AGPL SPDX header: {path}'
         )

@@ -1,7 +1,7 @@
 /* ============================================
    Herkunft der laufenden Fassung — Lizenz, Version, Revision, Quellcode.
 
-   AGPL-3.0-or-later verlangt, dass Benutzer den Corresponding Source *dieser*
+   AGPL-3.0-only verlangt, dass Benutzer den Corresponding Source *dieser*
    Fassung finden. Deshalb ist die Revision die vollständige Commit-SHA und die
    Source-URL überschreibbar: ein Fork oder ein verändertes Deployment muss auf
    seinen eigenen Quellcode zeigen dürfen, nicht auf den Upstream.
@@ -12,7 +12,7 @@
    Oberfläche zeigt dann nichts, statt eine falsche Provenienz zu behaupten.
    ============================================ */
 
-export const HAUSER_LICENSE = 'AGPL-3.0-or-later';
+export const HAUSER_LICENSE = 'AGPL-3.0-only';
 
 export interface BuildInfo {
   /* Semantische Version aus app/package.json */

@@ -26,8 +26,12 @@ describe('B-08E10 B3 prompt policy v1', () => {
     const style = buildRoomImagePrompt('style-light', validSpec);
     const dark = buildRoomImagePrompt('dark', validSpec);
     const darkOff = buildRoomImagePrompt('dark-off', validSpec);
-    expect(composition).toContain('realistic');
-    expect(composition).toContain('do not invent');
+    // Die Kompositionsphase muss Ausschnitt und Perspektive freigeben. Freeze-
+    // oder Illustrationsvorgaben unterdrücken die Neukomposition nachweislich.
+    expect(composition).toContain('Perspektive');
+    expect(composition).toMatch(/Erstelle eine passende Version/);
+    expect(composition.toLowerCase()).not.toContain('freeze');
+    expect(composition.toLowerCase()).not.toContain('illustrat');
     expect(style).toContain('freeze camera');
     expect(style).toContain('no text, UI, or logos');
     expect(dark).toContain('directly from the selected light image');

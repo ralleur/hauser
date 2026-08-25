@@ -128,14 +128,21 @@ in [`SECURITY.md`](SECURITY.md).
 
 ## Licensing and conduct
 
-Contributions require agreement to the [Contributor License Agreement](CLA.md).
-A bot asks you to confirm it on your first pull request. You keep the copyright
-in your work; the agreement gives the maintainer the rights needed to license
-the project as a whole, including under a future different or commercial
-license. The CLA explains why, and what it does not take away from you.
+Contributions are made under the
+[Contributor License Agreement](CLA.md) and are merged only after it has been
+accepted. The CLA workflow asks you to accept it on your first pull request and
+records your acceptance in this repository; the check stays red until it is
+recorded.
 
-The project's public license is the [GNU Affero General Public License v3.0 or
-later](LICENSE). Original visual assets added to the paths listed in
+You keep the copyright in your contribution — nothing is assigned. You grant the
+Maintainer a perpetual, worldwide, non-exclusive, irrevocable, royalty-free,
+transferable and sublicensable right to use it. The CLA also permits the
+Maintainer to license the Project and Contributions under different licensing
+terms. Because the grant is non-exclusive, you remain free to use your own work
+elsewhere. Read [CLA.md](CLA.md) for the exact terms.
+
+The project's public license is
+[`AGPL-3.0-only`](LICENSE). Original visual assets added to the paths listed in
 [ASSETS-LICENSE.md](ASSETS-LICENSE.md) are contributed under CC BY 4.0.
 
 The Hauser name and official branding are governed by
