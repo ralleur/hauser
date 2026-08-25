@@ -3,7 +3,7 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
-## [Unreleased]
+## [0.4.0-beta.7] - 2026-08-24
 
 ### License change
 
@@ -26,6 +26,18 @@ commercial license is available for settings where the AGPL does not fit.
 
 Contributions now require agreement to a [CLA](CLA.md). See ADR-025 for the full
 reasoning.
+
+### Fixed
+
+- The setup wizard's reconfigure flow (Settings → Rooms & Devices) never sent
+  the `If-Match` / `X-Hauser-Shared-Config-If-Match` preconditions that
+  `POST /api/setup/activate` requires when reconfiguring, so every reconfigure
+  save was rejected with `428 CONFIG_PRECONDITION_REQUIRED` before anything
+  was written. **Save changes** appeared to do nothing — no console error, no
+  visible feedback near the button — and any rooms or devices found by
+  **Reload rooms and devices** reverted to the previously active configuration
+  on leaving the screen. The wizard now captures both ETags on load and sends
+  them back on save. Reported in #7, reproduced on v0.4.0-beta.6 in #9.
 
 ## [0.4.0-beta.6] - 2026-08-21
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0-beta.7 - 2026-08-24
+
+### Changed
+
+- Hauser is now licensed under AGPL-3.0-or-later (was MIT). Releases up to and
+  including v0.4.0-beta.6 stay MIT. Nothing changes for people running Hauser
+  at home. See the main [CHANGELOG](https://github.com/ralleur/hauser/blob/main/CHANGELOG.md)
+  for the full reasoning.
+
+### Fixed
+
+- The setup wizard's reconfigure flow (Settings → Rooms & Devices) never sent
+  the ETag preconditions the activation endpoint requires when reconfiguring,
+  so **Save changes** silently failed every time and newly discovered rooms
+  or devices reverted on leaving the screen. Reported in #7, reproduced on
+  v0.4.0-beta.6 in #9.
+
 ## 0.4.0-beta.6 - 2026-08-21
 
 ### Fixed

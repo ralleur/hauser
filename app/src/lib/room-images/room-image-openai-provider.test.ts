@@ -142,6 +142,7 @@ async function startServer(options: Record<string, unknown>) {
     roomImageAuthConfig: auth(),
     roomImageUploadStore: { cleanup() {} },
     roomImageJobStore: { get() { return null; } },
+    roomImageCredentialPath: join(root, 'room-image-auth.json'),
     ...options,
   });
   servers.push(server);

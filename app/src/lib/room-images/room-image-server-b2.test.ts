@@ -61,6 +61,7 @@ async function start(options: Record<string, unknown> = {}) {
     allowedOrigins: new Set([ORIGIN]),
     roomImageAuthConfig: completeAuth(),
     roomImageUploadStore,
+    roomImageCredentialPath: join(root, 'room-image-auth.json'),
     ...options,
   });
   servers.push(server);

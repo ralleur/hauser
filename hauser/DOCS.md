@@ -70,14 +70,17 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.6` is the current published App and Docker/Compose beta. It fixes
-  setup activation failing with `403 SETUP_REQUEST_FORBIDDEN` when the App is
-  reached through a local hostname (e.g. `homeassistant.local:4173`) that
-  is not in the static allowed-origins list (#8): a direct browser request is
-  now also accepted whenever its Origin exactly matches the effective request
-  host, independent of hostname. It also carries the setup-wizard discovery
-  fixes for switches, media players and vacuums from `0.4.0-beta.5` (#7) and
-  the `/data/assets` start fix from `0.4.0-beta.4` (#6). The vacuum path
-  follows the documented Home Assistant service set and is not yet verified
-  against real hardware. An unrelated real-home installation remains the next
-  beta-stabilisation evidence gate.
+- `0.4.0-beta.7` is the current published App and Docker/Compose beta. Hauser
+  is now licensed under AGPL-3.0-or-later instead of MIT; everything up to and
+  including `0.4.0-beta.6` stays MIT, and nothing changes for people running
+  Hauser at home. This release also fixes the setup wizard's reconfigure flow
+  (Settings → Rooms & Devices): **Save changes** silently failed every time
+  because the activation request never carried the ETag preconditions the
+  server requires when reconfiguring, so newly discovered rooms or devices
+  reverted on leaving the screen (#7, reproduced on `0.4.0-beta.6` in #9). It
+  also carries the setup activation origin fix from `0.4.0-beta.6` (#8), the
+  setup-wizard discovery fixes for switches, media players and vacuums from
+  `0.4.0-beta.5` (#7), and the `/data/assets` start fix from `0.4.0-beta.4`
+  (#6). The vacuum path follows the documented Home Assistant service set and
+  is not yet verified against real hardware. An external real-home
+  installation remains the next beta-stabilisation evidence gate.

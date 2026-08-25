@@ -259,6 +259,10 @@
         <p class="room-image-alert" role="status">OpenAI ist konfiguriert, ein echter Bildabruf wurde in dieser Laufzeit aber noch nicht bestätigt.</p>
       {/if}
 
+      {#if wizardState.lifecycle === 'error' && wizardState.error}
+        <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
+      {/if}
+
       {#if !accessConfigured}
         <p class="room-image-alert" role="status">Verbinde zuerst ChatGPT oder hinterlege einen API-Key. Danach wird die Bildauswahl freigeschaltet.</p>
       {:else if view === 'upload'}
