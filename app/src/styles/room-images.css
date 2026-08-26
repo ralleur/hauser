@@ -69,6 +69,115 @@
   font-size: var(--text-sm);
 }
 
+.room-image-head-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+.room-image-access-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--overlay-control-background);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.room-image-access-chip span {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+}
+
+.room-image-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.room-image-nav-hint {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.room-image-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.room-image-consent .room-image-check { flex: 1; flex-direction: row; align-items: flex-start; }
+.room-image-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+}
+.room-image-flow li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.room-image-flow span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.room-image-info { position: relative; display: inline-flex; flex: none; }
+.room-image-info-btn {
+  width: var(--space-5);
+  height: var(--space-5);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: help;
+}
+.room-image-info-bubble {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-2));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, 60vw);
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out), visibility var(--duration-fast);
+}
+.room-image-info-bubble a { color: var(--color-accent-warm); }
+.room-image-info:hover .room-image-info-bubble,
+.room-image-info:focus-within .room-image-info-bubble {
+  opacity: 1;
+  visibility: visible;
+}
+
 .room-image-wizard-layer {
   position: fixed;
   inset: 0;
@@ -153,7 +262,23 @@
   background-color: var(--color-surface-0);
   background-repeat: no-repeat;
 }
-.room-image-crop { cursor: move; }
+.room-image-crop { position: relative; cursor: move; }
+/* Zeigt, welchen Teil des Bildes die Navigation spaeter verdeckt. */
+.room-image-crop-guide {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: flex-end;
+  width: 32%;
+  padding: var(--space-2) var(--space-3);
+  border-right: 1px dashed color-mix(in srgb, var(--color-text-on-accent) 65%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-surface-0) 55%, transparent), transparent);
+  color: var(--color-text-on-accent);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  pointer-events: none;
+}
 .room-image-range input { width: 100%; }
 .room-image-focus-tabs {
   display: grid;

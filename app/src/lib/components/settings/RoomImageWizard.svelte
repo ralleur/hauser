@@ -5,6 +5,7 @@
   import RoomImageAccess from './RoomImageAccess.svelte';
   import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
+  import { getRoomImageAccess, type RoomImageAccessStatus } from '../../state/room-image-access.ts';
   import { appState } from '../../state/app.svelte.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
@@ -25,6 +26,7 @@
   let dialog = $state<HTMLElement>();
   let previouslyFocused: HTMLElement | null = null;
   let fileInput = $state<HTMLInputElement>();
+  let captureInput = $state<HTMLInputElement>();
   let file: File | null = $state(null);
   let objectUrl = $state<string | null>(null);
   let upload = $state<RoomImageUpload | null>(null);
@@ -37,8 +39,7 @@
   let focusTarget = $state<'panel' | 'phone'>('panel');
   const candidateCount = 1 as const; // 1 Stilvariante + Komposition = 2 Kandidaten
 
-  let privacyConfirmed = $state(false);
-  let costConfirmed = $state(false);
+  let consentConfirmed = $state(false);
   let selectedCandidateId = $state<string | null>(null);
   let finalCostConfirmed = $state(false);
   let retryConfirmed = $state(false);
@@ -69,7 +70,15 @@
   const capabilityEnabled = $derived(wizardState.capability.public?.enabled === true);
   const busy = $derived(uploadBusy || wizardState.lifecycle === 'loading');
   const roomOptions = $derived(appState.rooms.map((room) => ({ id: room.id, name: room.name })));
-  let accessConfigured = $state(IS_DEMO);
+  /* Der OpenAI-Zugang ist nur beim ersten Mal ein eigener Schritt. Steht er,
+     bleibt im Kopf nur ein Chip, ueber den man ihn wieder aufklappen kann. */
+  let accessStatus = $state<RoomImageAccessStatus | null>(null);
+  let accessOpen = $state(false);
+  const accessConfigured = $derived(IS_DEMO || accessStatus?.configured === true);
+  const showAccess = $derived(!IS_DEMO && (accessOpen || !accessConfigured));
+  /* Auf dem Tablet direkt aufnehmen; am Desktop ignoriert der Browser capture
+     ohnehin, deshalb dort nur die Dateiauswahl. */
+  const canCapture = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
   /* Der Prompt folgt der erprobten Vorlage und wertet diese Felder nicht aus;
      der Contract verlangt sie weiterhin. */
@@ -84,6 +93,7 @@
       previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       resetLocalDraft();
       void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
+      if (!IS_DEMO) void loadAccess();
       void controller.resume();
       void tick().then(() => dialog?.focus());
     } else if (!open && wasOpen) {
@@ -100,6 +110,14 @@
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   });
 
+  async function loadAccess() {
+    try {
+      accessStatus = await getRoomImageAccess();
+    } catch {
+      accessStatus = { configured: false, mode: null, source: null };
+    }
+  }
+
   function resetLocalDraft() {
     demoSourceId = null;
     file = null;
@@ -111,8 +129,8 @@
     centerY = 0.5;
     focus = initialRoomImageFocus();
     focusTarget = 'panel';
-    privacyConfirmed = false;
-    costConfirmed = false;
+    consentConfirmed = false;
+    accessOpen = false;
     selectedCandidateId = null;
     finalCostConfirmed = false;
     retryConfirmed = false;
@@ -224,7 +242,7 @@
   }
 
   async function startMainJob() {
-    if (!upload || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled) return;
+    if (!upload || !consentConfirmed || busy || !capabilityEnabled) return;
     if (!cropProjection) {
       localError = m.rimg_err_crop();
       return;
@@ -314,14 +332,23 @@
           <h2 id="room-image-wizard-title">{m.rimg_title()}</h2>
           <p>{m.rimg_subtitle()}</p>
         </div>
-        <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
+        <div class="room-image-head-actions">
+          {#if !IS_DEMO && accessConfigured}
+            <button class="room-image-access-chip pressable" type="button" aria-expanded={accessOpen} onclick={() => accessOpen = !accessOpen}>
+              <span aria-hidden="true"></span>
+              {accessStatus?.mode === 'api_key' ? m.rimg_access_api_key() : m.rimg_access_chatgpt_plan()}
+            </button>
+          {/if}
+          <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
+        </div>
       </header>
 
       {#if IS_DEMO}
         <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
-      {:else}
+      {:else if showAccess}
         <RoomImageAccess onchange={(status) => {
-          accessConfigured = status.configured;
+          accessStatus = status;
+          if (status.configured) accessOpen = false;
           void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
         }} />
       {/if}
@@ -340,6 +367,10 @@
 
       {#if !accessConfigured}
         <p class="room-image-alert" role="status">{m.rimg_need_access()}</p>
+      {:else if accessOpen}
+        <footer class="room-image-wizard-actions">
+          <button class="secondary-btn pressable" type="button" onclick={() => accessOpen = false}>{m.rimg_access_back()}</button>
+        </footer>
       {:else if view === 'upload'}
         <div class="room-image-wizard-grid">
           <section class="room-image-wizard-main">
@@ -358,15 +389,26 @@
             {:else}
               <p>{m.rimg_photo_hint()}</p>
               <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
-              <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
-                {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
-              </button>
+              <div class="room-image-pick">
+                {#if canCapture}
+                  <input hidden bind:this={captureInput} type="file" accept="image/*" capture="environment" onchange={chooseFile} />
+                  <button class="primary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => captureInput?.click()}>
+                    {m.rimg_photo_capture()}
+                  </button>
+                {/if}
+                <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
+                  {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
+                </button>
+              </div>
             {/if}
+            <p class="room-image-nav-hint">{m.rimg_nav_hint()}</p>
 
             {#if upload && objectUrl && cropProjection}
               <div class="room-image-crop" role="img" aria-label={m.rimg_crop_label()} onpointerdown={setCropCenter}
                    style:background-image={`url("${objectUrl}")`} style:background-size={cropProjection.backgroundSize}
-                   style:background-position={cropProjection.backgroundPosition}></div>
+                   style:background-position={cropProjection.backgroundPosition}>
+                <span class="room-image-crop-guide" aria-hidden="true">{m.rimg_nav_guide()}</span>
+              </div>
               <label class="room-image-range">
                 <span>{m.rimg_crop_zoom()}</span>
                 <input type="range" min="1" max="3" step="0.05" bind:value={zoom} />
@@ -385,15 +427,24 @@
           </section>
 
           <aside class="room-image-wizard-side">
-            <h3>{m.rimg_step_cost()}</h3>
-            <label class="room-image-check"><input type="checkbox" bind:checked={privacyConfirmed} />
-              <span>{m.rimg_privacy_confirm()}</span>
-            </label>
-            <p>{m.rimg_cost_intro()}</p>
-            <a href="https://developers.openai.com/api/docs/pricing#image-generation" target="_blank" rel="noreferrer">{m.rimg_prices_link()}</a>
-            <label class="room-image-check"><input type="checkbox" bind:checked={costConfirmed} />
-              <span>{m.rimg_cost_confirm_2()}</span>
-            </label>
+            <h3>{m.rimg_flow_title()}</h3>
+            <ol class="room-image-flow">
+              <li><span aria-hidden="true">1</span>{m.rimg_step_photo()}</li>
+              <li><span aria-hidden="true">2</span>{m.rimg_candidates_title()}</li>
+              <li><span aria-hidden="true">3</span>{m.rimg_review_title()}</li>
+            </ol>
+            <div class="room-image-consent">
+              <label class="room-image-check"><input type="checkbox" bind:checked={consentConfirmed} />
+                <span>{m.rimg_consent_confirm()}</span>
+              </label>
+              <span class="room-image-info">
+                <button class="room-image-info-btn" type="button" aria-label={m.rimg_consent_info_label()} aria-describedby="rimg-consent-info">i</button>
+                <span class="room-image-info-bubble" role="tooltip" id="rimg-consent-info">
+                  <span>{m.rimg_consent_detail()}</span>
+                  <a href="https://developers.openai.com/api/docs/pricing#image-generation" target="_blank" rel="noreferrer">{m.rimg_prices_link()}</a>
+                </span>
+              </span>
+            </div>
           </aside>
         </div>
         {#if localError}<p class="room-image-alert is-error" role="alert">{localError}</p>{/if}
@@ -402,7 +453,7 @@
         {/if}
         <footer class="room-image-wizard-actions">
           <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_close()}</button>
-          <button class="primary-btn pressable" type="button" disabled={!upload || !privacyConfirmed || !costConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>{m.rimg_start()}</button>
+          <button class="primary-btn pressable" type="button" disabled={!upload || !consentConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>{m.rimg_start()}</button>
         </footer>
 
       {:else if wizardState.job}
