@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0-beta.9 - 2026-08-26
+
+### Fixed
+
+- The published container reported neither its revision nor the URL of its
+  source at `/api/build-info` — the surface through which Hauser meets AGPL
+  section 13. The release workflow never passed those values into the image
+  build. Affected every image published since the license change, including
+  `0.4.0-beta.7` and `0.4.0-beta.8`.
+
+`0.4.0-beta.8` was tagged but never released; everything it contained is in
+this version.
+
 ## 0.4.0-beta.8 - 2026-08-26
 
 ### Added

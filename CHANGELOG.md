@@ -5,6 +5,33 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.4.0-beta.9] - 2026-08-26
+
+### Fixed
+
+- **The published container did not say where its source came from.** Hauser
+  serves its exact revision and the URL of the corresponding source at
+  `/api/build-info`, without authentication and before any configuration
+  exists — that is how the project meets section 13 of the AGPL. In every
+  image published since the license change the two fields came back empty,
+  because the release workflow's publish step never passed
+  `HAUSER_REVISION` and `HAUSER_SOURCE_URL` to the build. It also never
+  passed `HAUSER_RELEASE=1`, the Dockerfile's own guard that fails a release
+  build rather than publishing an image which cannot back its source claim,
+  so nothing caught the omission. The image labels
+  (`org.opencontainers.image.revision` and `.source`) were always correct;
+  only what the running container reports about itself was missing. The
+  publish step now passes all three, and the guard makes a repeat a build
+  failure. `v0.4.0-beta.7` and `v0.4.0-beta.8` are both affected.
+
+### About v0.4.0-beta.8
+
+`v0.4.0-beta.8` was tagged and its image published, but no release was issued
+for it: the defect above was found while verifying that exact image digest.
+Everything beta.8 contained is in this release; its entry below stays as the
+record of what landed when. Update straight from `v0.4.0-beta.7` if you are
+still on it.
+
 ## [0.4.0-beta.8] - 2026-08-26
 
 ### Added

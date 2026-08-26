@@ -24,7 +24,7 @@ Jellyfin integrations, deterministic setup wizard, landscape panel, compact
 phone shell and everyday household screens are implemented. The versioned
 Compose path and isolated clean-room onboarding gate are green. No alpha was
 published; `v0.4.0-beta.1` was the first public release, and the beta line has
-since continued through `v0.4.0-beta.8`.
+since continued through `v0.4.0-beta.9`.
 
 ---
 

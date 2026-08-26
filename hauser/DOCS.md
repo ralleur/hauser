@@ -70,7 +70,7 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.8` is the current published App and Docker/Compose beta. Hauser
+- `0.4.0-beta.9` is the current published App and Docker/Compose beta. Hauser
   is now licensed under the GNU Affero General Public License instead of MIT;
   everything up to and including `0.4.0-beta.6` stays MIT, and nothing changes
   for people running

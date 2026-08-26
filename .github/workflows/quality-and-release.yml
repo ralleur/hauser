@@ -132,6 +132,9 @@ jobs:
           build-args: |
             SOURCE_DATE_EPOCH=${{ steps.image.outputs.source_date_epoch }}
             HAUSER_VERSION=${{ steps.image.outputs.version }}
+            HAUSER_REVISION=${{ github.sha }}
+            HAUSER_SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+            HAUSER_RELEASE=1
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.image.outputs.version }}
