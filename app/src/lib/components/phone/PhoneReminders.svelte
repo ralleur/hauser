@@ -9,7 +9,7 @@
   } from '../../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
-    PERSON_ORDER, PERSON_LABELS, type ReminderPerson,
+    PERSON_ORDER, personDisplayLabel, type ReminderPerson,
   } from '../../state/reminders.ts';
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
@@ -121,11 +121,11 @@
     {@const row = personRows[person]}
     <section class="rem-section">
       <header class="notes-section-head">
-        <h3 class="notes-section-title">{PERSON_LABELS[person]}</h3>
+        <h3 class="notes-section-title">{personDisplayLabel(person)}</h3>
         <span class="rem-swatch postit-{person}" aria-hidden="true"></span>
         <span class="notes-section-count num">{row.open.length || ''}</span>
         <button class="notes-add-btn pressable" type="button"
-                aria-label="Erinnerung für {PERSON_LABELS[person]} hinzufügen"
+                aria-label={m.notes_add_reminder_for({ person: personDisplayLabel(person) })}
                 onclick={() => toggleAdd(person)}>
           <Icon name="i-plus" cls="icon icon-md" />
         </button>
@@ -157,7 +157,7 @@
       </div>
       {#if addTarget === person}
         <form class="notes-add-form has-calendar" onsubmit={submitAdd}>
-          <input class="notes-add-input" type="text" placeholder="Erinnerung für {PERSON_LABELS[person]} …" maxlength="120"
+          <input class="notes-add-input" type="text" placeholder={m.notes_add_reminder_placeholder({ person: personDisplayLabel(person) })} maxlength="120"
                  bind:value={draft} use:focusOnMount disabled={busy}
                  enterkeyhint="go" autocomplete="off" />
           <button class="notes-add-confirm pressable" type="submit" disabled={busy || !draft.trim()}

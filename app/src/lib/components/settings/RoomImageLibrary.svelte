@@ -3,6 +3,8 @@
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
   import { appState } from '../../state/app.svelte.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { intlLocale } from '../../state/locale.svelte.ts';
   import {
     assignRoomImage,
     deleteRoomImageAsset,
@@ -145,6 +147,7 @@
         <button class="dialog-close pressable" type="button" aria-label={m.rimg_lib_close()} onclick={onclose}>×</button>
       </header>
 
+      {#if IS_DEMO}<p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>{/if}
       {#if error}<p class="room-image-alert is-error" role="alert">{error}</p>{/if}
       {#if notice}<p class="room-image-alert" role="status">{notice}</p>{/if}
 
@@ -159,7 +162,7 @@
               <img src={asset.variants.light} alt={m.rimg_lib_alt({ id: asset.assetId })} loading="lazy" />
               <div class="room-image-library-meta">
                 <strong>{roomNames(asset.assignedRoomIds)}</strong>
-                <small>{m.rimg_lib_meta({ size: formatRoomImageBytes(asset.byteLength), date: new Date(asset.createdAt).toLocaleDateString() })}</small>
+                <small>{m.rimg_lib_meta({ size: formatRoomImageBytes(asset.byteLength), date: new Date(asset.createdAt).toLocaleDateString(intlLocale()) })}</small>
               </div>
               <div class="room-image-library-actions">
                 {#if targetRoomId}

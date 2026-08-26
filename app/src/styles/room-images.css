@@ -311,6 +311,38 @@
   margin-top: auto;
 }
 .room-image-library-actions select { width: 100%; }
+
+/* Demo: Beispielfotos statt Datei-Upload. */
+.room-image-demo-sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.room-image-demo-source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.room-image-demo-source.is-active {
+  border-color: var(--color-accent-warm);
+  box-shadow: 0 0 0 1px var(--color-accent-warm);
+}
+.room-image-demo-source img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+.room-image-demo-source span { font-size: var(--text-sm); }
+.room-image-demo-source:disabled { opacity: 0.6; cursor: default; }
 /* Zielraum-Auswahl beim Longpress auf eine Gerätezeile im Raum-Overlay.
    Muss über .room-edit (z-index 200) liegen. */
 .re-move-layer {

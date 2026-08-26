@@ -2,7 +2,7 @@
   import Icon from './Icon.svelte';
   import { reminders } from '../state/reminders.svelte.ts';
   import {
-    PERSON_LABELS, reminderDisplayTitle, reminderPerson, type Reminder,
+    personDisplayLabel, reminderDisplayTitle, reminderPerson, type Reminder,
   } from '../state/reminders.ts';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -73,7 +73,7 @@
           {#each rows as item (item.id)}
             {@const person = reminderPerson(item.title)}
             <tr class:is-done={item.completed}>
-              <td><span class="rem-table-person postit-{person}">{PERSON_LABELS[person]}</span></td>
+              <td><span class="rem-table-person postit-{person}">{personDisplayLabel(person)}</span></td>
               <td>{reminderDisplayTitle(item.title)}</td>
               <td class="num">{formatDateTime(item.created)}</td>
               <td class="num">{closedAt(item)}</td>

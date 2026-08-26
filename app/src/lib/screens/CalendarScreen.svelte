@@ -1,12 +1,13 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import { familyCalendar, refreshFamilyCalendar } from '../state/calendar.svelte.ts';
-  import { projectCalendarWeeks, WEEKDAY_LABELS } from '../state/calendar.ts';
+  import { projectCalendarWeeks, weekdayLabels } from '../state/calendar.ts';
 
   import { m } from '../../paraglide/messages.js';
+  import { intlLocale } from '../state/locale.svelte.ts';
   const weeks = $derived(projectCalendarWeeks(familyCalendar.events));
   const updatedLabel = $derived(familyCalendar.updatedAt
-    ? `Aktualisiert ${new Date(familyCalendar.updatedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+    ? m.calendar_updated_at({ time: new Date(familyCalendar.updatedAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' }) })
     : m.calendar_not_updated());
 
   let scrollEl = $state<HTMLElement>();
@@ -71,7 +72,7 @@
       </div>
     </div>
     <div class="cal-weekdays" aria-hidden="true">
-      {#each WEEKDAY_LABELS as label}<span>{label}</span>{/each}
+      {#each weekdayLabels() as label}<span>{label}</span>{/each}
     </div>
   </header>
 

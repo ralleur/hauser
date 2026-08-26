@@ -8,6 +8,7 @@
   import { refreshShopping } from '../state/shopping.svelte.ts';
   import { projectShoppingSections, type ShoppingItem, type StoreId } from '../state/shopping.ts';
   import { m } from '../../paraglide/messages.js';
+  import { intlLocale } from '../state/locale.svelte.ts';
   import {
     shoppingConfig, shoppingSort, shoppingItemOrder, sortShoppingList, undoShoppingSort,
   } from '../state/shopping-settings.svelte.ts';
@@ -16,7 +17,7 @@
   } from '../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
-    PERSON_ORDER, PERSON_LABELS, type ReminderPerson,
+    PERSON_ORDER, personDisplayLabel, type ReminderPerson,
   } from '../state/reminders.ts';
 
   /* Beide Wrapper spiegeln live die zentralen HMI-Daten: links Einkauf,
@@ -31,7 +32,9 @@
   const personRows = $derived(reminderRowsByPerson(reminders.items));
 
   const updatedLabel = $derived(shopping.updatedAt
-    ? `Stand ${new Date(shopping.updatedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+    ? m.notes_shopping_updated({
+        time: new Date(shopping.updatedAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' }),
+      })
     : m.notes_not_loaded());
 
   /* Add-Flow: pro Sektion ein +, das eine Inline-Zeile öffnet. */
@@ -229,11 +232,11 @@
           {@const row = personRows[person]}
           <section class="rem-section">
             <header class="notes-section-head">
-              <h3 class="notes-section-title">{PERSON_LABELS[person]}</h3>
+              <h3 class="notes-section-title">{personDisplayLabel(person)}</h3>
               <span class="rem-swatch postit-{person}" aria-hidden="true"></span>
               <span class="notes-section-count num">{row.open.length || ''}</span>
               <button class="notes-add-btn pressable" type="button"
-                      aria-label="Erinnerung für {PERSON_LABELS[person]} hinzufügen"
+                      aria-label={m.notes_add_reminder_for({ person: personDisplayLabel(person) })}
                       onclick={() => toggleAdd(`rem:${person}`)}>
                 <Icon name="i-plus" cls="icon icon-md" />
               </button>
@@ -265,7 +268,7 @@
                 {/each}
               {/if}
             </div>
-            {@render addForm(`rem:${person}`, `Erinnerung für ${PERSON_LABELS[person]} …`)}
+            {@render addForm(`rem:${person}`, m.notes_add_reminder_placeholder({ person: personDisplayLabel(person) }))}
           </section>
         {/each}
       </div>

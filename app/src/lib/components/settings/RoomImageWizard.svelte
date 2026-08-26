@@ -6,6 +6,7 @@
   import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
   import { appState } from '../../state/app.svelte.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
   import {
     initialRoomImageFocus,
@@ -48,17 +49,27 @@
   let assignNotice = $state<string | null>(null);
   let wasOpen = false;
 
+  /* Demo: statt eines eigenen Uploads stehen mitgelieferte Beispielfotos zur
+     Wahl. Ab dem Zuschnitt ist der Ablauf identisch zum echten Assistenten. */
+  let demoSources = $state<{ id: string; label: string; url: string }[]>([]);
+  let demoSourceId = $state<string | null>(null);
+  if (IS_DEMO) {
+    void import('../../demo/demo-room-images.ts').then((demo) => {
+      demoSources = demo.demoRoomImageSources();
+    });
+  }
+
   const unsubscribe = controller.subscribe((next) => {
     wizardState = next;
     if (next.job) view = viewForRoomImageJob(next.job);
   });
 
   const cropProjection = $derived(upload ? projectRoomImageCrop(upload.width, upload.height, { zoom, centerX, centerY }) : null);
-  const currentPreview = $derived(wizardState.sourcePreviewUrl ?? objectUrl);
+  const currentPreview = $derived(IS_DEMO ? objectUrl : (wizardState.sourcePreviewUrl ?? objectUrl));
   const capabilityEnabled = $derived(wizardState.capability.public?.enabled === true);
   const busy = $derived(uploadBusy || wizardState.lifecycle === 'loading');
   const roomOptions = $derived(appState.rooms.map((room) => ({ id: room.id, name: room.name })));
-  let accessConfigured = $state(false);
+  let accessConfigured = $state(IS_DEMO);
 
   /* Der Prompt folgt der erprobten Vorlage und wertet diese Felder nicht aus;
      der Contract verlangt sie weiterhin. */
@@ -90,6 +101,7 @@
   });
 
   function resetLocalDraft() {
+    demoSourceId = null;
     file = null;
     upload = null;
     uploadBusy = false;
@@ -161,6 +173,32 @@
       if (upload) await controller.deleteUpload(upload.uploadId);
       upload = await controller.upload(selected, selected.type as RoomImageMimeType);
       file = selected;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(selected);
+      zoom = 1;
+      centerX = 0.5;
+      centerY = 0.5;
+      focus = initialRoomImageFocus();
+    } catch (error) {
+      localError = error instanceof Error ? error.message : m.rimg_err_prepare();
+    } finally {
+      uploadBusy = false;
+    }
+  }
+
+  async function chooseDemoSource(source: { id: string; label: string; url: string }) {
+    if (uploadBusy) return;
+    uploadBusy = true;
+    localError = null;
+    try {
+      const demo = await import('../../demo/demo-room-images.ts');
+      demo.selectDemoRoomImageSource(source.id);
+      const blob = await (await fetch(source.url)).blob();
+      const selected = new File([blob], `${source.id}.webp`, { type: 'image/webp' });
+      if (upload) await controller.deleteUpload(upload.uploadId);
+      upload = await controller.upload(selected, 'image/webp');
+      file = selected;
+      demoSourceId = source.id;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(selected);
       zoom = 1;
@@ -279,10 +317,14 @@
         <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
       </header>
 
-      <RoomImageAccess onchange={(status) => {
-        accessConfigured = status.configured;
-        void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
-      }} />
+      {#if IS_DEMO}
+        <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
+      {:else}
+        <RoomImageAccess onchange={(status) => {
+          accessConfigured = status.configured;
+          void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
+        }} />
+      {/if}
 
       {#if wizardState.capability.error}
         <p class="room-image-alert is-error" role="alert">{wizardState.capability.error.message}</p>
@@ -302,11 +344,24 @@
         <div class="room-image-wizard-grid">
           <section class="room-image-wizard-main">
             <h3>{m.rimg_step_photo()}</h3>
-            <p>{m.rimg_photo_hint()}</p>
-            <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
-            <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
-              {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
-            </button>
+            {#if IS_DEMO}
+              <p>{m.demo_rimg_pick_hint()}</p>
+              <div class="room-image-demo-sources" role="group" aria-label={m.demo_rimg_pick()}>
+                {#each demoSources as source (source.id)}
+                  <button class="room-image-demo-source pressable" type="button" class:is-active={demoSourceId === source.id}
+                          disabled={uploadBusy} onclick={() => chooseDemoSource(source)}>
+                    <img src={source.url} alt="" loading="lazy" />
+                    <span>{source.label}</span>
+                  </button>
+                {/each}
+              </div>
+            {:else}
+              <p>{m.rimg_photo_hint()}</p>
+              <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
+              <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
+                {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
+              </button>
+            {/if}
 
             {#if upload && objectUrl && cropProjection}
               <div class="room-image-crop" role="img" aria-label={m.rimg_crop_label()} onpointerdown={setCropCenter}

@@ -45,17 +45,28 @@ function publicDemoHouseholdConfig() {
   };
 }
 
+/* Das Personen-Präfix ist Zuordnung, kein Text: es steuert Sektion und
+   Post-it-Farbe und wird vor der Anzeige entfernt (reminders.ts). Deshalb
+   steht es hier und nicht im Katalog. */
+function demoReminder(id: string, title: string, completed: boolean) {
+  return {
+    id, title, completed,
+    due: null, description: null, priority: null,
+    created: nowIso(), edited: nowIso(), source: 'hmi',
+  };
+}
+
 function demoReminders() {
   return {
     version: 1,
     updatedAt: nowIso(),
     items: [
-      { id: 'demo-1', title: 'Alex - Fahrradlicht reparieren', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-2', title: 'Sam - Ersatzfilter bestellen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-3', title: 'Beide - Termin Autowerkstatt ausmachen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-4', title: 'Alex - Pflanzen umtopfen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-5', title: 'Sam - Fenstergriff nachziehen', completed: false, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
-      { id: 'demo-6', title: 'Beide - Keller aufräumen', completed: true, due: null, description: null, priority: null, created: nowIso(), edited: nowIso(), source: 'hmi' },
+      demoReminder('demo-1', `Alex - ${m.demo_todo_bike_light()}`, false),
+      demoReminder('demo-2', `Sam - ${m.demo_todo_filter()}`, false),
+      demoReminder('demo-3', `Beide - ${m.demo_todo_garage()}`, false),
+      demoReminder('demo-4', `Alex - ${m.demo_todo_plants()}`, false),
+      demoReminder('demo-5', `Sam - ${m.demo_todo_window()}`, false),
+      demoReminder('demo-6', `Beide - ${m.demo_todo_cellar()}`, true),
     ],
   };
 }
@@ -71,26 +82,26 @@ function demoShopping() {
         id: 'walmart',
         title: 'Walmart',
         items: [
-          { id: 'demo-a1', title: 'Hafermilch', checked: false },
-          { id: 'demo-a2', title: 'Tomaten', checked: false },
-          { id: 'demo-a3', title: 'Brot', checked: true, checkedAt: nowIso() },
+          { id: 'demo-a1', title: m.demo_shop_oat_milk(), checked: false },
+          { id: 'demo-a2', title: m.demo_shop_tomatoes(), checked: false },
+          { id: 'demo-a3', title: m.demo_shop_bread(), checked: true, checkedAt: nowIso() },
         ],
       },
       {
         id: 'carrefour',
         title: 'Carrefour',
         items: [
-          { id: 'demo-r1', title: 'Kaffeebohnen', checked: false },
-          { id: 'demo-r2', title: 'Parmesan', checked: false },
-          { id: 'demo-r3', title: 'Olivenöl', checked: false },
+          { id: 'demo-r1', title: m.demo_shop_coffee(), checked: false },
+          { id: 'demo-r2', title: m.demo_shop_parmesan(), checked: false },
+          { id: 'demo-r3', title: m.demo_shop_olive_oil(), checked: false },
         ],
       },
       {
         id: 'tesco',
         title: 'Tesco',
         items: [
-          { id: 'demo-d1', title: 'Zahnpasta', checked: false },
-          { id: 'demo-d2', title: 'Waschmittel', checked: false },
+          { id: 'demo-d1', title: m.demo_shop_toothpaste(), checked: false },
+          { id: 'demo-d2', title: m.demo_shop_detergent(), checked: false },
         ],
       },
     ],
@@ -218,6 +229,7 @@ export function installDemoApi(): void {
   };
 
   resetDemoState();
+  applyDemoDefaultLocale();
   document.documentElement.setAttribute('data-demo', 'true');
   addDemoBadge();
 }
@@ -231,6 +243,18 @@ function resetDemoState(): void {
     localStorage.removeItem('hmi:shopping-cache');
     localStorage.removeItem('hmi:shopping-done-log.v1');
   } catch { /* Storage nicht verfügbar — dann gibt es auch nichts zu räumen */ }
+}
+
+/* Die Demo richtet sich an ein internationales Publikum und startet deshalb
+   auf Englisch, nicht auf der Basissprache des Katalogs. Gesetzt wird nur, wenn
+   noch keine Wahl vorliegt — die Sprachumschaltung im Betrieb bleibt gültig.
+   Läuft vor dem Mount, damit der erste Aufbau schon englisch ist. */
+function applyDemoDefaultLocale(): void {
+  try {
+    if (localStorage.getItem('PARAGLIDE_LOCALE') === null) {
+      localStorage.setItem('PARAGLIDE_LOCALE', 'en');
+    }
+  } catch { /* Storage blockiert — dann greift die Browsersprache */ }
 }
 
 /* Räume werden nach dem ersten Paint und bei jeder Geräteänderung neu aus dem

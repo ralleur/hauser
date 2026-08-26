@@ -7,7 +7,7 @@ export function applyDemoNames(rooms: {
   id: string;
   name: string;
   presence: boolean;
-  lights: Array<{ entityId: string }>;
+  lights: Array<{ entityId: string; name: string }>;
 }[]): void {
   if (import.meta.env.VITE_DEMO !== '1') return;
 
@@ -15,6 +15,18 @@ export function applyDemoNames(rooms: {
     wohnzimmer: m.demo_room_wohnzimmer, kinderzimmer: m.demo_room_kinderzimmer,
     schlafzimmer: m.demo_room_schlafzimmer, bad: m.demo_room_bad,
     kueche: m.demo_room_kueche, flur: m.demo_room_flur,
+  };
+  /* Die Gerätenamen stammen aus dem Referenz-Seed und sind dort deutsch. In der
+     Demo folgen sie derselben Sprache wie die Raumnamen. */
+  const device: Record<string, () => string> = {
+    'light.wohnzimmer_kugellampen': m.demo_device_kugellampen,
+    'light.wohnzimmer_esstisch': m.demo_device_esstisch,
+    'light.wohnzimmer_tv': m.demo_device_kugel_tv,
+    'light.wohnzimmer_fensterlampe': m.demo_device_kugel_fenster,
+    'light.schlafzimmer_bett': m.demo_device_bett,
+    'light.schlafzimmer_schreibtisch': m.demo_device_schreibtisch,
+    'light.bad_spiegel': m.demo_device_spiegel,
+    'light.kueche_ledleiste': m.demo_device_ledfridge,
   };
   const present = new Set(['wohnzimmer', 'kueche']);
   const lightsOn: Readonly<Record<string, readonly number[]>> = {
@@ -50,6 +62,7 @@ export function applyDemoNames(rooms: {
     }
     const activeIndexes = new Set(lightsOn[item.id] ?? []);
     item.lights.forEach((light, index) => {
+      if (device[light.entityId]) light.name = device[light.entityId]();
       if (activeIndexes.has(index)) {
         merge(light.entityId, { on: true, brightness: index === 0 ? 68 : 42 });
       }

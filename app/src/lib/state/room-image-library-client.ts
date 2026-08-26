@@ -1,5 +1,9 @@
 import type { RoomImageFocus } from './room-image-client.ts';
 
+/* Die öffentliche Demo hat keinen Companion-Server; die Bibliothek kommt aus
+   vorbereiteten Assets. Dynamischer Import: kein Demo-Code im Produktbundle. */
+const IS_DEMO = import.meta.env?.VITE_DEMO === '1';
+
 export interface RoomImageLibraryAsset {
   assetId: string;
   variants: { light: string; dark: string; darkOff: string };
@@ -51,6 +55,7 @@ function isAsset(value: unknown): value is RoomImageLibraryAsset {
 }
 
 export async function loadRoomImageLibrary(): Promise<RoomImageLibrary> {
+  if (IS_DEMO) return (await import('../demo/demo-room-images.ts')).demoRoomImageLibrary();
   const response = await fetch('/api/room-image-assets', {
     method: 'GET', credentials: 'same-origin',
   });
@@ -75,6 +80,10 @@ export async function assignRoomImage(
   asset: { assetId: string; focus: RoomImageFocus } | null,
   householdEtag: string,
 ): Promise<void> {
+  if (IS_DEMO) {
+    (await import('../demo/demo-room-images.ts')).demoAssignRoomImage(roomId, asset?.assetId ?? null);
+    return;
+  }
   const response = await fetch(`/api/room-image-assignments/${encodeURIComponent(roomId)}`, {
     method: 'PUT',
     credentials: 'same-origin',
@@ -85,6 +94,10 @@ export async function assignRoomImage(
 }
 
 export async function deleteRoomImageAsset(assetId: string): Promise<void> {
+  if (IS_DEMO) {
+    (await import('../demo/demo-room-images.ts')).demoDeleteRoomImageAsset(assetId);
+    return;
+  }
   const response = await fetch(`/api/room-image-assets/${encodeURIComponent(assetId)}`, {
     method: 'DELETE', credentials: 'same-origin',
   });

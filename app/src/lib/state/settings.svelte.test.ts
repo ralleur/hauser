@@ -60,23 +60,23 @@ describe('setHaUrl', () => {
 });
 
 describe('setAmbientHeroText', () => {
-  it('ist standardmäßig aktiv und persistiert nur das Ausschalten', async () => {
+  it('ist standardmäßig aus und persistiert nur das Einschalten', async () => {
     const { settingsValues, setAmbientHeroText } = await freshSettings();
-    expect(settingsValues.ambientHeroText).toBe(true);
-
-    setAmbientHeroText(false);
     expect(settingsValues.ambientHeroText).toBe(false);
-    expect(localStorage.getItem('hmi:ambient-hero-text')).toBe('off');
 
     setAmbientHeroText(true);
     expect(settingsValues.ambientHeroText).toBe(true);
+    expect(localStorage.getItem('hmi:ambient-hero-text')).toBe('on');
+
+    setAmbientHeroText(false);
+    expect(settingsValues.ambientHeroText).toBe(false);
     expect(localStorage.getItem('hmi:ambient-hero-text')).toBeNull();
   });
 
-  it('übernimmt einen gespeicherten ausgeschalteten Zustand', async () => {
-    localStorage.setItem('hmi:ambient-hero-text', 'off');
+  it('übernimmt einen gespeicherten eingeschalteten Zustand', async () => {
+    localStorage.setItem('hmi:ambient-hero-text', 'on');
     const { settingsValues } = await freshSettings();
-    expect(settingsValues.ambientHeroText).toBe(false);
+    expect(settingsValues.ambientHeroText).toBe(true);
   });
 });
 

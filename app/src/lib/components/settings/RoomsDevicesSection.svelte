@@ -13,7 +13,6 @@
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../../config/product-capabilities.ts';
   import { settingsValues } from '../../state/settings.svelte.ts';
   import { resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 
   let roomImageWizardOpen = $state(false);
@@ -28,7 +27,7 @@
   {/if}
 </div>
 
-{#if ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO}
+{#if ROOM_IMAGE_WIZARD_ENABLED}
   <div class="settings-group">
     <SettingsCardHead icon="i-image" tint="warm"
                       title={m.sys_room_images()} sub={m.sys_room_images_hint()} />

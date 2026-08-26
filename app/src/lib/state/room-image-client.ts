@@ -753,7 +753,28 @@ function uploadPath(uploadId: string): string {
   return `/api/room-image-uploads/${encodeURIComponent(uploadId)}`;
 }
 
+/* Die öffentliche Demo hat keinen Companion-Server. Sie beantwortet dieselbe
+   API aus vorbereiteten Assets — der dynamische Import hält den Demo-Code aus
+   dem Produktionsbundle heraus. */
+function demoClient(): RoomImageApi {
+  const loading = import('../demo/demo-room-images.ts').then((demo) => demo.createDemoRoomImageApi());
+  return {
+    getCapability: async () => (await loading).getCapability(),
+    getCapabilityDetails: async () => (await loading).getCapabilityDetails(),
+    probeCapability: async () => (await loading).probeCapability(),
+    upload: async (data, mimeType) => (await loading).upload(data, mimeType),
+    deleteUpload: async (uploadId) => (await loading).deleteUpload(uploadId),
+    createJob: async (request) => (await loading).createJob(request),
+    getJob: async (jobId, requestOptions) => (await loading).getJob(jobId, requestOptions),
+    retryJob: async (jobId, request) => (await loading).retryJob(jobId, request),
+    cancelJob: async (jobId) => (await loading).cancelJob(jobId),
+    discardJob: async (jobId) => (await loading).discardJob(jobId),
+    publishJob: async (jobId, confirmed) => (await loading).publishJob(jobId, confirmed),
+  };
+}
+
 export function createRoomImageClient(options: RoomImageClientOptions = {}): RoomImageApi {
+  if (!options.fetchImpl && import.meta.env?.VITE_DEMO === '1') return demoClient();
   const fetchImpl = options.fetchImpl ?? fetch;
   return {
     getCapability: () => requestJson(

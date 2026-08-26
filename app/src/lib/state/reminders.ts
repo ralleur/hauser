@@ -7,6 +7,8 @@
    reminders.svelte.ts.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
+
 export interface ReminderSource {
   entityId: string; // todo.*
   name: string;
@@ -80,6 +82,13 @@ export const PERSON_LABELS: Readonly<Record<ReminderPerson, string>> = {
   sam: 'Sam',
   beide: 'Beide',
 };
+
+/* PERSON_LABELS ist das Präfix im gespeicherten Titel und bleibt deshalb
+   unverändert. Für die Anzeige sind die Vornamen Eigennamen, „Beide" dagegen
+   ein normales Wort — nur das wird übersetzt. */
+export function personDisplayLabel(person: ReminderPerson): string {
+  return person === 'beide' ? m.reminders_person_both() : PERSON_LABELS[person];
+}
 
 const PERSON_PREFIX = /^(alex|sam|beide)\s*[-–:]\s*/i;
 

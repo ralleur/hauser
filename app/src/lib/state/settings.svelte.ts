@@ -56,7 +56,7 @@ export const settingsValues = $state({
   jellyfinUrl: lsGet('hmi:jf-url') ?? '',
   libraryMode: (lsGet('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake',
   classicLockButton: lsGet('hmi:lock-button') === 'classic',
-  ambientHeroText: lsGet('hmi:ambient-hero-text') !== 'off',
+  ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
     ? null
@@ -71,11 +71,12 @@ export function setClassicLockButton(on: boolean): void {
   lsSet('hmi:lock-button', on ? 'classic' : null);
 }
 
-/* Experimenteller Tageskommentar im Lockscreen. Default bleibt aktiv; ein
-   explizites „off" blendet die Zeile reaktiv aus und verhindert neue Requests. */
+/* Experimenteller Tageskommentar im Lockscreen. Default ist aus — die Zeile
+   ruft einen LLM-Dienst auf, das bleibt eine bewusste Entscheidung. Ein
+   explizites „on" blendet sie reaktiv ein. */
 export function setAmbientHeroText(on: boolean): void {
   settingsValues.ambientHeroText = on;
-  lsSet('hmi:ambient-hero-text', on ? null : 'off');
+  lsSet('hmi:ambient-hero-text', on ? 'on' : null);
 }
 
 /* Deep Night reduziert den Lockscreen zwischen 22:00 und 06:00 auf eine rote

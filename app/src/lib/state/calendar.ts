@@ -1,3 +1,6 @@
+import { m } from '../../paraglide/messages.js';
+import { intlLocale } from './locale.svelte.ts';
+
 export interface CalendarSource {
   entityId: string;
   name: string;
@@ -110,24 +113,38 @@ export interface CalendarMonthWeek {
 const dayKeyFormatter = new Intl.DateTimeFormat('sv-SE', {
   year: 'numeric', month: '2-digit', day: '2-digit',
 });
-const dayLabelFormatter = new Intl.DateTimeFormat('de-DE', {
-  weekday: 'long', day: 'numeric', month: 'long',
-});
-const weekdayFormatter = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
-const timeFormatter = new Intl.DateTimeFormat('de-DE', {
-  hour: '2-digit', minute: '2-digit',
-});
-const monthHeadingFormatter = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
-const monthShortFormatter = new Intl.DateTimeFormat('de-DE', { month: 'short' });
+/* Datum und Uhrzeit folgen der Oberflächensprache (ADR-021). Die Formatter
+   werden je Sprache einmal gebaut und behalten — `new Intl.DateTimeFormat` pro
+   Aufruf wäre im Wochenraster teuer. */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatter(key: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = intlLocale();
+  const cacheKey = `${locale}|${key}`;
+  let cached = formatters.get(cacheKey);
+  if (!cached) {
+    cached = new Intl.DateTimeFormat(locale, options);
+    formatters.set(cacheKey, cached);
+  }
+  return cached;
+}
+
+const dayLabelFormatter = () => formatter('dayLabel', { weekday: 'long', day: 'numeric', month: 'long' });
+const weekdayFormatter = () => formatter('weekday', { weekday: 'short' });
+const timeFormatter = () => formatter('time', { hour: '2-digit', minute: '2-digit' });
+const monthHeadingFormatter = () => formatter('monthHeading', { month: 'long', year: 'numeric' });
+const monthShortFormatter = () => formatter('monthShort', { month: 'short' });
 
 /* Wochentagskürzel Mo–So (Woche beginnt montags) — einmal aus dem Formatter
    abgeleitet, damit die Kalender-Kopfzeile und die Projektion dieselbe
-   Schreibweise teilen. */
-export const WEEKDAY_LABELS: readonly string[] = Array.from({ length: 7 }, (_, offset) => {
-  const day = startOfWeek(new Date(2026, 0, 5)); // 5. Jan 2026 ist ein Montag
-  day.setDate(day.getDate() + offset);
-  return weekdayFormatter.format(day).replace('.', '');
-});
+   Schreibweise teilen. Als Funktion, weil die Sprache zur Laufzeit wechselt. */
+export function weekdayLabels(): readonly string[] {
+  return Array.from({ length: 7 }, (_, offset) => {
+    const day = startOfWeek(new Date(2026, 0, 5)); // 5. Jan 2026 ist ein Montag
+    day.setDate(day.getDate() + offset);
+    return weekdayFormatter().format(day).replace('.', '');
+  });
+}
 
 export function selectFamilyCalendar(sources: readonly CalendarSource[]): CalendarSource | null {
   return sources.find((source) => source.name.trim().toLocaleLowerCase('de-DE') === 'familie') ?? null;
@@ -227,12 +244,12 @@ export function projectCalendarWeeks(
       return {
         key,
         dayOfMonth: date.getDate(),
-        monthShort: date.getDate() === 1 ? monthShortFormatter.format(date).replace('.', '') : null,
+        monthShort: date.getDate() === 1 ? monthShortFormatter().format(date).replace('.', '') : null,
         isToday: key === todayKey,
         isPast: key < todayKey,
         events: shown.map((item) => ({
           id: item.id,
-          time: item.allDay ? null : timeFormatter.format(eventStart(item)),
+          time: item.allDay ? null : timeFormatter().format(eventStart(item)),
           title: item.title,
           allDay: item.allDay,
           now: eventIsRunning(item, now),
@@ -286,7 +303,7 @@ export function projectCalendarWeeks(
     return {
       key: days[0].key,
       monthKey: `${thursday.getFullYear()}-${thursday.getMonth()}`,
-      monthLabel: monthHeadingFormatter.format(thursday),
+      monthLabel: monthHeadingFormatter().format(thursday),
       isCurrent: days.some((day) => day.isToday),
       days,
       bars,
@@ -306,15 +323,15 @@ export function groupAgendaDays(events: readonly CalendarEvent[], now = new Date
   }
   return [...groups.entries()].map(([key, items]) => ({
     key,
-    label: dayLabelFormatter.format(eventStart(items[0])),
+    label: dayLabelFormatter().format(eventStart(items[0])),
     today: key === today,
     events: items,
   }));
 }
 
 export function formatAgendaTime(item: CalendarEvent): string {
-  if (item.allDay) return 'Ganztägig';
-  return `${timeFormatter.format(eventStart(item))}–${timeFormatter.format(eventEnd(item))}`;
+  if (item.allDay) return m.calendar_all_day();
+  return `${timeFormatter().format(eventStart(item))}–${timeFormatter().format(eventEnd(item))}`;
 }
 
 const AMBIENT_WEEK_DAYS = 7;
@@ -338,7 +355,7 @@ export function projectAmbientToday(
     .sort((a, b) => eventStart(a).getTime() - eventStart(b).getTime());
   const items = todays.slice(0, AMBIENT_TODAY_MAX).map((item) => ({
     id: item.id,
-    time: item.allDay ? null : timeFormatter.format(eventStart(item)),
+    time: item.allDay ? null : timeFormatter().format(eventStart(item)),
     title: item.title,
     now: eventIsRunning(item, now),
   }));
@@ -367,11 +384,11 @@ export function projectAmbientWeek(
     const dayEvents = upcoming.filter((item) => localDayKey(eventStart(item)) === key);
     return {
       key,
-      weekday: weekdayFormatter.format(day).replace('.', ''),
+      weekday: weekdayFormatter().format(day).replace('.', ''),
       dayOfMonth: day.getDate(),
       events: dayEvents.slice(0, AMBIENT_WEEK_EVENTS_PER_DAY).map((item) => ({
         id: item.id,
-        time: item.allDay ? 'Ganztägig' : timeFormatter.format(eventStart(item)),
+        time: item.allDay ? m.calendar_all_day() : timeFormatter().format(eventStart(item)),
         title: item.title,
         emphasis: item.id === nextId ? 'next' as const : null,
       })),

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
   import { clock } from '../state/clock.svelte.ts';
@@ -282,7 +283,7 @@
               <span class="ambient-week-title">{event.title}</span>
             </div>
           {/each}
-          {#if day.more}<div class="ambient-week-more">+{day.more} weitere</div>{/if}
+          {#if day.more}<div class="ambient-week-more">{m.ambient_more_count({ count: day.more })}</div>{/if}
           {#if !day.events.length}<div class="ambient-week-empty" aria-hidden="true">—</div>{/if}
         </div>
       {/each}
@@ -304,7 +305,7 @@
         </div>
       {/each}
       {#if postits.more}
-        <div class="ambient-postit-more num">+{postits.more} weitere</div>
+        <div class="ambient-postit-more num">{m.ambient_more_count({ count: postits.more })}</div>
       {/if}
     </aside>
   {/if}
@@ -314,9 +315,9 @@
        zentralen Einkaufsliste, ohne Checkboxen, mit den Laden-Überschriften.
        Leicht gekippt wie angepinntes Papier; nachts gedämpft. -->
   {#if shoppingSections.length && !deepNight}
-    <aside class="ambient-shopping" aria-label="Einkaufsliste">
+    <aside class="ambient-shopping" aria-label={m.ambient_shopping_title()}>
       <div class="ambient-shopping-paper">
-        <h3 class="ambient-shopping-title">Einkaufsliste</h3>
+        <h3 class="ambient-shopping-title">{m.ambient_shopping_title()}</h3>
         {#each shoppingSections as section (section.id)}
           <div class="ambient-shopping-store">{section.title}</div>
           <ul class="ambient-shopping-items">
