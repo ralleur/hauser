@@ -70,6 +70,10 @@ describe('deterministic setup household suggestion', () => {
       homeOffScript: null,
       laundry: { washer: null, dryer: null },
     });
+    expect(suggestion.config.navigation.map(({ target }) => target.id)).toEqual([
+      'home', 'calendar', 'notes', 'system',
+    ]);
+    expect(suggestion.config.enabledModules).toEqual(['home', 'calendar', 'notes', 'system']);
 
     const parsed = parseHouseholdConfig(suggestion.config);
     expect(parsed.ok).toBe(true);
@@ -102,6 +106,10 @@ describe('deterministic setup household suggestion', () => {
     expect(suggestion.config.mediaTargets).toEqual([
       expect.objectContaining({ entityId: 'media_player.living_sonos', roomId: 'living_room' }),
     ]);
+    expect(suggestion.config.navigation.map(({ target }) => target.id)).toEqual([
+      'home', 'calendar', 'notes', 'media', 'system',
+    ]);
+    expect(suggestion.config.enabledModules).toEqual(['home', 'calendar', 'notes', 'media', 'system']);
     expect(suggestion.ignoredEntityIds).not.toEqual(expect.arrayContaining([
       'switch.living_lamp',
       'switch.living_fountain',

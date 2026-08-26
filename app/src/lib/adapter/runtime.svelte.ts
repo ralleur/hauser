@@ -12,7 +12,7 @@ import { demoEnergySeed } from '../demo/demo-mode.ts';
 import { HaBackend } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
-import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue } from './types.ts';
+import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate } from './types.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
@@ -120,6 +120,10 @@ export class AdapterRuntime {
 
   async getReminders(entityId: string): Promise<Reminder[]> {
     return this.#backend.getReminders?.(entityId) ?? [];
+  }
+
+  async listSystemUpdates(): Promise<SystemUpdate[]> {
+    return this.#backend.listSystemUpdates?.() ?? [];
   }
 
   /* ── Gemergte Sicht (Schicht 4): das Einzige, was die UI liest ──

@@ -18,6 +18,7 @@
   import { ambientCopy, refreshAmbientCopy } from '../state/ambient-copy.svelte.ts';
   import { outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
+  import { localeState } from '../state/locale.svelte.ts';
   import { isDeepNightHour } from '../state/ambient-deep-night.ts';
   import type { TempTrend } from '../state/weather.ts';
   import Icon from './Icon.svelte';
@@ -185,9 +186,10 @@
   const heroCopy = $derived.by(() => {
     if (!settingsValues.ambientHeroText) return [];
     void clock.time;
-    return ambientCopy.lines.length
+    void localeState.current;
+    return ambientCopy.locale === localeState.current && ambientCopy.lines.length
       ? ambientCopy.lines
-      : generateAmbientCopy(familyCalendar.events, outdoor, new Date()).lines;
+      : generateAmbientCopy(familyCalendar.events, outdoor, new Date(), localeState.current).lines;
   });
   $effect(() => {
     if (!settingsValues.ambientHeroText) return;

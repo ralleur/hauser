@@ -1,7 +1,11 @@
 import { intlLocale } from './locale.svelte.ts';
 import { m } from '../../paraglide/messages.js';
 /* ── Uhr (tnum — kein Wackeln beim Minutenwechsel) ──
-   10-s-Tick wie im Clickdummy; Status-Bar und Ambient lesen dieselben Werte. */
+   10-s-Tick wie im Clickdummy; Status-Bar und Ambient lesen dieselben Werte.
+   Safari darf Timer in inaktiven Tabs anhalten. Sichtbarkeit, Fokus und
+   Page-Resume ziehen die Anzeige deshalb sofort auf die echte Zeit nach. */
+
+const CLOCK_TICK_MS = 10_000;
 
 function now() {
   const d = new Date();
@@ -14,9 +18,18 @@ function now() {
 
 export const clock = $state(now());
 
-setInterval(() => {
+function refreshClock(): void {
   Object.assign(clock, now());
-}, 10_000);
+}
+
+if (typeof window !== 'undefined') {
+  window.setInterval(refreshClock, CLOCK_TICK_MS);
+  window.addEventListener('focus', refreshClock);
+  window.addEventListener('pageshow', refreshClock);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshClock();
+  });
+}
 
 export function greetingForHour(h: number): string {
   if (h >= 5 && h < 11) return m.greeting_morning();

@@ -2,7 +2,8 @@
   import '../../styles/settings.css';
   import { tick, type Component } from 'svelte';
   import Icon from '../components/Icon.svelte';
-  import { appState } from '../state/app.svelte.ts';
+  import { systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
+  import { connection } from '../state/connection.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   import {
@@ -39,6 +40,10 @@
   const section = $derived(settingsSection(settingsUi.section));
   const results = $derived(searchSettings(settingsUi.query));
   const sidebar = $derived(settingsSidebar());
+
+  $effect(() => {
+    if (connection().status === 'connected') void refreshSystemStatus();
+  });
 
   /* Sektions-Id → Komponente. Die Registry bestimmt Reihenfolge und
      Gruppierung, diese Tabelle nur, was im Detailbereich gerendert wird.
@@ -149,8 +154,8 @@
                         onclick={() => selectSection(s.id)}>
                   <span class="settings-icon-tile tint-{s.tint}"><Icon name={s.icon} cls="icon icon-md" /></span>
                   <span class="settings-nav-label">{s.label}</span>
-                  {#if s.id === 'status' && appState.system.updates.length}
-                    <span class="settings-badge num">{appState.system.updates.length}</span>
+                  {#if s.id === 'status' && systemStatus.updates.length}
+                    <span class="settings-badge num">{systemStatus.updates.length}</span>
                   {/if}
                   <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
                 </button>

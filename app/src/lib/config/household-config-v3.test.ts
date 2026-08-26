@@ -204,6 +204,30 @@ describe('canonical household schema v4 hero contract', () => {
 });
 
 describe('sequential household v1/v2/v3 to v4 migration', () => {
+  it('adds Calendar and Notes to the exact beta onboarding navigation without changing custom configs', () => {
+    const input = v3Fixture();
+    input.mediaTargets = [];
+    input.navigation = [
+      { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
+      { id: 'system', name: 'System', order: 1, target: { type: 'module', id: 'system' } },
+    ];
+    input.enabledModules = ['home', 'system'];
+    const before = structuredClone(input);
+
+    const result = migrateHouseholdConfigDocument(input);
+
+    expect(result).toMatchObject({ ok: true, status: 'migrated', fromVersion: 4, toVersion: 4 });
+    if (!result.ok) throw new Error(result.message);
+    expect((result.document.navigation as Array<Record<string, any>>).map(({ target }) => target.id))
+      .toEqual(['home', 'calendar', 'notes', 'system']);
+    expect(result.document.enabledModules).toEqual(['home', 'calendar', 'notes', 'system']);
+    expect(input).toEqual(before);
+    expect(migrateHouseholdConfigDocument(result.document)).toMatchObject({ ok: true, status: 'current' });
+
+    const custom = v3Fixture();
+    expect(migrateHouseholdConfigDocument(custom)).toMatchObject({ ok: true, status: 'current' });
+  });
+
   it.each([1, 2])('migrates v%s without mutation and adds exactly hero null in room order', (version) => {
     const input = v2Fixture();
     input.schemaVersion = version;

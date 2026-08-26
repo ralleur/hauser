@@ -22,9 +22,11 @@ function validConfig() {
     }],
     navigation: [
       { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
-      { id: 'system', name: 'System', order: 1, target: { type: 'module', id: 'system' } },
+      { id: 'calendar', name: 'Calendar', order: 1, target: { type: 'module', id: 'calendar' } },
+      { id: 'notes', name: 'Notes', order: 2, target: { type: 'module', id: 'notes' } },
+      { id: 'system', name: 'System', order: 3, target: { type: 'module', id: 'system' } },
     ],
-    enabledModules: ['home', 'system'],
+    enabledModules: ['home', 'calendar', 'notes', 'system'],
     energy: null,
     mediaTargets: [],
     globalEntities: {
@@ -55,6 +57,11 @@ function legacyConfig(version: 1 | 2 = 1) {
   const config = structuredClone(validConfig()) as Record<string, any>;
   config.schemaVersion = version;
   for (const room of config.rooms) delete room.hero;
+  config.navigation = [
+    { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
+    { id: 'system', name: 'System', order: 1, target: { type: 'module', id: 'system' } },
+  ];
+  config.enabledModules = ['home', 'system'];
   return config;
 }
 

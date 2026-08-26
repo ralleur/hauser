@@ -22,7 +22,7 @@ import {
   ERR_INVALID_AUTH,
   type Connection,
 } from 'home-assistant-js-websocket';
-import type { AuthRequiredReason, Backend, ConnectionStatus } from './types.ts';
+import type { AuthRequiredReason, Backend, ConnectionStatus, SystemUpdate } from './types.ts';
 import {
   applyEntitiesDiff,
   haToLaundryState,
@@ -210,6 +210,20 @@ export class HaBackend implements Backend {
       reminderListMessage(entityId),
     );
     return (result.items ?? []).map((item, index) => reminderFromHa(item, index));
+  }
+
+  async listSystemUpdates(): Promise<SystemUpdate[]> {
+    if (!this.#conn || this.#status !== 'connected') return [];
+    const states = await getStates(this.#conn);
+    return states
+      .filter((state) => state.entity_id.startsWith('update.') && state.state === 'on')
+      .map((state) => ({
+        entityId: state.entity_id,
+        name: String(state.attributes.title ?? state.attributes.friendly_name ?? state.entity_id),
+        installedVersion: String(state.attributes.installed_version ?? '—'),
+        latestVersion: String(state.attributes.latest_version ?? '—'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /* ── iCloud-Kalender einrichten (Einstellungen → Kalender) ──

@@ -7,6 +7,7 @@
   import { hudClockTap } from '../state/hud.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
+  import { nav } from '../state/nav.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   const conn = $derived(connection());
@@ -55,7 +56,7 @@
       <span class="theme-toggle-label">{modeLabel}</span>
     </button>
     <!-- Standby: Langes Halten bietet den direkten Wechsel zum großen Button an. -->
-    {#if settingsValues.classicLockButton}
+    {#if settingsValues.classicLockButton || nav.screen === 'system'}
       <LockButton variant="titlebar" />
     {/if}
     <span class="ha-status"><span class="dot {conn.dot}"></span>{conn.label}</span>

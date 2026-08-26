@@ -135,13 +135,69 @@ function migrateV3ToV4(document: JsonObject): JsonObject {
   return { ...document, schemaVersion: HOUSEHOLD_SCHEMA_VERSION };
 }
 
+function isGeneratedSetupNavigationItem(
+  value: unknown,
+  id: 'home' | 'system',
+  order: number,
+): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const item = value as JsonObject;
+  const target = item.target;
+  return item.id === id
+    && item.name === (id === 'home' ? 'Home' : 'System')
+    && item.order === order
+    && typeof target === 'object'
+    && target !== null
+    && !Array.isArray(target)
+    && (target as JsonObject).type === 'module'
+    && (target as JsonObject).id === id;
+}
+
+/** Adds the screens that beta onboarding omitted, without touching custom nav. */
+function migrateGeneratedSetupNavigation(document: JsonObject): { document: JsonObject; changed: boolean } {
+  const navigation = document.navigation;
+  const enabledModules = document.enabledModules;
+  if (!Array.isArray(navigation) || !Array.isArray(enabledModules)) return { document, changed: false };
+  if (navigation.length !== 2
+    || !isGeneratedSetupNavigationItem(navigation[0], 'home', 0)
+    || !isGeneratedSetupNavigationItem(navigation[1], 'system', 1)) {
+    return { document, changed: false };
+  }
+
+  const enabled = new Set(enabledModules);
+  const hasMedia = enabled.has('media');
+  const expected = hasMedia ? new Set(['home', 'media', 'system']) : new Set(['home', 'system']);
+  if (enabled.size !== expected.size || [...enabled].some((id) => !expected.has(String(id)))) {
+    return { document, changed: false };
+  }
+
+  return {
+    changed: true,
+    document: {
+      ...document,
+      navigation: [
+        navigation[0],
+        { id: 'calendar', name: 'Calendar', order: 1, target: { type: 'module', id: 'calendar' } },
+        { id: 'notes', name: 'Notes', order: 2, target: { type: 'module', id: 'notes' } },
+        ...(hasMedia
+          ? [{ id: 'media', name: 'Media', order: 3, target: { type: 'module', id: 'media' } }]
+          : []),
+        { ...(navigation[1] as JsonObject), order: hasMedia ? 4 : 3 },
+      ],
+      enabledModules: hasMedia
+        ? ['home', 'calendar', 'notes', 'media', 'system']
+        : ['home', 'calendar', 'notes', 'system'],
+    },
+  };
+}
+
 function isMigrationFailure(
   value: JsonObject | HouseholdConfigMigrationResult,
 ): value is Extract<HouseholdConfigMigrationResult, { ok: false }> {
   return Object.hasOwn(value, 'ok') && value.ok === false;
 }
 
-/** Pure, deterministic and non-mutating v1 -> v2 -> v3 -> v4 migration boundary. */
+/** Pure, deterministic and non-mutating schema and beta-onboarding migration boundary. */
 export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigMigrationResult {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return {
@@ -169,12 +225,23 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
   }
   if (version === HOUSEHOLD_SCHEMA_VERSION) {
     const parsed = parseHouseholdConfig(document);
-    return parsed.ok ? {
+    if (!parsed.ok) return invalidCurrent(parsed.issues[0]);
+    const setupNavigation = migrateGeneratedSetupNavigation(document);
+    if (!setupNavigation.changed) return {
       ok: true,
       status: 'current',
       document,
       version: HOUSEHOLD_SCHEMA_VERSION,
-    } : invalidCurrent(parsed.issues[0]);
+    };
+    const invalid = validateCurrent(setupNavigation.document);
+    if (invalid) return invalid;
+    return {
+      ok: true,
+      status: 'migrated',
+      document: setupNavigation.document,
+      fromVersion: HOUSEHOLD_SCHEMA_VERSION,
+      toVersion: HOUSEHOLD_SCHEMA_VERSION,
+    };
   }
   if (version !== 1 && version !== 2 && version !== 3) {
     return {
@@ -195,7 +262,7 @@ export function migrateHouseholdConfigDocument(input: unknown): HouseholdConfigM
     if (isMigrationFailure(stepped)) return stepped;
     v3 = stepped;
   }
-  const migrated = migrateV3ToV4(v3);
+  const migrated = migrateGeneratedSetupNavigation(migrateV3ToV4(v3)).document;
   const invalid = validateCurrent(migrated);
   if (invalid) return invalid;
 

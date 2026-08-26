@@ -1,9 +1,12 @@
 <script lang="ts">
   /* ── System · Zustand ──
-     Reine Diagnoseanzeige der Smart-Home-Dienste. Die Erreichbarkeit der
-     Integrationen selbst steht in „Verbindungen · Dienste“ — hier geht es um
-     die Dienste hinter Home Assistant (Zigbee, MQTT, Tunnel, …). */
+     Produktiv ausschließlich verifizierbare Live-Daten: eigener HA-
+     Verbindungszustand und echte `update.*`-Entitäten. Die ausführliche
+     erfundene Diensteliste bleibt auf die klar markierte Demo beschränkt. */
   import { appState, SERVICE_STATUS } from '../../state/app.svelte.ts';
+  import { connection } from '../../state/connection.svelte.ts';
+  import { systemStatus } from '../../state/system-status.svelte.ts';
+  import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
@@ -14,6 +17,7 @@
      Systemübersicht und ohne Adminschutz — die Auskunft gehört jedem Benutzer,
      auch später in einer Gastoberfläche. */
   const license = $derived(licenseSourceView(buildInfo));
+  const conn = $derived(connection());
   const licenseTextUrl = `${import.meta.env.BASE_URL}legal/agpl-3.0.txt`;
 
   $effect(() => { void loadBuildInfo(); });
@@ -25,28 +29,53 @@
 
 <div class="settings-group" data-setting-id="service-health">
   <SettingsCardHead icon="i-heart-pulse" tint="success" title={m.sys_services()} />
-  {#each appState.system.services as svc (svc.id)}
-    {@const st = SERVICE_STATUS[svc.status]}
-    <div class="settings-row">
-      <span class="dot {st.dot}"></span>
-      <div class="settings-row-text">
-        <span class="settings-row-label">{svc.name}</span>
-        <span class="settings-row-sub num">{svc.detail}</span>
+  {#if IS_DEMO}
+    {#each appState.system.services as svc (svc.id)}
+      {@const st = SERVICE_STATUS[svc.status]}
+      <div class="settings-row">
+        <span class="dot {st.dot}"></span>
+        <div class="settings-row-text">
+          <span class="settings-row-label">{svc.name}</span>
+          <span class="settings-row-sub num">{svc.detail}</span>
+        </div>
+        <span class="settings-row-badge is-{svc.status}">{st.label}</span>
       </div>
-      <span class="settings-row-badge is-{svc.status}">{st.label}</span>
+    {/each}
+  {:else}
+    <div class="settings-row">
+      <span class="dot {conn.dot}"></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">Home Assistant</span>
+        <span class="settings-row-sub">{m.sys_services_live_hint()}</span>
+      </div>
+      <span class="settings-row-badge" class:is-degraded={!conn.online && !conn.disconnected}
+            class:is-offline={conn.disconnected}>{conn.label}</span>
     </div>
-  {/each}
+  {/if}
 </div>
 
 <div class="settings-group" data-setting-id="update-list">
   <SettingsCardHead icon="i-download" tint="neutral" title={m.sys_card_updates()} />
-  {#each appState.system.updates as u (u.name)}
+  {#each systemStatus.updates as u (u.entityId)}
     <div class="settings-row">
       <span class="settings-row-icon"><Icon name="i-download" cls="icon icon-md" /></span>
       <div class="settings-row-text">
         <span class="settings-row-label">{u.name}</span>
       </div>
-      <span class="settings-row-value num">{u.from} <span class="settings-arrow">→</span> {u.to}</span>
+      <span class="settings-row-value num">{u.installedVersion} <span class="settings-arrow">→</span> {u.latestVersion}</span>
+    </div>
+  {:else}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-check-circle-outline" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">
+          {systemStatus.loading
+            ? m.sys_updates_loading()
+            : systemStatus.failed
+              ? m.sys_updates_failed()
+              : conn.online ? m.sys_updates_none() : m.sys_updates_offline()}
+        </span>
+      </div>
     </div>
   {/each}
 </div>

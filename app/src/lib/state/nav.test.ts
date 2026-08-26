@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { endTransition, nav, normalizeScreen, projectPhoneTarget, type ScreenId } from './nav.svelte.ts';
+import {
+  endTransition,
+  isDefaultTabName,
+  nav,
+  normalizeScreen,
+  projectPhoneTarget,
+  type ScreenId,
+} from './nav.svelte.ts';
 
 describe('canonical navigation projection', () => {
   it.each([
@@ -22,6 +29,14 @@ describe('canonical navigation projection', () => {
   it('falls unknown targets back to home', () => {
     expect(normalizeScreen('unknown')).toBe('home');
     expect(projectPhoneTarget('unknown')).toEqual({ area: 'home' });
+  });
+
+  it('recognizes shipped tab names without treating custom names as defaults', () => {
+    expect(isDefaultTabName('calendar', 'Kalender')).toBe(true);
+    expect(isDefaultTabName('calendar', 'Calendar')).toBe(true);
+    expect(isDefaultTabName('notes', 'Notizen')).toBe(true);
+    expect(isDefaultTabName('library', 'Bibliothek')).toBe(true);
+    expect(isDefaultTabName('media', 'Wohnzimmer Audio')).toBe(false);
   });
 
   it('keeps canonical target while a presentation transition is ended', () => {

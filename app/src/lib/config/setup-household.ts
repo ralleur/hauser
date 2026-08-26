@@ -3,6 +3,7 @@ import type {
   EntityRole,
   HouseholdConfigV4,
   MediaTargetConfig,
+  NavigationItemConfig,
   RoomConfig,
   RoomHeroConfig,
   VisibleEntityConfig,
@@ -407,15 +408,27 @@ export function buildSetupHouseholdSuggestion(
     .filter((entityId) => entityId.startsWith('sun.'))
     .sort()[0] ?? null;
 
+  const navigation: NavigationItemConfig[] = [
+    { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
+    { id: 'calendar', name: 'Calendar', order: 1, target: { type: 'module', id: 'calendar' } },
+    { id: 'notes', name: 'Notes', order: 2, target: { type: 'module', id: 'notes' } },
+    ...(mediaTargets.length > 0
+      ? [{ id: 'media', name: 'Media', order: 3, target: { type: 'module' as const, id: 'media' as const } }]
+      : []),
+    {
+      id: 'system', name: 'System', order: mediaTargets.length > 0 ? 4 : 3,
+      target: { type: 'module', id: 'system' },
+    },
+  ];
+
   return {
     config: {
       schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
       rooms,
-      navigation: [
-        { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
-        { id: 'system', name: 'System', order: 1, target: { type: 'module', id: 'system' } },
-      ],
-      enabledModules: mediaTargets.length > 0 ? ['home', 'media', 'system'] : ['home', 'system'],
+      navigation,
+      enabledModules: mediaTargets.length > 0
+        ? ['home', 'calendar', 'notes', 'media', 'system']
+        : ['home', 'calendar', 'notes', 'system'],
       energy: null,
       mediaTargets,
       globalEntities: {

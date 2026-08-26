@@ -13,6 +13,13 @@
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 export type AuthRequiredReason = 'missing-token' | 'invalid-auth';
 
+export interface SystemUpdate {
+  entityId: string;
+  name: string;
+  installedVersion: string;
+  latestVersion: string;
+}
+
 export interface ConnectionLayer {
   readonly status: ConnectionStatus;
   connect(): Promise<void>;
@@ -120,6 +127,8 @@ export interface Backend {
       als `todo.*`-Entitäten; Discovery + Item-Abruf über `todo/item/list`. */
   listReminderSources?(): Promise<import('../state/reminders.ts').ReminderSource[]>;
   getReminders?(entityId: string): Promise<import('../state/reminders.ts').Reminder[]>;
+  /** Echte, von Home Assistant gemeldete `update.*`-Entitäten im Zustand on. */
+  listSystemUpdates?(): Promise<SystemUpdate[]>;
 }
 
 /* ── Entity-Value-Shapes der steuerbaren Domänen (ADR-017) ──

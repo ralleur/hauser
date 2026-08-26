@@ -1,5 +1,6 @@
 import { localDayKey, type CalendarEvent } from './calendar.ts';
 import type { OutdoorReading } from './weather.ts';
+import { m } from '../../paraglide/messages.js';
 
 
 export type AmbientCopyStyle = 'calendar' | 'wordplay' | 'weather' | 'daypart';
@@ -334,7 +335,9 @@ export function generateAmbientCopy(
   events: readonly CalendarEvent[],
   weather: OutdoorReading,
   now = new Date(),
+  locale = 'de',
 ): AmbientCopy {
+  if (locale !== 'de') return generateLocalizedAmbientCopy(events, weather, now);
   const today = eventsForDay(events, now);
   const relevant = today.filter((event) => eventPhase(event, now) !== 'past');
   const key = ambientCopyKey(events, weather, now);
@@ -355,6 +358,26 @@ export function generateAmbientCopy(
     return { lines: calendarTemplate(today, now, key), style: 'calendar' };
   }
   return { lines: pick(DAYPART_TEMPLATES[daypart(now).id], `${key}:daypart`), style: 'daypart' };
+}
+
+function generateLocalizedAmbientCopy(
+  events: readonly CalendarEvent[],
+  weather: OutdoorReading,
+  now: Date,
+): AmbientCopy {
+  const today = eventsForDay(events, now);
+  const remaining = today.filter((event) => eventPhase(event, now) !== 'past');
+  if (weather.condition === 'rainy') return { lines: [m.ambient_copy_rainy()], style: 'weather' };
+  if (weather.condition === 'snowy') return { lines: [m.ambient_copy_snowy()], style: 'weather' };
+  if (weather.windSpeed !== null && weather.windSpeed >= 30) {
+    return { lines: [m.ambient_copy_windy()], style: 'weather' };
+  }
+  if (remaining.length === 1) return { lines: [m.ambient_copy_one_event()], style: 'calendar' };
+  if (remaining.length > 1) {
+    return { lines: [m.ambient_copy_many_events({ count: remaining.length })], style: 'calendar' };
+  }
+  if (today.length > 0) return { lines: [m.ambient_copy_done()], style: 'calendar' };
+  return { lines: [m.ambient_copy_free_day()], style: 'daypart' };
 }
 
 export type EventCategory = 'swimming' | 'holiday' | 'fair' | 'errand' | 'outdoor' | 'family' | 'unknown';
@@ -470,13 +493,17 @@ export function buildAmbientCopyMessages(
   context: AmbientAnalysis,
   recent: readonly string[],
   variationRetry = false,
+  locale = 'de',
 ): ChatMessage[] {
   const publicContext = { ...context, eventState: undefined };
   const variation = variationRetry
     ? '\nVariation-Hinweis: Der erste Entwurf war ungültig oder zu ähnlich. Wähle einen klar anderen Satzanfang und eine andere Pointe.'
     : '';
+  const language = ({
+    de: 'Deutsch', en: 'Englisch', fr: 'Französisch', it: 'Italienisch', pt: 'Portugiesisch', pl: 'Polnisch',
+  } as Record<string, string>)[locale] ?? locale;
   return [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: `${SYSTEM_PROMPT}\nAntworte ausschließlich auf ${language}.` },
     {
       role: 'user',
       content: `Kontext: ${JSON.stringify(publicContext)}\nLetzte Botschaften, nicht wiederholen oder erkennbar nachbauen: ${JSON.stringify(recent.slice(-20))}${variation}`,

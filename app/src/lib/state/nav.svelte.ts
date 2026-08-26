@@ -34,19 +34,24 @@ function tabLabel(id: RuntimeTab['id']): string {
   }
 }
 
+/* Deutsche Legacy-Namen und englische Setup-Namen sind UI-Texte. */
+const DEFAULT_TAB_NAMES = '|Home|Energie|Kalender|Notizen|Media|Songs|Bibliothek|Ablage|System|Calendar|Notes|';
+
+export function isDefaultTabName(id: RuntimeTab['id'], name: string): boolean {
+  const value = name.trim();
+  return value === tabLabel(id) || DEFAULT_TAB_NAMES.includes(`|${value}|`);
+}
+
 /* `label` als Getter (ADR-021): Die Beschriftung wird beim Lesen aufgelöst,
    nicht beim Laden des Moduls. Damit bleibt `tab.label` für alle Aufrufer ein
    String, trägt aber die aktuelle Sprache. */
 export const TABS = NAV_TABS.map((tab) => ({
   ...tab,
   get label() {
-    /* In der öffentlichen Demo stammt die Konfiguration aus diesem Haushalt und
-       trägt deutsche Tabnamen. Sie sind dort kein Nutzerinhalt, sondern
-       Beispieldaten — englische Besucher sahen sonst „Energie" und „Notizen"
-       in einer sonst englischen Oberfläche. Ein echter Haushalt behält seine
-       selbst vergebenen Namen. */
-    if (IS_DEMO) return tabLabel(tab.id);
-    return HOUSEHOLD_DATA_SOURCE === 'active' ? tab.configName : tabLabel(tab.id);
+    if (IS_DEMO || HOUSEHOLD_DATA_SOURCE !== 'active' || isDefaultTabName(tab.id, tab.configName)) {
+      return tabLabel(tab.id);
+    }
+    return tab.configName;
   },
 }));
 
