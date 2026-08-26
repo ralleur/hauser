@@ -37,9 +37,50 @@ const demoShoppingConfig = {
   ],
 };
 
+/* Die Haushaltskonfiguration ist Referenzdaten und deshalb deutsch benannt.
+   Der Einstellungs-Screen liest die Räume und Geräte direkt daraus — in der
+   Demo werden die Namen darum hier übersetzt, damit sie zur restlichen
+   Oberfläche passen. Räume und Lichter teilen ihre Katalogschlüssel mit
+   demo-names.ts, das dieselben Namen im Runtime-Raummodell setzt. */
+const DEMO_ROOM_NAMES: Readonly<Record<string, () => string>> = {
+  wohnzimmer: m.demo_room_wohnzimmer,
+  kinderzimmer: m.demo_room_kinderzimmer,
+  schlafzimmer: m.demo_room_schlafzimmer,
+  bad: m.demo_room_bad,
+  kueche: m.demo_room_kueche,
+  flur: m.demo_room_flur,
+};
+
+const DEMO_ENTITY_NAMES: Readonly<Record<string, () => string>> = {
+  'light.wohnzimmer_kugellampen': m.demo_device_kugellampen,
+  'light.wohnzimmer_esstisch': m.demo_device_esstisch,
+  'light.wohnzimmer_tv': m.demo_device_kugel_tv,
+  'light.wohnzimmer_fensterlampe': m.demo_device_kugel_fenster,
+  'light.schlafzimmer_bett': m.demo_device_bett,
+  'light.schlafzimmer_schreibtisch': m.demo_device_schreibtisch,
+  'light.bad_spiegel': m.demo_device_spiegel,
+  'light.kueche_ledleiste': m.demo_device_ledfridge,
+};
+
+/* Klima, Temperatur und Kamera heißen in jedem Raum gleich — über die Rolle
+   statt über je eine Entity-ID. */
+const DEMO_ROLE_NAMES: Readonly<Record<string, () => string>> = {
+  climate: m.demo_device_climate,
+  temperature: m.demo_device_temperature,
+  camera: m.demo_device_camera,
+};
+
 function publicDemoHouseholdConfig() {
   return {
     ...demoHouseholdConfig,
+    rooms: demoHouseholdConfig.rooms.map((room) => ({
+      ...room,
+      name: DEMO_ROOM_NAMES[room.id]?.() ?? room.name,
+      visibleEntities: room.visibleEntities.map((entity) => ({
+        ...entity,
+        name: (DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role])?.() ?? entity.name,
+      })),
+    })),
     navigation: demoHouseholdConfig.navigation.filter((item) => item.target.id !== 'songs'),
     enabledModules: demoHouseholdConfig.enabledModules.filter((id) => id !== 'songs'),
   };

@@ -190,7 +190,7 @@ export function projectPostits(
       id: item.id,
       title: reminderDisplayTitle(item.title),
       person,
-      personLabel: PERSON_LABELS[person],
+      personLabel: personDisplayLabel(person),
       color: item.color ?? null,
       dueLabel: postitDueLabel(item, now),
       overdue: reminderOverdue(item, now),

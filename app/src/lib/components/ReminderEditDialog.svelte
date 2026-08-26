@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   import { reminders, updateReminder } from '../state/reminders.svelte.ts';
   import { reminderDisplayTitle } from '../state/reminders.ts';
 
@@ -26,7 +27,7 @@
       await updateReminder(reminderId, title, due || null);
       onclose();
     } catch (caught) {
-      error = caught instanceof Error ? caught.message : 'Fehler beim Speichern';
+      error = caught instanceof Error ? caught.message : m.rem_edit_save_error();
     } finally {
       busy = false;
     }
@@ -36,21 +37,21 @@
 <div class="rem-edit-backdrop" role="presentation" onclick={(event) => { if (event.target === event.currentTarget) onclose(); }}>
   <div role="dialog" aria-modal="true" aria-labelledby="rem-edit-title">
   <form class="rem-edit-dialog" onsubmit={save}>
-    <h2 id="rem-edit-title">Erinnerung bearbeiten</h2>
+    <h2 id="rem-edit-title">{m.rem_edit_title()}</h2>
     <label>
-      <span>Erinnerung</span>
+      <span>{m.rem_edit_field()}</span>
       <input type="text" maxlength="120" bind:value={title} disabled={busy} autocomplete="off" />
     </label>
     <label>
-      <span>Auf dem Lockscreen anzeigen ab</span>
+      <span>{m.rem_edit_show_from()}</span>
       <input type="date" bind:value={due} disabled={busy} />
     </label>
-    <p class="rem-edit-hint">Ohne Datum erscheint der Zettel sofort.</p>
+    <p class="rem-edit-hint">{m.rem_edit_no_date()}</p>
     {#if error}<p class="notes-add-error" role="alert">{error}</p>{/if}
     <div class="rem-edit-actions">
-      <button class="secondary-btn pressable" type="button" disabled={busy} onclick={onclose}>Abbrechen</button>
+      <button class="secondary-btn pressable" type="button" disabled={busy} onclick={onclose}>{m.rem_edit_cancel()}</button>
       <button class="primary-btn pressable" type="submit" disabled={busy || !title.trim()}>
-        {busy ? 'Speichert …' : 'Speichern'}
+        {busy ? m.rem_edit_saving() : m.rem_edit_save()}
       </button>
     </div>
   </form>

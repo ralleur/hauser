@@ -138,7 +138,7 @@
               {/if}
             </div>
             {#if members.length === 0}
-              <p class="re-empty">Keine Geräte in dieser Szene — unten per Suche hinzufügen.</p>
+              <p class="re-empty">{m.scene_empty()}</p>
             {:else}
               <ul class="re-list">
                 {#each members as entityId (entityId)}
@@ -151,7 +151,7 @@
                       <small class="re-meta">{entityId}</small>
                     </span>
                     {#if origin}<span class="re-tag">in {origin}</span>{/if}
-                    {#if !defaults.has(entityId)}<span class="re-tag">Extra</span>{/if}
+                    {#if !defaults.has(entityId)}<span class="re-tag">{m.scene_extra()}</span>{/if}
                     <span class="re-actions">
                       <button class="re-btn re-remove pressable" type="button"
                               aria-label="{view.name} aus Szene {scene.label} entfernen"
@@ -166,13 +166,13 @@
           </section>
 
           <section class="ld-section">
-            <span class="caps-label">Licht oder Schalter hinzufügen</span>
+            <span class="caps-label">{m.scene_add_device()}</span>
             <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
-                   placeholder="Suchen: Name oder entity_id …"
+                   placeholder={m.scene_search_placeholder()}
                    aria-label="Licht oder Schalter suchen" autocomplete="off" spellcheck="false" />
             {#if query.trim()}
               {#if suggestions.length === 0}
-                <p class="re-empty">Keine passenden Lichter oder Schalter gefunden.</p>
+                <p class="re-empty">{m.scene_no_match()}</p>
               {:else}
                 <ul class="re-list re-suggest">
                   {#each suggestions as item (item.entityId)}

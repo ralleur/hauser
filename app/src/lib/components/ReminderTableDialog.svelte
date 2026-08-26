@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
+  import { intlLocale } from '../state/locale.svelte.ts';
   import Icon from './Icon.svelte';
   import { reminders } from '../state/reminders.svelte.ts';
   import {
@@ -7,10 +9,10 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', {
+  const dateTimeFormatter = () => new Intl.DateTimeFormat(intlLocale(), {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
-  const dateFormatter = new Intl.DateTimeFormat('de-DE', {
+  const dateFormatter = () => new Intl.DateTimeFormat(intlLocale(), {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
 
@@ -23,14 +25,14 @@
 
   function formatDateTime(value: string | null | undefined): string {
     const parsed = timestamp(value);
-    return parsed ? dateTimeFormatter.format(new Date(parsed)) : '—';
+    return parsed ? dateTimeFormatter().format(new Date(parsed)) : '—';
   }
 
   function formatDue(value: string | null): string {
     if (!value) return '—';
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [year, month, day] = value.split('-').map(Number);
-      return dateFormatter.format(new Date(year, month - 1, day));
+      return dateFormatter().format(new Date(year, month - 1, day));
     }
     return formatDateTime(value);
   }
@@ -50,10 +52,10 @@
   <div class="rem-table-dialog" role="dialog" aria-modal="true" aria-labelledby="rem-table-title" tabindex="-1">
     <header class="rem-table-head">
       <div>
-        <h2 id="rem-table-title">Alle Erinnerungen</h2>
-        <p>{rows.length} {rows.length === 1 ? 'Eintrag' : 'Einträge'}</p>
+        <h2 id="rem-table-title">{m.rem_table_title()}</h2>
+        <p>{rows.length === 1 ? m.rem_table_count_one({ count: rows.length }) : m.rem_table_count_other({ count: rows.length })}</p>
       </div>
-      <button class="notes-refresh pressable" type="button" aria-label="Übersicht schließen" onclick={onclose}>
+      <button class="notes-refresh pressable" type="button" aria-label={m.rem_table_close()} onclick={onclose}>
         <Icon name="i-close" cls="icon icon-md" />
       </button>
     </header>
@@ -62,11 +64,11 @@
       <table class="rem-table">
         <thead>
           <tr>
-            <th scope="col">Wer</th>
-            <th scope="col">Was</th>
-            <th scope="col">Erstellt</th>
-            <th scope="col">Geschlossen</th>
-            <th scope="col">Fällig</th>
+            <th scope="col">{m.rem_table_who()}</th>
+            <th scope="col">{m.rem_table_what()}</th>
+            <th scope="col">{m.rem_table_created()}</th>
+            <th scope="col">{m.rem_table_closed()}</th>
+            <th scope="col">{m.rem_table_due()}</th>
           </tr>
         </thead>
         <tbody>
@@ -80,7 +82,7 @@
               <td class="num">{formatDue(item.due)}</td>
             </tr>
           {:else}
-            <tr><td class="rem-table-empty" colspan="5">Noch keine Erinnerungen vorhanden.</td></tr>
+            <tr><td class="rem-table-empty" colspan="5">{m.rem_table_empty()}</td></tr>
           {/each}
         </tbody>
       </table>

@@ -83,7 +83,7 @@
       <span class="caps-label">{m.climate_temperature()}</span>
       <div class="climate-card">
         <div class="climate-warning" class:is-visible={room.windowOpen}>
-          <Icon name="i-window" cls="icon icon-md" /><span>Fenster offen — Heizung pausiert</span>
+          <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
         </div>
         <div class="climate-hero">
           <span class="climate-temp num" class:is-unavailable={temp === null}>
@@ -96,13 +96,13 @@
           <div class="climate-pills">
             <!-- Zieltemperatur des Raums als Pille (identisch zum TabBar-Klima-Dock). -->
             <div class="climate-dock room-climate-pill" aria-label="Zieltemperatur {room.name}">
-              <button class="cd-key cd-key-down pressable" type="button" aria-label="0,5 Grad kälter"
+              <button class="cd-key cd-key-down pressable" type="button" aria-label={m.room_temp_down()}
                       onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
               <div class="cd-readout">
                 <span class="cd-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
                 <span class="cd-sub">{m.climate_target()}</span>
               </div>
-              <button class="cd-key cd-key-up pressable" type="button" aria-label="0,5 Grad wärmer"
+              <button class="cd-key cd-key-up pressable" type="button" aria-label={m.room_temp_up()}
                       onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
             </div>
             <!-- Modus als zweite Pille, gleiche Breite: 3 Segmente zur Auswahl. -->

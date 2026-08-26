@@ -5,6 +5,7 @@
      DeviceDetail). Segmentfarben ausschließlich über Tokens (accent-warm-Rampe,
      gemischt mit surface-2); Reduced-Motion greift über die 0ms-Durations der
      wiederverwendeten Overlay-Animationen. Read-only — keine HA-Kommandos. */
+  import { m } from '../../paraglide/messages.js';
   import { fmtKw } from '../format.ts';
   import type { LoadBreakdown, LoadSegment } from '../state/energy-load.ts';
 
@@ -57,15 +58,15 @@
        onanimationend={(e) => { if (mode === 'closing' && e.target === e.currentTarget) onClosed(); }}>
     <header class="elo-header">
       <div class="elo-title-group">
-        <span class="caps-label">Verbrauchsaufteilung</span>
+        <span class="caps-label">{m.energy_split_title()}</span>
         <h2 class="elo-title num">{fmtKw(total)}<span class="kpi-unit">kW</span></h2>
       </div>
-      <button class="elo-close pressable" type="button" aria-label="Schließen"
+      <button class="elo-close pressable" type="button" aria-label={m.energy_split_close()}
               onclick={onRequestClose}>×</button>
     </header>
 
     {#if segments.length === 0}
-      <p class="elo-empty">Aktuell keine erfasste Last.</p>
+      <p class="elo-empty">{m.energy_split_empty()}</p>
     {:else}
       <div class="elo-body">
         <div class="elo-donut" aria-hidden="true">

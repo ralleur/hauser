@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { WIDTH_PRESETS, type LayoutSlotId } from '../state/layout-config.ts';
@@ -60,9 +61,9 @@
       <header class="layout-dialog-head">
         <div>
           <span class="caps-label">Home &amp; Energie</span>
-          <h2 id="layout-dialog-title">Kontrollflächen anpassen</h2>
+          <h2 id="layout-dialog-title">{m.layout_title()}</h2>
         </div>
-        <button class="dialog-close pressable" type="button" aria-label="Layout-Konfiguration schließen"
+        <button class="dialog-close pressable" type="button" aria-label={m.layout_close()}
                 onclick={() => layoutManager.cancel()}>×</button>
       </header>
 
@@ -83,10 +84,10 @@
         </div>
         {#if layoutManager.draft.slots.length === 1}
           <button class="secondary-btn pressable" type="button"
-                  onclick={() => layoutManager.addSlot(roomForNewSlot())}>Zweite Kontrolloberfläche hinzufügen</button>
+                  onclick={() => layoutManager.addSlot(roomForNewSlot())}>{m.layout_add_second()}</button>
         {:else}
           <button class="secondary-btn danger-btn pressable" type="button"
-                  onclick={() => layoutManager.removeSlot()}>Zweite Kontrolloberfläche entfernen</button>
+                  onclick={() => layoutManager.removeSlot()}>{m.layout_remove_second()}</button>
         {/if}
       </div>
 
@@ -106,10 +107,10 @@
       </fieldset>
 
       <footer class="layout-dialog-actions">
-        <button class="text-btn pressable" type="button" onclick={() => layoutManager.reset()}>Auf Standard zurücksetzen</button>
+        <button class="text-btn pressable" type="button" onclick={() => layoutManager.reset()}>{m.layout_reset()}</button>
         <span class="dialog-action-spacer"></span>
-        <button class="secondary-btn pressable" type="button" onclick={() => layoutManager.cancel()}>Abbrechen</button>
-        <button class="primary-btn pressable" type="button" onclick={() => layoutManager.apply()}>Übernehmen</button>
+        <button class="secondary-btn pressable" type="button" onclick={() => layoutManager.cancel()}>{m.layout_cancel()}</button>
+        <button class="primary-btn pressable" type="button" onclick={() => layoutManager.apply()}>{m.layout_apply()}</button>
       </footer>
     </div>
   </div>

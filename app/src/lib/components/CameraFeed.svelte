@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   import { onMount } from 'svelte';
   import { runtime, configuredHaUrl } from '../adapter/runtime.svelte.ts';
   import type { CameraValue } from '../adapter/types.ts';
@@ -68,7 +69,7 @@
     {#if source && !failed}
       <img src={source} alt={`Livebild ${label}`} onerror={() => { failed = true; }} />
     {:else}
-      <p>Kamerabild nicht verfügbar</p>
+      <p>{m.camera_unavailable()}</p>
     {/if}
   </div>
 </figure>

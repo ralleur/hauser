@@ -199,7 +199,7 @@
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
   <div class="room-edit-panel overlay-panel" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
-       aria-label="Geräte in {room?.name ?? 'Raum'} bearbeiten" tabindex="-1" bind:this={panelEl}
+       aria-label={m.room_edit_devices_label({ room: room?.name ?? '' })} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (roomEdit.mode === 'closing' && e.target === e.currentTarget) finishRoomEditClose(); }}>
     {#if room}
       {#key room.id}
@@ -234,7 +234,7 @@
             <Icon name="i-chevron-right" cls="icon icon-md" />
           </button>
           <section class="ld-section">
-            <span class="caps-label">Reihenfolge · {room.lights.length}</span>
+            <span class="caps-label">{m.room_order_label()} · {room.lights.length}</span>
             {#if room.lights.length === 0}
               <p class="re-empty">{m.room_no_devices()}</p>
             {:else}
@@ -328,7 +328,7 @@
                   </label>
                   <button class="re-unassign pressable" type="button"
                           onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>
-                    Zuweisung entfernen
+                    {m.room_unassign_light()}
                   </button>
                 {/if}
               </aside>

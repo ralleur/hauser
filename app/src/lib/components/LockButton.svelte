@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
+  import { m } from '../../paraglide/messages.js';
   import { longpress } from '../actions/longpress.ts';
   import { requestAmbient } from '../state/ambient.svelte.ts';
   import { setClassicLockButton } from '../state/settings.svelte.ts';
@@ -28,7 +29,7 @@
 <span class="lock-control" class:is-large={variant === 'large'} bind:this={root}>
   <button class:standby-fab={variant === 'large'} class:standby-btn={variant === 'titlebar'}
           class="pressable" type="button"
-          aria-label="Standby — Ambient-Bildschirm sofort anzeigen"
+          aria-label={m.lock_button_label()}
           aria-haspopup="menu" aria-expanded={menuOpen}
           use:longpress={{ onLongPress: () => { menuOpen = true; } }}
           onclick={requestAmbient}>
@@ -39,7 +40,7 @@
     <div class="lock-position-menu" class:from-titlebar={variant === 'titlebar'} role="menu">
       <button class="lock-position-option pressable" type="button" role="menuitem"
               onclick={variant === 'large' ? moveToTitlebar : makeLarge}>
-        {variant === 'large' ? 'Lockbutton in die Titelleiste verschieben' : 'Großer Lockbutton'}
+        {variant === 'large' ? m.lock_button_to_titlebar() : m.lock_button_large()}
       </button>
     </div>
   {/if}
