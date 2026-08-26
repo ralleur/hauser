@@ -24,7 +24,7 @@ Jellyfin integrations, deterministic setup wizard, landscape panel, compact
 phone shell and everyday household screens are implemented. The versioned
 Compose path and isolated clean-room onboarding gate are green. No alpha was
 published; `v0.4.0-beta.1` was the first public release, and the beta line has
-since continued through `v0.4.0-beta.7`.
+since continued through `v0.4.0-beta.8`.
 
 ---
 
@@ -207,7 +207,7 @@ configuration, not from the interface.
 > **Changed after v0.4.0-beta.6:** an earlier version of this table promised that Hauser
 > would stay MIT licensed. It moved to the GNU Affero General Public License
 > instead, starting with v0.4.0-beta.7, and the project's license identifier is
-> `AGPL-3.0-only` from the release after that one. AGPL is still an
+> `AGPL-3.0-only` from v0.4.0-beta.8 onwards. AGPL is still an
 > OSI-approved open source license and everything released up to and including
 > v0.4.0-beta.6 remains MIT, but the earlier wording was a commitment and
 > withdrawing it belongs in the open rather than in a quiet edit.

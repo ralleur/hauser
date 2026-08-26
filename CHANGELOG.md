@@ -5,6 +5,83 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.4.0-beta.8] - 2026-08-26
+
+### Added
+
+- **Calendar and Notes are part of the generated navigation.** Onboarding
+  produced a navigation with only Home and System (plus Media when a media
+  player was discovered), while the Calendar and Notes screens existed with no
+  way to reach them — the README's hero image showed tabs an onboarded install
+  never had. New installs now get Home, Calendar, Notes, optionally Media, and
+  System. An existing install whose navigation is still the untouched
+  onboarding result is migrated to the same set on load; a navigation you have
+  customized yourself is left alone. Reported in #8.
+- **An image-set library for generated room backgrounds.** Finished sets were
+  reachable from nowhere once the assistant had produced them. Settings →
+  Rooms & Devices now lists every set with a preview, its size, its creation
+  date and the room it is assigned to, and lets you assign a set to a room,
+  remove that assignment, or delete it after a confirmation. The header shows
+  how many sets exist and how much storage they occupy.
+- **Room configuration behaves the same from everywhere.** There were two
+  routes into a room's configuration with different capabilities. Tapping a
+  room under Rooms & Devices now opens the same overlay as a long press from
+  the home screen; the embedded list keeps creating, deleting and reordering.
+  The overlay also assigns image sets from the library, and a long press on a
+  device row moves that device to another room.
+
+### Fixed
+
+- **The room-image assistant could not start a job over plain `http://`.**
+  Generating an ID used `crypto.randomUUID`, which browsers expose only in a
+  secure context, so on a panel reached over `http://` in the LAN the request
+  failed while it was still being assembled — before any network call and
+  before the error handling. Pressing **Create variants** did nothing at all:
+  no request, no status change, no message. The assistant now falls back to
+  `getRandomValues`, reports unexpected failures instead of swallowing them,
+  and places error messages directly above the action buttons where they are
+  in view. The ChatGPT authorization code can be copied with a click.
+- **The assistant returned photographs where it should have returned a
+  composition.** The composition step received the already-cropped tile rather
+  than the whole photograph, so the prompt discussed a framing the model never
+  saw, and protective wording in the first phase suppressed the free
+  recomposition entirely. The two candidates now differ as intended: a
+  realistic composition with corrected perspective, and an illustration.
+- **Both clocks froze.** The dashboard and ambient clocks stopped advancing
+  and only a manual reload brought them back. They now resynchronize when the
+  page is restored, the tab becomes visible or the window regains focus, in
+  addition to their regular tick. Reported in #8.
+- **Status & Updates showed invented services and updates.** The screen listed
+  six pending updates and five connected services from hard-coded prototype
+  data, none of it reflecting the connected instance — misleading about
+  security-relevant state. A productive install now shows only the verified
+  Home Assistant connection and genuine pending `update.*` entities, and says
+  **No updates available** when there are none. The fictional list remains only
+  in the demo build, which is marked as such. Reported in #8.
+- **The floating power button covered controls beneath it.** While System
+  settings are open, the power control now sits in the title bar even when the
+  floating button is the general preference — it no longer obscures the Scenes
+  **Reset** button. Reported in #8.
+- **German text remained in the English interface.** The connection indicator,
+  the Safari *Add to Home Screen* hint, and the room-image assistant, its
+  library and its access dialog are now translated in all six languages, and
+  the ambient hero text keeps the selected language consistently instead of
+  switching between English and German across visits. Reported in #8.
+- Room-image dialogs opened from the room overlay were unstyled, and the
+  device-move sheet appeared behind the overlay, because their styles were
+  loaded only by the System screen.
+
+### Changed
+
+- **The AI line on the lock screen is off by default.** It calls a language
+  model service, which should be a deliberate choice rather than something that
+  happens on first start. Turning it on is remembered; the default is off on
+  every install.
+- The public demo starts in English until a visitor picks a language, and it
+  now shows the room-image assistant and the image-set library in full, with
+  prepared example photographs instead of an upload. A marked note in both
+  dialogs states that no account and no AI service is involved.
+
 ### License
 
 The project's license identifier is now **AGPL-3.0-only** instead of

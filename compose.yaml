@@ -2,7 +2,7 @@ name: hauser
 
 services:
   hauser:
-    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.7}"
+    image: "${HAUSER_IMAGE_REPOSITORY:-ghcr.io/ralleur/hauser}:${HAUSER_IMAGE_TAG:-v0.4.0-beta.8}"
     # The image entrypoint prepares bind-mounted volumes as root before
     # dropping privileges — needed under Home Assistant OS, where the
     # Supervisor hands over a root-owned /data. Compose uses named volumes

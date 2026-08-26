@@ -43,7 +43,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.4.0-beta.7` is current. The first installation by
+normal installation path; `v0.4.0-beta.8` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -195,9 +195,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.4.0-beta.7` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.4.0-beta.8` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.4.0-beta.7` tag, which the Home Assistant Supervisor
+publish the plain `0.4.0-beta.8` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 
@@ -336,8 +336,8 @@ Contributions are welcome and are made under the
 Hauser was MIT licensed up to and including **v0.4.0-beta.6**. Those releases
 stay MIT and can be used and forked under those terms forever — the change to
 the AGPL applies to later versions only. Nothing has been withdrawn or retagged.
-Release `v0.4.0-beta.7` was published as `AGPL-3.0-or-later`; from the next
-release onwards the project is `AGPL-3.0-only`.
+Release `v0.4.0-beta.7` was published as `AGPL-3.0-or-later`; from
+`v0.4.0-beta.8` onwards the project is `AGPL-3.0-only`.
 
 Original room illustrations, background artwork and public screenshots are
 licensed [CC BY 4.0](ASSETS-LICENSE.md). The Hauser name, logos, brand marks,
