@@ -81,7 +81,7 @@ describe('optimistische Daten-Writes', () => {
     expect(optimistic.title).toBe('Sam - Müll rausbringen');
     expect(module.hmiReminderId(optimistic.id)).toBeNull();
     expect(hmiDataRequest).toHaveBeenCalledWith('/api/reminders', 'POST', {
-      who: 'sam', title: 'Müll rausbringen', due: null,
+      who: 'sam', label: 'Sam', title: 'Müll rausbringen', due: null,
     });
 
     release();

@@ -25,6 +25,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:calendar-selected',
   'hmi:reminders-selected',
   'hmi:shopping-config:v1',
+  'hmi:reminder-persons:v1',
 ] as const;
 
 type FetchLike = typeof fetch;

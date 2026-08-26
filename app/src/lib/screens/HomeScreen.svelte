@@ -2,6 +2,7 @@
   import RoomHero from '../components/RoomHero.svelte';
   import RoomControls from '../components/RoomControls.svelte';
   import PanelRoomSelector from '../components/PanelRoomSelector.svelte';
+  import RoomImageOnboarding from '../components/RoomImageOnboarding.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
@@ -53,4 +54,6 @@
       </aside>
     {/each}
   </div>
+
+  <RoomImageOnboarding />
 </div>

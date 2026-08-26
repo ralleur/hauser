@@ -1,15 +1,24 @@
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { hmiDataRequest } from './hmi-data.ts';
 import {
+  reminderPerson,
   selectReminderLists,
-  PERSON_LABELS,
   type Reminder,
   type ReminderPerson,
   type ReminderSource,
 } from './reminders.ts';
+import { personLabel } from './reminder-persons.ts';
+import { reminderPersons } from './reminder-persons.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
 
 const HMI_SOURCE_ID = 'hmi:family-reminders';
+
+/* Titel-Präfix einer Person: der aktuelle Anzeigename der Bewohner-Liste,
+   damit umbenannte Personen auch in neuen Aufgaben so heißen. */
+function personDisplayName(id: ReminderPerson): string {
+  const person = reminderPersons.list.find((entry) => entry.id === id);
+  return person ? personLabel(person) : id;
+}
 
 interface HmiTaskFile {
   updated_at: string;
@@ -109,9 +118,11 @@ export function initReminders(): void {
 
 /* Neue Aufgabe zentral im HMI-Backend anlegen und optimistisch anzeigen. */
 export async function addReminder(who: ReminderPerson, title: string, due: string | null = null): Promise<void> {
-  const fullTitle = new RegExp(`^${who}\\s*[-–:]`, 'i').test(title)
+  const label = personDisplayName(who);
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fullTitle = new RegExp(`^(${who}|${escaped})\\s*[-–:]`, 'i').test(title)
     ? title
-    : `${PERSON_LABELS[who]} - ${title}`;
+    : `${label} - ${title}`;
   const id = `${HMI_SOURCE_ID}:optimistic-${Date.now()}-${optimisticSequence++}`;
   const expectedCount = reminders.items.filter((item) => item.title === fullTitle).length + 1;
   pendingAdds.set(id, { title: fullTitle, due, expectedCount });
@@ -120,7 +131,7 @@ export async function addReminder(who: ReminderPerson, title: string, due: strin
     color: '#ffffff', created: new Date().toISOString(), edited: null,
   }];
   try {
-    await hmiDataRequest('/api/reminders', 'POST', { who, title, due });
+    await hmiDataRequest('/api/reminders', 'POST', { who, label, title, due });
     scheduleReconcile();
   } catch (error) {
     pendingAdds.delete(id);
@@ -141,7 +152,7 @@ export async function updateReminder(reminderId: string, title: string, due: str
   const id = hmiReminderId(reminderId);
   const current = reminders.items.find((item) => item.id === reminderId);
   if (!id || !current) throw new Error('Diese Erinnerung kann hier nicht bearbeitet werden.');
-  const who = current.title.match(/^(Alex|Sam|Beide)\s*[-–:]/i)?.[1] ?? 'Beide';
+  const who = personDisplayName(reminderPerson(current.title, reminderPersons.list));
   const fullTitle = `${who} - ${title.trim()}`;
   await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}`, 'PATCH', { title: fullTitle, due });
   await refreshReminders();

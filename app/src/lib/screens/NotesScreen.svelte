@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import ReminderEditDialog from '../components/ReminderEditDialog.svelte';
+  import ReminderPersonDialog from '../components/ReminderPersonDialog.svelte';
   import ReminderTableDialog from '../components/ReminderTableDialog.svelte';
   import { doubletap } from '../actions/doubletap.ts';
   import { longpress } from '../actions/longpress.ts';
@@ -17,8 +18,10 @@
   } from '../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
-    PERSON_ORDER, personDisplayLabel, type ReminderPerson,
+    type ReminderPerson,
   } from '../state/reminders.ts';
+  import { personLabel, postitStyle } from '../state/reminder-persons.ts';
+  import { reminderPersons } from '../state/reminder-persons.svelte.ts';
 
   /* Beide Wrapper spiegeln live die zentralen HMI-Daten: links Einkauf,
      rechts Erinnerungen nach Person gruppiert.
@@ -29,7 +32,8 @@
     stores: shoppingConfig.stores,
     itemOrder: shoppingItemOrder(shopping.sections),
   }));
-  const personRows = $derived(reminderRowsByPerson(reminders.items));
+  const persons = $derived(reminderPersons.list);
+  const personRows = $derived(reminderRowsByPerson(reminders.items, undefined, persons));
 
   const updatedLabel = $derived(shopping.updatedAt
     ? m.notes_shopping_updated({
@@ -90,6 +94,8 @@
   let popoutError = $state<string | null>(null);
   let editingId = $state<string | null>(null);
   let tableOpen = $state(false);
+  /* Bewohner-Dialog: 'new' legt an, eine Personen-ID benennt um. */
+  let personDialog = $state<string | null>(null);
 
   function openPopout(e: MouseEvent, reminderId: string) {
     if (!hmiReminderId(reminderId)) return; // HA-Erinnerungen bleiben read-only
@@ -217,6 +223,10 @@
       <header class="panel-head">
         <h2 class="panel-title">{m.notes_reminders()}</h2>
         <div class="notes-head-meta">
+          <button class="notes-refresh pressable" type="button" aria-label={m.notes_person_add()}
+                  onclick={() => { personDialog = 'new'; }}>
+            <Icon name="i-account-plus" cls="icon icon-md" />
+          </button>
           <button class="notes-refresh pressable" type="button" aria-label={m.notes_reminders_table()}
                   onclick={() => { tableOpen = true; }}>
             <Icon name="i-table" cls="icon icon-md" />
@@ -228,15 +238,21 @@
         </div>
       </header>
       <div class="notes-body">
-        {#each PERSON_ORDER as person (person)}
+        {#each persons as entry (entry.id)}
+          {@const person = entry.id}
+          {@const label = personLabel(entry)}
           {@const row = personRows[person]}
           <section class="rem-section">
             <header class="notes-section-head">
-              <h3 class="notes-section-title">{personDisplayLabel(person)}</h3>
-              <span class="rem-swatch postit-{person}" aria-hidden="true"></span>
+              <!-- Tap auf den Namen benennt den Bewohner um (Namen der Familie
+                   statt der Voreinstellungen). -->
+              <button class="notes-section-title rem-person-btn pressable" type="button"
+                      aria-label={m.notes_person_rename({ person: label })}
+                      onclick={() => { personDialog = person; }}>{label}</button>
+              <span class="rem-swatch" style={postitStyle(entry.color)} aria-hidden="true"></span>
               <span class="notes-section-count num">{row.open.length || ''}</span>
               <button class="notes-add-btn pressable" type="button"
-                      aria-label={m.notes_add_reminder_for({ person: personDisplayLabel(person) })}
+                      aria-label={m.notes_add_reminder_for({ person: label })}
                       onclick={() => toggleAdd(`rem:${person}`)}>
                 <Icon name="i-plus" cls="icon icon-md" />
               </button>
@@ -245,12 +261,12 @@
                  (älteste zuerst), erledigte ausgegraut rechts daneben. -->
             <div class="rem-cards">
               {#each row.open as item (item.id)}
-                <button class="rem-card pressable postit-{person}" type="button"
+                <button class="rem-card pressable" type="button" style={postitStyle(entry.color)}
                         class:is-selected={popout?.id === item.id}
-                        aria-label="{reminderDisplayTitle(item.title)} — Kontextmenü öffnen"
+                        aria-label="{reminderDisplayTitle(item.title, persons)} — Kontextmenü öffnen"
                         use:longpress={{ onLongPress: () => { if (hmiReminderId(item.id)) popout = { id: item.id, x: window.innerWidth / 2 - 90, y: window.innerHeight / 2 - 48 }; } }}
                         onclick={(e) => openPopout(e, item.id)}>
-                  <p class="rem-card-title">{reminderDisplayTitle(item.title)}</p>
+                  <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>
                   {#if postitDueLabel(item)}
                     <span class="rem-card-due num" class:is-overdue={reminderOverdue(item)}>{postitDueLabel(item)}</span>
                   {/if}
@@ -261,14 +277,15 @@
               {#if row.done.length}
                 <span class="rem-done-sep" aria-hidden="true"></span>
                 {#each row.done as item (item.id)}
-                  <div class="rem-card is-done postit-{person}" aria-label="Erledigt: {reminderDisplayTitle(item.title)}">
-                    <p class="rem-card-title">{reminderDisplayTitle(item.title)}</p>
+                  <div class="rem-card is-done" style={postitStyle(entry.color)}
+                       aria-label="Erledigt: {reminderDisplayTitle(item.title, persons)}">
+                    <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>
                     <span class="rem-card-due">Erledigt ✓</span>
                   </div>
                 {/each}
               {/if}
             </div>
-            {@render addForm(`rem:${person}`, m.notes_add_reminder_placeholder({ person: personDisplayLabel(person) }))}
+            {@render addForm(`rem:${person}`, m.notes_add_reminder_placeholder({ person: label }))}
           </section>
         {/each}
       </div>
@@ -293,5 +310,9 @@
   {/if}
   {#if tableOpen}
     <ReminderTableDialog onclose={() => { tableOpen = false; }} />
+  {/if}
+  {#if personDialog}
+    <ReminderPersonDialog personId={personDialog === 'new' ? null : personDialog}
+                          onclose={() => { personDialog = null; }} />
   {/if}
 </div>

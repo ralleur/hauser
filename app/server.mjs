@@ -189,7 +189,7 @@ const SHARED_CONFIG_KEYS = new Set([
   'hmi:jf-user', 'hmi:library', 'hmi:lock-button',
   'hmi:device-config:v1', 'hmi:scene-config:v1', 'hmi:home-layout:v1',
   'hmi:light-icon-overrides:v1', 'hmi:calendar-selected', 'hmi:reminders-selected',
-  'hmi:shopping-config:v1',
+  'hmi:shopping-config:v1', 'hmi:reminder-persons:v1',
 ]);
 const SHARED_CONFIG_VALUE_MAX = 256 * 1024;
 
@@ -6636,13 +6636,20 @@ export function createFamilyDataStore(
     return due;
   }
 
-  function addReminder(who, rawTitle, rawDue = null) {
+  function addReminder(who, rawTitle, rawDue = null, rawLabel = null) {
+    /* Die drei Voreinstellungen bleiben ohne Label gültig; frei angelegte
+       Bewohner (Notizen-Screen) schicken ihren Anzeigenamen mit. */
     const labels = { alex: 'Alex', sam: 'Sam', beide: 'Beide' };
+    const id = String(who || '').trim().toLowerCase();
+    const label = String(rawLabel || labels[id] || '').trim();
     const title = String(rawTitle || '').trim();
-    if (!labels[who]) throw new Error('Unbekannte Person');
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(id) || !label || label.length > 40) {
+      throw new Error('Unbekannte Person');
+    }
     if (!title) throw new Error('Leerer Titel');
     if (title.length > 120) throw new Error('Titel ist zu lang');
-    const fullTitle = new RegExp(`^${who}\\s*[-–:]`, 'i').test(title) ? title : `${labels[who]} - ${title}`;
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const fullTitle = new RegExp(`^(${id}|${escaped})\\s*[-–:]`, 'i').test(title) ? title : `${label} - ${title}`;
     const now = new Date().toISOString();
     const item = {
       id: randomUUID(), title: fullTitle, completed: false, due: reminderDue(rawDue),
@@ -9814,7 +9821,7 @@ function serveFamilyData(req, res, store) {
     }
     if (pathname === '/api/reminders' && req.method === 'POST') {
       return readSmallJson(req, res, (payload) => {
-        try { jsonResponse(res, 201, { ok: true, item: store.addReminder(payload?.who, payload?.title, payload?.due) }); }
+        try { jsonResponse(res, 201, { ok: true, item: store.addReminder(payload?.who, payload?.title, payload?.due, payload?.label) }); }
         catch (error) { jsonResponse(res, 422, { error: error.message }); }
       });
     }

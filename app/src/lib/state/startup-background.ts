@@ -9,6 +9,7 @@ import { deviceManager } from './device-manager.svelte.ts';
 import { rehydrateLayoutManager } from './layout-manager.svelte.ts';
 import { rehydrateImmersionLight } from './immersion-light.svelte.ts';
 import { notifications } from './notifications.svelte.ts';
+import { rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
 import { syncConfiguredBackend } from './runtime-backend-sync.ts';
 import { createHaRetryController } from './runtime-background.ts';
@@ -43,11 +44,12 @@ export function rehydrateSharedConfigConsumers(): void {
   rehydrateImmersionLight();
   sceneManager.config = loadSceneConfig();
   rehydrateShoppingConfig();
+  rehydrateReminderPersons();
   settingsValues.demoMode = readShared('hmi:backend') === 'fake';
   settingsValues.haUrl = readShared('hmi:ha-url') ?? '';
   settingsValues.jellyfinUrl = readShared('hmi:jf-url') ?? '';
   settingsValues.libraryMode = (readShared('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake';
-  settingsValues.classicLockButton = readShared('hmi:lock-button') === 'classic';
+  settingsValues.classicLockButton = readShared('hmi:lock-button') !== 'large';
   settingsUi.needsReload = false;
 }
 

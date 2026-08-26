@@ -3,9 +3,11 @@
   import { intlLocale } from '../state/locale.svelte.ts';
   import Icon from './Icon.svelte';
   import { reminders } from '../state/reminders.svelte.ts';
+  import { reminderDisplayTitle, reminderPerson, type Reminder } from '../state/reminders.ts';
+  import { postitStyle } from '../state/reminder-persons.ts';
   import {
-    personDisplayLabel, reminderDisplayTitle, reminderPerson, type Reminder,
-  } from '../state/reminders.ts';
+    personColorId, personDisplayLabel, reminderPersons,
+  } from '../state/reminder-persons.svelte.ts';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -16,6 +18,7 @@
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
 
+  const persons = $derived(reminderPersons.list);
   const rows = $derived([...reminders.items].sort((a, b) => timestamp(b.created) - timestamp(a.created)));
 
   function timestamp(value: string | null | undefined): number {
@@ -73,10 +76,10 @@
         </thead>
         <tbody>
           {#each rows as item (item.id)}
-            {@const person = reminderPerson(item.title)}
+            {@const person = reminderPerson(item.title, persons)}
             <tr class:is-done={item.completed}>
-              <td><span class="rem-table-person postit-{person}">{personDisplayLabel(person)}</span></td>
-              <td>{reminderDisplayTitle(item.title)}</td>
+              <td><span class="rem-table-person" style={postitStyle(personColorId(person))}>{personDisplayLabel(person)}</span></td>
+              <td>{reminderDisplayTitle(item.title, persons)}</td>
               <td class="num">{formatDateTime(item.created)}</td>
               <td class="num">{closedAt(item)}</td>
               <td class="num">{formatDue(item.due)}</td>

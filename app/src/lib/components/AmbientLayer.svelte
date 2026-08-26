@@ -10,6 +10,8 @@
   import { projectAmbientWeek } from '../state/calendar.ts';
   import { reminders, refreshReminders } from '../state/reminders.svelte.ts';
   import { projectPostits } from '../state/reminders.ts';
+  import { postitStyle } from '../state/reminder-persons.ts';
+  import { personColorId, reminderPersons } from '../state/reminder-persons.svelte.ts';
   import { shopping, refreshShopping } from '../state/shopping.svelte.ts';
   import { projectShoppingSections } from '../state/shopping.ts';
   import { shoppingConfig, shoppingItemOrder } from '../state/shopping-settings.svelte.ts';
@@ -172,7 +174,7 @@
      und Wochenband nicht überlagern. */
   const postits = $derived.by(() => {
     void clock.time;
-    return projectPostits(reminders.items);
+    return projectPostits(reminders.items, new Date(), undefined, reminderPersons.list);
   });
 
   /* Zentrale Einkaufsliste: links als weißlicher Notizzettel-
@@ -296,7 +298,7 @@
   {#if postits.items.length && !deepNight}
     <aside class="ambient-postits" aria-label="Offene Erinnerungen">
       {#each postits.items as note (note.id)}
-        <div class="ambient-postit postit-{note.person}" class:is-overdue={note.overdue}>
+        <div class="ambient-postit" style={postitStyle(personColorId(note.person))} class:is-overdue={note.overdue}>
           <span class="ambient-postit-person">{note.personLabel}</span>
           <p class="ambient-postit-title">{note.title}</p>
           {#if note.dueLabel}

@@ -726,6 +726,14 @@ body.theme-fade * {
   outline: 2px solid var(--color-accent-warm);
   outline-offset: 2px;
 }
+/* Platzhalter-Kachel: der Raum kennt (noch) keine Geräte. Gestrichelter Rand,
+   damit sie als Einladung und nicht als geschaltetes Gerät gelesen wird. */
+.light-tile.is-placeholder {
+  border-style: dashed;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.light-tile.is-placeholder .light-tile-name { color: var(--color-text-secondary); }
 
 /* Icon-Feld: quadratisch (~36px). Der Zustand wird ausschließlich hierüber
    kommuniziert — Fill, Icon-Farbe und Rand kippen zwischen Aus/An. */
@@ -3839,6 +3847,58 @@ body.theme-fade * {
 .rem-edit-dialog label > span { font-size: var(--text-sm); color: var(--color-text-secondary); }
 .rem-edit-hint { font-size: var(--text-xs); color: var(--color-text-tertiary); }
 .rem-edit-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+
+/* Bewohner-Dialog: Name + Zettelfarbe. Die Farbfelder tragen die Papierfarbe
+   selbst, die Auswahl markiert der Rahmen. */
+.rem-person-colors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--space-2);
+  border: 0;
+}
+.rem-person-colors legend {
+  padding-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.rem-person-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+.rem-person-swatch:has(input:checked) {
+  border-color: var(--color-accent-warm);
+  color: var(--color-text-primary);
+}
+/* Der native Radio bleibt fokussierbar, sichtbar ist die Kachel selbst. */
+.rem-person-swatch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.rem-person-swatch-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--postit-paper);
+  border: 1px solid var(--postit-muted);
+}
+/* Der Sektionsname ist tippbar (umbenennen) — Knopf ohne Knopf-Optik. */
+.rem-person-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
 .rem-table-backdrop {
   position: fixed;
   inset: 0;

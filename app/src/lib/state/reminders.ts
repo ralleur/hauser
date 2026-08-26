@@ -8,6 +8,7 @@
    ============================================ */
 
 import { m } from '../../paraglide/messages.js';
+import type { ReminderPersonConfig } from './reminder-persons.ts';
 
 export interface ReminderSource {
   entityId: string; // todo.*
@@ -73,11 +74,17 @@ export function reminderOverdue(item: Reminder, now = new Date()): boolean {
 /* ── Personen-Zuordnung: die Familie präfixt Aufgaben mit „Alex - …" /
    „Sam - …" (die HMI legt neue Aufgaben genauso an, „Beide - …" für
    gemeinsame). Alles ohne Personen-Präfix gilt als gemeinsam. Die Person
-   bestimmt die Post-it-Farbe: Sam gelb, Alex grün, Beide gelbgrün. ── */
-export type ReminderPerson = 'alex' | 'sam' | 'beide';
+   bestimmt die Post-it-Farbe.
+
+   Die drei Namen sind nur der Startpunkt: die Bewohner lassen sich umbenennen
+   und erweitern (reminder-persons.ts). Deshalb nimmt jede Projektion die
+   aktuelle Personenliste entgegen; ohne Liste gelten die Voreinstellungen.
+   Ein umbenannter Bewohner wird weiterhin über seine ID und das ursprüngliche
+   Präfix erkannt, damit bestehende Aufgaben zugeordnet bleiben. ── */
+export type ReminderPerson = string;
 
 export const PERSON_ORDER: readonly ReminderPerson[] = ['alex', 'sam', 'beide'];
-export const PERSON_LABELS: Readonly<Record<ReminderPerson, string>> = {
+export const PERSON_LABELS: Readonly<Record<string, string>> = {
   alex: 'Alex',
   sam: 'Sam',
   beide: 'Beide',
@@ -87,21 +94,60 @@ export const PERSON_LABELS: Readonly<Record<ReminderPerson, string>> = {
    unverändert. Für die Anzeige sind die Vornamen Eigennamen, „Beide" dagegen
    ein normales Wort — nur das wird übersetzt. */
 export function personDisplayLabel(person: ReminderPerson): string {
-  return person === 'beide' ? m.reminders_person_both() : PERSON_LABELS[person];
+  return person === 'beide' ? m.reminders_person_both() : PERSON_LABELS[person] ?? person;
 }
 
-const PERSON_PREFIX = /^(alex|sam|beide)\s*[-–:]\s*/i;
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-export function reminderPerson(title: string): ReminderPerson {
-  const match = PERSON_PREFIX.exec(title.trim());
-  const name = match?.[1].toLowerCase();
-  return name === 'alex' || name === 'sam' ? name : 'beide';
+interface PersonPrefixes {
+  entries: { id: ReminderPerson; patterns: string[] }[];
+  fallback: ReminderPerson;
+}
+
+function personPrefixes(persons?: readonly ReminderPersonConfig[]): PersonPrefixes {
+  const source = persons?.length
+    ? persons
+    : PERSON_ORDER.map((id) => ({ id, label: null, color: '' }));
+  const entries = source.map((person) => ({
+    id: person.id,
+    patterns: [person.id, person.label ?? '', PERSON_LABELS[person.id] ?? '']
+      .filter((pattern): pattern is string => pattern.length > 0),
+  }));
+  const shared = source.find((person) => person.id === 'beide');
+  return { entries, fallback: (shared ?? source[source.length - 1]).id };
+}
+
+function splitPersonPrefix(
+  title: string,
+  persons?: readonly ReminderPersonConfig[],
+): { person: ReminderPerson; rest: string } {
+  const trimmed = title.trim();
+  const { entries, fallback } = personPrefixes(persons);
+  for (const entry of entries) {
+    for (const pattern of entry.patterns) {
+      const prefix = new RegExp(`^${escapeRegExp(pattern)}\\s*[-–:]\\s*`, 'i');
+      if (prefix.test(trimmed)) return { person: entry.id, rest: trimmed.replace(prefix, '') || trimmed };
+    }
+  }
+  return { person: fallback, rest: trimmed };
+}
+
+export function reminderPerson(
+  title: string,
+  persons?: readonly ReminderPersonConfig[],
+): ReminderPerson {
+  return splitPersonPrefix(title, persons).person;
 }
 
 /* Anzeige-Titel ohne Personen-Präfix — Farbe bzw. Sektions-Überschrift
    übernehmen die Zuordnung. */
-export function reminderDisplayTitle(title: string): string {
-  return title.trim().replace(PERSON_PREFIX, '') || title.trim();
+export function reminderDisplayTitle(
+  title: string,
+  persons?: readonly ReminderPersonConfig[],
+): string {
+  return splitPersonPrefix(title, persons).rest;
 }
 
 /* ── Post-it-Reihe der Notizen-Seite: pro Person EINE horizontal scrollbare
@@ -123,14 +169,15 @@ function timeOf(value: string | null | undefined): number {
 export function reminderRowsByPerson(
   items: readonly Reminder[],
   doneMax = DONE_ROW_MAX,
+  persons?: readonly ReminderPersonConfig[],
 ): Record<ReminderPerson, ReminderRow> {
-  const rows: Record<ReminderPerson, ReminderRow> = {
-    alex: { open: [], done: [] },
-    sam: { open: [], done: [] },
-    beide: { open: [], done: [] },
-  };
+  const ids = persons?.length ? persons.map((person) => person.id) : PERSON_ORDER;
+  const rows: Record<ReminderPerson, ReminderRow> = Object.fromEntries(
+    ids.map((id) => [id, { open: [] as Reminder[], done: [] as Reminder[] }]),
+  );
   for (const item of items) {
-    const row = rows[reminderPerson(item.title)];
+    const row = rows[reminderPerson(item.title, persons)];
+    if (!row) continue;
     (item.completed ? row.done : row.open).push(item);
   }
   for (const row of Object.values(rows)) {
@@ -179,18 +226,20 @@ export function projectPostits(
   items: readonly Reminder[],
   now = new Date(),
   max = POSTIT_MAX,
+  persons?: readonly ReminderPersonConfig[],
 ): { items: Postit[]; more: number } {
   const open = openReminders(items).filter((item) => {
     if (!item.id.startsWith('hmi:family-reminders:') || !item.due) return true;
     return new Date(`${item.due}T00:00:00`).getTime() <= startOfDay(now).getTime();
   });
   const shown = open.slice(0, max).map((item) => {
-    const person = reminderPerson(item.title);
+    const person = reminderPerson(item.title, persons);
+    const configured = persons?.find((entry) => entry.id === person)?.label ?? null;
     return {
       id: item.id,
-      title: reminderDisplayTitle(item.title),
+      title: reminderDisplayTitle(item.title, persons),
       person,
-      personLabel: personDisplayLabel(person),
+      personLabel: configured ?? personDisplayLabel(person),
       color: item.color ?? null,
       dueLabel: postitDueLabel(item, now),
       overdue: reminderOverdue(item, now),

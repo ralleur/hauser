@@ -9,11 +9,19 @@
   } from '../../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
-    PERSON_ORDER, personDisplayLabel, type ReminderPerson,
+    type ReminderPerson,
   } from '../../state/reminders.ts';
+  import { postitStyle } from '../../state/reminder-persons.ts';
+  import {
+    personColorId, personDisplayLabel, reminderPersons,
+  } from '../../state/reminder-persons.svelte.ts';
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
-  const personRows = $derived(reminderRowsByPerson(reminders.items));
+  /* Die Bewohner werden auf dem Panel gepflegt; das Handy zeigt dieselbe
+     Liste in derselben Reihenfolge. */
+  const persons = $derived(reminderPersons.list);
+  const PERSON_ORDER = $derived(persons.map((person) => person.id));
+  const personRows = $derived(reminderRowsByPerson(reminders.items, undefined, persons));
 
   let addTarget = $state<ReminderPerson | null>(null);
   let draft = $state('');
@@ -122,7 +130,7 @@
     <section class="rem-section">
       <header class="notes-section-head">
         <h3 class="notes-section-title">{personDisplayLabel(person)}</h3>
-        <span class="rem-swatch postit-{person}" aria-hidden="true"></span>
+        <span class="rem-swatch" style={postitStyle(personColorId(person))} aria-hidden="true"></span>
         <span class="notes-section-count num">{row.open.length || ''}</span>
         <button class="notes-add-btn pressable" type="button"
                 aria-label={m.notes_add_reminder_for({ person: personDisplayLabel(person) })}
@@ -132,12 +140,12 @@
       </header>
       <div class="rem-cards">
         {#each row.open as item (item.id)}
-          <button class="rem-card pressable postit-{person}" type="button"
+          <button class="rem-card pressable" type="button" style={postitStyle(personColorId(person))}
                   class:is-selected={popout?.id === item.id}
-                  aria-label="{reminderDisplayTitle(item.title)} — Kontextmenü öffnen"
+                  aria-label="{reminderDisplayTitle(item.title, persons)} — Kontextmenü öffnen"
                   use:longpress={{ onLongPress: () => openPopoutCentered(item.id) }}
                   onclick={(e) => openPopout(e, item.id)}>
-            <p class="rem-card-title">{reminderDisplayTitle(item.title)}</p>
+            <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>
             {#if postitDueLabel(item)}
               <span class="rem-card-due num" class:is-overdue={reminderOverdue(item)}>{postitDueLabel(item)}</span>
             {/if}
@@ -148,8 +156,9 @@
         {#if row.done.length}
           <span class="rem-done-sep" aria-hidden="true"></span>
           {#each row.done as item (item.id)}
-            <div class="rem-card is-done postit-{person}" aria-label="Erledigt: {reminderDisplayTitle(item.title)}">
-              <p class="rem-card-title">{reminderDisplayTitle(item.title)}</p>
+            <div class="rem-card is-done" style={postitStyle(personColorId(person))}
+                 aria-label="Erledigt: {reminderDisplayTitle(item.title, persons)}">
+              <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>
               <span class="rem-card-due">{m.phone_done_check()}</span>
             </div>
           {/each}

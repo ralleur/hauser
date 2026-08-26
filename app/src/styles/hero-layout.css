@@ -283,3 +283,142 @@
   .home-stage.has-two-slots .home-panels { overflow-x: auto; }
   .layout-slot-settings, .width-presets { grid-template-columns: 1fr; }
 }
+
+/* ── Onboarding-Karte für Raumbilder ──
+   Rechte Bühnenhälfte: sie erscheint nur, solange der gewählte Raum kein
+   eigenes Bild hat, und erklärt in einer Karte den Weg dorthin. Gleiche
+   Flächensprache wie .home-panel, nur deckender — sie trägt Fließtext. */
+.room-onboard {
+  position: absolute;
+  inset: var(--space-4) var(--space-4) var(--space-4) auto;
+  z-index: 3;
+  width: min(420px, 40%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface-1) 96%, transparent);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-overlay-shadow);
+  overflow: hidden;
+}
+.room-onboard-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.room-onboard-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+.room-onboard-text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+.room-onboard-teaser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.room-onboard-teaser figure {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+.room-onboard-teaser img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.room-onboard-teaser figcaption {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface-0) 80%, transparent);
+  font-size: var(--text-2xs);
+  color: var(--color-text-secondary);
+}
+.room-onboard-arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+.room-onboard-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  list-style: none;
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--color-border);
+}
+.room-onboard-steps li {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'icon icon' 'num label';
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  text-align: left;
+}
+.room-onboard-step-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-0);
+  color: var(--color-text-primary);
+}
+.room-onboard-step-num {
+  grid-area: num;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-2xs);
+  color: var(--color-text-secondary);
+}
+.room-onboard-step-label {
+  grid-area: label;
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-secondary);
+}
+.room-onboard-actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.room-onboard-actions button {
+  width: 100%;
+  justify-content: center;
+}

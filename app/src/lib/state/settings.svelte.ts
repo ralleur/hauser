@@ -55,7 +55,7 @@ export const settingsValues = $state({
   haUrl: lsGet('hmi:ha-url') ?? '',
   jellyfinUrl: lsGet('hmi:jf-url') ?? '',
   libraryMode: (lsGet('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake',
-  classicLockButton: lsGet('hmi:lock-button') === 'classic',
+  classicLockButton: lsGet('hmi:lock-button') !== 'large',
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
@@ -63,12 +63,12 @@ export const settingsValues = $state({
     : (lsGet('hmi:off-confirm-before') ?? '22:00'),
 });
 
-/* Lock-Button-Schema: Default ist der große Standby-FAB unten rechts;
-   „classic" blendet stattdessen wieder den Button in der Status-Bar ein.
+/* Lock-Button-Schema: Default ist der Button oben in der Status-Bar;
+   „large" blendet stattdessen den großen Standby-FAB unten rechts ein.
    Rein reaktiv — kein Neuladen nötig. */
 export function setClassicLockButton(on: boolean): void {
   settingsValues.classicLockButton = on;
-  lsSet('hmi:lock-button', on ? 'classic' : null);
+  lsSet('hmi:lock-button', on ? null : 'large');
 }
 
 /* Experimenteller Tageskommentar im Lockscreen. Default ist aus — die Zeile

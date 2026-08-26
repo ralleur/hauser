@@ -13,6 +13,7 @@
   import { SCENES, type SceneId } from '../state/scene-config.ts';
   import { applyScene, openSceneEdit } from '../state/scene-manager.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
+  import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { pulse } from '../actions/pulse.ts';
   import { fmtTemp } from '../format.ts';
   import type { ClimateValue } from '../adapter/types.ts';
@@ -68,6 +69,16 @@
     <div class="light-list">
       {#each room.lights as device (device.id)}
         <DeviceTile roomId={room.id} {device} />
+      {:else}
+        <!-- Schlecht gepflegter Raum in HA: statt einer leeren Fläche eine
+             Kachel im Geräte-Stil, die den Raum-Editor öffnet (wie Long-Press). -->
+        <button class="light-tile is-placeholder pressable" type="button"
+                onclick={() => openRoomEdit(room.id)}>
+          <span class="light-tile-icon" aria-hidden="true"><Icon name="i-plus" /></span>
+          <span class="light-tile-label">
+            <span class="light-tile-name">{m.room_add_device()}</span>
+          </span>
+        </button>
       {/each}
     </div>
   </section>
