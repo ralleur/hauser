@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.4.0-beta.10 - 2026-08-26
+
+### Added
+
+- Rooms without a background show an onboarding card on the home screen:
+  before/after, the three steps, and the choice between generating an image,
+  picking one yourself, or dismissing the card.
+- Rooms without devices show an **Add device** placeholder tile.
+- The people on the pinboard can be renamed, added, and given a note colour.
+
+### Changed
+
+- The room-image assistant leads with the photograph. OpenAI access is only the
+  first step when it is missing, cropping and zoom moved to the style-variant
+  step, and the focus picker is gone — the generated sets already match the
+  panel format.
+- The standby button sits in the title bar by default.
+
+### Fixed
+
+- Every write of the room-image assistant was answered with `ORIGIN_FORBIDDEN`
+  in the Home Assistant app, because the add-on can only configure the loopback
+  origins while the browser reaches Hauser under the host's address. A request
+  whose `Origin` matches its own effective origin exactly is now accepted as
+  well; foreign origins, differing ports or protocols, and missing or duplicate
+  `Origin` headers stay rejected.
+- Room-image error messages appeared in German regardless of the interface
+  language.
+- A published image set could be marked expired without detaching its asset,
+  which made the service refuse to start.
+
 ## 0.4.0-beta.9 - 2026-08-26
 
 ### Fixed

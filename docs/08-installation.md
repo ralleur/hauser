@@ -1,8 +1,8 @@
 # Installation and operation
 
-Hauser `v0.4.0-beta.9` is the current public technical beta. Once a tag passes
+Hauser `v0.4.0-beta.10` is the current public technical beta. Once a tag passes
 the release workflow, the release package uses
-`ghcr.io/ralleur/hauser:v0.4.0-beta.9`. An explicit source-build overlay remains
+`ghcr.io/ralleur/hauser:v0.4.0-beta.10`. An explicit source-build overlay remains
 available for development and source-level verification. Neither path comes with
 a support promise.
 

@@ -5,6 +5,59 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.4.0-beta.10] - 2026-08-26
+
+### Added
+
+- **Rooms without a background explain how to get one.** A room that has no
+  image set assigned showed nothing but an empty tile. The home screen now
+  carries an onboarding card with a before/after band, the three steps the
+  assistant takes, and three ways out: generate an image, pick one yourself,
+  or dismiss the card. The assistant and the library are loaded only when one
+  of them is actually opened.
+- **Rooms without devices offer a way to add one.** Instead of a blank area, an
+  empty room shows an **Add device** placeholder tile that opens the same room
+  editor as a long press on the room tile.
+- **The people on the pinboard can be named and added.** Tapping a name renames
+  that person, a header button adds another, and each gets a note colour from a
+  fixed palette. Existing tasks stay with their person.
+
+### Changed
+
+- **The room-image assistant leads with the photograph.** The OpenAI access
+  step now appears only when access is missing and stays reachable as a chip in
+  the header afterwards; the consent text is one line with the long form behind
+  an info button. Choosing the photograph is the first thing the assistant asks
+  for and offers the camera directly on touch devices. Cropping and zoom moved
+  to step two, next to the style variants, because the perspective correction
+  changes the framing anyway. The focus picker is gone entirely — the generated
+  sets already match the panel format exactly, so it changed nothing.
+- **The standby button sits in the title bar by default.** The setting in the
+  long-press menu now switches to the large floating button instead of away
+  from it.
+
+### Fixed
+
+- **The room-image assistant failed with a 403 in the Home Assistant app.**
+  Every write of the assistant — starting a ChatGPT sign-in, uploading a
+  photograph, creating variants — was answered with `ORIGIN_FORBIDDEN` when
+  Hauser ran as a Home Assistant add-on. The add-on can only configure the
+  loopback origins, while the browser reaches Hauser under the host's own
+  address, so the request never matched the static allowlist. A request whose
+  `Origin` matches its own effective origin — protocol, host and port,
+  compared exactly — is now accepted in addition to the configured list.
+  Foreign origins, differing ports or protocols, `null`, malformed values, a
+  missing origin on a write, and duplicate `Origin` headers stay rejected.
+- **Room-image errors appeared in German in an English install.** The assistant,
+  the library and the access panel showed the server's message verbatim, and
+  the server writes German only. They now use the translated message for the
+  operation that failed.
+- **A published image set could break the next server start.** The expiry pass
+  marked already published sets as expired without detaching the asset, which
+  the metadata validation forbids — so the service refused to start with
+  "incoherent room-image job metadata". Records that carry an asset are left
+  alone.
+
 ## [0.4.0-beta.9] - 2026-08-26
 
 ### Fixed
