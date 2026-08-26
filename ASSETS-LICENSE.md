@@ -17,6 +17,7 @@ The following paths are licensed under
 | `app/public/energy/` | Energy background artwork |
 | `app/public/notes/` | Notes background artwork |
 | `website/media/` | Public screenshots and presentation images |
+| `app/public/wizard/` | Before/after example pair shown in the room-image wizard |
 
 You may use, adapt and redistribute these assets, including commercially, as
 long as you give appropriate credit, link to the license and indicate whether
@@ -31,6 +32,11 @@ photographs and are not stock imagery.
 
 The files in `website/media/` are screenshots or presentation images derived
 from the Hauser interface. Some of them contain the AI-generated artwork above.
+
+The `before` file in `app/public/wizard/` is an actual photograph of a private
+home, contributed by the project author for this purpose; the `after` file next
+to it is the AI-generated result produced from it. The same pair appears in
+`website/media/`.
 
 This is stated explicitly because provenance matters when you reuse assets: if
 your project or jurisdiction has requirements around AI-generated material, or

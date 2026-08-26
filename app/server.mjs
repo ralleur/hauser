@@ -2282,7 +2282,10 @@ export function createRoomImageJobStore({
     const timestamp = now();
     for (const record of [...jobs.values()]) {
       if (pendingLineageTransaction(record.wizardId)) continue;
-      if (record.expiresAt <= timestamp && record.phase !== 'publishing_set'
+      /* Veroeffentlichte Sets haben keine Zwischendaten mehr: sie duerfen nicht
+         ablaufen, sonst widerspricht der Datensatz (Asset ohne 'succeeded')
+         seiner eigenen Validierung und der Start scheitert. */
+      if (record.expiresAt <= timestamp && record.phase !== 'publishing_set' && record.asset === null
           && !['expired', 'cancelled', 'superseded'].includes(record.status)) {
         update(record.jobId, (changed) => expire(changed));
       }

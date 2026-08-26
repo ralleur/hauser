@@ -102,14 +102,41 @@
   gap: var(--space-3);
 }
 .room-image-nav-hint {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
   margin-bottom: 0;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+}
+.room-image-nav-hint .icon { flex: none; margin-top: 2px; color: var(--color-accent-warm); }
+.room-image-pick .primary-btn,
+.room-image-pick .secondary-btn,
+.room-image-wizard-actions .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .room-image-consent {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px dotted var(--overlay-border);
+}
+.room-image-check input[type="checkbox"] {
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-top: 0;
+  appearance: none;
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-1);
+  cursor: pointer;
+}
+.room-image-check input[type="checkbox"]:checked {
+  border-color: var(--color-accent-warm);
+  background: var(--color-accent-warm) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/></svg>") center / 68% no-repeat;
 }
 .room-image-consent .room-image-check { flex: 1; flex-direction: row; align-items: flex-start; }
 .room-image-flow {
@@ -190,13 +217,13 @@
   backdrop-filter: blur(var(--overlay-blur));
 }
 .room-image-wizard {
-  width: min(1180px, 100%);
+  width: min(1320px, 100%);
   max-height: min(900px, calc(100dvh - var(--space-7)));
   overflow-y: auto;
   padding: var(--space-6);
   border: 1px solid var(--overlay-border);
   border-radius: var(--radius-2xl);
-  background: var(--overlay-panel-background);
+  background: color-mix(in srgb, var(--color-accent-warm) 5%, var(--overlay-panel-background));
   box-shadow: var(--elevation-overlay-shadow);
   color: var(--color-text-primary);
   animation: modal-enter var(--duration-enter) var(--ease-spring) both;
@@ -224,14 +251,135 @@
 .room-image-wizard-side,
 .room-image-final-confirm,
 .room-image-counter-grid > div {
+  padding: var(--space-5);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-accent-warm) 3%, var(--overlay-control-background));
+}
+.room-image-wizard-main h3,
+.room-image-wizard-side h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-lg);
+}
+/* Nummernkreis vor der Ueberschrift und in der Ablaufliste. */
+.room-image-step,
+.room-image-flow span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-accent-warm) 20%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.room-image-flow span { width: var(--space-5); height: var(--space-5); font-size: var(--text-xs); }
+
+/* Leerer Zustand: Text links, Ablage-Kachel rechts. */
+.room-image-hero.is-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+}
+.room-image-hero-copy > p { margin-bottom: var(--space-4); }
+.room-image-dropzone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 106 / 75;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface-1);
+  background-position: center;
+  background-size: cover;
+  cursor: pointer;
+}
+.room-image-dropzone.has-photo {
+  background-color: var(--color-surface-2);
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+.room-image-dropzone.has-photo::before { content: none; }
+.room-image-dropzone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-surface-1) 62%, transparent);
+}
+.room-image-dropzone-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-primary);
+}
+
+/* Vorher/Nachher-Band unter den Karten. */
+.room-image-teaser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
   padding: var(--space-4);
   border: 1px solid var(--overlay-border);
   border-radius: var(--radius-xl);
-  background: var(--overlay-control-background);
+  background: color-mix(in srgb, var(--color-accent-warm) 3%, var(--overlay-control-background));
 }
+.room-image-teaser figure {
+  position: relative;
+  flex: none;
+  width: 200px;
+  margin: 0;
+}
+.room-image-teaser img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+}
+.room-image-teaser figcaption {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface-1) 88%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+}
+.room-image-teaser-arrow {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.room-image-teaser p {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+}
+.room-image-teaser strong { color: var(--color-text-primary); }
 .room-image-wizard-side,
 .room-image-wizard-side label,
-.room-image-range,
 .room-image-preservation,
 .room-image-preservation label,
 .room-image-check,
@@ -251,18 +399,6 @@
   color: var(--color-text-primary);
   font: inherit;
 }
-.room-image-crop,
-.room-image-focus-preview {
-  width: 100%;
-  aspect-ratio: 106 / 75;
-  margin-top: var(--space-4);
-  overflow: hidden;
-  border: 1px solid var(--overlay-border);
-  border-radius: var(--radius-xl);
-  background-color: var(--color-surface-0);
-  background-repeat: no-repeat;
-}
-.room-image-crop { position: relative; cursor: move; }
 /* Zeigt, welchen Teil des Bildes die Navigation spaeter verdeckt. */
 .room-image-crop-guide {
   position: absolute;
@@ -273,39 +409,16 @@
   padding: var(--space-2) var(--space-3);
   border-right: 1px dashed color-mix(in srgb, var(--color-text-on-accent) 65%, transparent);
   background: linear-gradient(90deg, color-mix(in srgb, var(--color-surface-0) 55%, transparent), transparent);
-  color: var(--color-text-on-accent);
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   pointer-events: none;
 }
-.room-image-range input { width: 100%; }
-.room-image-focus-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-.room-image-focus-tabs button {
-  min-height: var(--touch-min);
-  border: 1px solid var(--overlay-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-2);
-}
-.room-image-focus-tabs button.is-active {
-  border-color: var(--color-accent-warm);
-  color: var(--color-accent-warm);
-}
-.room-image-focus-preview { position: relative; margin-top: 0; background-position: center; }
-.room-image-focus-preview span {
-  position: absolute;
-  width: var(--space-5);
-  height: var(--space-5);
-  border: 2px solid var(--color-text-on-accent);
-  border-radius: var(--radius-full);
-  background: var(--color-accent-warm);
-  box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--color-accent-warm) 30%, transparent);
-  transform: translate(-50%, -50%);
+.room-image-crop-guide > span {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface-inverse) 70%, transparent);
+  color: var(--color-text-on-inverse);
 }
 .room-image-preservation { margin: 0; padding: 0; border: 0; }
 .room-image-preservation legend { margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); }

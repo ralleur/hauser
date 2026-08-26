@@ -3,6 +3,7 @@
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
   import RoomImageAccess from './RoomImageAccess.svelte';
+  import Icon from '../Icon.svelte';
   import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
   import { getRoomImageAccess, type RoomImageAccessStatus } from '../../state/room-image-access.ts';
@@ -11,7 +12,6 @@
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
   import {
     initialRoomImageFocus,
-    pointFromPointer,
     projectRoomImageCrop,
     roomImagePhaseLabel,
     viewForRoomImageJob,
@@ -35,8 +35,12 @@
   let zoom = $state(1);
   let centerX = $state(0.5);
   let centerY = $state(0.5);
-  let focus = $state<RoomImageFocus>(initialRoomImageFocus());
-  let focusTarget = $state<'panel' | 'phone'>('panel');
+  /* Der Bildausschnitt bleibt mittig: die Perspektivkorrektur veraendert das
+     Motiv ohnehin, wer etwas anderes will, macht ein neues Foto. */
+  const focus: RoomImageFocus = initialRoomImageFocus();
+  /* Beispielbilder aus dem Projekt: sie zeigen im leeren Zustand, worauf der
+     Assistent hinauslaeuft, und liegen in jedem Build unter public/. */
+  const ASSET_BASE = import.meta.env.BASE_URL;
   const candidateCount = 1 as const; // 1 Stilvariante + Komposition = 2 Kandidaten
 
   let consentConfirmed = $state(false);
@@ -127,8 +131,6 @@
     zoom = 1;
     centerX = 0.5;
     centerY = 0.5;
-    focus = initialRoomImageFocus();
-    focusTarget = 'panel';
     consentConfirmed = false;
     accessOpen = false;
     selectedCandidateId = null;
@@ -196,7 +198,6 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-      focus = initialRoomImageFocus();
     } catch (error) {
       localError = error instanceof Error ? error.message : m.rimg_err_prepare();
     } finally {
@@ -222,23 +223,11 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-      focus = initialRoomImageFocus();
     } catch (error) {
       localError = error instanceof Error ? error.message : m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }
-  }
-
-  function setCropCenter(event: PointerEvent) {
-    const point = pointFromPointer(event);
-    centerX = point.x;
-    centerY = point.y;
-  }
-
-  function setFocus(event: PointerEvent) {
-    const point = pointFromPointer(event);
-    focus = { ...focus, [focusTarget]: point };
   }
 
   async function startMainJob() {
@@ -357,8 +346,6 @@
         <p class="room-image-alert is-error" role="alert">{wizardState.capability.error.message}</p>
       {:else if wizardState.capability.public?.imageCapability === 'disabled'}
         <p class="room-image-alert" role="status">{m.rimg_cap_disabled()}</p>
-      {:else if wizardState.capability.public?.imageCapability === 'unverified'}
-        <p class="room-image-alert" role="status">{m.rimg_cap_unverified()}</p>
       {/if}
 
       {#if wizardState.lifecycle === 'error' && wizardState.error && view !== 'upload'}
@@ -373,63 +360,60 @@
         </footer>
       {:else if view === 'upload'}
         <div class="room-image-wizard-grid">
-          <section class="room-image-wizard-main">
-            <h3>{m.rimg_step_photo()}</h3>
-            {#if IS_DEMO}
-              <p>{m.demo_rimg_pick_hint()}</p>
-              <div class="room-image-demo-sources" role="group" aria-label={m.demo_rimg_pick()}>
-                {#each demoSources as source (source.id)}
-                  <button class="room-image-demo-source pressable" type="button" class:is-active={demoSourceId === source.id}
-                          disabled={uploadBusy} onclick={() => chooseDemoSource(source)}>
-                    <img src={source.url} alt="" loading="lazy" />
-                    <span>{source.label}</span>
+          <section class="room-image-wizard-main room-image-hero" class:is-split={!IS_DEMO}>
+            <div class="room-image-hero-copy">
+              <h3><span class="room-image-step" aria-hidden="true">1</span>{m.rimg_step_photo()}</h3>
+              {#if IS_DEMO}
+                <p>{m.demo_rimg_pick_hint()}</p>
+                <div class="room-image-demo-sources" role="group" aria-label={m.demo_rimg_pick()}>
+                  {#each demoSources as source (source.id)}
+                    <button class="room-image-demo-source pressable" type="button" class:is-active={demoSourceId === source.id}
+                            disabled={uploadBusy} onclick={() => chooseDemoSource(source)}>
+                      <img src={source.url} alt="" loading="lazy" />
+                      <span>{source.label}</span>
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <p>{m.rimg_photo_hint()}</p>
+                <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
+                <div class="room-image-pick">
+                  <button class="primary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
+                    <Icon name="i-tray-arrow-up" cls="icon icon-sm" />
+                    {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
                   </button>
-                {/each}
-              </div>
-            {:else}
-              <p>{m.rimg_photo_hint()}</p>
-              <input hidden bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={chooseFile} />
-              <div class="room-image-pick">
-                {#if canCapture}
-                  <input hidden bind:this={captureInput} type="file" accept="image/*" capture="environment" onchange={chooseFile} />
-                  <button class="primary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => captureInput?.click()}>
-                    {m.rimg_photo_capture()}
-                  </button>
-                {/if}
-                <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => fileInput?.click()}>
-                  {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
-                </button>
-              </div>
-            {/if}
-            <p class="room-image-nav-hint">{m.rimg_nav_hint()}</p>
+                  {#if canCapture}
+                    <input hidden bind:this={captureInput} type="file" accept="image/*" capture="environment" onchange={chooseFile} />
+                    <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => captureInput?.click()}>
+                      <Icon name="i-camera-outline" cls="icon icon-sm" />
+                      {m.rimg_photo_capture()}
+                    </button>
+                  {/if}
+                </div>
+              {/if}
+              <p class="room-image-nav-hint">
+                <Icon name="i-lightbulb-on-outline" cls="icon icon-sm" />
+                <span>{m.rimg_nav_hint()}</span>
+              </p>
+            </div>
 
-            {#if upload && objectUrl && cropProjection}
-              <div class="room-image-crop" role="img" aria-label={m.rimg_crop_label()} onpointerdown={setCropCenter}
-                   style:background-image={`url("${objectUrl}")`} style:background-size={cropProjection.backgroundSize}
-                   style:background-position={cropProjection.backgroundPosition}>
-                <span class="room-image-crop-guide" aria-hidden="true">{m.rimg_nav_guide()}</span>
-              </div>
-              <label class="room-image-range">
-                <span>{m.rimg_crop_zoom()}</span>
-                <input type="range" min="1" max="3" step="0.05" bind:value={zoom} />
-              </label>
-              <div class="room-image-focus-tabs" role="group" aria-label={m.rimg_focus_group()}>
-                <button type="button" class:is-active={focusTarget === 'panel'} onclick={() => focusTarget = 'panel'}>{m.rimg_focus_panel()}</button>
-                <button type="button" class:is-active={focusTarget === 'phone'} onclick={() => focusTarget = 'phone'}>{m.rimg_focus_phone()}</button>
-              </div>
-              <button class="room-image-focus-preview" type="button" aria-label={m.rimg_focus_set({ target: focusTarget === 'panel' ? m.rimg_focus_panel() : m.rimg_focus_phone() })} onpointerdown={setFocus}
-                      style:background-image={`url("${objectUrl}")`} style:background-size={cropProjection.backgroundSize}
-                      style:background-position={cropProjection.backgroundPosition}>
-                <span style:left={`${focus[focusTarget].x * 100}%`} style:top={`${focus[focusTarget].y * 100}%`}></span>
+            {#if !IS_DEMO}
+              <button class="room-image-dropzone pressable" type="button" class:has-photo={Boolean(upload && objectUrl)}
+                      disabled={uploadBusy || !capabilityEnabled}
+                      aria-label={upload ? m.rimg_photo_other() : m.rimg_photo_choose()} onclick={() => fileInput?.click()}
+                      style:background-image={upload && objectUrl ? `url("${objectUrl}")` : `url("${ASSET_BASE}hero/schlafzimmer-light.avif")`}>
+                {#if !upload}
+                  <span class="room-image-crop-guide" aria-hidden="true"><span>{m.rimg_nav_guide()}</span></span>
+                  <span class="room-image-dropzone-mark" aria-hidden="true"><Icon name="i-cloud-upload-outline" cls="icon icon-md" /></span>
+                {/if}
               </button>
-              <small>{focusTarget === 'panel' ? m.rimg_focus_hint_panel() : m.rimg_focus_hint_phone()}</small>
             {/if}
           </section>
 
           <aside class="room-image-wizard-side">
             <h3>{m.rimg_flow_title()}</h3>
             <ol class="room-image-flow">
-              <li><span aria-hidden="true">1</span>{m.rimg_step_photo()}</li>
+              <li><span aria-hidden="true">1</span>{m.rimg_photo_choose()}</li>
               <li><span aria-hidden="true">2</span>{m.rimg_candidates_title()}</li>
               <li><span aria-hidden="true">3</span>{m.rimg_review_title()}</li>
             </ol>
@@ -447,13 +431,30 @@
             </div>
           </aside>
         </div>
+        {#if !upload}
+          <section class="room-image-teaser">
+            <figure>
+              <img src={`${ASSET_BASE}wizard/before.webp`} alt="" loading="lazy" />
+              <figcaption>{m.rimg_before()}</figcaption>
+            </figure>
+            <span class="room-image-teaser-arrow" aria-hidden="true"><Icon name="i-arrow-right" cls="icon icon-sm" /></span>
+            <figure>
+              <img src={`${ASSET_BASE}wizard/after.webp`} alt="" loading="lazy" />
+              <figcaption>{m.rimg_after()}</figcaption>
+            </figure>
+            <p><strong>{m.rimg_teaser_title()}</strong><span>{m.rimg_teaser_sub()}</span></p>
+          </section>
+        {/if}
         {#if localError}<p class="room-image-alert is-error" role="alert">{localError}</p>{/if}
         {#if wizardState.lifecycle === 'error' && wizardState.error}
           <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
         {/if}
         <footer class="room-image-wizard-actions">
           <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_close()}</button>
-          <button class="primary-btn pressable" type="button" disabled={!upload || !consentConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>{m.rimg_start()}</button>
+          <button class="primary-btn pressable" type="button" disabled={!upload || !consentConfirmed || busy || !capabilityEnabled} onclick={startMainJob}>
+            {m.rimg_start()}
+            <Icon name="i-creation" cls="icon icon-sm" />
+          </button>
         </footer>
 
       {:else if wizardState.job}

@@ -59,6 +59,7 @@ cc_roots = (
     Path('app/public/rooms'),
     Path('app/public/energy'),
     Path('app/public/notes'),
+    Path('app/public/wizard'),
     Path('website/media'),
 )
 brand_roots = (

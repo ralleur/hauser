@@ -508,6 +508,19 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     });
   });
 
+  it('keeps a published set out of the expiry sweep so a restart still loads it', async () => {
+    const sandbox = root();
+    let clock = 1_700_000_000_000;
+    const app = await startB4({ sandbox, now: () => clock });
+    const asset = await publishAsset(app);
+    clock += 25 * 60 * 60 * 1000;
+    expect(() => app.jobStore.cleanup()).not.toThrow();
+    expect(app.jobStore.get(app.finalJobId)).toMatchObject({ status: 'succeeded', phase: 'complete', asset });
+    expect(() => createRoomImageJobStore({
+      metadataRoot: join(sandbox, 'jobs'), tempRoot: join(sandbox, 'private'), now: () => clock,
+    })).not.toThrow();
+  });
+
   it('lists sanitized live assignments and serves only catalogued immutable variants', async () => {
     const app = await startB4();
     const published = await fetch(`${app.base}/api/room-image-jobs/${app.finalJobId}/publish`, {
