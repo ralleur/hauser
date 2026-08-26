@@ -383,9 +383,33 @@ function normalizedRoomImageIdentity(req, headerName) {
   return normalizeRoomImageIdentity(req.rawHeaders, headerName);
 }
 
-function allowedRoomImageOrigin(req, allowedOrigins) {
+// Same-Origin-Vergleich: Die Origin muss exakt dem effektiven Request-Origin
+// aus Protokoll, Host und Port entsprechen.
+function sameOriginAsRequest(origin, req) {
+  const host = req.headers?.host;
+  if (typeof host !== 'string' || !host) return false;
+  const protocol = req.socket?.encrypted ? 'https:' : 'http:';
+  try {
+    const browserOrigin = new URL(origin);
+    const requestUrl = new URL(`${protocol}//${host}`);
+    const validBrowserOrigin = ['http:', 'https:'].includes(browserOrigin.protocol)
+      && !browserOrigin.username && !browserOrigin.password
+      && browserOrigin.pathname === '/' && !browserOrigin.search && !browserOrigin.hash
+      && browserOrigin.origin === origin;
+    const validRequestHost = requestUrl.pathname === '/'
+      && !requestUrl.username && !requestUrl.password
+      && !requestUrl.search && !requestUrl.hash;
+    return validBrowserOrigin && validRequestHost && browserOrigin.origin === requestUrl.origin;
+  } catch {
+    return false;
+  }
+}
+
+export function allowedRoomImageOrigin(req, allowedOrigins) {
   const origins = rawHeaderValues(req, 'origin');
-  return origins.length === 1 && allowedOrigins.has(origins[0]);
+  if (origins.length !== 1) return false;
+  const origin = origins[0];
+  return allowedOrigins.has(origin) || sameOriginAsRequest(origin, req);
 }
 
 class RoomImageUploadStoreError extends Error {
@@ -4084,24 +4108,7 @@ export function requestOriginAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   if (origin === undefined) return true;
   if (typeof origin !== 'string' || !origin) return false;
   if (allowedOrigins.has(origin)) return true;
-
-  const host = req.headers?.host;
-  if (typeof host !== 'string' || !host) return false;
-  const protocol = req.socket?.encrypted ? 'https:' : 'http:';
-  try {
-    const browserOrigin = new URL(origin);
-    const requestUrl = new URL(`${protocol}//${host}`);
-    const validBrowserOrigin = ['http:', 'https:'].includes(browserOrigin.protocol)
-      && !browserOrigin.username && !browserOrigin.password
-      && browserOrigin.pathname === '/' && !browserOrigin.search && !browserOrigin.hash
-      && browserOrigin.origin === origin;
-    const validRequestHost = requestUrl.pathname === '/'
-      && !requestUrl.username && !requestUrl.password
-      && !requestUrl.search && !requestUrl.hash;
-    return validBrowserOrigin && validRequestHost && browserOrigin.origin === requestUrl.origin;
-  } catch {
-    return false;
-  }
+  return sameOriginAsRequest(origin, req);
 }
 
 export function songRequestAllowed(req, target, allowedOrigins = ALLOWED_ORIGINS) {

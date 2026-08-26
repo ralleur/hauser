@@ -60,7 +60,7 @@
   }
 
   async function load() {
-    try { update(await getRoomImageAccess()); } catch (cause) { error = cause instanceof Error ? cause.message : m.rimg_access_err_load(); }
+    try { update(await getRoomImageAccess()); } catch { error = m.rimg_access_err_load(); }
   }
 
   async function saveKey() {
@@ -69,7 +69,7 @@
     try {
       update(await saveRoomImageApiKey(apiKey));
       apiKey = '';
-    } catch (cause) { error = cause instanceof Error ? cause.message : m.rimg_access_err_save(); }
+    } catch { error = m.rimg_access_err_save(); }
     finally { busy = false; }
   }
 
@@ -80,7 +80,7 @@
       login = await startRoomImageChatGptLogin();
       window.open(login.verificationUrl, '_blank', 'noopener,noreferrer');
       schedulePoll();
-    } catch (cause) { error = cause instanceof Error ? cause.message : m.rimg_access_err_login_start(); }
+    } catch { error = m.rimg_access_err_login_start(); }
     finally { busy = false; }
   }
 
@@ -98,8 +98,8 @@
         login = null;
         update(await getRoomImageAccess());
       } else schedulePoll();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : m.rimg_access_err_login_finish();
+    } catch {
+      error = m.rimg_access_err_login_finish();
       login = null;
     }
   }
@@ -107,7 +107,7 @@
   async function disconnect() {
     busy = true; error = null;
     try { update(await clearRoomImageAccess()); login = null; }
-    catch (cause) { error = cause instanceof Error ? cause.message : m.rimg_access_err_clear(); }
+    catch { error = m.rimg_access_err_clear(); }
     finally { busy = false; }
   }
 </script>

@@ -198,8 +198,8 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-    } catch (error) {
-      localError = error instanceof Error ? error.message : m.rimg_err_prepare();
+    } catch {
+      localError = m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }
@@ -223,8 +223,8 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-    } catch (error) {
-      localError = error instanceof Error ? error.message : m.rimg_err_prepare();
+    } catch {
+      localError = m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }
@@ -251,8 +251,8 @@
         costConfirmed: true,
         confirmedProviderCalls: 2,
       });
-    } catch (error) {
-      localError = error instanceof Error ? error.message : m.rimg_err_start();
+    } catch {
+      localError = m.rimg_err_start();
     }
   }
 
@@ -292,8 +292,8 @@
         const library = await loadRoomImageLibrary();
         await assignRoomImage(assignRoomId, { assetId: asset.assetId, focus: asset.focus }, library.householdEtag);
         assignNotice = m.rimg_assigned();
-      } catch (error) {
-        assignError = error instanceof Error ? error.message : m.rimg_err_assign();
+      } catch {
+        assignError = m.rimg_err_assign();
         assignBusy = false;
         return;
       }

@@ -51,8 +51,8 @@
     try {
       library = await loadRoomImageLibrary();
       error = null;
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : m.rimg_lib_err_load();
+    } catch {
+      error = m.rimg_lib_err_load();
     } finally {
       busy = false;
     }
@@ -73,8 +73,8 @@
       notice = m.rimg_lib_assigned_to({ room: rooms.find((room) => room.id === roomId)?.name ?? roomId });
       onassigned?.(asset.assetId);
       await reload();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : m.rimg_err_assign();
+    } catch {
+      error = m.rimg_err_assign();
       busy = false;
     }
   }
@@ -89,8 +89,8 @@
       notice = m.rimg_lib_unassigned_notice();
       onassigned?.(null);
       await reload();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : m.rimg_lib_err_unassign();
+    } catch {
+      error = m.rimg_lib_err_unassign();
       busy = false;
     }
   }
@@ -109,8 +109,8 @@
       await deleteRoomImageAsset(asset.assetId);
       notice = m.rimg_lib_deleted();
       await reload();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : m.rimg_lib_err_delete();
+    } catch {
+      error = m.rimg_lib_err_delete();
       busy = false;
     }
   }

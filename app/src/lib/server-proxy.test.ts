@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import neutralApartment from '../../config/examples/neutral-apartment.json';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, hotelAdminOnlyRoute, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, allowedRoomImageOrigin, hotelAdminOnlyRoute, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -359,6 +359,38 @@ describe('HMI-Backend-Proxy', () => {
     const response = await fetch(`http://127.0.0.1:${port}/hermes/health`);
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'Route nicht gefunden' });
+  });
+
+  it('erlaubt Room-Image-Schreibzugriffe bei konfigurierter oder exakt gleicher Origin', () => {
+    const req = (origins: string[], host: string | null = '198.51.100.7:4173', encrypted = false) => ({
+      rawHeaders: [
+        ...origins.flatMap((origin) => ['Origin', origin]),
+        ...(host === null ? [] : ['Host', host]),
+      ],
+      headers: { ...(origins.length === 1 ? { origin: origins[0] } : {}), ...(host === null ? {} : { host }) },
+      socket: { encrypted },
+    });
+    const configured = new Set(['http://localhost:4173', 'http://127.0.0.1:4173']);
+
+    expect(allowedRoomImageOrigin(req(['http://localhost:4173'], 'localhost:4173'), configured)).toBe(true);
+    expect(allowedRoomImageOrigin(req(['http://127.0.0.1:4173'], 'anderer.host:4173'), configured)).toBe(true);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173']), configured)).toBe(true);
+    expect(allowedRoomImageOrigin(req(['http://homeassistant.local:8123'], 'homeassistant.local:8123'), configured)).toBe(true);
+    expect(allowedRoomImageOrigin(req(['https://haos.local:4173'], 'haos.local:4173', true), configured)).toBe(true);
+
+    expect(allowedRoomImageOrigin(req(['http://evil.invalid'], '198.51.100.7:4173'), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4174']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['https://198.51.100.7:4173']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173'], '198.51.100.7:4173', true), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['null']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['not an origin']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173/pfad']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req([]), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173', 'http://198.51.100.7:4173']), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://localhost:4173', 'http://evil.invalid'], 'localhost:4173'), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173'], null), configured)).toBe(false);
+    expect(allowedRoomImageOrigin(req(['http://198.51.100.7:4173'], 'kaputter host/wert'), configured)).toBe(false);
   });
 
   it('erlaubt direkte Browserzugriffe nur bei exaktem effektiven Request-Origin', () => {
