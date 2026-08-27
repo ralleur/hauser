@@ -5,6 +5,7 @@ import homeScreen from '../screens/HomeScreen.svelte?raw';
 import phoneFeed from '../components/phone/PhoneHomeFeed.svelte?raw';
 import phoneRoomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte?raw';
+import roomListEditor from '../components/settings/RoomListEditor.svelte?raw';
 
 describe('room management UI contracts', () => {
   it('keeps all room edits inside the atomic setup draft until activation', () => {
@@ -30,29 +31,47 @@ describe('room management UI contracts', () => {
   });
 
   it('renders room management directly and keeps the destructive rescan at the bottom', () => {
-    expect(roomsDevicesSection).toContain('<SetupWizard mode="reconfigure" embedded />');
+    expect(roomsDevicesSection).toContain('<SetupWizard mode="reconfigure" embedded after={cards} />');
     expect(roomsDevicesSection).not.toContain('openHouseholdSetup');
-    expect(setupWizard.indexOf('m.settings_rooms_devices_save()')).toBeLessThan(
-      setupWizard.indexOf('m.settings_rooms_devices_scan_label()'),
+    // Neu einlesen ist die dritte Reset-Kachel — unterhalb von Liste,
+    // Speichern und Raumbildern, nicht zwischen den Räumen.
+    expect(roomsDevicesSection.indexOf('m.sys_room_images()')).toBeLessThan(
+      roomsDevicesSection.indexOf('m.settings_rooms_devices_scan_label()'),
     );
+    expect(setupWizard).toContain('m.settings_rooms_devices_save()');
     expect(setupWizard).toMatch(/catch \(error\) \{\s+suggestion = previousSuggestion;/);
   });
 
-  it('shows rooms as one compact expandable list instead of permanent cards', () => {
+  it('does not block embedded room saves on an incomplete Jellyfin session', () => {
+    expect(setupWizard).toContain('if (!embedded && jellyfinEnabled && !jellyfinSession)');
+    expect(setupWizard).toContain("disabled={status === 'activating' || (!embedded && jellyfinEnabled && !jellyfinSession)}");
+  });
+
+  it('shows every room with its current image, device count and drag handle', () => {
+    expect(roomListEditor).toContain('resolveRoomHero({');
+    expect(roomListEditor).toContain('m.settings_rooms_devices_configure()');
+    expect(roomListEditor).toContain('m.settings_rooms_devices_rename()');
+    expect(roomListEditor).toContain("<Icon name=\"i-dots-grid\"");
+    expect(roomListEditor).toMatch(/onpointerdown=\{\(event\) => startDrag\(event, room\.id\)\}/);
+    expect(roomListEditor).toContain('onreorder(dragRoomId, to)');
+    // Ohne Zeigegerät bleibt die Reihenfolge über die Pfeiltasten erreichbar.
+    expect(roomListEditor).toContain("if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;");
+    expect(roomListEditor).toMatch(/\.room-handle \{ cursor: grab; touch-action: none; \}/);
+  });
+
+  it('keeps the first-run wizard on its own expandable list', () => {
     expect(setupWizard).toContain("let expandedRoomId = $state<string | null>(null)");
     expect(setupWizard).toContain('class:expanded={expandedRoomId === room.id}');
-    // Der Ersteinrichtungs-Wizard klappt weiter auf; eingebettet in den
-    // Einstellungen bleibt nur die Löschbestätigung.
-    expect(setupWizard).toContain('embedded ? pendingDeleteRoomId === room.id : expandedRoomId === room.id');
     expect(setupWizard).toMatch(/\.room-list \{[^}]*overflow: hidden;[^}]*border:/);
     expect(setupWizard).toMatch(/\.room-card \+ \.room-card \{ border-top:/);
   });
 
   it('opens the shared room overlay from the embedded settings list', () => {
-    // In den Einstellungen führt der Tap auf einen Raum in dasselbe Overlay wie
+    // In den Einstellungen führt „Geräte konfigurieren“ in dasselbe Overlay wie
     // der Longpress vom Home-Screen; Entitätenpflege gibt es dort nicht mehr.
     expect(setupWizard).toContain("import { openRoomEdit } from '../state/overlay.svelte.ts'");
-    expect(setupWizard).toContain('? openRoomEdit(room.id)');
+    expect(setupWizard).toContain('onopen={openRoomEdit}');
     expect(setupWizard).toContain('{#if embedded}');
+    expect(roomListEditor).toContain('onopen(room.id)');
   });
 });

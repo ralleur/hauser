@@ -29,13 +29,19 @@ export function finishDeviceDetailClose() {
 /* ── Raum-Geräte-Editor: Long-Press auf eine Raum-Kachel (Home) öffnet das
    Bearbeiten-Modal (Reihenfolge, Hinzufügen per Suche, Entfernen). Gleiche
    Zustandsmaschine wie deviceDetail, eigener Stack-Slot. */
+export type RoomEditView = 'devices' | 'immersion' | 'background';
+
 export const roomEdit = $state({
   mode: 'hidden' as 'hidden' | 'open' | 'closing',
   roomId: '',
+  /* Womit das Overlay aufgeht: der Tap auf das Raumbild landet direkt beim
+     Bild, alles andere bei der Geräteliste. */
+  view: 'devices' as RoomEditView,
 });
 
-export function openRoomEdit(roomId: string) {
+export function openRoomEdit(roomId: string, view: RoomEditView = 'devices') {
   roomEdit.roomId = roomId;
+  roomEdit.view = view;
   roomEdit.mode = 'open';
 }
 

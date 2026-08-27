@@ -17,7 +17,7 @@ The following paths are licensed under
 | `app/public/energy/` | Energy background artwork |
 | `app/public/notes/` | Notes background artwork |
 | `website/media/` | Public screenshots and presentation images |
-| `app/public/wizard/` | Before/after example pair shown in the room-image wizard |
+| `app/public/wizard/` | Before/after example pair and the icons of the room-image wizard and its library |
 
 You may use, adapt and redistribute these assets, including commercially, as
 long as you give appropriate credit, link to the license and indicate whether

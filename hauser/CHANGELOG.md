@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.0 - 2026-08-27
+
+### Added
+
+- **Rooms & devices** shows every room with its image and device count, drags
+  into order with a handle, and keeps configure, rename and delete in the row.
+- Tapping a room's image opens the room-image editor directly.
+- The room-image assistant and the image library sit in their own cards.
+
+### Changed
+
+- Versions drop the `-beta.N` suffix: every release below `1.0.0` is a beta.
+- Settings open on **Rooms & devices**; returning within 30 seconds restores the
+  section that was open.
+- Resetting device names, scenes and the Home Assistant re-read is one card.
+
+### Fixed
+
+- The room-image card on the home screen can be switched off for good.
+- Saving room changes in Settings is no longer blocked by an unverified
+  Jellyfin sign-in.
+
 ## 0.4.0-beta.10 - 2026-08-26
 
 ### Added

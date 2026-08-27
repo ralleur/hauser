@@ -89,11 +89,14 @@
     setRoomDeviceOrder(room.id, ids);
   }
 
-  // Beim Raum-Wechsel bzw. Schließen die Suche zurücksetzen.
+  // Jedes Öffnen startet frisch — in der Ansicht, mit der es aufgerufen wurde.
   $effect(() => {
+    const opening = roomEdit.mode === 'open';
+    const requestedView = roomEdit.view;
     void roomEdit.roomId;
+    if (!opening) return;
     query = '';
-    view = 'devices';
+    view = requestedView;
     selectedLightId = '';
     backgroundMessage = null;
     backgroundError = false;

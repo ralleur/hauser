@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../../styles/settings.css';
-  import { tick, type Component } from 'svelte';
+  import { onMount, tick, type Component } from 'svelte';
   import Icon from '../components/Icon.svelte';
   import { systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
@@ -14,6 +14,8 @@
   } from '../state/settings-registry.ts';
   import {
     settingsUi,
+    enterSettings,
+    leaveSettings,
     openSection,
     openSetting,
   } from '../state/settings.svelte.ts';
@@ -40,6 +42,11 @@
   const section = $derived(settingsSection(settingsUi.section));
   const results = $derived(searchSettings(settingsUi.query));
   const sidebar = $derived(settingsSidebar());
+
+  onMount(() => {
+    enterSettings();
+    return () => leaveSettings();
+  });
 
   $effect(() => {
     if (connection().status === 'connected') void refreshSystemStatus();

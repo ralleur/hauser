@@ -22,9 +22,10 @@ function lsSet(key: string, value: string | null): void {
 }
 
 export const settingsUi = $state({
-  /* Einstieg auf „Dienste“: die Frage „hängt alles dran und läuft es?“ ist
-     der häufigste Grund, die Einstellungen überhaupt zu öffnen. */
-  section: 'services' as SettingsSectionId,
+  /* Einstieg auf „Räume & Geräte“: das ist die Seite, auf der wirklich etwas
+     eingerichtet wird. Wer den Screen nur kurz verlässt, kommt zurück, wo er
+     war (siehe enterSettings/leaveSettings). */
+  section: 'rooms-devices' as SettingsSectionId,
   query: '',
   /* Sprungziel aus der Suche: die Zeile blitzt kurz auf (Chrome-Settings-Muster).
      seq unterscheidet wiederholte Sprünge auf dieselbe Einstellung. */
@@ -33,6 +34,25 @@ export const settingsUi = $state({
   /* Änderungen, die erst ein Neuladen der App aufnimmt (Backend-Wechsel, Resets) */
   needsReload: false,
 });
+
+/* Ein kurzer Abstecher (Raum nachsehen, Musik lauter) soll die geöffnete
+   Sektion nicht kosten; ein späterer Aufruf ist ein neuer Vorgang und startet
+   wieder bei Räume & Geräte. */
+const SECTION_RESUME_MS = 30_000;
+let leftSettingsAt: number | null = null;
+
+export function enterSettings(now: number = Date.now()): void {
+  if (leftSettingsAt === null || now - leftSettingsAt > SECTION_RESUME_MS) {
+    settingsUi.section = 'rooms-devices';
+    settingsUi.highlight = null;
+    settingsUi.query = '';
+  }
+  leftSettingsAt = null;
+}
+
+export function leaveSettings(now: number = Date.now()): void {
+  leftSettingsAt = now;
+}
 
 export function openSection(id: SettingsSectionId): void {
   settingsUi.section = id;
@@ -57,6 +77,7 @@ export const settingsValues = $state({
   libraryMode: (lsGet('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake',
   classicLockButton: lsGet('hmi:lock-button') !== 'large',
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
+  roomOnboardHidden: lsGet('hmi:room-onboard') === 'off',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
     ? null
@@ -77,6 +98,14 @@ export function setClassicLockButton(on: boolean): void {
 export function setAmbientHeroText(on: boolean): void {
   settingsValues.ambientHeroText = on;
   lsSet('hmi:ambient-hero-text', on ? 'on' : null);
+}
+
+/* Die Onboarding-Karte für Raumbilder erklärt den Assistenten so lange, bis
+   ein Raum ein Bild hat. Wer sie nicht mehr sehen will, schaltet sie hier
+   dauerhaft ab — lokal für dieses Gerät, wie die übrigen Anzeigeschalter. */
+export function setRoomOnboardHidden(hidden: boolean): void {
+  settingsValues.roomOnboardHidden = hidden;
+  lsSet('hmi:room-onboard', hidden ? 'off' : null);
 }
 
 /* Deep Night reduziert den Lockscreen zwischen 22:00 und 06:00 auf eine rote

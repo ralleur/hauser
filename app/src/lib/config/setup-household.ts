@@ -165,6 +165,20 @@ export function moveSetupRoom(
   return next;
 }
 
+export function moveSetupRoomTo(
+  config: HouseholdConfigV4,
+  roomId: string,
+  targetIndex: number,
+): HouseholdConfigV4 {
+  const index = config.rooms.findIndex((room) => room.id === roomId);
+  if (index < 0 || targetIndex < 0 || targetIndex >= config.rooms.length) return config;
+  if (index === targetIndex) return config;
+  const next = cloneHouseholdConfig(config);
+  const [moved] = next.rooms.splice(index, 1);
+  next.rooms.splice(targetIndex, 0, moved);
+  return next;
+}
+
 function compatibleRoomMerge(source: RoomConfig, target: RoomConfig): boolean {
   const singletonRoles = new Set(target.visibleEntities
     .filter(({ role }) => role !== 'light')

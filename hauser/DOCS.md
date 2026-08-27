@@ -70,19 +70,19 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.4.0-beta.10` is the current published App and Docker/Compose beta. Hauser
-  is licensed under the GNU Affero General Public License instead of MIT;
-  everything up to and including `0.4.0-beta.6` stays MIT, and nothing changes
-  for people running Hauser at home. This release fixes the room-image
-  assistant inside the App: every write it makes was answered with
-  `ORIGIN_FORBIDDEN`, because the App can only configure the loopback origins
-  while the browser reaches Hauser under the host's own address. A request
-  whose `Origin` matches its own effective origin exactly is now accepted as
-  well. It carries the earlier App fixes: the reconfigure-flow ETag fix and the
-  container source metadata from `0.4.0-beta.9`, the setup activation origin
-  fix from `0.4.0-beta.6` (#8), the setup-wizard discovery fixes for switches,
-  media players and vacuums from `0.4.0-beta.5` (#7), and the `/data/assets`
-  start fix from `0.4.0-beta.4` (#6). The vacuum path follows the documented
-  Home Assistant service set and is not yet verified against real hardware. An
-  external real-home installation remains the next beta-stabilisation evidence
-  gate.
+- `0.5.0` is the current published App and Docker/Compose beta. It is the first
+  release without a `-beta.N` suffix: every version below `1.0.0` is a beta, so
+  the number carries that on its own. Hauser is licensed under the GNU Affero
+  General Public License instead of MIT; everything up to and including
+  `0.4.0-beta.6` stays MIT, and nothing changes for people running Hauser at
+  home. This release rebuilds the **Rooms & devices** settings page: every room
+  shows its own image, the order is dragged instead of nudged with arrows, and
+  the room actions sit in the row. It carries the earlier App fixes: the
+  room-image origin fix from `0.4.0-beta.10`, the reconfigure-flow ETag fix and
+  the container source metadata from `0.4.0-beta.9`, the setup activation
+  origin fix from `0.4.0-beta.6` (#8), the setup-wizard discovery fixes for
+  switches, media players and vacuums from `0.4.0-beta.5` (#7), and the
+  `/data/assets` start fix from `0.4.0-beta.4` (#6). The vacuum path follows the
+  documented Home Assistant service set and is not yet verified against real
+  hardware. An external real-home installation remains the next
+  beta-stabilisation evidence gate.

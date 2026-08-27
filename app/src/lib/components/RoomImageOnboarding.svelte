@@ -10,6 +10,7 @@
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../config/product-capabilities.ts';
   import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
+  import { settingsValues, setRoomOnboardHidden } from '../state/settings.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   const ASSET_BASE = import.meta.env.BASE_URL;
@@ -26,6 +27,7 @@
   const roomId = $derived(appState.currentRoom);
   const visible = $derived(
     ROOM_IMAGE_WIZARD_ENABLED
+    && !settingsValues.roomOnboardHidden
     && !!roomId
     && roomHeroConfig(roomId) === null
     && !dismissed[roomId as string],
@@ -86,6 +88,11 @@
       <button class="secondary-btn pressable" type="button" onclick={dismiss}>
         {m.room_onboard_dismiss()}
       </button>
+      <label class="room-onboard-hide">
+        <input type="checkbox" checked={settingsValues.roomOnboardHidden}
+               onchange={(event) => setRoomOnboardHidden(event.currentTarget.checked)} />
+        <span>{m.room_onboard_hide()}</span>
+      </label>
     </footer>
   </aside>
 {/if}

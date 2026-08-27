@@ -5,6 +5,43 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-27
+
+### Added
+
+- **Rooms & devices is a real room list.** Every room now shows its current
+  room image, its name and how many devices it holds. **Configure devices**
+  opens the room editor, **Rename** edits the name in place, the six-dot handle
+  drags the room into position — with the arrow keys as the keyboard path — and
+  the overflow menu keeps move, rename and delete. **New room** and **Save
+  changes** sit where the list ends.
+- **Tapping a room's image opens the image editor.** The thumbnail in the
+  settings list leads straight to the room-image view of the room overlay,
+  where an image can be uploaded, picked from the library or removed.
+- **The room-image assistant and the library have their own cards.** Both sit
+  as illustrated tiles under the room list instead of two anonymous rows.
+
+### Changed
+
+- **Version numbers drop the `-beta.N` suffix.** Every release below `1.0.0` is
+  a beta; the version number says so on its own. `0.4.0-beta.10` is followed by
+  `0.5.0`.
+- **Settings open on Rooms & devices.** That is the page where a home is
+  actually set up. Coming back within 30 seconds still returns to the section
+  that was open, so a quick detour costs nothing; a later visit starts fresh.
+- **Resetting is one card with three tiles.** Device names and icons, scenes,
+  and re-reading rooms and devices from Home Assistant — the last one used to
+  be a separate section at the bottom of the page.
+
+### Fixed
+
+- **The room-image card kept coming back.** Dismissing it only applied to that
+  one room and only until the next reload. A checkbox on the card now switches
+  it off for good on that device.
+- **Saving room changes could be blocked by Jellyfin.** In Settings there are
+  no Jellyfin fields, yet an unverified sign-in disabled **Save changes**. The
+  first-run wizard still requires the tested sign-in.
+
 ## [0.4.0-beta.10] - 2026-08-26
 
 ### Added

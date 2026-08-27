@@ -15,6 +15,7 @@
     canMoveSetupEntity,
     moveSetupEntity,
     moveSetupRoom,
+    moveSetupRoomTo,
     omitSetupEntity,
     preserveSetupRoomHeroes,
     removeSetupRoom,
@@ -30,13 +31,19 @@
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
+  import RoomListEditor from './settings/RoomListEditor.svelte';
+  import type { Snippet } from 'svelte';
 
   let {
     mode = 'first-run',
     embedded = false,
+    after,
   }: {
     mode?: 'first-run' | 'reconfigure';
     embedded?: boolean;
+    /* Eingebettet reicht die Sektion ihre eigenen Karten (Raumbilder,
+       Zurücksetzen) hier hinein und bekommt dafür das Neu-Einlesen. */
+    after?: Snippet<[{ rescan: () => void; busy: boolean }]>;
   } = $props();
   initLocale();
   const reconfigure = $derived(mode === 'reconfigure');
@@ -225,13 +232,9 @@
     if (room) document.querySelector<HTMLInputElement>(`[data-room-name="${room.id}"]`)?.focus();
   }
 
-  function renameRoom(roomId: string, event: Event): void {
+  function renameRoom(roomId: string, name: string): void {
     if (!suggestion) return;
-    const config = renameSetupRoom(
-      suggestion.config,
-      roomId,
-      (event.currentTarget as HTMLInputElement).value,
-    );
+    const config = renameSetupRoom(suggestion.config, roomId, name);
     suggestion = { ...suggestion, config };
   }
 
@@ -239,6 +242,39 @@
     if (!suggestion) return;
     const config = moveSetupRoom(suggestion.config, roomId, direction);
     if (config !== suggestion.config) suggestion = { ...suggestion, config };
+  }
+
+  function reorderRoom(roomId: string, targetIndex: number): void {
+    if (!suggestion) return;
+    const config = moveSetupRoomTo(suggestion.config, roomId, targetIndex);
+    if (config !== suggestion.config) suggestion = { ...suggestion, config };
+  }
+
+  function roomDeleteOptions(roomId: string): { id: string; name: string; disabled: boolean }[] {
+    if (!suggestion) return [];
+    const config = suggestion.config;
+    return config.rooms
+      .filter((room) => room.id !== roomId)
+      .map((room) => ({
+        id: room.id,
+        name: room.name,
+        disabled: !canRemoveSetupRoom(config, roomId, { type: 'move', targetRoomId: room.id }),
+      }));
+  }
+
+  function deleteRoom(roomId: string, destination: string): void {
+    if (!suggestion) return;
+    const room = suggestion.config.rooms.find((candidate) => candidate.id === roomId);
+    if (!room) return;
+    const removal = destination === '__omit__'
+      ? { type: 'omit' as const }
+      : { type: 'move' as const, targetRoomId: destination };
+    const next = removeSetupRoom(suggestion.config, roomId, removal);
+    if (next === suggestion.config) return;
+    const removedEntities = room.visibleEntities.length;
+    suggestion = { ...suggestion, config: next };
+    if (expandedRoomId === roomId) expandedRoomId = next.rooms[0]?.id ?? null;
+    if (removal.type === 'omit') omittedCount += removedEntities;
   }
 
   function beginDeleteRoom(roomId: string): void {
@@ -273,7 +309,7 @@
 
   async function activate(): Promise<void> {
     if (!suggestion) return;
-    if (jellyfinEnabled && !jellyfinSession) {
+    if (!embedded && jellyfinEnabled && !jellyfinSession) {
       status = 'error';
       message = m.setup_jellyfin_required();
       return;
@@ -411,6 +447,18 @@
         {:else if suggestion.inferredRooms}
           <span class="warning">{m.setup_inferred_rooms()}</span>
         {/if}
+        {#if embedded}
+          <RoomListEditor
+            rooms={suggestion.config.rooms}
+            busy={status === 'activating'}
+            deleteOptions={roomDeleteOptions}
+            onopen={openRoomEdit}
+            onrename={(roomId, name) => renameRoom(roomId, name)}
+            onreorder={reorderRoom}
+            ondelete={deleteRoom}
+            onadd={() => void addRoom()}
+          />
+        {:else}
         <div class="room-list">
           {#each suggestion.config.rooms as room, roomIndex (room.id)}
             <section class:expanded={expandedRoomId === room.id} class="room-card" aria-labelledby={`room-${room.id}`}>
@@ -419,10 +467,8 @@
                   class="room-expand"
                   type="button"
                   aria-label={room.name}
-                  aria-expanded={embedded ? undefined : expandedRoomId === room.id}
-                  onclick={() => (embedded
-                    ? openRoomEdit(room.id)
-                    : (expandedRoomId = expandedRoomId === room.id ? null : room.id))}
+                  aria-expanded={expandedRoomId === room.id}
+                  onclick={() => (expandedRoomId = expandedRoomId === room.id ? null : room.id)}
                 >
                   <span class="room-index num">{roomIndex + 1}</span>
                   <span class="room-chevron" aria-hidden="true">›</span>
@@ -433,7 +479,7 @@
                     id={`room-${room.id}`}
                     data-room-name={room.id}
                     value={room.name}
-                    oninput={(event) => renameRoom(room.id, event)}
+                    oninput={(event) => renameRoom(room.id, event.currentTarget.value)}
                     required
                   />
                 </label>
@@ -453,7 +499,7 @@
                     onclick={() => beginDeleteRoom(room.id)}>{m.setup_delete_room()}</button>
                 </div>
               </div>
-              {#if embedded ? pendingDeleteRoomId === room.id : expandedRoomId === room.id}
+              {#if expandedRoomId === room.id}
                 <div class="room-details">
                   {#if pendingDeleteRoomId === room.id}
                     <div class="room-delete-confirm" role="group" aria-labelledby={`delete-room-${room.id}`}>
@@ -477,9 +523,7 @@
                       </div>
                     </div>
                   {/if}
-                  {#if embedded}
-                    <!-- Entitaetenpflege laeuft ueber das Raum-Overlay. -->
-                  {:else if room.visibleEntities.length > 0}
+                  {#if room.visibleEntities.length > 0}
                     <div class="entity-list">
                       {#each room.visibleEntities as entity (entity.entityId)}
                         <div class="entity-editor">
@@ -514,6 +558,7 @@
         <button class="secondary add-room" type="button" onclick={() => void addRoom()} disabled={status === 'activating'}>
           + {m.setup_add_room()}
         </button>
+        {/if}
         {#if suggestion.ignoredEntityIds.length + omittedCount > 0}
           <p class="ignored">{m.setup_ignored_count({ count: suggestion.ignoredEntityIds.length + omittedCount })}</p>
         {/if}
@@ -588,28 +633,21 @@
         </section>
         {/if}
 
-        <button
-          class="primary"
-          type="button"
-          onclick={() => void activate()}
-          disabled={status === 'activating' || (jellyfinEnabled && !jellyfinSession)}
-        >
-          {status === 'activating'
-            ? (reconfigure ? m.setup_saving() : m.setup_activating())
-            : (embedded ? m.settings_rooms_devices_save() : (reconfigure ? m.setup_save_start() : m.setup_confirm_start()))}
-        </button>
+        <div class:save-bar={embedded}>
+          <button
+            class="primary"
+            type="button"
+            onclick={() => void activate()}
+            disabled={status === 'activating' || (!embedded && jellyfinEnabled && !jellyfinSession)}
+          >
+            {status === 'activating'
+              ? (reconfigure ? m.setup_saving() : m.setup_activating())
+              : (embedded ? m.settings_rooms_devices_save() : (reconfigure ? m.setup_save_start() : m.setup_confirm_start()))}
+          </button>
+        </div>
 
-        {#if embedded}
-          <section class="rescan-step" aria-labelledby="rescan-title">
-            <h2 id="rescan-title">{m.settings_rooms_devices_scan_label()}</h2>
-            <p>{m.settings_rooms_devices_scan_desc()}</p>
-            <button
-              class="secondary"
-              type="button"
-              disabled={status === 'loading' || status === 'connecting' || status === 'activating'}
-              onclick={() => void connectAndScan()}
-            >{status === 'connecting' ? m.setup_connecting() : m.settings_rooms_devices_scan_action()}</button>
-          </section>
+        {#if embedded && after}
+          {@render after({ rescan: () => void connectAndScan(), busy: status === 'loading' || status === 'connecting' || status === 'activating' })}
         {/if}
       </div>
     {/if}
@@ -687,9 +725,7 @@
   .jellyfin-form { padding-top: var(--space-2); }
   .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .message.success { color: var(--color-success); }
-  .rescan-step { display: grid; gap: var(--space-3); margin-top: var(--space-7); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
-  .rescan-step p { margin: 0; color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
-  .rescan-step button { justify-self: start; }
+  .save-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-6); }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   @media (max-width: 900px) { .entity-editor { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; padding: var(--space-2) 0; } .entity-editor small { grid-column: 1 / -1; grid-row: 2; } }
   @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .room-heading { grid-template-columns: var(--touch-min) minmax(0, 1fr) auto; } .room-count { display: none; } .room-actions { grid-column: 2 / -1; flex-wrap: wrap; } .room-details { padding-left: var(--space-4); } .entity-editor, .credential-grid { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; grid-row: auto; } }
