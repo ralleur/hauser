@@ -305,6 +305,8 @@ button {
   .re-btn,
   .re-search,
   .re-immersion-entry,
+  .re-quick-entry,
+  .re-metric-box,
   .secondary-btn
 ) {
   border-color: var(--overlay-border);
@@ -1233,6 +1235,13 @@ body.theme-fade * {
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   background: var(--overlay-control-background);
+}
+/* Aktive Szene: der Raum steht genau auf ihrem Zielzustand — egal ob per Pille
+   gefahren oder von Hand nachgestellt (state/scene-manager: isSceneActive). */
+.room-controls .scene-btn.is-active {
+  border-color: var(--color-accent-warm);
+  color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 16%, var(--overlay-control-background));
 }
 .room-controls .scene-btn .scene-check {
   position: absolute;
@@ -3391,6 +3400,73 @@ body.theme-fade * {
   background: var(--color-surface-2);
   color: var(--color-text-secondary);
 }
+/* Schnelleinstieg: die vier Einstiege als 2×2-Raster über der Geräteliste. */
+.re-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.re-quick-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+.re-quick-entry .re-label { min-width: 0; }
+.re-quick-entry .re-name,
+.re-quick-entry .re-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) {
+  .re-quick-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Erweitert: je Messgröße eine Box mit Schalter und Sensorwahl. */
+.re-metric-box {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-2);
+}
+.re-metric-box + .re-metric-box { margin-top: var(--space-3); }
+.re-metric-head { align-items: center; }
+.re-metric-sensor {
+  display: block;
+  margin-top: var(--space-3);
+}
+.re-metric-sensor .re-search { width: 100%; }
+
+/* Schalter im Konfig-Overlay-Stil: an = Theme-Orange. */
+.re-toggle {
+  flex: none;
+  width: calc(var(--space-8) + var(--space-2));
+  height: var(--space-6);
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.re-toggle.is-on {
+  border-color: var(--color-accent-warm);
+  background: var(--color-accent-warm);
+  justify-content: flex-end;
+}
+.re-toggle-knob {
+  width: calc(var(--space-6) - 6px);
+  height: calc(var(--space-6) - 6px);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+.re-toggle.is-on .re-toggle-knob { background: var(--color-surface-1); }
+
 .re-immersion-editor {
   display: grid;
   grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
@@ -3464,29 +3540,99 @@ body.theme-fade * {
    room-edit-Muster (Shell-Klassen wiederverwendet), plus Szenen-Tabs,
    Wirkungs-Hinweis und Standard/Zurücksetzen-Zeile. ── */
 .se-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
 .se-tab {
-  flex: 1;
-  height: var(--touch-preferred);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-preferred);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 .se-tab.is-active {
   background: var(--color-surface-1);
   border-color: var(--color-text-tertiary);
   color: var(--color-text-primary);
 }
-.se-hint {
-  margin: 0 0 var(--space-5);
+/* Anlegen statt Auswählen: gleiche Pille, aber im .cfg-add-Stil. */
+.se-tab-add { font-size: var(--text-xs); }
+.se-name {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+/* Namensfeld endet vor dem Löschen-Knopf. */
+.se-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.se-name-row .re-search {
+  flex: 1;
+  min-width: 0;
+}
+/* ── Konfig-Overlay-Standard (docs/07) ──
+   Jedes Konfigurations-Overlay benutzt dieselben drei Bausteine, damit sich
+   Raum-, Szenen- und künftige Editoren gleich anfühlen:
+   `.cfg-handle`   Neun-Punkte-Griff zum Ziehen (actions/dragreorder.ts),
+   `.cfg-delete`   destruktive Aktion in Rot, zweistufig mit `.is-confirming`,
+   `.cfg-add`      anlegende Aktion gestrichelt im Theme-Orange.
+   Die Zeile, die gerade gezogen wird, trägt `.is-dragging`. */
+.cfg-handle {
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
   color: var(--color-text-tertiary);
-  font-size: var(--text-sm);
+  cursor: grab;
+  touch-action: none;
+}
+.cfg-handle:disabled { opacity: 0.3; cursor: default; }
+.is-dragging { background: var(--color-surface-2); border-radius: var(--radius-xl); }
+.is-dragging .cfg-handle { cursor: grabbing; color: var(--color-accent-warm); }
+
+.cfg-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+.cfg-delete.is-confirming {
+  background: var(--color-error);
+  color: var(--color-surface-1);
+}
+.cfg-delete:disabled { opacity: 0.3; }
+
+.cfg-add {
+  border-style: dashed;
+  border-color: var(--color-accent-warm);
+  color: var(--color-accent-warm);
 }
 .se-section-head {
   display: flex;
@@ -3507,6 +3653,67 @@ body.theme-fade * {
   background: transparent;
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
+}
+
+/* Mitglied mit eigenem Zielzustand (Apple-Home-Muster): die Zeile klappt auf
+   und zeigt genau die Regler, die das Gerät kann. */
+.se-member {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.se-member-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.se-member-state {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+.se-member.is-expanded > .re-row {
+  border-color: var(--color-text-tertiary);
+}
+.se-member-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+}
+.se-member-controls .se-reset { align-self: flex-start; }
+.se-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.se-power {
+  display: flex;
+  gap: var(--space-2);
+}
+.se-power-seg {
+  flex: 1;
+  height: var(--touch-preferred);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+.se-power-seg.is-active {
+  background: var(--color-surface-2);
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
 }
 
 /* ============================================
@@ -3984,6 +4191,8 @@ body.theme-fade * {
   .re-btn,
   .re-search,
   .re-immersion-entry,
+  .re-quick-entry,
+  .re-metric-box,
   .secondary-btn
 ) {
   border-color: var(--overlay-border);

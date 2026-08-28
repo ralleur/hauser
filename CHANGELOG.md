@@ -5,6 +5,66 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-08-28
+
+### Added
+
+- **Camera feeds can become movable pop-outs.** A long press opens the camera
+  menu, moves the feed out of the control surface and onto the room background,
+  and lets it be dragged and resized. A pop-out follows its room by default or
+  can stay visible across room changes; its title bar can be hidden, and it can
+  return to the control surface at any time.
+- **Room tiles per row are adjustable.** The home layout now supports one to
+  four room tiles in each row instead of enforcing a fixed two-column grid.
+
+### Changed
+
+- **Home layout editing is a live mirrored drawer.** A long press on the room
+  background opens an unblurred panel on the right with the same dimensions as
+  a control surface. The former Compact, Balanced and Wide choices are one
+  continuous size control, with a default action and direct preview.
+- **The camera, climate and new layout controls are fully localized** in German,
+  English, French, Italian, Polish and Portuguese.
+- The redundant **Temperature** heading above the climate card and the Safari
+  install hint have been removed.
+
+### Fixed
+
+- Saving reconfigured rooms now refreshes the active household cache before
+  returning to the dashboard, so the new room state appears immediately.
+
+## [0.5.1] - 2026-08-28
+
+### Added
+
+- **Scenes are configurable per room.** The scene editor lists the devices a
+  scene drives and the state each one takes — on or off, and, where the lamp
+  supports it, brightness and colour temperature. Every change runs on the
+  lights straight away as a preview and is taken back when the editor closes,
+  so the room is never left in an editing state.
+- **Rooms can have their own scenes.** Beside the three built-in scenes, a room
+  can gain its own through **Add new scene**, and every scene — built-in ones
+  included — can be renamed or deleted. All of it belongs to the room where it
+  was made: a *Movie night* in the living room does not appear in the kitchen.
+- **The active scene is highlighted.** A scene lights up when the room actually
+  stands at its target state, whether it was tapped or the lamps were set there
+  by hand.
+- **Advanced room settings.** A room's tile on the home screen can show
+  temperature, humidity, both or neither, and the sensor behind each is picked
+  automatically from the Home Assistant area the room maps to. Another sensor
+  can be chosen where several fit.
+- **The room-image assistant opens from the room overlay**, next to uploading an
+  image and picking one from the library.
+
+### Changed
+
+- **Configuration overlays share one set of controls.** Reordering is a six-dot
+  handle that drags — with the arrow keys as the keyboard path — deleting asks
+  once in place of a dialog, and creating something new is a dashed tile. The
+  room editor's device list follows suit: the up/down chevrons are gone.
+- **The room editor opens on a quick-setup grid.** Room image, scenes, lamp
+  placement and the new advanced view sit as four tiles above the device list.
+
 ## [0.5.0] - 2026-08-27
 
 ### Added

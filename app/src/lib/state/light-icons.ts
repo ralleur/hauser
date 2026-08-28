@@ -4,7 +4,7 @@ import { isSafeIconId } from './icon-path.ts';
 import { sharedStorage } from './shared-config.ts';
 
 const DEFAULT_ICONS_BY_CATEGORY: Record<DeviceCategory, string> = {
-  light: 'i-bulb', switch: 'i-bolt', temp: 'i-thermometer', info: 'i-gauge', media: 'i-playlist-music',
+  light: 'i-bulb', switch: 'i-bolt', temp: 'i-thermometer', info: 'i-gauge', media: 'i-playlist-music', camera: 'i-camera',
 };
 
 export const DEFAULT_LAMP_ICON = DEFAULT_ICONS_BY_CATEGORY.light;

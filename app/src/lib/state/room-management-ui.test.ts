@@ -47,6 +47,11 @@ describe('room management UI contracts', () => {
     expect(setupWizard).toContain("disabled={status === 'activating' || (!embedded && jellyfinEnabled && !jellyfinSession)}");
   });
 
+  it('refreshes the active household cache before leaving after a room save', () => {
+    expect(setupWizard).toContain("import { refreshHouseholdConfigRuntimeCache } from '../config/household-config-runtime.ts'");
+    expect(setupWizard).toMatch(/await refreshHouseholdConfigRuntimeCache\(\);\s+if \(reconfigure\) returnToDashboard\(\);/);
+  });
+
   it('shows every room with its current image, device count and drag handle', () => {
     expect(roomListEditor).toContain('resolveRoomHero({');
     expect(roomListEditor).toContain('m.settings_rooms_devices_configure()');

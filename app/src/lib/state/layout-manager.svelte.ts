@@ -7,6 +7,8 @@ import {
   reconcileLayoutRooms,
   resetLayoutConfig,
   saveLayoutConfig,
+  setPanelSize,
+  setRoomsPerRow,
   setSlotRoom,
   setWidthPreset,
   type LayoutConfig,
@@ -57,6 +59,8 @@ export const layoutManager = {
     saveLayoutConfig(applied);
   },
   setWidth(preset: WidthPresetId) { draft = setWidthPreset(draft, preset); },
+  setPanelSize(value: number) { draft = setPanelSize(draft, value); },
+  setRoomsPerRow(value: number) { draft = setRoomsPerRow(draft, value); },
   reconcileRooms(validRoomIds: readonly string[]) {
     const nextApplied = reconcileLayoutRooms(applied, validRoomIds);
     if (JSON.stringify(nextApplied) !== JSON.stringify(applied)) {

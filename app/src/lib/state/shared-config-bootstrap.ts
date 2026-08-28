@@ -19,6 +19,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:lock-button',
   'hmi:device-config:v1',
   'hmi:scene-config:v1',
+  'hmi:room-display:v1',
   'hmi:home-layout:v1',
   'hmi:light-icon-overrides:v1',
   'hmi:immersion-light:v1',

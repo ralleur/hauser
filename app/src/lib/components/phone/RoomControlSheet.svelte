@@ -4,7 +4,7 @@
   import RoomControls from '../RoomControls.svelte';
   import type { Room } from '../../state/app.svelte.ts';
   import { closeDeviceDetail, deviceDetail } from '../../state/overlay.svelte.ts';
-  import { closeSceneEdit, sceneEdit } from '../../state/scene-manager.svelte.ts';
+  import { closeSceneEdit, sceneEdit } from '../../state/scene-edit-overlay.svelte.ts';
   import { createRetryableLazyLoader } from '../../state/lazy-loader.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
 

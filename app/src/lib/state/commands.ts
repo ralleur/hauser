@@ -18,6 +18,13 @@ import {
 import type { LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
 import type { Light } from './app.svelte.ts';
 
+type RoomMetric = 'temperature' | 'humidity';
+let roomSensorResolver: ((roomId: string, metric: RoomMetric) => string) | null = null;
+
+export function setRoomSensorResolver(resolver: (roomId: string, metric: RoomMetric) => string): void {
+  roomSensorResolver = resolver;
+}
+
 /* ── Lesen: gemergte Sicht (Server-State bzw. pending Intent) ──
    `undefined`, solange ein frisch eingeblendetes Nicht-Seed-Gerät noch keinen
    Wert hat (kein Seed, kein Cache, ADR-006-Abo greift erst nach der Projektion).
@@ -44,7 +51,9 @@ export function mergedClimate(roomId: string): ClimateValue | null {
    3. sonst null → die UI zeigt gar keine Temperatur an (keine Mock-Werte).
    Reine Leseoperation über die gemergte Sicht; toleriert fehlende Werte. */
 export function roomTemperature(roomId: string): number | null {
-  const sensorId = tempSensorEntityId(roomId);
+  // Im Raum-Overlay konfigurierter bzw. aus HA übernommener Sensor hat Vorrang.
+  const configured = roomSensorResolver?.(roomId, 'temperature') ?? '';
+  const sensorId = configured || tempSensorEntityId(roomId);
   if (sensorId) {
     const s = runtime.merged(sensorId) as SensorValue | undefined;
     if (s && typeof s.value === 'number') return s.value;
@@ -52,6 +61,15 @@ export function roomTemperature(roomId: string): number | null {
   const climate = mergedClimate(roomId);
   if (climate && typeof climate.current === 'number') return climate.current;
   return null;
+}
+
+/* Luftfeuchte eines Raums: nur aus einem Sensor — Thermostate melden sie
+   nicht verlässlich. null, wenn keiner zugeordnet ist oder er nichts liefert. */
+export function roomHumidity(roomId: string): number | null {
+  const sensorId = roomSensorResolver?.(roomId, 'humidity') ?? '';
+  if (!sensorId) return null;
+  const s = runtime.merged(sensorId) as SensorValue | undefined;
+  return s && typeof s.value === 'number' ? s.value : null;
 }
 
 export function lightPending(roomId: string, lightId: string): boolean {

@@ -1,23 +1,20 @@
 <script lang="ts">
   import '../../styles/room-controls.css';
   /* ── RoomControls (B-13): Steuer-Details des gewählten Raums im linken Panel.
-     Reihenfolge Szenen → Licht → Klima. Die Klima-Kachel ist verschlankt: statt
-     doppeltem Ziel-Quadrat + Stepper + Modus-Zeile nur noch die Ist-Temperatur
-     plus EINE Pille (wie das TabBar-Klima-Dock: blau = kälter, rot = wärmer),
-     die die Zieltemperatur des Raums setzt. ── */
+     Reihenfolge Szenen → Licht → Klima. ── */
   import Icon from './Icon.svelte';
   import DeviceTile from './DeviceTile.svelte';
   import CameraFeed from './CameraFeed.svelte';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature } from '../state/commands.ts';
-  import { SCENES, type SceneId } from '../state/scene-config.ts';
-  import { applyScene, openSceneEdit } from '../state/scene-manager.svelte.ts';
+  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity } from '../state/commands.ts';
+  import { type SceneId } from '../state/scene-config.ts';
+  import { applyScene, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { pulse } from '../actions/pulse.ts';
   import { fmtTemp } from '../format.ts';
   import type { ClimateValue } from '../adapter/types.ts';
-  import { roomCameraEntityId } from '../state/entities.ts';
+  import { cameraPopouts } from '../state/camera-popouts.svelte.ts';
 
   import { m } from '../../paraglide/messages.js';
   let { room }: { room: Room } = $props();
@@ -26,7 +23,10 @@
   /* Ist-Temperatur mit Fallback-Kette (dedizierter Sensor > Thermostat-Ist >
      nichts) — kein Mock mehr. null wird explizit als nicht verfügbar gezeigt. */
   const temp = $derived(roomTemperature(room.id));
-  const cameraEntityId = $derived(roomCameraEntityId(room.id));
+  const humidity = $derived(roomHumidity(room.id));
+  const roomScenes = $derived(scenes(room.id));
+  const cameraDevices = $derived(room.lights.filter((device) => device.category === 'camera' && !cameraPopouts.has(device.entityId)));
+  const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'));
 
   /* Klima-Widerspruch (docs/02): Ziel ist ein Stepper (diskret) → 300-ms-
      Korrektur als Opacity-Crossfade des Werts. */
@@ -53,21 +53,25 @@
 </script>
 
 <div class="room-controls">
-  <section class="detail-section">
-    <div class="scene-row">
-      {#each SCENES as s (s.id)}
-        <button class="scene-btn pressable" type="button"
-                use:longpress={{ onLongPress: () => openSceneEdit(room.id, s.id) }}
-                onclick={(e) => onSceneTap(s.id, e)}>
-          {s.label}<span class="scene-check"><Icon name="i-check" cls="icon icon-md" /></span>
-        </button>
-      {/each}
-    </div>
-  </section>
+  {#if roomScenes.length > 0}
+    <section class="detail-section">
+      <div class="scene-row">
+        {#each roomScenes as s (s.id)}
+          {@const active = isSceneActive(room.id, s.id)}
+          <button class="scene-btn pressable" type="button" class:is-active={active}
+                  aria-pressed={active}
+                  use:longpress={{ onLongPress: () => openSceneEdit(room.id, s.id) }}
+                  onclick={(e) => onSceneTap(s.id, e)}>
+            {s.label}<span class="scene-check"><Icon name="i-check" cls="icon icon-md" /></span>
+          </button>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <section class="detail-section">
     <div class="light-list">
-      {#each room.lights as device (device.id)}
+      {#each tileDevices as device (device.id)}
         <DeviceTile roomId={room.id} {device} />
       {:else}
         <!-- Schlecht gepflegter Raum in HA: statt einer leeren Fläche eine
@@ -83,20 +87,25 @@
     </div>
   </section>
 
-  {#if cameraEntityId}
+  {#each cameraDevices as camera (camera.entityId)}
     <section class="detail-section">
-      <CameraFeed entityId={cameraEntityId} label="Balkon" />
+      <CameraFeed
+        entityId={camera.entityId}
+        label={camera.name}
+        titlebarVisible={cameraPopouts.titlebarVisible(camera.entityId)}
+        onpopout={() => cameraPopouts.open(camera.entityId, camera.name, room.id)}
+        ontoggletitlebar={() => cameraPopouts.toggleTitlebar(camera.entityId)}
+      />
     </section>
-  {/if}
+  {/each}
 
   {#if climate}
-    <section class="detail-section">
-      <span class="caps-label">{m.climate_temperature()}</span>
+    <section class="detail-section climate-section">
       <div class="climate-card">
         <div class="climate-warning" class:is-visible={room.windowOpen}>
           <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
         </div>
-        <div class="climate-hero">
+        <div class="climate-current">
           <span class="climate-temp num" class:is-unavailable={temp === null}>
             {#if temp !== null}
               {fmtTemp(temp)}<span class="unit">°C</span>
@@ -104,28 +113,35 @@
               {m.media_unavailable()}
             {/if}
           </span>
-          <div class="climate-pills">
-            <!-- Zieltemperatur des Raums als Pille (identisch zum TabBar-Klima-Dock). -->
-            <div class="climate-dock room-climate-pill" aria-label="Zieltemperatur {room.name}">
-              <button class="cd-key cd-key-down pressable" type="button" aria-label={m.room_temp_down()}
-                      onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
-              <div class="cd-readout">
-                <span class="cd-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
-                <span class="cd-sub">{m.climate_target()}</span>
-              </div>
-              <button class="cd-key cd-key-up pressable" type="button" aria-label={m.room_temp_up()}
-                      onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
-            </div>
-            <!-- Modus als zweite Pille, gleiche Breite: 3 Segmente zur Auswahl. -->
-            <div class="mode-pill" role="radiogroup" aria-label="Modus">
-              {#each HVAC_MODES as m (m.id)}
-                <button class="mode-seg pressable" type="button" role="radio" data-mode={m.id}
-                        aria-label={m.label} aria-checked={climate.hvac === m.id} class:is-active={climate.hvac === m.id}
-                        onclick={() => setHvac(room.id, m.id)}>
-                  <Icon name={m.icon} cls="icon icon-md" />
-                </button>
-              {/each}
-            </div>
+          <div class="climate-current-meta">
+            <Icon name="i-thermometer" cls="icon icon-xl" />
+            <span>
+              <strong>{m.climate_current_temperature()}</strong>
+              {#if humidity !== null}
+                <small>{Math.round(humidity)} % {m.room_display_humidity()}</small>
+              {/if}
+            </span>
+          </div>
+        </div>
+
+        <div class="climate-controller" aria-label="{m.climate_target_temperature()} {room.name}">
+          <span class="climate-controller-label">{m.climate_target_temperature()}</span>
+          <div class="climate-target-control">
+            <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
+                    onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon icon-xl" /></button>
+            <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
+            <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
+                    onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon icon-xl" /></button>
+          </div>
+          <div class="climate-mode-selector" role="radiogroup" aria-label={m.climate_mode_label()}>
+            {#each HVAC_MODES as mode (mode.id)}
+              <button class="climate-mode pressable" type="button" role="radio" data-mode={mode.id}
+                      aria-label={mode.label} aria-checked={climate.hvac === mode.id} class:is-active={climate.hvac === mode.id}
+                      onclick={() => setHvac(room.id, mode.id)}>
+                <Icon name={mode.icon} cls="icon icon-xl" />
+                <span>{mode.label}</span>
+              </button>
+            {/each}
           </div>
         </div>
       </div>

@@ -12,6 +12,8 @@ export interface LayoutSlot {
 export interface LayoutConfig {
   version: 1;
   widthPreset: WidthPresetId;
+  panelSize: number;
+  roomsPerRow: number;
   slots: LayoutSlot[];
 }
 
@@ -40,11 +42,19 @@ export const WIDTH_PRESETS: readonly WidthPreset[] = [
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   version: 1,
   widthPreset: 'compact',
+  panelSize: 15,
+  roomsPerRow: 2,
   slots: [{ id: 'slot-1', roomId: null }],
 };
 
 export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
-  return { version: 1, widthPreset: config.widthPreset, slots: config.slots.map((slot) => ({ ...slot })) };
+  return {
+    version: 1,
+    widthPreset: config.widthPreset,
+    panelSize: normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset)),
+    roomsPerRow: normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+    slots: config.slots.map((slot) => ({ ...slot })),
+  };
 }
 
 export function parseLayoutConfig(raw: string | null): LayoutConfig {
@@ -68,7 +78,17 @@ export function parseLayoutConfig(raw: string | null): LayoutConfig {
       }
       slots.push({ id: expectedId, roomId: slot.roomId as string | null });
     }
-    return { version: 1, widthPreset: candidate.widthPreset, slots };
+    return {
+      version: 1,
+      widthPreset: candidate.widthPreset,
+      panelSize: normalizePanelSize(typeof candidate.panelSize === 'number'
+        ? candidate.panelSize
+        : panelSizeForPreset(candidate.widthPreset)),
+      roomsPerRow: normalizeRoomsPerRow(typeof candidate.roomsPerRow === 'number'
+        ? candidate.roomsPerRow
+        : DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+      slots,
+    };
   } catch {
     return cloneLayoutConfig(DEFAULT_LAYOUT_CONFIG);
   }
@@ -115,12 +135,40 @@ export function setSlotRoom(config: LayoutConfig, slotId: LayoutSlotId, roomId: 
 
 export function setWidthPreset(config: LayoutConfig, widthPreset: WidthPresetId): LayoutConfig {
   const next = cloneLayoutConfig(config);
-  if (isWidthPreset(widthPreset)) next.widthPreset = widthPreset;
+  if (isWidthPreset(widthPreset)) {
+    next.widthPreset = widthPreset;
+    next.panelSize = panelSizeForPreset(widthPreset);
+  }
   return next;
 }
 
 export function widthPreset(config: LayoutConfig): WidthPreset {
-  return WIDTH_PRESETS.find((preset) => preset.id === config.widthPreset) ?? WIDTH_PRESETS[1];
+  const size = normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset));
+  const totalPercent = 28 + size * 0.4;
+  return {
+    id: config.widthPreset,
+    label: `${Math.round(totalPercent)} %`,
+    totalPercent,
+    slotMinPx: 360 + size * 0.48,
+    heroMinPx: 516 - size * 0.96,
+  };
+}
+
+export function setPanelSize(config: LayoutConfig, panelSize: number): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.panelSize = normalizePanelSize(panelSize);
+  next.widthPreset = next.panelSize < 28 ? 'compact' : next.panelSize < 56 ? 'balanced' : 'wide';
+  return next;
+}
+
+export function setRoomsPerRow(config: LayoutConfig, roomsPerRow: number): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.roomsPerRow = normalizeRoomsPerRow(roomsPerRow);
+  return next;
+}
+
+export function layoutRoomsPerRow(config: LayoutConfig): number {
+  return normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow);
 }
 
 export function reconcileLayoutRooms(config: LayoutConfig, validRoomIds: readonly string[]): LayoutConfig {
@@ -135,6 +183,20 @@ export function reconcileLayoutRooms(config: LayoutConfig, validRoomIds: readonl
 
 function isWidthPreset(value: unknown): value is WidthPresetId {
   return WIDTH_PRESETS.some((preset) => preset.id === value);
+}
+
+function panelSizeForPreset(preset: WidthPresetId): number {
+  if (preset === 'compact') return 15;
+  if (preset === 'wide') return 70;
+  return 40;
+}
+
+function normalizePanelSize(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function normalizeRoomsPerRow(value: number): number {
+  return Math.min(4, Math.max(1, Math.round(value)));
 }
 
 function isRoomId(value: unknown): value is string {

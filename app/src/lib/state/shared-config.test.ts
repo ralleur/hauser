@@ -44,11 +44,15 @@ describe('zentrale HMI-Konfiguration', () => {
     const centralLayout = {
       version: 1,
       widthPreset: 'wide',
+      panelSize: 70,
+      roomsPerRow: 2,
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };
     const localLayout = {
       version: 1,
       widthPreset: 'compact',
+      panelSize: 15,
+      roomsPerRow: 2,
       slots: [{ id: 'slot-1', roomId: 'kueche' }],
     };
     let resolveGet!: (response: Response) => void;
@@ -433,6 +437,8 @@ describe('zentrale HMI-Konfiguration', () => {
     const centralLayout = {
       version: 1,
       widthPreset: 'wide',
+      panelSize: 70,
+      roomsPerRow: 2,
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };
     const centralScene = {

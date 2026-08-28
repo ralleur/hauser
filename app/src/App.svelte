@@ -31,6 +31,7 @@
 
   let NotificationLayerComponent = $state<Component | null>(null);
   let PlayerLayerComponent = $state<Component | null>(null);
+  let configuredRoomSensorIds = $state((): string[] => []);
 
   onMount(() => {
     let cancelled = false;
@@ -47,6 +48,7 @@
               if (!layers) return;
               NotificationLayerComponent = layers.notificationLayer;
               PlayerLayerComponent = layers.playerLayer;
+              configuredRoomSensorIds = layers.configuredRoomSensorIds;
             })
             .catch(() => {});
         }, 0);
@@ -60,8 +62,11 @@
     };
   });
 
+  /* ADR-006: Abo auf den sichtbaren Screen verengen. Die im Raum-Overlay
+     gewählten Temperatur-/Feuchtesensoren stehen nicht in der Haushalts-Config
+     und kommen hier dazu — sonst bekämen sie nie einen Wert. */
   $effect(() => {
-    runtime.setVisible(visibleEntityIds(nav.screen));
+    runtime.setVisible(visibleEntityIds(nav.screen).concat(configuredRoomSensorIds()));
   });
 
   const initialShellSnapshot = untrack(() => initialShell);

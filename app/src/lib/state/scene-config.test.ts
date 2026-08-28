@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addSceneMember,
   buildSceneCommands,
+  deleteScene,
   defaultSceneMembers,
   EMPTY_SCENE_CONFIG,
   isSceneCustomized,
@@ -12,6 +13,7 @@ import {
   resolveSceneMembers,
   saveSceneConfig,
   sceneDef,
+  sceneList,
   sceneOverride,
   SCENE_CONFIG_KEY,
   SCENES,
@@ -55,6 +57,12 @@ describe('scene-config Defaults + Auflösung', () => {
 });
 
 describe('scene-config Updates', () => {
+  it('erlaubt das Löschen der letzten Szene eines Raums', () => {
+    let config = EMPTY_SCENE_CONFIG;
+    for (const scene of SCENES) config = deleteScene(config, 'wohnzimmer', scene.id);
+    expect(sceneList(config, 'wohnzimmer')).toEqual([]);
+  });
+
   it('Entfernen eines Default-Lichts landet im exclude, Wieder-Hinzufügen räumt es', () => {
     let config: SceneConfig = EMPTY_SCENE_CONFIG;
     config = removeSceneMember(config, 'wohnzimmer', 'gemuetlich', 'light.wohnzimmer_esstisch', defaults);

@@ -62,7 +62,10 @@ describe('device runtime projection', () => {
   it('Seed ohne Overrides bleibt unverändert', () => {
     const projected = buildRuntimeRooms(rooms, catalog, EMPTY_DEVICE_CONFIG);
     expect(projected.map((r) => [r.id, r.lights.map((l) => l.entityId)])).toEqual(
-      rooms.map((r) => [r.id, r.lights.map((l) => l.entityId)]),
+      rooms.map((r) => [r.id, [
+        ...r.lights.map((l) => l.entityId),
+        ...(r.cameraEntityId ? [r.cameraEntityId] : []),
+      ]]),
     );
   });
 
@@ -86,15 +89,16 @@ describe('device runtime projection', () => {
     expect(device).toMatchObject({ domain: 'switch', category: 'switch', name: 'Steckdose Test', dimmable: false, icon: 'i-bolt' });
   });
 
-  it('sensor/climate/media werden mit Kategorie, Metadaten und Default-Symbol projiziert', () => {
+  it('sensor/climate/media/camera werden mit Kategorie, Metadaten und Default-Symbol projiziert', () => {
     const fullCatalog = mergeCatalog(catalog, [
       { entityId: 'sensor.aussentemp', domain: 'sensor', name: 'Außen', area: 'wohnzimmer', unit: '°C', deviceClass: 'temperature' },
       { entityId: 'climate.buero', domain: 'climate', name: 'Heizung Büro', area: 'wohnzimmer' },
       { entityId: 'media_player.tv', domain: 'media_player', name: 'Fernseher', area: 'wohnzimmer' },
       { entityId: 'binary_sensor.fenster', domain: 'binary_sensor', name: 'Fenster', area: 'wohnzimmer', deviceClass: 'window' },
+      { entityId: 'camera.balkon', domain: 'camera', name: 'Balkonkamera', area: 'wohnzimmer' },
     ]);
     let config = EMPTY_DEVICE_CONFIG;
-    for (const id of ['sensor.aussentemp', 'climate.buero', 'media_player.tv', 'binary_sensor.fenster']) {
+    for (const id of ['sensor.aussentemp', 'climate.buero', 'media_player.tv', 'binary_sensor.fenster', 'camera.balkon']) {
       config = setDeviceVisibility(config, id, true, 'wohnzimmer');
     }
     const projected = buildRuntimeRooms(rooms, fullCatalog, config);
@@ -103,6 +107,7 @@ describe('device runtime projection', () => {
     expect(byId.get('climate.buero')).toMatchObject({ category: 'temp', icon: 'i-thermometer' });
     expect(byId.get('media_player.tv')).toMatchObject({ category: 'media', icon: 'i-playlist-music' });
     expect(byId.get('binary_sensor.fenster')).toMatchObject({ category: 'info', deviceClass: 'window' });
+    expect(byId.get('camera.balkon')).toMatchObject({ category: 'camera', name: 'Balkonkamera', icon: 'i-camera' });
   });
 
   it('Namen-Override gilt für alle Gerätekategorien in der Projektion', () => {
@@ -140,7 +145,7 @@ describe('device runtime projection', () => {
     const config = setRoomOrder(EMPTY_DEVICE_CONFIG, rooms[0].id, ['automation.invalid', ...swapped]);
     expect(config.order[rooms[0].id]).toEqual(swapped); // unbekannte Domains fliegen raus
     const projected = buildRuntimeRooms(rooms, catalog, config);
-    expect(projected[0].lights.map((l) => l.entityId)).toEqual(swapped);
+    expect(projected[0].lights.map((l) => l.entityId)).toEqual([...swapped, rooms[0].cameraEntityId]);
   });
 
   it('Hinzufügen ans Ende: setRoomOrder nach assignDeviceRoom rankt neu ans Ende', () => {
@@ -150,7 +155,7 @@ describe('device runtime projection', () => {
     let config = assignDeviceRoom(EMPTY_DEVICE_CONFIG, extra, rooms[0].id);
     config = setRoomOrder(config, rooms[0].id, [...ids, extra]);
     const projected = buildRuntimeRooms(rooms, fullCatalog, config);
-    expect(projected[0].lights.map((l) => l.entityId)).toEqual([...ids, extra]);
+    expect(projected[0].lights.map((l) => l.entityId)).toEqual([...ids, extra, rooms[0].cameraEntityId]);
   });
 
   it('order sortiert Geräte stabil', () => {

@@ -4,7 +4,8 @@
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomTemperature, roomHumidity } from '../state/commands.ts';
+  import { showsMetric } from '../state/room-display-config.svelte.ts';
   import {
     clampPanelRoomPage,
     panelRoomPageForSelection,
@@ -16,10 +17,12 @@
   let {
     rooms,
     selectedId,
+    roomsPerRow = 2,
     onselect,
   }: {
     rooms: Room[];
     selectedId: string | null;
+    roomsPerRow?: number;
     onselect: (roomId: string) => void;
   } = $props();
 
@@ -54,7 +57,7 @@
   });
 </script>
 
-<div class="room-selector" class:has-pages={multiPage}>
+<div class="room-selector" class:has-pages={multiPage} style={`--rooms-per-row:${roomsPerRow}`}>
   <div
     class="room-page-viewport"
     bind:this={viewport}
@@ -65,7 +68,8 @@
       <div class="room-page" aria-hidden={multiPage && pageIndex !== currentPage} inert={multiPage && pageIndex !== currentPage}>
         {#each pageRooms as room (room.id)}
           {@const climate = mergedClimate(room.id)}
-          {@const temp = roomTemperature(room.id)}
+          {@const temp = showsMetric(room.id, 'temperature') ? roomTemperature(room.id) : null}
+          {@const humidity = showsMetric(room.id, 'humidity') ? roomHumidity(room.id) : null}
           {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
           {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
           <button
@@ -85,6 +89,9 @@
                 <span class="rb-temp" class:mode-heat={mode?.id === 'heat'} class:mode-cool={mode?.id === 'cool'}>
                   {#if mode}<Icon name={mode.icon} cls="icon icon-sm" />{/if}{fmtTemp(temp)}°
                 </span>
+              {/if}
+              {#if humidity !== null}
+                <span class="rb-humidity"><Icon name="i-water-percent" cls="icon icon-sm" />{Math.round(humidity)}%</span>
               {/if}
               <span class="rb-light" class:is-on={lightsOn > 0}><Icon name="i-bulb" cls="icon icon-sm" /></span>
               {#if room.windowOpen}<Icon name="i-window" cls="icon icon-sm rb-window" />{/if}

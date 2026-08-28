@@ -10,6 +10,7 @@ export const DEFAULT_ICONS_BY_CATEGORY: Record<DeviceCategory, string> = {
   temp: 'i-thermometer',
   info: 'i-gauge',
   media: 'i-playlist-music',
+  camera: 'i-camera',
 };
 
 const GERMAN_SEARCH_TERMS: Record<string, readonly string[]> = {

@@ -95,6 +95,31 @@
   touch-action: pan-x pan-y;
 }
 
+.camera-popout-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+.camera-popout {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-8);
+  width: min(calc(var(--space-8) * 12), calc(100% - var(--space-8)));
+  pointer-events: auto;
+  filter: drop-shadow(var(--elevation-overlay-shadow));
+}
+
+.camera-popout .camera-feed-caption,
+.camera-popout.titlebar-hidden .camera-feed-frame {
+  cursor: grab;
+  touch-action: none;
+}
+
+.camera-popout.is-dragging .camera-feed-caption,
+.camera-popout.is-dragging .camera-feed-frame { cursor: grabbing; }
+
 .panel-head {
   flex: none;
   display: flex;
@@ -137,7 +162,7 @@
   box-sizing: border-box;
   min-width: 100%;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(var(--rooms-per-row), minmax(0, 1fr));
   gap: var(--space-2);
   padding: var(--space-5);
   scroll-snap-align: start;
@@ -255,21 +280,35 @@
 }
 
 /* ── Layout-Konfiguration ── */
-.layout-dialog-scrim { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: var(--space-6); background: var(--overlay-scrim); backdrop-filter: blur(var(--overlay-blur)); }
-.layout-dialog { width: min(760px, 100%); max-height: min(860px, calc(100dvh - 96px)); overflow-y: auto; padding: var(--space-6); border: 1px solid var(--overlay-border); border-radius: var(--radius-2xl); background: var(--overlay-panel-background); box-shadow: var(--elevation-overlay-shadow); -webkit-backdrop-filter: blur(var(--overlay-blur)) saturate(1.08); backdrop-filter: blur(var(--overlay-blur)) saturate(1.08); }
+.layout-dialog-scrim { position: fixed; inset: 0; z-index: 120; background: transparent; }
+.layout-dialog {
+  position: absolute;
+  inset: calc(var(--touch-preferred) + var(--space-4)) var(--space-4)
+    calc(var(--space-7) + var(--space-5) + var(--space-4)) auto;
+  box-sizing: border-box;
+  width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  overflow-y: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+.layout-dialog-scrim.has-two-slots .layout-dialog {
+  width: calc((max(
+    calc(var(--slot-min) + var(--slot-min) + var(--space-3)),
+    min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8)))
+  ) - var(--space-3)) / 2);
+}
 .layout-dialog-head, .layout-dialog-actions, .system-layout-settings { display: flex; align-items: center; gap: var(--space-3); }
 .layout-dialog-head { justify-content: space-between; }
-.layout-dialog-head h2, .layout-config-section h3, .layout-config-section legend, .system-layout-settings h2 { margin: 0; }
+.layout-dialog-head h2, .system-layout-settings h2 { margin: 0; }
 .dialog-close { width: 48px; height: 48px; border: 1px solid var(--overlay-border); border-radius: var(--radius-full); font-size: var(--text-xl); background: var(--overlay-control-background); color: var(--color-text-primary); }
 .layout-config-section { margin-top: var(--space-6); padding: 0; border: 0; }
-.layout-slot-settings, .width-presets { display: grid; gap: var(--space-3); margin: var(--space-3) 0; }
-.layout-slot-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.layout-slot-settings label { display: grid; gap: var(--space-2); }
-.layout-slot-settings select { min-height: 48px; padding: 0 var(--space-3); border: 1px solid var(--overlay-border); border-radius: var(--radius-lg); background: var(--overlay-control-background); color: var(--color-text-primary); }
-.width-presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.width-presets label { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--overlay-border); border-radius: var(--radius-lg); background: var(--overlay-control-background); }
-.width-presets label.is-selected { border-color: var(--color-accent-cool); }
-.width-presets small { color: var(--color-text-secondary); }
+.layout-slider-settings { display: grid; gap: var(--space-3); }
+.layout-slider-setting { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--overlay-border); border-radius: var(--radius-lg); background: var(--overlay-control-background); }
+.layout-slider-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.layout-slider-head .text-btn { min-height: var(--touch-min); padding: 0 var(--space-3); }
 .primary-btn, .secondary-btn, .text-btn { min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-lg); font-weight: var(--font-weight-semibold); }
 .primary-btn { background: var(--color-text-primary); color: var(--color-surface-1); }
 .secondary-btn { border: 1px solid var(--overlay-border); background: var(--overlay-control-background); }
@@ -281,7 +320,6 @@
 .system-layout-settings p { margin: var(--space-1) 0 0; color: var(--color-text-secondary); }
 @media (max-width: 1100px) {
   .home-stage.has-two-slots .home-panels { overflow-x: auto; }
-  .layout-slot-settings, .width-presets { grid-template-columns: 1fr; }
 }
 
 /* ── Onboarding-Karte für Raumbilder ──

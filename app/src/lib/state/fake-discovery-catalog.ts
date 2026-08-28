@@ -3,7 +3,7 @@
    isolated runtimes can consume the same catalog truth without loading them. */
 
 export const MANAGED_DOMAINS = [
-  'light', 'switch', 'sensor', 'binary_sensor', 'climate', 'media_player', 'cover', 'fan', 'input_boolean', 'vacuum',
+  'light', 'switch', 'sensor', 'binary_sensor', 'climate', 'media_player', 'cover', 'fan', 'input_boolean', 'vacuum', 'camera',
 ] as const;
 export type ManagedDomain = (typeof MANAGED_DOMAINS)[number];
 

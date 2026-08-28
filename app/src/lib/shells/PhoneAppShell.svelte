@@ -90,6 +90,7 @@
   let phoneFeatureRetries = $state({} as Partial<Record<PhoneFeatureId, number>>);
   let PhoneScreenComponent = $state<Component<any> | null>(null);
   let phoneScreenFailed = $state(false);
+  let SceneEditComponent = $state<Component<any> | null>(null);
   const activePhoneScreenId = $derived.by<PhoneScreenFeatureId | null>(() => {
     if (target.area === 'calendar') return 'calendar';
     if (target.area === 'media') {
@@ -376,6 +377,13 @@
   }
 
   onMount(() => {
+    const handleSceneEditOpen = () => {
+      if (SceneEditComponent) return;
+      void import('../components/SceneEdit.svelte').then((module) => {
+        SceneEditComponent = module.default;
+      });
+    };
+    window.addEventListener('hauser:scene-edit-open', handleSceneEditOpen);
     const browser = {
       get state() { return history.state; },
       pushState: (data: unknown, unused?: string, url?: string | URL | null) => history.pushState(data, unused ?? '', url),
@@ -386,6 +394,7 @@
     layer = createPhoneLayerController(browser, handleLayerChange);
     const unregister = shellLifecycle.register(() => layer?.destroy());
     return () => {
+      window.removeEventListener('hauser:scene-edit-open', handleSceneEditOpen);
       unregister();
       clearTimeout(modalReleaseTimer);
       phoneLayerLoader.cancel();
@@ -543,5 +552,9 @@
         {@render phoneLayerLoading('room', 'Raum bearbeiten')}
       {/if}
     {/if}
+  {/if}
+  <!-- Nur wenn kein Raum-Sheet offen ist: das bringt den Szenen-Editor selbst mit. -->
+  {#if !roomOpen && featureStylesReady && SceneEditComponent}
+    <SceneEditComponent />
   {/if}
 </div>

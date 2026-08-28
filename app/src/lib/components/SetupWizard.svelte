@@ -8,6 +8,7 @@
     jellyfin,
   } from '../adapter/jellyfin.ts';
   import { parseHouseholdConfig, type HouseholdConfigV4 } from '../config/household-config.ts';
+  import { refreshHouseholdConfigRuntimeCache } from '../config/household-config-runtime.ts';
   import {
     addSetupRoom,
     buildSetupHouseholdSuggestion,
@@ -365,6 +366,7 @@
       token = '';
       jellyfinPassword = '';
       jellyfinSession = null;
+      await refreshHouseholdConfigRuntimeCache();
       if (reconfigure) returnToDashboard();
       else location.reload();
     } catch (error) {

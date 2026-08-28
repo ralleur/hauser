@@ -11,14 +11,13 @@
   import StatusBar from '../components/StatusBar.svelte';
   import TabBar from '../components/TabBar.svelte';
   import LoginScreen from '../components/LoginScreen.svelte';
-  import StandaloneHint from '../components/StandaloneHint.svelte';
   import StandbyFab from '../components/StandbyFab.svelte';
   import HomeScreen from '../screens/HomeScreen.svelte';
   import { SCREENS, nav, endTransition, type ScreenId } from '../state/nav.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
   import { authState } from '../state/auth.svelte.ts';
   import { closeDeviceDetail, closeRoomEdit, deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
-  import { closeSceneEdit, sceneEdit } from '../state/scene-manager.svelte.ts';
+  import { closeSceneEdit, sceneEdit } from '../state/scene-edit-overlay.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { hud } from '../state/hud.svelte.ts';
   import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
@@ -216,4 +215,3 @@
 {#if auth.needsToken}
   <LoginScreen />
 {/if}
-<StandaloneHint />

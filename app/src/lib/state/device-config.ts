@@ -21,7 +21,7 @@ export {
 /* Overlay-/Kachel-Kategorien: light = volles Licht-Detail, switch = Ein/Aus
    (auch fan/cover, bis eigene Overlays existieren), temp = Solltemp+Modus,
    info = read-only Wert/Zustand, media = Play/Pause+Lautstärke (Stufe 1). */
-export type DeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media';
+export type DeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media' | 'camera';
 
 /* Anzeige-Label je Kategorie (RoomEdit-Vorschläge, a11y). */
 export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
@@ -30,6 +30,7 @@ export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
   temp: 'Klima',
   info: 'Sensor',
   media: 'Media',
+  camera: 'Kamera',
 };
 
 export function categoryOf(domain: ManagedDomain): DeviceCategory {
@@ -39,6 +40,7 @@ export function categoryOf(domain: ManagedDomain): DeviceCategory {
     case 'climate': return 'temp';
     case 'sensor': case 'binary_sensor': return 'info';
     case 'media_player': return 'media';
+    case 'camera': return 'camera';
   }
 }
 
@@ -146,13 +148,22 @@ export function resetDeviceConfig(storage: DeviceStorage | undefined = browserSt
 }
 
 export function seedCatalog(rooms: readonly RoomSeed[]): EntityCatalogItem[] {
-  return rooms.flatMap((room) => room.lights.map((light) => ({
-    entityId: light.entityId,
-    domain: 'light' as const,
-    name: light.name,
-    area: room.id,
-    capabilities: seedCapabilities(light),
-  })));
+  return rooms.flatMap((room) => [
+    ...room.lights.map((light) => ({
+      entityId: light.entityId,
+      domain: 'light' as const,
+      name: light.name,
+      area: room.id,
+      capabilities: seedCapabilities(light),
+    })),
+    ...(room.cameraEntityId ? [{
+      entityId: room.cameraEntityId,
+      domain: 'camera' as const,
+      name: 'Kamera',
+      area: room.id,
+      capabilities: {},
+    }] : []),
+  ]);
 }
 
 export function mergeCatalog(seed: readonly EntityCatalogItem[], discovered: readonly EntityCatalogItem[]): EntityCatalogItem[] {
@@ -179,8 +190,9 @@ export function buildRuntimeRooms(
   config: DeviceConfig,
 ): Room[] {
   const roomIds = new Set(rooms.map((r) => r.id));
-  const seedByEntity = new Map<string, { roomId: string; light: LightSeed }>();
+  const seedByEntity = new Map<string, { roomId: string; light?: LightSeed }>();
   for (const room of rooms) for (const light of room.lights) seedByEntity.set(light.entityId, { roomId: room.id, light });
+  for (const room of rooms) if (room.cameraEntityId) seedByEntity.set(room.cameraEntityId, { roomId: room.id });
   const catalogById = new Map(catalog.map((item) => [item.entityId, item]));
 
   const byRoom = new Map<string, ManagedDevice[]>();

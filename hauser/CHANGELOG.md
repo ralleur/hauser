@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.5.2 - 2026-08-28
+
+### Added
+
+- Camera feeds can leave the control surface as movable, resizable pop-outs,
+  follow their room or remain visible, hide their title bar, and return to the
+  control surface.
+- The room grid supports one to four rooms per row.
+
+### Changed
+
+- Home layout editing is an unblurred, right-hand mirrored drawer with a live
+  continuous size control instead of three presets.
+- Camera, climate and layout controls are localized in all six interface
+  languages.
+- The duplicate temperature heading and Safari install hint are removed.
+
+### Fixed
+
+- Saving reconfigured rooms refreshes the household cache before returning to
+  the dashboard.
+
+## 0.5.1 - 2026-08-28
+
+### Added
+
+- Scenes are configurable per device: which lights belong to a scene and what
+  state each takes, previewed live while editing.
+- Rooms can add, rename and delete their own scenes; the changes stay in that
+  room, and the built-in scenes remain available everywhere.
+- The scene the room currently stands at is highlighted — also when the lamps
+  were set there by hand.
+- Advanced room settings decide whether the room tile shows temperature and
+  humidity, with the sensor taken from the Home Assistant area.
+- The room-image assistant opens straight from the room overlay.
+
+### Changed
+
+- Configuration overlays share one look: a drag handle for order, a two-step
+  delete, and a dashed tile for adding.
+- The room editor opens on a quick-setup grid above the device list.
+
 ## 0.5.0 - 2026-08-27
 
 ### Added

@@ -83,6 +83,7 @@
   --text-2xl: 40px;  /* Screen-Titel */
   --text-3xl: 54px;  /* Raumtemperatur, große KPIs */
   --text-4xl: 72px;  /* Hero-Werte (Detailansicht) */
+  --text-display: 104px; /* Dominante Raumwerte in großen Steuerkarten */
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;

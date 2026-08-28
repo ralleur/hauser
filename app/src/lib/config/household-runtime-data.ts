@@ -215,6 +215,7 @@ function projectRooms(model: HouseholdRuntimeModel): {
       ],
       ...(climate ? { climateEntityId: climate.entityId, target: 20, hvac: 'off' as const } : {}),
       ...(temperature ? { tempSensorId: temperature.entityId } : {}),
+      ...(camera ? { cameraEntityId: camera.entityId } : {}),
     };
   });
   return { rooms, cameras };

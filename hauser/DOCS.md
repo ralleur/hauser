@@ -70,14 +70,16 @@ migration remains fail-closed and makes the internal health probe fail.
 - The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
 - No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.5.0` is the current published App and Docker/Compose beta. It is the first
-  release without a `-beta.N` suffix: every version below `1.0.0` is a beta, so
-  the number carries that on its own. Hauser is licensed under the GNU Affero
-  General Public License instead of MIT; everything up to and including
-  `0.4.0-beta.6` stays MIT, and nothing changes for people running Hauser at
-  home. This release rebuilds the **Rooms & devices** settings page: every room
-  shows its own image, the order is dragged instead of nudged with arrows, and
-  the room actions sit in the row. It carries the earlier App fixes: the
+- `0.5.2` is the current published App and Docker/Compose beta. Versions below
+  `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
+  that it is a beta. Hauser is licensed under the GNU Affero General Public
+  License instead of MIT; everything up to and including `0.4.0-beta.6` stays
+  MIT, and nothing changes for people running Hauser at home. This release makes
+  scenes configurable per room — which devices a scene drives, what state each
+  takes, and scenes a room adds, renames or deletes for itself — and gives the
+  room tile optional temperature and humidity from the sensors of its Home
+  Assistant area. It carries `0.5.0`'s **Rooms & devices** settings page and the
+  earlier App fixes: the
   room-image origin fix from `0.4.0-beta.10`, the reconfigure-flow ETag fix and
   the container source metadata from `0.4.0-beta.9`, the setup activation
   origin fix from `0.4.0-beta.6` (#8), the setup-wizard discovery fixes for

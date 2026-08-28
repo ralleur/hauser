@@ -19,6 +19,7 @@
 }
 
 .camera-feed {
+  position: relative;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -80,10 +81,68 @@
 
 .camera-feed-frame:fullscreen img { object-fit: contain; }
 
-/* Ist-Temperatur links, Ziel- und Modus-Pille rechts. */
-.room-controls .climate-hero {
-  align-items: center;
-  margin: var(--space-2) 0 0;
+.camera-feed-titlebar-hidden .camera-feed-frame { border-top: 0; }
+
+.camera-context-menu {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: grid;
+  width: min(calc(100% - var(--space-6)), calc(var(--space-8) * 10));
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+
+.camera-context-option {
+  min-height: var(--touch-min);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.camera-context-option:active,
+.camera-context-option.is-active { background: var(--color-surface-2); }
+
+.camera-size-control {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+/* Klima-Hero nach dem Ziel-Mock: Istwert als ruhiger Datenanker, daneben eine
+   eigene Bedienebene für Zieltemperatur und Betriebsart. */
+.climate-section {
+  container-type: inline-size;
+}
+
+.room-controls .climate-card {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-5);
+  margin-top: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface-1);
+}
+
+.room-controls .climate-warning {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.climate-current {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.room-controls .climate-temp {
+  font-size: var(--text-4xl);
 }
 
 .room-controls .climate-temp.is-unavailable {
@@ -91,52 +150,120 @@
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   line-height: var(--leading-normal);
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   color: var(--color-text-secondary);
 }
 
-.climate-pills {
+.climate-current-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-tertiary);
+}
+
+.climate-current-meta > span {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-2);
-}
-
-.climate-pills .room-climate-pill {
-  width: 100%;
-  justify-content: space-between;
-}
-
-.mode-pill {
-  display: flex;
-  width: 100%;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-2);
-}
-
-.mode-seg {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: var(--space-1);
-  min-height: 38px;
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-full);
-  font-size: var(--text-2xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  transition: background-color var(--duration-normal) var(--ease-out),
-              color var(--duration-normal) var(--ease-out);
+  min-width: 0;
 }
 
-.mode-seg[data-mode='heat'] .icon { color: var(--color-error); }
-.mode-seg[data-mode='cool'] .icon { color: var(--color-accent-cool); }
-.mode-seg[data-mode='off'] .icon { color: var(--color-text-tertiary); }
-
-.mode-seg.is-active {
-  background: var(--color-surface-3);
+.climate-current-meta strong {
   color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
 }
+
+.climate-current-meta small {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.climate-controller {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-2xl);
+  background: var(--overlay-panel-background);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+
+.climate-controller-label {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.climate-target-control {
+  display: grid;
+  grid-template-columns: var(--touch-preferred) minmax(0, 1fr) var(--touch-preferred);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.climate-step {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--overlay-control-background);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+
+.climate-step-down { color: var(--color-accent-cool); }
+.climate-step-up { color: var(--color-error); }
+
+.climate-target-value {
+  text-align: center;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  white-space: nowrap;
+}
+
+.climate-mode-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.climate-mode {
+  display: flex;
+  min-width: 0;
+  min-height: var(--touch-preferred);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-1);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+}
+
+.climate-mode:last-child { border-right: 0; }
+.climate-mode[data-mode='heat'] .icon { color: var(--color-error); }
+.climate-mode[data-mode='cool'] .icon { color: var(--color-accent-cool); }
+.climate-mode[data-mode='off'] .icon { color: var(--color-text-tertiary); }
+
+.climate-mode.is-active {
+  border-radius: var(--radius-lg);
+  background: var(--color-text-primary);
+  color: var(--color-surface-1);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--elevation-overlay-shadow);
+}
+
+.climate-mode.is-active .icon { color: var(--color-surface-1); }

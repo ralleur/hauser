@@ -13,8 +13,9 @@ export type LegacyManagedDomain =
   | 'cover'
   | 'fan'
   | 'input_boolean'
-  | 'vacuum';
-export type LegacyDeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media';
+  | 'vacuum'
+  | 'camera';
+export type LegacyDeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media' | 'camera';
 
 export interface Light {
   id: string;
@@ -58,6 +59,7 @@ export interface RoomSeed extends Room {
   climateEntityId?: string;
   tempSensorId?: string;
   current?: number;
+  cameraEntityId?: string;
 }
 
 export interface MediaPlayerMeta { id: string; name: string }
@@ -80,6 +82,7 @@ export const ROOM_SEED: RoomSeed[] = [
     hvac: 'heat', presence: true, windowOpen: false,
     climateEntityId: 'climate.wohnzimmer',
     tempSensorId: 'sensor.temp_wohnzimmer',
+    cameraEntityId: 'camera.balkon',
     lights: [
       { id: 'kugellampen', name: 'Kugellampen', entityId: 'light.wohnzimmer_kugellampen', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 2700, colorHex: null },
       { id: 'esstisch', name: 'Esstisch', entityId: 'light.wohnzimmer_esstisch', on: false, brightness: 50, dimmable: true, colorTemp: true, color: true, colorTempK: 3000, colorHex: null, icon: 'i-lamp-pendant' },

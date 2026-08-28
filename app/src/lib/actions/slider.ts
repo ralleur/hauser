@@ -19,10 +19,11 @@ export interface SliderParams {
      zurückzuspringen. Die Action steuert das Timing selbst, damit die Transition-
      Klasse garantiert VOR dem Repaint sitzt. */
   correct?: number;
+  format?: (value: number) => string;
 }
 
 export function slider(node: HTMLElement, params: SliderParams) {
-  let { value, onChange, plain, disabled } = params;
+  let { value, onChange, plain, disabled, format } = params;
   let lastCorrect = params.correct ?? 0;
   let correctTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -41,7 +42,7 @@ export function slider(node: HTMLElement, params: SliderParams) {
     const x = THUMB_HALF + (pct / 100) * usable;
     fill.style.transform = `scaleX(${pct / 100})`;
     node.style.setProperty('--thumb-x', `translateX(${x}px)`);
-    if (!plain && pct !== shownPct) { shownPct = pct; thumb.textContent = String(Math.round(pct)); }
+    if (!plain && pct !== shownPct) { shownPct = pct; thumb.textContent = format ? format(pct) : String(Math.round(pct)); }
   };
 
   // Initial-Paint: synchron, wenn das Element schon Layout hat
@@ -111,6 +112,7 @@ export function slider(node: HTMLElement, params: SliderParams) {
       plain = next.plain;
       disabled = next.disabled;
       value = next.value;
+      format = next.format;
       if (disabled || dragging) return; // Drag hat Vorrang vor externen Updates
       if (!width) measure();
       pendingPct = value;

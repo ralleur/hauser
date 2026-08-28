@@ -52,6 +52,8 @@ describe('layout config persistence', () => {
     }))).toEqual({
       version: 1,
       widthPreset: 'wide',
+      panelSize: 70,
+      roomsPerRow: 2,
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }, { id: 'slot-2', roomId: 'buero' }],
     });
   });
@@ -105,6 +107,8 @@ describe('layout config updates', () => {
     const stale = {
       version: 1 as const,
       widthPreset: 'balanced' as const,
+      panelSize: 40,
+      roomsPerRow: 2,
       slots: [
         { id: 'slot-1' as const, roomId: 'geloescht' },
         { id: 'slot-2' as const, roomId: null },

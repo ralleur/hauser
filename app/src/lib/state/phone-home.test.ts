@@ -157,8 +157,13 @@ describe('phone home source, command and modal boundaries', () => {
   it('closes the stacked tablet overlays with the lazy room-control closure', () => {
     expect(roomSheet).toMatch(/onDestroy\(\(\) => \{[\s\S]*closeDeviceDetail\(true\)/);
     expect(roomSheet).toMatch(/onDestroy\(\(\) => \{[\s\S]*closeSceneEdit\(true\)/);
-    expect(phoneShell).not.toContain('scene-manager.svelte.ts');
+    // Das Geräte-Detail bleibt exklusiv in der Raum-Sheet-Closure. Der Szenen-
+    // Editor ist zusätzlich aus dem Raum-Editor erreichbar („Szenen anpassen")
+    // und aktiviert seinen Shell-Host erst bei Bedarf — aber nur, solange kein
+    // Raum-Sheet offen ist, das ihn selbst mitbringt.
     expect(phoneShell).not.toContain('deviceDetail');
+    expect(phoneShell).toContain("addEventListener('hauser:scene-edit-open'");
+    expect(phoneShell).toMatch(/\{#if !roomOpen && featureStylesReady && SceneEditComponent\}/);
   });
 
   it('recovers failed room and nested overlay chunks with retry and close actions', () => {

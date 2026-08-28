@@ -11,6 +11,7 @@ import { rehydrateImmersionLight } from './immersion-light.svelte.ts';
 import { notifications } from './notifications.svelte.ts';
 import { rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
+import { configuredRoomSensorIds } from './room-display-config.svelte.ts';
 import { syncConfiguredBackend } from './runtime-backend-sync.ts';
 import { createHaRetryController } from './runtime-background.ts';
 import { loadSceneConfig } from './scene-config.ts';
@@ -116,5 +117,6 @@ export async function startBackgroundRuntime(isCancelled: () => boolean) {
   return {
     notificationLayer: notificationLayer.default,
     playerLayer: playerLayer.default,
+    configuredRoomSensorIds,
   };
 }

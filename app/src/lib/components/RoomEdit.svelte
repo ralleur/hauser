@@ -6,8 +6,10 @@
   import Icon from './Icon.svelte';
   import '../../styles/room-images.css';
   import { longpress } from '../actions/longpress.ts';
+  import { dragreorder } from '../actions/dragreorder.ts';
   import { appState } from '../state/app.svelte.ts';
   import { roomEdit, closeRoomEdit, finishRoomEditClose } from '../state/overlay.svelte.ts';
+  import { openSceneEdit, scenes } from '../state/scene-manager.svelte.ts';
   import {
     addDeviceToRoom,
     deviceManager,
@@ -24,12 +26,23 @@
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
   import RoomImageLibrary from './settings/RoomImageLibrary.svelte';
+  import RoomImageWizard from './settings/RoomImageWizard.svelte';
+  import {
+    autoSensorId,
+    roomSensorCandidates,
+    sensorIdFor,
+    sensorIsAutomatic,
+    setSensorId,
+    setShowsMetric,
+    showsMetric,
+  } from '../state/room-display-config.svelte.ts';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
 
   let query = $state('');
   let searchEl = $state<HTMLInputElement>();
-  let view = $state<'devices' | 'immersion' | 'background'>('devices');
+  let view = $state<'devices' | 'immersion' | 'background' | 'advanced'>('devices');
+  let wizardOpen = $state(false);
   let selectedLightId = $state('');
   let backgroundInput = $state<HTMLInputElement>();
   let backgroundBusy = $state(false);
@@ -60,6 +73,11 @@
       .map((s) => s.item);
   });
 
+  // Anzeigename eines Sensors aus dem Katalog; unbekannt → die entity_id.
+  function sensorName(entityId: string): string {
+    return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
+  }
+
   function matchRank(item: EntityCatalogItem, q: string): number {
     const name = item.name.toLowerCase();
     if (name.startsWith(q)) return 3;
@@ -80,12 +98,18 @@
     searchEl?.focus();
   }
 
-  function move(index: number, delta: -1 | 1) {
+  /* Reihenfolge der Raumgeräte: Konfig-Overlay-Standard (actions/dragreorder) —
+     derselbe Neun-Punkte-Griff wie in der Raumliste und im Szenen-Editor. */
+  let dragEntityId = $state<string | null>(null);
+  let orderListEl = $state<HTMLElement>();
+
+  function moveDevice(entityId: string, targetIndex: number) {
     if (!room) return;
     const ids = room.lights.map((l) => l.entityId);
-    const target = index + delta;
-    if (target < 0 || target >= ids.length) return;
-    [ids[index], ids[target]] = [ids[target], ids[index]];
+    const from = ids.indexOf(entityId);
+    const to = Math.max(0, Math.min(ids.length - 1, targetIndex));
+    if (from < 0 || from === to) return;
+    ids.splice(to, 0, ...ids.splice(from, 1));
     setRoomDeviceOrder(room.id, ids);
   }
 
@@ -101,6 +125,16 @@
     backgroundMessage = null;
     backgroundError = false;
   });
+
+  /* Szenen-Editor ist ein eigenes Overlay (gleicher Modal-Tier): das Raum-
+     Overlay geht dafür zu, sonst stapelten zwei Scrims übereinander. */
+  function openScenes() {
+    if (!room) return;
+    const roomId = room.id;
+    closeRoomEdit(true);
+    // Ohne Szenen öffnet der Editor leer und bietet direkt „Neue Szene“ an.
+    openSceneEdit(roomId, scenes(roomId)[0]?.id ?? 'gemuetlich');
+  }
 
   function openImmersionEditor() {
     view = 'immersion';
@@ -213,50 +247,79 @@
               <Icon name="i-chevron-left" cls="icon icon-md" />
             </button>
           {/if}
-          <h2 class="ld-title">{room.name} <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : m.room_devices()}</span></h2>
+          <h2 class="ld-title">{room.name} <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : view === 'advanced' ? m.room_advanced() : m.room_devices()}</span></h2>
           <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                   onclick={() => closeRoomEdit()}>×</button>
         </header>
 
         <div class="ld-body">
           {#if view === 'devices'}
-          <button class="re-immersion-entry pressable" type="button" onclick={openBackgroundEditor}>
-            <span class="re-icon" aria-hidden="true"><Icon name="i-image" /></span>
-            <span class="re-label">
-              <span class="re-name">{m.room_background()}</span>
-              <small class="re-meta">{background ? m.room_background_custom() : m.room_background_default()}</small>
-            </span>
-            <Icon name="i-chevron-right" cls="icon icon-md" />
-          </button>
-          <button class="re-immersion-entry pressable" type="button" onclick={openImmersionEditor}>
-            <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
-            <span class="re-label">
-              <span class="re-name">{m.room_assign_lamps()}</span>
-              <small class="re-meta">{m.room_set_light_positions()}</small>
-            </span>
-            <Icon name="i-chevron-right" cls="icon icon-md" />
-          </button>
+          <!-- Schnelleinstieg: die vier Einstiege als 2×2-Raster, damit die
+               Geräteliste darunter ohne Scrollen sichtbar bleibt. -->
+          <section class="ld-section">
+            <span class="caps-label">{m.room_quick_setup()}</span>
+            <div class="re-quick-grid">
+              <button class="re-quick-entry pressable" type="button" onclick={openBackgroundEditor}>
+                <span class="re-icon" aria-hidden="true"><Icon name="i-image" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_background()}</span>
+                  <small class="re-meta">{background ? m.room_background_custom() : m.room_background_default()}</small>
+                </span>
+                <Icon name="i-chevron-right" cls="icon icon-md" />
+              </button>
+              <button class="re-quick-entry pressable" type="button" onclick={openScenes}>
+                <span class="re-icon" aria-hidden="true"><Icon name="i-palette" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_edit_scenes()}</span>
+                  <small class="re-meta">{m.room_edit_scenes_hint()}</small>
+                </span>
+                <Icon name="i-chevron-right" cls="icon icon-md" />
+              </button>
+              <button class="re-quick-entry pressable" type="button" onclick={openImmersionEditor}>
+                <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_assign_lamps()}</span>
+                  <small class="re-meta">{m.room_set_light_positions()}</small>
+                </span>
+                <Icon name="i-chevron-right" cls="icon icon-md" />
+              </button>
+              <button class="re-quick-entry pressable" type="button" onclick={() => view = 'advanced'}>
+                <span class="re-icon" aria-hidden="true"><Icon name="i-tune" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_advanced()}</span>
+                  <small class="re-meta">{m.room_advanced_hint()}</small>
+                </span>
+                <Icon name="i-chevron-right" cls="icon icon-md" />
+              </button>
+            </div>
+          </section>
           <section class="ld-section">
             <span class="caps-label">{m.room_order_label()} · {room.lights.length}</span>
             {#if room.lights.length === 0}
               <p class="re-empty">{m.room_no_devices()}</p>
             {:else}
-              <ul class="re-list">
-                {#each room.lights as device, i (device.entityId)}
-                  <li class="re-row" use:longpress={{ onLongPress: () => moveDeviceId = device.entityId }}>
+              <ul class="re-list" bind:this={orderListEl}>
+                {#each room.lights as device (device.entityId)}
+                  <li class="re-row" class:is-dragging={dragEntityId === device.entityId}
+                      data-reorder-row={device.entityId}
+                      use:longpress={{ onLongPress: () => moveDeviceId = device.entityId }}>
                     <span class="re-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
                     <span class="re-label">
                       <span class="re-name">{device.name}</span>
                       <small class="re-meta">{device.entityId}</small>
                     </span>
                     <span class="re-actions">
-                      <button class="re-btn pressable" type="button" disabled={i === 0}
-                              aria-label="{device.name} nach oben" onclick={() => move(i, -1)}>
-                        <Icon name="i-chevron-up" cls="icon icon-md" />
-                      </button>
-                      <button class="re-btn pressable" type="button" disabled={i === room.lights.length - 1}
-                              aria-label="{device.name} nach unten" onclick={() => move(i, 1)}>
-                        <Icon name="i-chevron-down" cls="icon icon-md" />
+                      <button class="cfg-handle" type="button"
+                              aria-label={m.scene_reorder({ name: device.name })}
+                              disabled={room.lights.length < 2}
+                              use:dragreorder={{
+                                id: device.entityId,
+                                list: () => orderListEl,
+                                enabled: room.lights.length > 1,
+                                onReorder: moveDevice,
+                                onDragChange: (dragging) => { dragEntityId = dragging ? device.entityId : null; },
+                              }}>
+                        <Icon name="i-dots-grid" cls="icon icon-md" />
                       </button>
                       <button class="re-btn re-remove pressable" type="button"
                               aria-label="{device.name} aus {room.name} entfernen"
@@ -345,6 +408,56 @@
                 {/each}
               </button>
             </div>
+          {:else if view === 'advanced'}
+            <!-- Was die Raum-Kachel auf dem Home-Screen zeigt. Der Sensor kommt
+                 automatisch aus der HA-Bereichszuordnung; die Auswahl ist nur
+                 nötig, wenn mehrere infrage kommen oder HA nichts weiß. -->
+            <section class="ld-section">
+              {#each ['temperature', 'humidity'] as const as metric (metric)}
+                {@const candidates = roomSensorCandidates(room.id, metric)}
+                {@const auto = autoSensorId(room.id, metric)}
+                {@const chosen = sensorIdFor(room.id, metric)}
+                {@const shown = showsMetric(room.id, metric)}
+                <div class="re-metric-box">
+                  <div class="re-row re-metric-head">
+                    <span class="re-icon" aria-hidden="true">
+                      <Icon name={metric === 'temperature' ? 'i-thermometer' : 'i-water-percent'} />
+                    </span>
+                    <span class="re-label">
+                      <span class="re-name">{metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}</span>
+                      <small class="re-meta">
+                        {metric === 'temperature' ? m.room_display_temp_hint() : m.room_display_humidity_hint()}
+                      </small>
+                    </span>
+                    <button class="re-toggle pressable" type="button" role="switch" aria-checked={shown}
+                            class:is-on={shown}
+                            aria-label={metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}
+                            onclick={() => setShowsMetric(room.id, metric, !shown)}>
+                      <span class="re-toggle-knob"></span>
+                    </button>
+                  </div>
+
+                  {#if shown}
+                    <label class="re-metric-sensor">
+                      <span class="caps-label">{m.room_display_sensor()}</span>
+                      {#if candidates.length === 0 && !chosen}
+                        <p class="re-empty">{m.room_display_sensor_none()}</p>
+                      {:else}
+                        <select class="re-search" value={sensorIsAutomatic(room.id, metric) ? '' : chosen}
+                                onchange={(e) => setSensorId(room.id, metric, e.currentTarget.value || undefined)}>
+                          <option value="">
+                            {m.room_display_sensor_auto()}{auto ? ` · ${sensorName(auto)}` : ''}
+                          </option>
+                          {#each candidates as item (item.entityId)}
+                            <option value={item.entityId}>{item.name}</option>
+                          {/each}
+                        </select>
+                      {/if}
+                    </label>
+                  {/if}
+                </div>
+              {/each}
+            </section>
           {:else}
             <section class="re-background-editor">
               <div class="re-background-preview" style:background-image={`url("${backgroundUrl}")`}
@@ -359,6 +472,8 @@
                 </button>
                 <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
                         onclick={() => libraryOpen = true}>{m.rimg_lib_from_library()}</button>
+                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
+                        onclick={() => wizardOpen = true}>{m.rimg_wizard_entry()}</button>
                 {#if background}
                   <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
                           onclick={restoreBackground}>{m.room_background_restore()}</button>
@@ -396,4 +511,5 @@
   <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}
                     onclose={() => libraryOpen = false}
                     onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
+  <RoomImageWizard open={wizardOpen} onclose={() => wizardOpen = false} />
 {/if}

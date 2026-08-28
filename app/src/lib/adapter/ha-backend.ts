@@ -412,10 +412,45 @@ export class HaBackend implements Backend {
     if (!this.#conn || !this.#catalogCb) return;
     try {
       const states = await getStates(this.#conn);
-      this.#catalogCb(states.map(catalogItemFromHaState).filter((x): x is EntityCatalogItem => x !== null));
+      const areas = await this.#entityAreas();
+      const items = states
+        .map(catalogItemFromHaState)
+        .filter((x): x is EntityCatalogItem => x !== null)
+        .map((item) => (areas.has(item.entityId) ? { ...item, area: areas.get(item.entityId)! } : item));
+      this.#catalogCb(items);
     } catch (err) {
       console.warn('[HaBackend] Entity-Katalog konnte nicht geladen werden:', err);
     }
+  }
+
+  /* Bereichszuordnung je Entität. `/api/states` liefert sie NICHT — sie steht
+     nur in den Registries. Eine Entität erbt den Bereich ihres Geräts, solange
+     sie keinen eigenen gesetzt hat (dieselbe Regel wie in HA). Der Bereichsname
+     ist stabiler als die area_id, deshalb wird er zurückgegeben.
+     Scheitert der Abruf (fehlende Rechte, alte HA-Version), bleibt der Katalog
+     ohne Bereiche — die Automatik greift dann eben nicht. */
+  async #entityAreas(): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!this.#conn) return map;
+    try {
+      const [areas, devices, entities] = await Promise.all([
+        this.#conn.sendMessagePromise<{ area_id: string; name: string }[]>({ type: 'config/area_registry/list' }),
+        this.#conn.sendMessagePromise<{ id: string; area_id: string | null }[]>({ type: 'config/device_registry/list' }),
+        this.#conn.sendMessagePromise<{ entity_id: string; area_id: string | null; device_id: string | null }[]>(
+          { type: 'config/entity_registry/list' },
+        ),
+      ]);
+      const areaName = new Map(areas.map((a) => [a.area_id, a.name]));
+      const deviceArea = new Map(devices.map((d) => [d.id, d.area_id]));
+      for (const entry of entities) {
+        const areaId = entry.area_id ?? (entry.device_id ? deviceArea.get(entry.device_id) ?? null : null);
+        const name = areaId ? areaName.get(areaId) : undefined;
+        if (name) map.set(entry.entity_id, name);
+      }
+    } catch (err) {
+      console.warn('[HaBackend] Bereichszuordnung nicht verfügbar:', err);
+    }
+    return map;
   }
 
   #onDiff(diff: EntitiesDiff): void {

@@ -6,6 +6,7 @@
    ============================================ */
 
 import { showScreen } from './nav.svelte.ts';
+import { m } from '../../paraglide/messages.js';
 
 import {
   buildRuntimeRooms,
@@ -292,9 +293,9 @@ export const SERVICE_STATUS = {
 } as const;
 
 export const HVAC_MODES = [
-  { id: 'heat', label: 'Heizen', icon: 'i-flame' },
-  { id: 'cool', label: 'Kühlen', icon: 'i-snow' },
-  { id: 'off', label: 'Aus', icon: 'i-power' },
+  { id: 'heat', get label() { return m.climate_mode_heat(); }, icon: 'i-flame' },
+  { id: 'cool', get label() { return m.climate_mode_cool(); }, icon: 'i-snow' },
+  { id: 'off', get label() { return m.climate_mode_off(); }, icon: 'i-power' },
 ] as const;
 
 /* Fake-Command-Dispatch: loggt nur; die Anbindungs-Session ersetzt das durch

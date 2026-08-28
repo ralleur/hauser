@@ -641,22 +641,8 @@
   padding: var(--space-4) var(--space-4) calc(env(safe-area-inset-bottom, 0px) + var(--space-6));
 }
 
-/* Mobile Raum-Overlay: deterministische Zwei-Spalten-Klima-Anordnung statt
-   des flexiblen Panel-Layouts. So bleiben Ist- und Zielwert sauber ausgerichtet. */
-.room-sheet-scroll .climate-hero {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-}
-
 .room-sheet-scroll .climate-temp {
   font-size: var(--text-xl);
-}
-
-.room-sheet-scroll .climate-pills {
-  width: 100%;
-  min-width: 0;
 }
 
 /* Kamera auf dem Phone als kompakte Querkarte statt als vollbreites 16:9-
