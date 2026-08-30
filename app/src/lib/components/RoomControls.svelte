@@ -106,9 +106,10 @@
           <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
         </div>
         <div class="climate-current">
+          <span class="climate-current-label">{m.climate_current()}</span>
           <span class="climate-temp num" class:is-unavailable={temp === null}>
             {#if temp !== null}
-              {fmtTemp(temp)}<span class="unit">°C</span>
+              {fmtTemp(temp)}<span class="unit">°<span class="unit-c">C</span></span>
             {:else}
               {m.media_unavailable()}
             {/if}
@@ -117,6 +118,7 @@
             <Icon name="i-thermometer" cls="icon icon-xl" />
             <span>
               <strong>{m.climate_current_temperature()}</strong>
+              <span class="climate-current-room-label">{m.climate_room_temperature()}</span>
               {#if humidity !== null}
                 <small>{Math.round(humidity)} % {m.room_display_humidity()}</small>
               {/if}
@@ -125,13 +127,21 @@
         </div>
 
         <div class="climate-controller" aria-label="{m.climate_target_temperature()} {room.name}">
-          <span class="climate-controller-label">{m.climate_target_temperature()}</span>
-          <div class="climate-target-control">
-            <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
-                    onclick={() => stepTarget(room.id, -0.5)}><Icon name="i-chevron-down" cls="icon icon-xl" /></button>
-            <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
-            <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
-                    onclick={() => stepTarget(room.id, 0.5)}><Icon name="i-chevron-up" cls="icon icon-xl" /></button>
+          <div class="climate-target-panel">
+            <span class="climate-controller-label">{m.climate_target_temperature()}</span>
+            <div class="climate-target-control">
+              <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
+                      onclick={() => stepTarget(room.id, -0.5)}>
+                <Icon name="i-chevron-down" cls="icon icon-xl climate-step-panel-icon" />
+                <Icon name="i-minus" cls="icon icon-xl climate-step-phone-icon" />
+              </button>
+              <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
+              <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
+                      onclick={() => stepTarget(room.id, 0.5)}>
+                <Icon name="i-chevron-up" cls="icon icon-xl climate-step-panel-icon" />
+                <Icon name="i-plus" cls="icon icon-xl climate-step-phone-icon" />
+              </button>
+            </div>
           </div>
           <div class="climate-mode-selector" role="radiogroup" aria-label={m.climate_mode_label()}>
             {#each HVAC_MODES as mode (mode.id)}

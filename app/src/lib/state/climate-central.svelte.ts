@@ -15,13 +15,27 @@
    ============================================================ */
 
 import { appState } from './app.svelte.ts';
-import { mergedClimate, setTarget } from './commands.ts';
+import { runtime } from '../adapter/runtime.svelte.ts';
+import type { ClimateValue } from '../adapter/types.ts';
+import { mergedClimate, setClimateTarget, setTarget } from './commands.ts';
+import {
+  centralClimateConfig,
+  centralRoomDelta,
+  centralRoomIncluded,
+} from './climate-central-config.svelte.ts';
 
 function climateTargets(): number[] {
+  if (centralClimateConfig.customEntityId) {
+    const climate = runtime.merged(centralClimateConfig.customEntityId) as ClimateValue | undefined;
+    return climate ? [climate.target] : [];
+  }
   return appState.rooms
-    .map((r) => mergedClimate(r.id))
-    .filter((c): c is NonNullable<typeof c> => c !== null)
-    .map((c) => c.target);
+    .filter((room) => centralRoomIncluded(room.id))
+    .map((room) => {
+      const climate = mergedClimate(room.id);
+      return climate ? climate.target - centralRoomDelta(room.id) : null;
+    })
+    .filter((target): target is number => target !== null);
 }
 
 export const centralClimate = (() => {
@@ -46,13 +60,19 @@ export const centralClimate = (() => {
   function setAll(v: number): void {
     const clamped = Math.min(26, Math.max(16, v));
     lastSet = clamped;
-    for (const r of appState.rooms) setTarget(r.id, clamped); // setTarget ignoriert Nicht-Klima-Räume
+    if (centralClimateConfig.customEntityId) {
+      setClimateTarget(centralClimateConfig.customEntityId, clamped);
+      return;
+    }
+    for (const room of appState.rooms) {
+      if (centralRoomIncluded(room.id)) setTarget(room.id, clamped + centralRoomDelta(room.id));
+    }
   }
 
   return {
     get value() { return value; },
     get isSynced() { return synced !== null; },
-    get hasClimate() { return climateTargets().length > 0; },
+    get hasClimate() { return centralClimateConfig.customEntityId !== null || climateTargets().length > 0; },
     step(delta: number) { setAll(value + delta); },
   };
 })();

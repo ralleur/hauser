@@ -13,6 +13,17 @@
   import RoomImageLibrary from './RoomImageLibrary.svelte';
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../../config/product-capabilities.ts';
   import { settingsValues } from '../../state/settings.svelte.ts';
+  import { appState } from '../../state/app.svelte.ts';
+  import { mergedClimate } from '../../state/commands.ts';
+  import { deviceManager } from '../../state/device-manager.svelte.ts';
+  import {
+    centralClimateConfig,
+    centralRoomDelta,
+    centralRoomIncluded,
+    setCentralClimateEntity,
+    setCentralRoomDelta,
+    setCentralRoomIncluded,
+  } from '../../state/climate-central-config.svelte.ts';
   import { resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
@@ -21,6 +32,9 @@
   let roomImageWizardOpen = $state(false);
   let roomImageLibraryOpen = $state(false);
   let rescanConfirming = $state(false);
+
+  const climateRooms = $derived(appState.rooms.filter((room) => mergedClimate(room.id) !== null));
+  const climateEntities = $derived(deviceManager.catalog.filter((entity) => entity.domain === 'climate'));
 </script>
 
 {#snippet cards({ rescan, busy = false }: { rescan?: () => void; busy?: boolean })}
@@ -57,6 +71,60 @@
       </div>
     </div>
   {/if}
+
+  <div class="settings-group" data-setting-id="central-climate">
+    <SettingsCardHead icon="i-thermometer" tint="warm"
+                      title={m.central_climate_settings_title()} sub={m.central_climate_settings_desc()} />
+    <div class="central-climate-card">
+      <label class="central-climate-source">
+        <span class="rooms-tile-title">{m.central_climate_source()}</span>
+        <select class="central-climate-select"
+                value={centralClimateConfig.customEntityId ?? ''}
+                onchange={(event) => setCentralClimateEntity(event.currentTarget.value || null)}>
+          <option value="">{m.central_climate_source_rooms()}</option>
+          {#if centralClimateConfig.customEntityId && !climateEntities.some((entity) => entity.entityId === centralClimateConfig.customEntityId)}
+            <option value={centralClimateConfig.customEntityId}>{centralClimateConfig.customEntityId}</option>
+          {/if}
+          {#each climateEntities as entity (entity.entityId)}
+            <option value={entity.entityId}>{entity.name} · {entity.entityId}</option>
+          {/each}
+        </select>
+      </label>
+
+      {#if centralClimateConfig.customEntityId}
+        <p class="central-climate-note">{m.central_climate_custom_hint()}</p>
+      {:else if climateRooms.length === 0}
+        <p class="central-climate-note">{m.central_climate_no_rooms()}</p>
+      {:else}
+        <div class="central-climate-rooms">
+          <span class="caps-label">{m.central_climate_rooms()}</span>
+          {#each climateRooms as room (room.id)}
+            {@const included = centralRoomIncluded(room.id)}
+            <div class="central-climate-room">
+              <label class="central-climate-check">
+                <input type="checkbox" checked={included}
+                       onchange={(event) => setCentralRoomIncluded(room.id, event.currentTarget.checked)} />
+                <span>
+                  <strong>{room.name}</strong>
+                  <small>{m.central_climate_include()}</small>
+                </span>
+              </label>
+              <label class="central-climate-delta">
+                <span>{m.central_climate_delta()}</span>
+                <span class="central-climate-delta-input">
+                  <input type="number" min="-10" max="10" step="0.5"
+                         disabled={!included} value={centralRoomDelta(room.id)}
+                         onchange={(event) => setCentralRoomDelta(room.id, event.currentTarget.valueAsNumber)} />
+                  <span>°C</span>
+                </span>
+              </label>
+            </div>
+          {/each}
+        </div>
+        <p class="central-climate-note">{m.central_climate_delta_hint()}</p>
+      {/if}
+    </div>
+  </div>
 
   <div class="settings-group">
     <SettingsCardHead icon="i-restore" tint="warm"
@@ -182,4 +250,98 @@
     color: var(--color-text-on-accent);
   }
   .rooms-tile-action.is-primary :global(.icon) { color: var(--color-text-on-accent); }
+
+  .central-climate-card {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0 var(--space-4) var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-0);
+  }
+
+  .central-climate-source,
+  .central-climate-rooms {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .central-climate-select,
+  .central-climate-delta input {
+    min-height: var(--touch-min);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-1);
+    color: var(--color-text-primary);
+    font: inherit;
+  }
+
+  .central-climate-select { padding: 0 var(--space-3); }
+
+  .central-climate-room {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-1);
+  }
+
+  .central-climate-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .central-climate-check input {
+    width: var(--icon-md);
+    height: var(--icon-md);
+    accent-color: var(--color-accent-warm);
+  }
+
+  .central-climate-check span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .central-climate-check small,
+  .central-climate-note,
+  .central-climate-delta > span {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+  }
+
+  .central-climate-delta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .central-climate-delta-input {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .central-climate-delta input {
+    width: var(--space-8);
+    padding: 0 var(--space-2);
+    text-align: right;
+  }
+
+  .central-climate-note {
+    margin: 0;
+    line-height: var(--leading-normal);
+  }
+
+  @media (max-width: 640px) {
+    .central-climate-room { grid-template-columns: minmax(0, 1fr); }
+    .central-climate-delta { justify-content: space-between; }
+  }
 </style>

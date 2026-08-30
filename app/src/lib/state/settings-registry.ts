@@ -168,6 +168,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     id: 'room-image-wizard', section: 'rooms-devices' as const, label: 'Raumbilder erstellen',
     keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
   }] : []),
+  { id: 'central-climate', section: 'rooms-devices', get label() { return m.central_climate_settings_title(); },
+    keywords: ['temperatur', 'klima', 'räume', 'delta', 'thermostat', 'heizung'] },
   { id: 'reset-devices', section: 'rooms-devices', get label() { return m.settings_entry_reset_devices_label(); },
     keywords: ['umbenennen', 'symbole', 'lampen', 'lichter', 'reset', 'standard'] },
   { id: 'reset-scenes', section: 'rooms-devices', get label() { return m.settings_entry_reset_scenes_label(); },

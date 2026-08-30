@@ -641,8 +641,192 @@
   padding: var(--space-4) var(--space-4) calc(env(safe-area-inset-bottom, 0px) + var(--space-6));
 }
 
-.room-sheet-scroll .climate-temp {
-  font-size: var(--text-xl);
+/* Mobile Thermostat: Ist- und Zielwert teilen sich die obere Zeile, die
+   Betriebsarten bilden darunter eine gemeinsame, durchgehende Bedienleiste. */
+.room-sheet-scroll .room-controls .climate-card {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0;
+  padding: var(--space-3);
+  border-color: var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.room-sheet-scroll .room-controls .climate-current {
+  grid-column: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  text-align: center;
+}
+
+.room-sheet-scroll .room-controls .climate-current::after {
+  position: absolute;
+  inset-block: var(--space-4);
+  right: 0;
+  width: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+.room-sheet-scroll .room-controls .climate-current-label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-3xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.room-sheet-scroll .room-controls .climate-temp {
+  flex: none;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+}
+
+.room-sheet-scroll .room-controls .climate-temp .unit {
+  margin-left: 0;
+  font-size: var(--text-lg);
+  vertical-align: 20%;
+}
+
+.room-sheet-scroll .room-controls .climate-temp .unit-c {
+  display: none;
+}
+
+.room-sheet-scroll .room-controls .climate-current-meta {
+  gap: var(--space-1);
+  justify-content: center;
+}
+
+.room-sheet-scroll .room-controls .climate-current-meta .icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  opacity: 0.72;
+}
+
+.room-sheet-scroll .room-controls .climate-current-meta strong {
+  display: none;
+}
+
+.room-sheet-scroll .room-controls .climate-current-room-label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-normal);
+}
+
+.room-sheet-scroll .room-controls .climate-current-meta small {
+  display: none;
+}
+
+.room-sheet-scroll .room-controls .climate-controller {
+  display: contents;
+}
+
+.room-sheet-scroll .room-controls .climate-target-panel {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+}
+
+.room-sheet-scroll .room-controls .climate-controller-label {
+  font-size: var(--text-3xs);
+  font-weight: var(--font-weight-normal);
+  letter-spacing: var(--tracking-wide);
+}
+
+.room-sheet-scroll .room-controls .climate-target-control {
+  grid-template-columns: calc(var(--touch-min) - var(--space-2)) minmax(0, 1fr) calc(var(--touch-min) - var(--space-2));
+  gap: var(--space-1);
+}
+
+.room-sheet-scroll .room-controls .climate-step {
+  width: calc(var(--touch-min) - var(--space-2));
+  height: calc(var(--touch-min) - var(--space-2));
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+.room-sheet-scroll .room-controls .climate-step .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.room-sheet-scroll .room-controls .climate-step-panel-icon {
+  display: none;
+}
+
+.room-sheet-scroll .room-controls .climate-step-phone-icon {
+  display: block;
+}
+
+.room-sheet-scroll .room-controls .climate-target-value {
+  min-width: 0;
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-snug);
+}
+
+.room-sheet-scroll .room-controls .climate-mode-selector {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  margin-top: var(--space-2);
+  padding-top: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.room-sheet-scroll .room-controls .climate-mode {
+  min-height: calc(var(--touch-preferred) + var(--space-5));
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  border-radius: 0;
+  background: var(--overlay-control-background);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-normal);
+  text-transform: none;
+}
+
+.room-sheet-scroll .room-controls .climate-mode .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.room-sheet-scroll .room-controls .climate-mode.is-active {
+  border-radius: 0;
+  background: var(--color-text-primary);
+  color: var(--color-surface-0);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: none;
+}
+
+.room-sheet-scroll .room-controls .climate-mode.is-active .icon {
+  color: var(--color-surface-0);
+}
+
+.room-sheet-scroll .room-controls .climate-mode:first-child.is-active {
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.room-sheet-scroll .room-controls .climate-mode:last-child.is-active {
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.room-sheet-scroll .room-controls .climate-mode > span {
+  display: block;
+}
+
+@media (max-width: 350px) {
+  .room-sheet-scroll .room-controls .climate-target-value {
+    font-size: var(--text-md);
+  }
 }
 
 /* Kamera auf dem Phone als kompakte Querkarte statt als vollbreites 16:9-

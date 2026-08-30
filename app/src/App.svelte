@@ -2,6 +2,7 @@
   import { onDestroy, onMount, untrack, type Component } from 'svelte';
   import { runtime } from './lib/adapter/runtime.svelte.ts';
   import { visibleEntityIds } from './lib/state/entities.ts';
+  import { configuredCentralClimateIds } from './lib/state/climate-central-config.svelte.ts';
   import { initTheme } from './lib/state/theme.svelte.ts';
   import { initDeviceManager } from './lib/state/device-manager.svelte.ts';
   import { measurePressedPaint } from './lib/state/phase4-metrics.svelte.ts';
@@ -66,7 +67,7 @@
      gewählten Temperatur-/Feuchtesensoren stehen nicht in der Haushalts-Config
      und kommen hier dazu — sonst bekämen sie nie einen Wert. */
   $effect(() => {
-    runtime.setVisible(visibleEntityIds(nav.screen).concat(configuredRoomSensorIds()));
+    runtime.setVisible(visibleEntityIds(nav.screen).concat(configuredRoomSensorIds(), configuredCentralClimateIds()));
   });
 
   const initialShellSnapshot = untrack(() => initialShell);

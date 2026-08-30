@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import phoneHome from '../components/phone/PhoneHomeFeed.svelte?raw';
+import phoneQuickActions from '../components/phone/PhoneQuickActions.svelte?raw';
 import roomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomSheet from '../components/phone/RoomControlSheet.svelte?raw';
 import roomControls from '../components/RoomControls.svelte?raw';
@@ -64,8 +65,8 @@ describe('phone home room projection', () => {
     }));
     expect(currentClimateTemperature(projected)).toBe(21.4);
     expect(currentClimateTemperature(projected.map((room) => ({ ...room, climateAvailable: false })))).toBeNull();
-    expect(phoneHome).toContain('m.climate_current()');
-    expect(phoneHome).toContain('m.climate_target()');
+    expect(phoneQuickActions).toContain('m.climate_current()');
+    expect(phoneQuickActions).toContain('m.climate_target()');
   });
 
   it('tolerates missing readers and values without inventing room state', () => {
@@ -135,10 +136,10 @@ describe('phone home source, command and modal boundaries', () => {
   });
 
   it('keeps the mobile vacation action enabled as a bidirectional toggle', () => {
-    expect(phoneHome).toMatch(/onclick=\{toggleVacationMode\}/);
-    expect(phoneHome).toMatch(/disabled=\{!online\}/);
-    expect(phoneHome).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
-    expect(phoneHome).toContain('vacationActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()');
+    expect(phoneQuickActions).toMatch(/onclick=\{toggleVacationMode\}/);
+    expect(phoneQuickActions).toMatch(/disabled=\{!online\}/);
+    expect(phoneQuickActions).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
+    expect(phoneQuickActions).toContain('vacationActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()');
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {
