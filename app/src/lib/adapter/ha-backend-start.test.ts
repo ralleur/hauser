@@ -145,9 +145,69 @@ describe('HaBackend deferred startup', () => {
     emit({ r: { 'input_select.fixture_washer': null } });
 
     expect(update).toHaveBeenLastCalledWith('input_select.fixture_washer', undefined);
-    const cache = JSON.parse(localStorage.getItem('hmi:ha-cache') ?? '{}') as Record<string, unknown>;
+    /* B-27 A3: Der Cache wird nicht mehr je Diff synchron geschrieben, sondern
+       gesammelt. Der Inhalt steht deshalb erst nach der Debounce-Periode — und
+       dann in einem einzigen Schreibvorgang mit dem Endstand beider Diffs. */
+    expect(localStorage.getItem('hmi:ha-cache')).toBeNull();
+    const cache = await vi.waitFor(() => {
+      const written = JSON.parse(localStorage.getItem('hmi:ha-cache') ?? '{}') as Record<string, unknown>;
+      expect(written).toHaveProperty('select.fixture_dryer');
+      return written;
+    }, { timeout: 2_000 });
     expect(cache).not.toHaveProperty('input_select.fixture_washer');
-    expect(cache).toHaveProperty('select.fixture_dryer');
+  });
+
+  /* B-27 A1: iOS friert die PWA im Hintergrund ein; beim Auftauchen bleibt der
+     Socket halb offen und `#start()` würde ihn für gültig halten. Ohne den
+     Liveness-Ping wartet ein Resume bis zum nächsten Backoff-Slot. */
+  it('drops a half-open socket on resume instead of trusting the existing connection', async () => {
+    vi.useFakeTimers();
+    const documentTarget = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+    vi.stubGlobal('document', documentTarget);
+    vi.stubGlobal('window', new EventTarget());
+    const stale = connection(async () => async () => {});
+    stale.sendMessagePromise.mockReturnValue(new Promise(() => {})); // Ping bleibt unbeantwortet
+    const fresh = connection(async () => async () => {});
+    websocket.createConnection
+      .mockResolvedValueOnce(stale)
+      .mockResolvedValueOnce(fresh);
+    const backend = new HaBackend({ url: 'http://ha:8123', entityIds: ['light.demo'] });
+    const statuses: string[] = [];
+    backend.onConnectionChange((status) => statuses.push(status));
+
+    backend.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(statuses.at(-1)).toBe('connected');
+    expect(websocket.createConnection).toHaveBeenCalledOnce();
+
+    documentTarget.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(stale.sendMessagePromise).toHaveBeenCalledWith({ type: 'ping' });
+    expect(stale.close).toHaveBeenCalledOnce();
+    expect(websocket.createConnection).toHaveBeenCalledTimes(2);
+    expect(fresh.subscribeMessage).toHaveBeenCalledOnce();
+    expect(statuses.at(-1)).toBe('connected');
+  });
+
+  it('keeps a live connection untouched when the app becomes visible again', async () => {
+    vi.useFakeTimers();
+    const documentTarget = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+    vi.stubGlobal('document', documentTarget);
+    vi.stubGlobal('window', new EventTarget());
+    const live = connection(async () => async () => {});
+    live.sendMessagePromise.mockResolvedValue({});
+    websocket.createConnection.mockResolvedValueOnce(live);
+    const backend = new HaBackend({ url: 'http://ha:8123', entityIds: ['light.demo'] });
+
+    backend.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    documentTarget.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(live.close).not.toHaveBeenCalled();
+    expect(websocket.createConnection).toHaveBeenCalledOnce();
   });
 
   it('resolves the URL at start time and keeps concurrent starts single-flight', async () => {

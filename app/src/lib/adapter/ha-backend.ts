@@ -53,6 +53,15 @@ function markHaStartup(name: 'hmi:ha-connected' | 'hmi:fresh-data', label: strin
 const TOKEN_KEY = 'hmi:ha-token';
 const CACHE_KEY = 'hmi:ha-cache';
 
+/* B-27 A1: iOS friert eine Home-Screen-PWA im Hintergrund ein und feuert beim
+   Auftauchen kein `online`-Event. Der Socket kann dabei halb offen bleiben —
+   für `#start()` sieht er wie eine gültige Verbindung aus. Deshalb beim
+   Sichtbarwerden ein Ping mit kurzer Frist, bevor entschieden wird. */
+const RESUME_PING_TIMEOUT_MS = 2_000;
+/* B-27 A3: Der initiale Daten-Burst liefert Dutzende Diffs in Folge; jeder
+   davon hätte die komplette Entity-Map synchron serialisiert. */
+const CACHE_FLUSH_DEBOUNCE_MS = 500;
+
 /* B-08E11: Im App-Modus läuft der Live-Kanal über das Same-Origin-Gateway des
    Hauser-Servers; die Basis ist damit die eigene Origin. Der Access-Token des
    Handshakes ist ein Platzhalter — authentifiziert wird serverseitig, der
@@ -131,6 +140,9 @@ export class HaBackend implements Backend {
   #startInFlight = false;
   #receivedFreshData = false;
   #retry: RetryController | null = null;
+  #lifecycleInstalled = false;
+  #cacheDirty = false;
+  #cacheTimer: ReturnType<typeof setTimeout> | null = null;
 
   #raw = new Map<string, RawEntity>();
   #last = new Map<string, unknown>();
@@ -153,6 +165,7 @@ export class HaBackend implements Backend {
   /* ── Backend-Interface ── */
 
   start(): void {
+    this.#installLifecycle();
     void this.#start();
   }
 
@@ -383,6 +396,62 @@ export class HaBackend implements Backend {
     return true;
   }
 
+  /* ── Resume (B-27 A1) und Cache-Flush (B-27 A3) ── */
+
+  #installLifecycle(): void {
+    if (this.#lifecycleInstalled || typeof document === 'undefined') return;
+    this.#lifecycleInstalled = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      void this.#resume();
+    });
+    window.addEventListener('pagehide', () => this.#flushCache());
+  }
+
+  /* Ohne diesen Weg wartet ein Resume bis zum nächsten Backoff-Slot (bis 30 s).
+     Reihenfolge: erst prüfen, ob die bestehende Verbindung überhaupt noch lebt,
+     dann den Backoff verwerfen und sofort neu verbinden. */
+  async #resume(): Promise<void> {
+    if (!this.hasToken()) return;
+    if (this.#conn && this.#status === 'connected') {
+      if (await this.#isAlive()) return;
+      this.#dropStaleConnection();
+    }
+    if (this.#conn) return; // ein laufender Aufbau bleibt unangetastet
+    this.#resetRetry();
+    void this.#start();
+  }
+
+  async #isAlive(): Promise<boolean> {
+    const conn = this.#conn;
+    if (!conn) return false;
+    let expire: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        conn.sendMessagePromise({ type: 'ping' }),
+        new Promise((_, reject) => {
+          expire = setTimeout(() => reject(new Error('ping timeout')), RESUME_PING_TIMEOUT_MS);
+        }),
+      ]);
+      return this.#conn === conn;
+    } catch {
+      return false;
+    } finally {
+      if (expire !== undefined) clearTimeout(expire);
+    }
+  }
+
+  /* Der Socket antwortet nicht mehr: hart verwerfen. Das Unsubscribe wird
+     bewusst nicht gesendet — es käme über diesen Socket nie an. `close()` ist
+     ein angeforderter Schluss, die Library reconnected daraufhin nicht selbst. */
+  #dropStaleConnection(): void {
+    const conn = this.#conn;
+    this.#conn = null;
+    this.#unsub = null;
+    this.#raw.clear();
+    conn?.close();
+  }
+
   /* ── Verbindungsaufbau + Auth ── */
 
   async #start(): Promise<void> {
@@ -553,6 +622,17 @@ export class HaBackend implements Backend {
   }
 
   #saveCache(): void {
+    this.#cacheDirty = true;
+    if (this.#cacheTimer !== null) return;
+    this.#cacheTimer = setTimeout(() => {
+      this.#cacheTimer = null;
+      this.#flushCache();
+    }, CACHE_FLUSH_DEBOUNCE_MS);
+  }
+
+  #flushCache(): void {
+    if (!this.#cacheDirty) return;
+    this.#cacheDirty = false;
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(this.#last)));
     } catch { /* Quota/Serialisierung: Cache ist best-effort */ }

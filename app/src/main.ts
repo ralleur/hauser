@@ -58,6 +58,15 @@ async function healthStatus(): Promise<'ready' | 'setup_required' | null> {
   }
 }
 
+/* B-27 A4: Erinnert nur, DASS Hotel Mode eingerichtet ist (siehe
+   HOTEL_ENABLED_KEY in hotel-mode-bootstrap.ts). Das Literal steht hier
+   bewusst doppelt — ein Import würde das Hotel-Modul in den Initialgraphen
+   ziehen, den der Build-Gate misst. */
+function hotelModeRemembered(): boolean {
+  try { return localStorage.getItem('hmi:hotel-mode') === 'enabled'; }
+  catch { return false; }
+}
+
 function afterFirstPaint(task: () => void): void {
   requestAnimationFrame(() => requestAnimationFrame(() => window.setTimeout(task, 0)));
 }
@@ -105,23 +114,10 @@ if (reconfigureRequested) {
     return mountedApp = mount(HotelNeutralScreen, { target: document.body });
   };
 
-  const startAuthorizedApp = async () => {
-    // Hotel Mode entscheidet vor den produktiven Modulen, welche Oberfläche
-    // überhaupt entsteht: außerhalb eines Aufenthalts wird gar keine Steuerung
-    // geladen, während eines Aufenthalts stehen Gastmodell und Hotel-Runtime
-    // danach bereits. Ohne Hotel Mode ist das ein reiner Statusabruf.
-    const { applyHotelBootstrap, mountHotelAdminLayer, mountHotelGuestLayer } =
-      await import('./lib/hotel-mode-bootstrap.ts');
-    const hotel = await applyHotelBootstrap();
-    if (hotel.surface === 'inactive') {
-      const neutral = await startHotelNeutralShell();
-      await mountHotelAdminLayer(hotel.surface);
-      return neutral;
-    }
-
-    // Erst die validierte Projektion darf produktive State-/Shell-Module laden.
-    // App.svelte initialisiert Theme und DeviceManager genau einmal und startet
-    // den Backendpfad weiterhin erst post-paint in onMount.
+  // Erst die validierte Projektion darf produktive State-/Shell-Module laden.
+  // App.svelte initialisiert Theme und DeviceManager genau einmal und startet
+  // den Backendpfad weiterhin erst post-paint in onMount.
+  const mountProductiveApp = async () => {
     const [
       appModule,
       { standalone },
@@ -145,13 +141,49 @@ if (reconfigureRequested) {
     }
 
     if (mountedApp) await unmount(mountedApp);
-    mountedApp = mount(appModule.default, {
+    return mountedApp = mount(appModule.default, {
       target: document.body,
       props: { shellLoaders, initialShell },
     });
+  };
+
+  const startAuthorizedApp = async () => {
+    // Hotel Mode entscheidet vor den produktiven Modulen, welche Oberfläche
+    // überhaupt entsteht: außerhalb eines Aufenthalts wird gar keine Steuerung
+    // geladen, während eines Aufenthalts stehen Gastmodell und Hotel-Runtime
+    // danach bereits.
+    //
+    // B-27 A4: Erinnert dieses Gerät keine Hotelinstallation, ist das ein
+    // reiner Statusabruf, der heute jeden Start um bis zu 2 s vor dem ersten
+    // produktiven Modul aufhält. Er läuft deshalb hinter dem Paint. Ergibt er
+    // wider Erwarten doch eine Hotelinstallation, hinterlegt er den Schlüssel
+    // und ein Reload übernimmt den blockierenden Weg — die produktiven
+    // Singletons stehen dann bereits, ein Reload ist der kleinste sichere
+    // Cutover auf die eingeschränkte Oberfläche.
+    if (!hotelModeRemembered()) {
+      const app = await mountProductiveApp();
+      afterFirstPaint(() => {
+        void import('./lib/hotel-mode-bootstrap.ts')
+          .then(({ resolveHotelBootstrap }) => resolveHotelBootstrap())
+          .then((state) => { if (state.surface !== 'disabled') location.reload(); })
+          .catch(() => { /* ohne Auskunft bleibt der bisherige Zustand gültig */ });
+      });
+      return app;
+    }
+
+    const { applyHotelBootstrap, mountHotelAdminLayer, mountHotelGuestLayer } =
+      await import('./lib/hotel-mode-bootstrap.ts');
+    const hotel = await applyHotelBootstrap();
+    if (hotel.surface === 'inactive') {
+      const neutral = await startHotelNeutralShell();
+      await mountHotelAdminLayer(hotel.surface);
+      return neutral;
+    }
+
+    const app = await mountProductiveApp();
     await mountHotelGuestLayer(hotel);
     await mountHotelAdminLayer(hotel.surface);
-    return mountedApp;
+    return app;
   };
 
   const firstPaint = await householdRuntime.bootstrapHouseholdConfigFirstPaint({

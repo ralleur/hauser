@@ -12,7 +12,11 @@ import { notifications } from './notifications.svelte.ts';
 import { rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
 import { configuredRoomSensorIds } from './room-display-config.svelte.ts';
-import { syncConfiguredBackend, syncHaTransport } from './runtime-backend-sync.ts';
+import {
+  haCredentialsAvailableLocally,
+  syncConfiguredBackend,
+  syncHaTransport,
+} from './runtime-backend-sync.ts';
 import { createHaRetryController } from './runtime-background.ts';
 import { loadSceneConfig } from './scene-config.ts';
 import { sceneManager } from './scene-manager.svelte.ts';
@@ -100,13 +104,20 @@ export async function startBackgroundRuntime(isCancelled: () => boolean) {
      und muss wie sie vor dem Verbindungsaufbau feststehen. Bewusst neben dem
      Shared-Config-Bootstrap statt in ihm: dessen Vertrag ist genau ein GET. */
   const transportReady = syncHaTransport();
-  await bootstrapSharedConfigBeforeRuntime(() => {});
+  const sharedConfigReady = bootstrapSharedConfigBeforeRuntime(() => {});
+
+  /* B-27 A2: Stehen die Zugangsdaten schon lokal, hängt der Verbindungsaufbau
+     nur noch an der Betriebsart — die Shared Config läuft daneben weiter. Sonst
+     bleibt die bisherige Reihenfolge Shared Config → Backend-Start. */
+  const startHaEarly = haCredentialsAvailableLocally();
+  if (!startHaEarly) await sharedConfigReady;
   await transportReady;
   if (!isCancelled()) {
     syncConfiguredBackend();
     syncAuthState();
     runtime.start();
   }
+  if (startHaEarly) await sharedConfigReady;
   if (isCancelled()) return null;
 
   initFamilyCalendar();

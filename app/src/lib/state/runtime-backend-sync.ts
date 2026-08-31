@@ -51,6 +51,25 @@ export function syncConfiguredBackend(): void {
       }));
 }
 
+/* B-27 A2: Auf einem eingerichteten Gerät liegen Token und HA-URL bereits
+   lokal — die HA-Verbindung muss dann nicht auf die Shared Config warten.
+   Fehlt eines von beiden, bleibt es bei der bisherigen Reihenfolge: ein frisch
+   eingerichtetes Gerät startete sonst mit `missing-token` und zeigte kurz den
+   Login. Der Backendtyp muss ebenfalls schon lokal feststehen, sonst würde ein
+   Demo-Gerät vor dem Sync gegen echtes HA verbinden. */
+export function haCredentialsAvailableLocally(
+  storage: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage,
+): boolean {
+  if (!storage) return false;
+  try {
+    if (configuredBackendKind(storage) !== 'ha') return false;
+    if (configuredHaTransport(storage) === 'gateway') return true;
+    return !!storage.getItem('hmi:ha-token')?.trim() && !!storage.getItem('hmi:ha-url')?.trim();
+  } catch {
+    return false;
+  }
+}
+
 /** Betriebsart des Live-Kanals vom Server übernehmen, bevor der Backend-Start
  * eine Verbindung aufbaut. Scheitert die Auskunft, bleibt der zuletzt bekannte
  * Wert stehen — geraten wird nichts. */
