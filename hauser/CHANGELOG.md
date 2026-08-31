@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.3 - 2026-08-31
+
+### Added
+
+- One shared climate control in the status bar and phone quick actions can set
+  all configured thermostats together.
+
+### Changed
+
+- Phone thermostat controls distinguish current and target temperature more
+  clearly, use their space more efficiently, and consistently show plus and
+  minus buttons.
+- Phone quick actions and optional room-editor state load only when needed.
+
+### Fixed
+
+- ChatGPT-subscription room-image generation uses the native Codex image-edit
+  endpoint and reads its JSON image response.
+- Manual room-image upload accepts an exact direct-LAN same-origin request such
+  as `http://homeassistant.local:4173` while foreign origins remain rejected.
+- Manual room-image upload errors follow the selected interface language.
+
 ## 0.5.2 - 2026-08-28
 
 ### Added

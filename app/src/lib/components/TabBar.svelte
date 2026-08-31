@@ -50,13 +50,13 @@
     {#if centralClimate.hasClimate}
       <div class="climate-dock" aria-label={m.status_climate_central()}>
         <button class="cd-key cd-key-down pressable" type="button" aria-label={m.status_all_rooms_cooler()}
-                onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
+                onclick={() => centralClimate.step(-0.5)}><Icon name="i-minus" cls="icon cd-step-icon" /></button>
         <div class="cd-readout">
           <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
           <span class="cd-sub">{m.status_all_rooms()}</span>
         </div>
         <button class="cd-key cd-key-up pressable" type="button" aria-label={m.status_all_rooms_warmer()}
-                onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
+                onclick={() => centralClimate.step(0.5)}><Icon name="i-plus" cls="icon cd-step-icon" /></button>
       </div>
     {/if}
   </div>

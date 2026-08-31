@@ -142,8 +142,7 @@
 }
 
 .climate-current-label,
-.climate-current-room-label,
-.climate-step-phone-icon {
+.climate-current-room-label {
   display: none;
 }
 

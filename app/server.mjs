@@ -163,7 +163,7 @@ const ROOM_IMAGE_CODEX_BASE_URL = 'https://chatgpt.com/backend-api/codex';
 const ROOM_IMAGE_CODEX_AUTH_URL = 'https://auth.openai.com';
 const ROOM_IMAGE_CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const ROOM_IMAGE_CODEX_TOKEN_URL = `${ROOM_IMAGE_CODEX_AUTH_URL}/oauth/token`;
-const ROOM_IMAGE_CODEX_CHAT_MODEL = 'gpt-5.5';
+const ROOM_IMAGE_CODEX_IMAGE_MODEL = 'gpt-image-2';
 const ROOM_IMAGE_CREDENTIAL_PATH = process.env.HMI_ROOM_IMAGE_CREDENTIAL_PATH
   || resolve(dirname(CONFIG_PATH), 'room-image-auth.json');
 const ROOM_IMAGE_PROVIDER_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -3317,38 +3317,16 @@ async function validateRoomImageProviderPng(bytes) {
 
 function roomImageCodexHeaders(accessToken) {
   const headers = {
-    Accept: 'text/event-stream',
+    Accept: 'application/json',
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
     'User-Agent': 'codex_cli_rs/0.0.0 (Hauser)',
     originator: 'codex_cli_rs',
+    'x-codex-image-turn-id': randomUUID(),
   };
   const accountId = roomImageJwtClaims(accessToken)?.['https://api.openai.com/auth']?.chatgpt_account_id;
   if (typeof accountId === 'string' && accountId) headers['ChatGPT-Account-ID'] = accountId;
   return headers;
-}
-
-function extractRoomImageCodexBase64(value) {
-  let found = null;
-  if (Array.isArray(value)) {
-    for (const child of value) found = extractRoomImageCodexBase64(child) || found;
-  } else if (value && typeof value === 'object') {
-    if (value.type === 'image_generation_call' && typeof value.result === 'string') found = value.result;
-    if (typeof value.partial_image_b64 === 'string') found = value.partial_image_b64;
-    for (const child of Object.values(value)) found = extractRoomImageCodexBase64(child) || found;
-  }
-  return found;
-}
-
-function extractRoomImageCodexStream(text) {
-  let found = null;
-  for (const block of text.split(/\r?\n\r?\n/)) {
-    const data = block.split(/\r?\n/).filter((line) => line.startsWith('data:'))
-      .map((line) => line.slice(5).trimStart()).join('\n').trim();
-    if (!data || data === '[DONE]') continue;
-    try { found = extractRoomImageCodexBase64(JSON.parse(data)) || found; } catch { /* ignore non-JSON events */ }
-  }
-  return found;
 }
 
 export function createChatGptRoomImageProvider({ credentialStore, fetchImpl = globalThis.fetch } = {}) {
@@ -3366,24 +3344,16 @@ export function createChatGptRoomImageProvider({ credentialStore, fetchImpl = gl
     const token = await credentialStore.chatGptAccessToken();
     if (!token) return { definitiveResponse: true, status: 401, errorCode: 'PROVIDER_CREDENTIAL_INVALID' };
     const payload = {
-      model: ROOM_IMAGE_CODEX_CHAT_MODEL,
-      store: false,
-      instructions: 'You are an assistant that must fulfill image generation and image editing requests by using the image_generation tool when provided.',
-      input: [{
-        type: 'message', role: 'user', content: [
-          { type: 'input_text', text: prompt },
-          { type: 'input_image', image_url: `data:image/jpeg;base64,${Buffer.from(input).toString('base64')}` },
-        ],
-      }],
-      tools: [{
-        type: 'image_generation', model: 'gpt-image-2', size: '1536x1024', quality: 'medium',
-        output_format: 'png', background: 'opaque', partial_images: 1,
-      }],
-      stream: true,
+      images: [{ image_url: `data:image/jpeg;base64,${Buffer.from(input).toString('base64')}` }],
+      prompt,
+      background: 'opaque',
+      model: ROOM_IMAGE_CODEX_IMAGE_MODEL,
+      quality: 'medium',
+      size: '1536x1024',
     };
     let response;
     try {
-      response = await fetchImpl(`${ROOM_IMAGE_CODEX_BASE_URL}/responses`, {
+      response = await fetchImpl(`${ROOM_IMAGE_CODEX_BASE_URL}/images/edits`, {
         method: 'POST', headers: roomImageCodexHeaders(token), body: JSON.stringify(payload), signal,
       });
     } catch { throw roomImageProviderUnknownError(); }
@@ -3393,12 +3363,13 @@ export function createChatGptRoomImageProvider({ credentialStore, fetchImpl = gl
       await cancelRoomImageProviderResponseBody(response);
       return { definitiveResponse: true, status: response.status, errorCode: roomImageProviderHttpErrorCode(response.status), ...support };
     }
-    let encoded;
+    let result;
     try {
-      const text = await response.text();
-      if (Buffer.byteLength(text) > ROOM_IMAGE_PROVIDER_MAX_JSON_RESPONSE_BYTES) return { definitiveResponse: true, status: 200, errorCode: 'PROVIDER_INVALID_RESPONSE', ...support };
-      encoded = extractRoomImageCodexStream(text);
+      result = await readBoundedRoomImageProviderJson(response, signal);
     } catch { throw roomImageProviderUnknownError(); }
+    const item = Array.isArray(result?.data) && result.data.length === 1 ? result.data[0] : null;
+    const encoded = item && typeof item === 'object' && !Array.isArray(item) && !Object.hasOwn(item, 'url')
+      ? item.b64_json : null;
     const image = decodeCanonicalRoomImageBase64(encoded);
     if (!image || !await validateRoomImageProviderPng(image)) {
       return { definitiveResponse: true, status: response.status, errorCode: 'PROVIDER_INVALID_RESPONSE', ...support };
@@ -8798,8 +8769,7 @@ async function serveRoomImageUpload(req, res, identity, uploadStore, assertSetup
 }
 
 function manualRoomBackgroundOriginAllowed(req, allowedOrigins) {
-  const origins = rawHeaderValues(req, 'origin');
-  return origins.length === 1 && allowedOrigins.has(origins[0]);
+  return allowedRoomImageOrigin(req, allowedOrigins);
 }
 
 async function decodeManualRoomBackground(req) {

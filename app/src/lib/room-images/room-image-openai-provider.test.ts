@@ -603,12 +603,9 @@ describe('Room-image ChatGPT and API-key access', () => {
     ]);
   });
 
-  it('edits through the Codex Responses image_generation stream', async () => {
-    const payload = JSON.stringify({ type: 'response.output_item.done', item: {
-      type: 'image_generation_call', result: Buffer.from(validPng).toString('base64'),
-    } });
-    const fetchImpl = vi.fn(async () => new Response(`event: response.output_item.done\ndata: ${payload}\n\n`, {
-      status: 200, headers: { 'content-type': 'text/event-stream' },
+  it('edits through the native Codex Images endpoint', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({
+      data: [{ b64_json: Buffer.from(validPng).toString('base64') }],
     }));
     const credentialStore = { chatGptAccessToken: vi.fn(async () => 'header.payload.signature') };
     const provider = createChatGptRoomImageProvider({ credentialStore, fetchImpl });
@@ -617,11 +614,17 @@ describe('Room-image ChatGPT and API-key access', () => {
     expect(result).toMatchObject({ definitiveResponse: true, status: 200 });
     expect(Buffer.from(result.image)).toEqual(Buffer.from(validPng));
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('https://chatgpt.com/backend-api/codex/responses');
+    expect(url).toBe('https://chatgpt.com/backend-api/codex/images/edits');
     expect(init.headers).toMatchObject({ originator: 'codex_cli_rs', Authorization: 'Bearer header.payload.signature' });
+    expect(new Headers(init.headers).get('accept')).toBe('application/json');
+    expect(new Headers(init.headers).get('x-codex-image-turn-id')).toMatch(/^[0-9a-f-]{36}$/);
     const request = JSON.parse(String(init.body));
-    expect(request.tools).toEqual([expect.objectContaining({ type: 'image_generation', model: 'gpt-image-2' })]);
-    expect(request.input[0].content[1]).toMatchObject({ type: 'input_image' });
+    expect(request).toMatchObject({
+      model: 'gpt-image-2', prompt: PROMPT, background: 'opaque', quality: 'medium', size: '1536x1024',
+      images: [{ image_url: expect.stringMatching(/^data:image\/jpeg;base64,/) }],
+    });
+    expect(request).not.toHaveProperty('tools');
+    expect(request).not.toHaveProperty('stream');
   });
 });
 

@@ -760,14 +760,6 @@
   height: var(--icon-md);
 }
 
-.room-sheet-scroll .room-controls .climate-step-panel-icon {
-  display: none;
-}
-
-.room-sheet-scroll .room-controls .climate-step-phone-icon {
-  display: block;
-}
-
 .room-sheet-scroll .room-controls .climate-target-value {
   min-width: 0;
   font-size: var(--text-lg);

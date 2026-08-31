@@ -5,6 +5,34 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-08-31
+
+### Added
+
+- **One climate control can set every thermostat.** The status bar and phone
+  quick actions show the shared target temperature and raise or lower all
+  configured climate entities together.
+
+### Changed
+
+- **Climate controls are clearer and more compact on phones.** Current and
+  target temperatures have distinct labels, the thermostat card uses the
+  available width more efficiently, and temperature steps consistently use
+  plus and minus buttons.
+- Phone quick actions and optional room-editor state are loaded only when they
+  are needed, reducing the initial phone bundle.
+
+### Fixed
+
+- **Room-image generation with a ChatGPT subscription works again.** Hauser now
+  uses the native Codex image-edit endpoint and its JSON image result instead
+  of waiting for an image-generation tool result from a Responses stream.
+- **Custom room images work from the direct Home Assistant App address.** The
+  manual upload endpoint now accepts an exact same-origin request such as
+  `http://homeassistant.local:4173` while continuing to reject foreign origins.
+- Manual room-image upload failures follow the selected interface language
+  instead of exposing the server's German message.
+
 ## [0.5.2] - 2026-08-28
 
 ### Added

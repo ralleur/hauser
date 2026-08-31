@@ -41,7 +41,7 @@
     </button>
     <div class="climate-dock phone-climate-dock" aria-label={m.phone_climate_central()}>
       <button class="cd-key cd-key-down pressable" type="button" aria-label={m.phone_climate_colder()}
-              onclick={() => centralClimate.step(-0.5)}><Icon name="i-chevron-down" cls="icon cd-chevron" /></button>
+              onclick={() => centralClimate.step(-0.5)}><Icon name="i-minus" cls="icon cd-step-icon" /></button>
       <div class="cd-readout phone-climate-readout">
         <div class="phone-climate-reading">
           <span class="phone-climate-label">{m.climate_current()}</span>
@@ -56,7 +56,7 @@
         </div>
       </div>
       <button class="cd-key cd-key-up pressable" type="button" aria-label={m.phone_climate_warmer()}
-              onclick={() => centralClimate.step(0.5)}><Icon name="i-chevron-up" cls="icon cd-chevron" /></button>
+              onclick={() => centralClimate.step(0.5)}><Icon name="i-plus" cls="icon cd-step-icon" /></button>
     </div>
     <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
             type="button" disabled={!online} aria-pressed={vacationActive}

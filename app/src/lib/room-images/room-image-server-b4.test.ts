@@ -627,6 +627,23 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect((await fetch(`${app.base}/assets/room-images/${uploaded.hero.assetId}/light.avif`)).status).toBe(404);
   });
 
+  it('accepts a manual room background from the exact direct-LAN request origin', async () => {
+    const app = await startB4();
+    const household = await fetch(`${app.base}/api/household-config`);
+    const etag = household.headers.get('etag')!;
+    await household.arrayBuffer();
+    const png = readFileSync(new URL('./fixtures/neutral-alpha.png', import.meta.url));
+
+    const upload = await fetch(`${app.base}/api/room-backgrounds/den`, {
+      method: 'POST', headers: { origin: app.base, 'if-match': etag, 'content-type': 'image/png' }, body: png,
+    });
+
+    expect(upload.status).toBe(200);
+    await expect(upload.json()).resolves.toMatchObject({
+      roomId: 'den', hero: { assetId: expect.stringMatching(/^manual_[0-9a-f]{32}$/) },
+    });
+  });
+
   it('rejects unsafe manual room background requests without mutation', async () => {
     const app = await startB4();
     const before = readFileSync(app.householdConfigPath);

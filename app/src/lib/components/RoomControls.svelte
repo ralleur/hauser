@@ -132,14 +132,12 @@
             <div class="climate-target-control">
               <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
                       onclick={() => stepTarget(room.id, -0.5)}>
-                <Icon name="i-chevron-down" cls="icon icon-xl climate-step-panel-icon" />
-                <Icon name="i-minus" cls="icon icon-xl climate-step-phone-icon" />
+                <Icon name="i-minus" cls="icon icon-xl" />
               </button>
               <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
               <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
                       onclick={() => stepTarget(room.id, 0.5)}>
-                <Icon name="i-chevron-up" cls="icon icon-xl climate-step-panel-icon" />
-                <Icon name="i-plus" cls="icon icon-xl climate-step-phone-icon" />
+                <Icon name="i-plus" cls="icon icon-xl" />
               </button>
             </div>
           </div>

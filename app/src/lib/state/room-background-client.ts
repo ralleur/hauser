@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import type { RoomHeroConfig } from '../config/household-config.ts';
 import { setRoomHeroConfig } from './room-hero-config.svelte.ts';
 
@@ -22,11 +23,8 @@ async function householdEtag(): Promise<string> {
 }
 
 async function errorMessage(response: Response): Promise<string> {
-  try {
-    const payload = await response.json() as { message?: unknown };
-    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message;
-  } catch { /* use stable fallback */ }
-  return 'Das Raumbild konnte nicht gespeichert werden.';
+  try { await response.arrayBuffer(); } catch { /* use stable localized fallback */ }
+  return m.room_background_failed();
 }
 
 async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): Promise<RoomHeroConfig | null> {
