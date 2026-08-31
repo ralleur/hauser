@@ -11,7 +11,7 @@
   import Icon from '../Icon.svelte';
   import { connection } from '../../state/connection.svelte.ts';
   import { authState, requestToken } from '../../state/auth.svelte.ts';
-  import { configuredHaUrl, HA_URL_DEFAULT } from '../../adapter/runtime.svelte.ts';
+  import { configuredHaTransport, configuredHaUrl, HA_URL_DEFAULT } from '../../adapter/runtime.svelte.ts';
   import { jellyfin, JELLYFIN_URL_DEFAULT } from '../../adapter/jellyfin.ts';
   import { jellyfinLogin, isLoggingIn, libraryError, usingLiveLibrary } from '../../state/library.svelte.ts';
   import { settingsUi, settingsValues, setHaUrl, setJellyfinUrl, icloudSetup, setupICloudCalendar } from '../../state/settings.svelte.ts';
@@ -24,8 +24,12 @@
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
   import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
   import SettingsCardHead from './SettingsCardHead.svelte';
+  import DeviceAddress from '../DeviceAddress.svelte';
 
   const conn = $derived(connection());
+  /* B-08E11: Im Home-Assistant-App-Modus gibt es keine editierbare HA-Adresse
+     und keinen Token — der Hauser-Server verbindet intern. */
+  const managedByApp = configuredHaTransport() === 'gateway';
   const auth = authState();
 
 
@@ -117,11 +121,21 @@
     <span class="dot {conn.dot}"></span>
     <div class="settings-row-text">
       <span class="settings-row-label">Home Assistant</span>
-      <span class="settings-row-sub">{settingsValues.demoMode ? m.sys_demo_mode_note() : configuredHaUrl()}</span>
+      <span class="settings-row-sub">{settingsValues.demoMode
+        ? m.sys_demo_mode_note()
+        : managedByApp ? m.sys_ha_managed_by_app() : configuredHaUrl()}</span>
     </div>
     <span class="settings-row-value">{conn.label}</span>
   </div>
 
+  <div class="settings-row is-stacked" data-setting-id="device-address">
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_device_address()}</span>
+    </div>
+    <DeviceAddress />
+  </div>
+
+  {#if !managedByApp}
   <div class="settings-row is-stacked" data-setting-id="ha-url">
     <div class="settings-row-text">
       <span class="settings-row-label">{m.sys_address()}</span>
@@ -142,6 +156,7 @@
     <button class="secondary-btn pressable" type="button" disabled={!auth.usingHa}
             onclick={() => requestToken()}>{m.sys_renew()}</button>
   </div>
+  {/if}
 
 </div>
 

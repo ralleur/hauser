@@ -12,7 +12,7 @@ import { notifications } from './notifications.svelte.ts';
 import { rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
 import { configuredRoomSensorIds } from './room-display-config.svelte.ts';
-import { syncConfiguredBackend } from './runtime-backend-sync.ts';
+import { syncConfiguredBackend, syncHaTransport } from './runtime-backend-sync.ts';
 import { createHaRetryController } from './runtime-background.ts';
 import { loadSceneConfig } from './scene-config.ts';
 import { sceneManager } from './scene-manager.svelte.ts';
@@ -96,12 +96,17 @@ export async function bootstrapSharedConfigBeforeRuntime(
 }
 
 export async function startBackgroundRuntime(isCancelled: () => boolean) {
-  await bootstrapSharedConfigBeforeRuntime(() => {
-    if (isCancelled()) return;
+  /* B-08E11: Die Betriebsart des Live-Kanals läuft parallel zur Shared Config
+     und muss wie sie vor dem Verbindungsaufbau feststehen. Bewusst neben dem
+     Shared-Config-Bootstrap statt in ihm: dessen Vertrag ist genau ein GET. */
+  const transportReady = syncHaTransport();
+  await bootstrapSharedConfigBeforeRuntime(() => {});
+  await transportReady;
+  if (!isCancelled()) {
     syncConfiguredBackend();
     syncAuthState();
     runtime.start();
-  });
+  }
   if (isCancelled()) return null;
 
   initFamilyCalendar();

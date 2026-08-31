@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0 - 2026-08-31
+
+### Changed
+
+- The App connects to Home Assistant itself. Setup no longer asks for a Home
+  Assistant address or a Long-Lived Access Token: the App declares
+  `homeassistant_api` and the Hauser server reaches Home Assistant Core over the
+  internal Supervisor endpoints, while the browser gets live state through a
+  same-origin WebSocket on the Hauser server. The Supervisor token stays inside
+  the server process and is never written to `/data`, handed to the browser or
+  logged.
+- An installation that previously stored a Long-Lived Access Token has it
+  removed from `/data/config.json` on the first start of this version.
+- Setup ends by showing the exact address phones and tablets use, with a copy
+  action and a QR code. The same address stays available under
+  **System → Services**.
+
+### Security
+
+- The App's direct LAN port is documented as a trusted-network boundary: it
+  carries no separate user login and no device pairing, and must not be
+  published to the internet.
+
 ## 0.5.3 - 2026-08-31
 
 ### Added

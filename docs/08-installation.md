@@ -1,8 +1,8 @@
 # Installation and operation
 
-Hauser `v0.5.3` is the current public technical beta. Once a tag passes
+Hauser `v0.6.0` is the current public technical beta. Once a tag passes
 the release workflow, the release package uses
-`ghcr.io/ralleur/hauser:v0.5.3`. An explicit source-build overlay remains
+`ghcr.io/ralleur/hauser:v0.6.0`. An explicit source-build overlay remains
 available for development and source-level verification. Neither path comes with
 a support promise.
 
@@ -152,8 +152,18 @@ hosts. Add `https://github.com/ralleur/hauser` under **Settings → Apps → App
 Store → Repositories**, then install and start **Hauser**. `hauser/DOCS.md`
 documents that packaging in full.
 
-Two properties differ from the Compose path and matter when diagnosing a start
+Three properties differ from the Compose path and matter when diagnosing a start
 failure:
+
+- The App runs in `supervisor` connection mode (`HMI_HA_CONNECTION_MODE`). The
+  server reaches Home Assistant Core over the internal Supervisor endpoints and
+  keeps `SUPERVISOR_TOKEN` inside the server process; the browser talks to a
+  same-origin WebSocket on the Hauser server instead of to Home Assistant. The
+  setup wizard therefore asks for no URL and no token, and an installation that
+  previously stored a Long-Lived Access Token has it removed from
+  `/data/config.json` on the first start in App mode. Compose keeps the
+  `direct` mode and its wizard unchanged. A missing or rejected internal access
+  fails closed — there is no fallback to a stored token.
 
 - The Supervisor provides a single persistent directory, `/data`, owned by root.
   The container entrypoint therefore starts as root, creates every directory

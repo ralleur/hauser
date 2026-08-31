@@ -41,6 +41,17 @@ home-assistant-js-websocket — Apache License 2.0
 hls.js — Apache License 2.0
   https://github.com/video-dev/hls.js
 
+qrcode-generator — MIT License
+  https://github.com/kazuhikoarase/qrcode-generator
+  Renders the on-device address as a QR code. Loaded lazily, never during
+  application startup.
+
+ws — MIT License
+  https://github.com/websockets/ws
+  Server-side WebSocket implementation. Used only by the Hauser server to
+  offer the same-origin live channel when Hauser runs as a Home Assistant
+  app; it never ships to the browser.
+
 Build tooling (Svelte, Vite, TypeScript, Vitest) is MIT licensed; see the
 respective packages in app/package.json.
 

@@ -5,6 +5,29 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-31
+
+### Changed
+
+- **As a Home Assistant App, Hauser no longer asks for a Home Assistant address
+  or a Long-Lived Access Token.** The App connects to Home Assistant Core over
+  the internal Supervisor endpoints, and the browser reaches live state through
+  a same-origin WebSocket on the Hauser server. The Supervisor token stays
+  inside the server process and is never written to `/data`, handed to the
+  browser or logged. Installations that previously stored a Long-Lived Access
+  Token have it removed on the first start in App mode. Docker Compose keeps its
+  existing setup wizard, address and token unchanged.
+- **The setup wizard ends by showing the address phones and tablets use**, with
+  a copy action and a QR code. The same address stays available under
+  **System → Services**. It is the address the current session was opened
+  through, not a guess from the Home Assistant host name.
+
+### Security
+
+- The App's direct LAN port is documented as a trusted-network boundary: it
+  carries no separate login and no device pairing, and must not be published to
+  the internet.
+
 ## [0.5.3] - 2026-08-31
 
 ### Added

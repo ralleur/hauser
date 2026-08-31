@@ -53,6 +53,14 @@ function markHaStartup(name: 'hmi:ha-connected' | 'hmi:fresh-data', label: strin
 const TOKEN_KEY = 'hmi:ha-token';
 const CACHE_KEY = 'hmi:ha-cache';
 
+/* B-08E11: Im App-Modus läuft der Live-Kanal über das Same-Origin-Gateway des
+   Hauser-Servers; die Basis ist damit die eigene Origin. Der Access-Token des
+   Handshakes ist ein Platzhalter — authentifiziert wird serverseitig, der
+   Browser besitzt kein Credential. */
+const GATEWAY_PLACEHOLDER_TOKEN = 'hauser-gateway';
+
+export type HaTransport = 'direct' | 'gateway';
+
 type Unsub = () => Promise<void>;
 type RetryController = { beforeStart(): void; schedule(): void; reset(): void };
 type RetryFactory = (retry: () => void) => RetryController;
@@ -74,14 +82,39 @@ export interface HaBackendOptions {
   /** Configured Laundry source IDs that must bypass generic domain mapping.
    * Defaults to the active household config at backend construction time. */
   laundryEntityIds?: readonly string[];
+  /** Live-Kanal: direkt zu Home Assistant oder über das Same-Origin-Gateway.
+   * Wird erst beim Verbindungsaufbau aufgelöst, nicht beim Konstruieren. */
+  transport?: HaTransport | (() => HaTransport);
 }
 
 export function entityRegistryRenameMessage(entityId: string, name: string) {
   return { type: 'config/entity_registry/update' as const, entity_id: entityId, name };
 }
 
+type CaldavFlowResult = {
+  type: string;
+  errors?: Record<string, string> | null;
+  reason?: string;
+};
+
+function interpretCaldavFlowResult(result: CaldavFlowResult): { ok: boolean; message: string } {
+  if (result.type === 'create_entry') {
+    return { ok: true, message: 'iCloud-Kalender in Home Assistant eingerichtet. Die Kalender-Entitäten erscheinen in wenigen Augenblicken.' };
+  }
+  if (result.type === 'abort') {
+    return result.reason === 'already_configured'
+      ? { ok: false, message: 'Dieser iCloud-Account ist in Home Assistant bereits eingerichtet.' }
+      : { ok: false, message: `Einrichtung abgebrochen (${result.reason ?? 'unbekannt'}).` };
+  }
+  const error = result.errors?.base;
+  if (error === 'invalid_auth') return { ok: false, message: 'Apple-ID oder App-Passwort falsch. Hinweis: App-spezifisches Passwort unter appleid.apple.com erzeugen.' };
+  if (error === 'cannot_connect') return { ok: false, message: 'Home Assistant erreicht caldav.icloud.com nicht.' };
+  return { ok: false, message: `iCloud hat die Anmeldung nicht akzeptiert (${error ?? result.type}).` };
+}
+
 export class HaBackend implements Backend {
   #resolveUrl: () => string;
+  #resolveTransport: () => HaTransport;
   #entityIds: string[];
   #seed: Map<string, unknown>;
   #laundryEntityIds: Set<string>;
@@ -105,6 +138,8 @@ export class HaBackend implements Backend {
   constructor(opts: HaBackendOptions) {
     const url = opts.url;
     this.#resolveUrl = typeof url === 'function' ? url : () => url;
+    const transport = opts.transport ?? 'direct';
+    this.#resolveTransport = typeof transport === 'function' ? transport : () => transport;
     this.#entityIds = [...opts.entityIds];
     this.#seed = opts.seed ?? new Map();
     const laundryEntityIds = opts.laundryEntityIds
@@ -233,6 +268,11 @@ export class HaBackend implements Backend {
      Voraussetzungen: Admin-Token und (bei fremdem Origin) ein Eintrag in
      `http.cors_allowed_origins` der HA-Konfiguration. */
   async setupICloudCalendar(username: string, appPassword: string): Promise<{ ok: boolean; message: string }> {
+    /* Im App-Modus gibt es keinen Browser-Token und keinen fremden Origin: der
+       Flow läuft über eine schmale Same-Origin-Route des Hauser-Servers. */
+    if (this.#resolveTransport() === 'gateway') {
+      return this.#setupICloudCalendarViaServer(username, appPassword);
+    }
     const token = readToken();
     if (!token) return { ok: false, message: 'Kein Home-Assistant-Token hinterlegt.' };
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -268,24 +308,42 @@ export class HaBackend implements Backend {
     }).catch(() => null);
     if (!stepRes) return { ok: false, message: 'Verbindung zu Home Assistant abgerissen.' };
     if (!stepRes.ok) return { ok: false, message: `Einrichtung fehlgeschlagen (HTTP ${stepRes.status}).` };
-    const result = (await stepRes.json()) as {
-      type: string;
-      errors?: Record<string, string> | null;
-      reason?: string;
-    };
+    const result = (await stepRes.json()) as CaldavFlowResult;
 
-    if (result.type === 'create_entry') {
-      return { ok: true, message: 'iCloud-Kalender in Home Assistant eingerichtet. Die Kalender-Entitäten erscheinen in wenigen Augenblicken.' };
+    return interpretCaldavFlowResult(result);
+  }
+
+  /* Derselbe Flow, nur über den internen Zugang. Antworten werden identisch
+     ausgewertet, damit beide Betriebsarten dieselben Meldungen zeigen. */
+  async #setupICloudCalendarViaServer(
+    username: string,
+    appPassword: string,
+  ): Promise<{ ok: boolean; message: string }> {
+    let response: Response;
+    try {
+      response = await fetch('/api/ha/caldav-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: appPassword }),
+      });
+    } catch {
+      return { ok: false, message: 'Der Hauser-Server ist nicht erreichbar.' };
     }
-    if (result.type === 'abort') {
-      return result.reason === 'already_configured'
-        ? { ok: false, message: 'Dieser iCloud-Account ist in Home Assistant bereits eingerichtet.' }
-        : { ok: false, message: `Einrichtung abgebrochen (${result.reason ?? 'unbekannt'}).` };
+    const payload = await response.json().catch(() => null) as
+      { ok?: boolean; code?: string; result?: CaldavFlowResult } | null;
+    if (!response.ok || !payload?.ok || !payload.result) {
+      if (payload?.code === 'HA_CALDAV_NOT_AVAILABLE') {
+        return { ok: false, message: 'CalDAV-Integration in dieser HA-Version nicht verfügbar.' };
+      }
+      if (payload?.code === 'HA_SUPERVISOR_TOKEN_MISSING') {
+        return { ok: false, message: 'Der interne Home-Assistant-Zugang der App fehlt.' };
+      }
+      if (payload?.code === 'HA_SUPERVISOR_TIMEOUT') {
+        return { ok: false, message: 'Home Assistant hat nicht rechtzeitig geantwortet.' };
+      }
+      return { ok: false, message: `Einrichtung fehlgeschlagen (HTTP ${response.status}).` };
     }
-    const error = result.errors?.base;
-    if (error === 'invalid_auth') return { ok: false, message: 'Apple-ID oder App-Passwort falsch. Hinweis: App-spezifisches Passwort unter appleid.apple.com erzeugen.' };
-    if (error === 'cannot_connect') return { ok: false, message: 'Home Assistant erreicht caldav.icloud.com nicht.' };
-    return { ok: false, message: `iCloud hat die Anmeldung nicht akzeptiert (${error ?? result.type}).` };
+    return interpretCaldavFlowResult(payload.result);
   }
 
   /* ADR-006: screengenaues Verengen des Abos. Union-Default kommt aus dem
@@ -304,7 +362,9 @@ export class HaBackend implements Backend {
   }
 
   hasToken(): boolean {
-    return !!readToken();
+    /* Im App-Modus gibt es keinen Browser-Token und deshalb auch keinen
+       Login-Layer: der Server hält den Zugang. */
+    return this.#resolveTransport() === 'gateway' || !!readToken();
   }
 
   setToken(token: string): void {
@@ -329,7 +389,8 @@ export class HaBackend implements Backend {
     if (this.#startInFlight || this.#conn) return;
     this.#retry?.beforeStart();
     this.#startInFlight = true;
-    const token = readToken();
+    const gateway = this.#resolveTransport() === 'gateway';
+    const token = gateway ? GATEWAY_PLACEHOLDER_TOKEN : readToken();
     if (!token) {
       this.#resetRetry();
       this.#setStatus('disconnected');
@@ -339,7 +400,10 @@ export class HaBackend implements Backend {
     }
     this.#setStatus('connecting');
     try {
-      const auth = createLongLivedTokenAuth(this.#resolveUrl(), token);
+      const auth = createLongLivedTokenAuth(
+        gateway ? location.origin : this.#resolveUrl(),
+        token,
+      );
       const conn = await createConnection({ auth });
       this.#conn = conn;
       // Library-Reconnect → ConnectionStatus (ADR-018 §2). Die Library
@@ -370,7 +434,7 @@ export class HaBackend implements Backend {
         this.#unsub = null;
       }
       failedConnection?.close();
-      if (err === ERR_INVALID_AUTH) {
+      if (err === ERR_INVALID_AUTH && !gateway) {
         // Token abgelaufen/ungültig → verwerfen, Login zeigen (docs/04).
         this.#resetRetry();
         try { sharedStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }

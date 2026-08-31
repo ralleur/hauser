@@ -8,6 +8,16 @@ import { isIP } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  HA_SUPERVISOR_CORE_URL,
+  HA_SUPERVISOR_WEBSOCKET_URL,
+  createHaSupervisorClient,
+  parseHaConnectionMode,
+  readHaDiscoverySnapshot,
+  readSupervisorToken,
+  redactSupervisorToken,
+} from './server/ha-supervisor.mjs';
+import { HA_GATEWAY_PATH, createHaWebSocketGateway } from './server/ha-gateway.mjs';
 
 const SERVER_CONTRACT_COMPILED = process.env.HMI_SERVER_CONTRACT === 'compiled';
 const serverContractBase = SERVER_CONTRACT_COMPILED ? './server-contract' : './src/lib/config';
@@ -54,6 +64,14 @@ const {
   validateRoomImagePromptSpec,
 } = await import(`${roomImageContractBase}/room-image-prompt-policy-v1.${roomImageContractExtension}`);
 const { default: sharp } = await import('sharp');
+
+/* B-08E11: Betriebsart des Home-Assistant-Zugangs. `direct` ist der heutige
+   Browser-zu-HA-Pfad mit Long-Lived Access Token und bleibt der Default für
+   Compose und Entwicklung. `supervisor` ist der interne HA-Core-Zugang der
+   Home-Assistant-App. Ein ungültiger Wert bricht den Start ab, statt still auf
+   `direct` zurückzufallen. */
+export const HA_CONNECTION_MODE = parseHaConnectionMode(process.env.HMI_HA_CONNECTION_MODE);
+export { createHaSupervisorClient, createHaWebSocketGateway, parseHaConnectionMode, readHaDiscoverySnapshot, redactSupervisorToken };
 
 const HOST = process.env.HMI_HOST || '0.0.0.0';
 const PORT = Number(process.env.HMI_PORT || 4173);
@@ -4554,7 +4572,7 @@ export function createHotelCalendarClient({
   timeoutMs = HOTEL_CALENDAR_TIMEOUT_MS,
 } = {}) {
   async function events(entityId, fromMs, toMs) {
-    const url = new URL(`/api/calendars/${encodeURIComponent(entityId)}`, baseUrl);
+    const url = haRestUrl(baseUrl, `api/calendars/${encodeURIComponent(entityId)}`);
     url.searchParams.set('start', new Date(fromMs).toISOString());
     url.searchParams.set('end', new Date(toMs).toISOString());
     let response;
@@ -4619,6 +4637,7 @@ function hotelAdminStay(stay) {
 export function createHotelModeStayService({
   store,
   configStore = null,
+  connectionMode = HA_CONNECTION_MODE,
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
   now = () => Date.now(),
   calendarClientFactory = createHotelCalendarClient,
@@ -4628,10 +4647,7 @@ export function createHotelModeStayService({
   let inFlight = null;
 
   function credentials() {
-    const values = configStore ? configStore.read() : {};
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+    return resolveServerHaAccess(configStore, connectionMode);
   }
 
   /**
@@ -4840,7 +4856,7 @@ export function createHotelStatesClient({
   timeoutMs = HOTEL_STATE_TIMEOUT_MS,
 } = {}) {
   async function state(entityId) {
-    const url = new URL(`/api/states/${encodeURIComponent(entityId)}`, baseUrl);
+    const url = haRestUrl(baseUrl, `api/states/${encodeURIComponent(entityId)}`);
     let response;
     try {
       response = await fetchImpl(url, {
@@ -4890,6 +4906,7 @@ export function createHotelStatesClient({
 export function createHotelGuestStateService({
   stays,
   configStore = null,
+  connectionMode = HA_CONNECTION_MODE,
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
   now = () => Date.now(),
   statesClientFactory = createHotelStatesClient,
@@ -4900,10 +4917,7 @@ export function createHotelGuestStateService({
   let inFlight = null;
 
   function credentials() {
-    const values = configStore ? configStore.read() : {};
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+    return resolveServerHaAccess(configStore, connectionMode);
   }
 
   function neutral(enabled) {
@@ -4992,9 +5006,9 @@ export function createHotelCommandClient({
   timeoutMs = HOTEL_COMMAND_TIMEOUT_MS,
 } = {}) {
   async function call(domain, service, entityId, data) {
-    const url = new URL(
-      `/api/services/${encodeURIComponent(domain)}/${encodeURIComponent(service)}`,
+    const url = haRestUrl(
       baseUrl,
+      `api/services/${encodeURIComponent(domain)}/${encodeURIComponent(service)}`,
     );
     let response;
     try {
@@ -5028,15 +5042,13 @@ export function createHotelCommandService({
   stays,
   guests = null,
   configStore = null,
+  connectionMode = HA_CONNECTION_MODE,
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
   commandClientFactory = createHotelCommandClient,
   policyReader = () => readHotelModePolicy(householdConfigPath),
 } = {}) {
   function credentials() {
-    const values = configStore ? configStore.read() : {};
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+    return resolveServerHaAccess(configStore, connectionMode);
   }
 
   async function execute(request) {
@@ -5087,6 +5099,7 @@ function hotelCommandMessage(code) {
 const HOTEL_ADMIN_ONLY_PREFIXES = [
   '/api/config',
   '/api/setup',
+  '/api/ha/caldav-flow',
   '/api/room-images',
   '/api/room-image-assets',
   '/api/ablage',
@@ -5269,7 +5282,7 @@ export function createHotelEventClient({
   timeoutMs = HOTEL_COMMAND_TIMEOUT_MS,
 } = {}) {
   async function fire(eventType, data) {
-    const url = new URL(`/api/events/${encodeURIComponent(eventType)}`, baseUrl);
+    const url = haRestUrl(baseUrl, `api/events/${encodeURIComponent(eventType)}`);
     let response;
     try {
       response = await fetchImpl(url, {
@@ -5303,6 +5316,7 @@ export function createHotelCheckoutService({
   store,
   guests = null,
   configStore = null,
+  connectionMode = HA_CONNECTION_MODE,
   householdConfigPath = HOUSEHOLD_CONFIG_PATH,
   now = () => Date.now(),
   policyReader = () => readHotelModePolicy(householdConfigPath),
@@ -5310,10 +5324,7 @@ export function createHotelCheckoutService({
   commandClientFactory = createHotelCommandClient,
 } = {}) {
   function credentials() {
-    const values = configStore ? configStore.read() : {};
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+    return resolveServerHaAccess(configStore, connectionMode);
   }
 
   async function announce(policy, stayId, checkedOutAt) {
@@ -5381,16 +5392,14 @@ export function createHotelCheckoutService({
  */
 export function createHotelActivationPreflight({
   configStore = null,
+  connectionMode = HA_CONNECTION_MODE,
   access = null,
   statesClientFactory = createHotelStatesClient,
   calendarClientFactory = createHotelCalendarClient,
   now = () => Date.now(),
 } = {}) {
   function credentials() {
-    const values = configStore ? configStore.read() : {};
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+    return resolveServerHaAccess(configStore, connectionMode);
   }
 
   async function inspect(hotelMode) {
@@ -6802,6 +6811,12 @@ function setupRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   return req.method === 'POST' && requestOriginAllowed(req, allowedOrigins);
 }
 
+/* Die lesenden Setup-Routen des Supervisor-Modus liefern Haushaltsstruktur,
+   niemals Credentials, bleiben aber an dieselbe Origin-Grenze gebunden. */
+function setupReadRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
+  return req.method === 'GET' && requestOriginAllowed(req, allowedOrigins);
+}
+
 function normalizeSetupServiceUrl(value) {
   if (typeof value !== 'string' || value.length > 2048) return null;
   try {
@@ -6816,6 +6831,41 @@ function normalizeSetupServiceUrl(value) {
 
 function normalizeSetupHaUrl(value) {
   return normalizeSetupServiceUrl(value);
+}
+
+/* B-08E11: Der einzige serverseitige Auflöser des Home-Assistant-Zugangs.
+   Im direkten Modus kommt er aus der Shared Config, im App-Modus
+   ausschließlich aus der Prozessumgebung — dort wird nichts gespeichert und es
+   gibt keinen Rückfall auf einen Long-Lived Access Token. */
+function resolveServerHaAccess(configStore, connectionMode = HA_CONNECTION_MODE) {
+  if (connectionMode === 'supervisor') {
+    const token = readSupervisorToken();
+    return token
+      ? { baseUrl: HA_SUPERVISOR_CORE_URL, token, websocketUrl: HA_SUPERVISOR_WEBSOCKET_URL }
+      : null;
+  }
+  const values = configStore ? configStore.read() : {};
+  const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
+  const token = values['hmi:ha-token'];
+  return baseUrl && typeof token === 'string' && token ? { baseUrl, token } : null;
+}
+
+/* Cutover: eine bestehende Installation, die auf den App-Modus wechselt, darf
+   ihren alten Long-Lived Access Token nicht behalten. Entfernt wird atomar über
+   dieselbe Schreibroutine wie jede andere Änderung — es entsteht keine
+   Klartext-Sicherungsdatei, in der das Secret weiterlebt. */
+export function purgeHaCredentialsFromSharedConfig(configStore) {
+  const values = configStore.read();
+  if (values['hmi:ha-url'] === undefined && values['hmi:ha-token'] === undefined) return false;
+  configStore.update({ 'hmi:ha-url': null, 'hmi:ha-token': null });
+  return true;
+}
+
+/* HA-Pfade relativ auflösen, damit derselbe Aufruf gegen eine HA-Adresse und
+   gegen den internen Core-Präfix `/core/` funktioniert. */
+function haRestUrl(baseUrl, path) {
+  const base = String(baseUrl).endsWith('/') ? String(baseUrl) : `${baseUrl}/`;
+  return new URL(path.replace(/^\//, ''), base);
 }
 
 function normalizeSetupJellyfin(payload) {
@@ -6835,16 +6885,25 @@ function normalizeSetupJellyfin(payload) {
   };
 }
 
-function setupPayloadError(payload) {
-  const haUrl = normalizeSetupHaUrl(payload?.haUrl);
-  if (!haUrl) {
+function setupPayloadError(payload, connectionMode = 'direct') {
+  const supervisor = connectionMode === 'supervisor';
+  /* Im App-Modus gibt es keine Nutzer-Credentials. Eine Anfrage, die trotzdem
+     welche mitbringt, wird abgelehnt statt stillschweigend entwertet. */
+  if (supervisor && (payload?.haUrl !== undefined || payload?.haToken !== undefined)) {
+    return {
+      code: 'SETUP_CREDENTIALS_NOT_ALLOWED',
+      message: 'Im Home-Assistant-App-Modus werden weder HA-Adresse noch HA-Token entgegengenommen.',
+    };
+  }
+  const haUrl = supervisor ? null : normalizeSetupHaUrl(payload?.haUrl);
+  if (!supervisor && !haUrl) {
     return {
       code: 'SETUP_INVALID_HOME_ASSISTANT_URL',
       message: 'Die Home-Assistant-URL muss eine gültige HTTP- oder HTTPS-Adresse sein.',
     };
   }
-  if (typeof payload?.haToken !== 'string' || !payload.haToken.trim()
-      || Buffer.byteLength(payload.haToken) > 16 * 1024) {
+  if (!supervisor && (typeof payload?.haToken !== 'string' || !payload.haToken.trim()
+      || Buffer.byteLength(payload.haToken) > 16 * 1024)) {
     return {
       code: 'SETUP_INVALID_HOME_ASSISTANT_TOKEN',
       message: 'Der Home-Assistant-Token fehlt oder ist zu groß.',
@@ -6879,7 +6938,7 @@ function setupPayloadError(payload) {
   }
   return {
     haUrl,
-    haToken: payload.haToken.trim(),
+    haToken: supervisor ? null : payload.haToken.trim(),
     householdConfig: parsed.value,
     jellyfin,
   };
@@ -6917,6 +6976,30 @@ export async function verifySetupHomeAssistant(haUrl, haToken, fetchImpl = fetch
   }
 }
 
+/* Aktivierungsprüfung im App-Modus: derselbe Vertrag wie
+   `verifySetupHomeAssistant`, aber über den internen Zugang und ohne jede
+   Nutzereingabe. Fehlt die Berechtigung, wird das gemeldet — es gibt keinen
+   Rückfall auf eine HA-Adresse oder einen Long-Lived Access Token. */
+export async function verifySetupSupervisorHomeAssistant(client) {
+  try {
+    const result = await client.rest('GET', '/api/config');
+    if (result.status === 200) return { ok: true };
+    return {
+      ok: false,
+      code: 'HA_SUPERVISOR_HTTP_ERROR',
+      message: 'Home Assistant hat die interne Anfrage abgelehnt.',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: typeof error?.code === 'string' ? error.code : 'HA_SUPERVISOR_UNREACHABLE',
+      message: typeof error?.message === 'string'
+        ? error.message
+        : 'Home Assistant ist über den internen App-Zugang nicht erreichbar.',
+    };
+  }
+}
+
 export async function verifySetupJellyfin(url, accessToken, userId, fetchImpl = fetch) {
   try {
     const response = await fetchImpl(`${url}/Users/${encodeURIComponent(userId)}`, {
@@ -6949,6 +7032,120 @@ export async function verifySetupJellyfin(url, accessToken, userId, fetchImpl = 
   }
 }
 
+/* Ein Supervisor-Client pro Anfrage: der interne Zugang wird geöffnet,
+   benutzt und wieder geschlossen, statt über Anfragen hinweg zu leben. */
+async function withSupervisorClient(clientFactory, use) {
+  const client = clientFactory();
+  try { return await use(client); } finally { client.close(); }
+}
+
+/* CalDAV-/iCloud-Einrichtung im App-Modus: der HA-Config-Flow läuft über den
+   internen Zugang statt über direktes Browser-REST mit CORS. Das App-Passwort
+   wird durchgereicht und nie gespeichert oder geloggt. */
+async function serveHaCaldavFlow(req, res, { connectionMode, supervisorClientFactory }) {
+  if (connectionMode !== 'supervisor') {
+    jsonResponse(res, 404, {
+      ok: false,
+      code: 'HA_CALDAV_FLOW_NOT_AVAILABLE',
+      message: 'Der serverseitige CalDAV-Flow gibt es nur im Home-Assistant-App-Modus.',
+    });
+    return;
+  }
+  let body = '';
+  let oversized = false;
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    if (oversized) return;
+    body += chunk;
+    if (Buffer.byteLength(body) > 64 * 1024) oversized = true;
+  });
+  req.on('end', async () => {
+    if (oversized) {
+      jsonResponse(res, 413, { ok: false, code: 'HA_CALDAV_REQUEST_TOO_LARGE', message: 'Die Anfrage ist zu groß.' });
+      return;
+    }
+    let payload;
+    try { payload = JSON.parse(body); } catch { payload = null; }
+    const username = typeof payload?.username === 'string' ? payload.username.trim() : '';
+    const password = typeof payload?.password === 'string' ? payload.password : '';
+    if (!username || !password) {
+      jsonResponse(res, 400, {
+        ok: false, code: 'HA_CALDAV_INVALID_REQUEST',
+        message: 'Apple-ID und App-Passwort werden benötigt.',
+      });
+      return;
+    }
+    try {
+      const result = await withSupervisorClient(supervisorClientFactory, async (client) => {
+        const started = await client.rest('POST', '/api/config/config_entries/flow', {
+          handler: 'caldav', show_advanced_options: false,
+        });
+        if (started.status === 404) {
+          return { httpStatus: 404, payload: { ok: false, code: 'HA_CALDAV_NOT_AVAILABLE', message: 'Die CalDAV-Integration ist in dieser Home-Assistant-Version nicht verfügbar.' } };
+        }
+        const flowId = started.body?.flow_id;
+        if (started.status >= 400 || typeof flowId !== 'string' || !flowId) {
+          return { httpStatus: 502, payload: { ok: false, code: 'HA_CALDAV_FLOW_FAILED', message: 'Home Assistant hat den CalDAV-Flow nicht gestartet.' } };
+        }
+        const step = await client.rest('POST', `/api/config/config_entries/flow/${encodeURIComponent(flowId)}`, {
+          url: 'https://caldav.icloud.com', username, password, verify_ssl: true,
+        });
+        if (step.status >= 400 || !step.body || typeof step.body !== 'object') {
+          return { httpStatus: 502, payload: { ok: false, code: 'HA_CALDAV_FLOW_FAILED', message: 'Home Assistant hat den CalDAV-Flow abgebrochen.' } };
+        }
+        return { httpStatus: 200, payload: { ok: true, result: step.body } };
+      });
+      jsonResponse(res, result.httpStatus, result.payload);
+    } catch (error) {
+      jsonResponse(res, Number.isInteger(error?.status) ? error.status : 502, {
+        ok: false,
+        code: typeof error?.code === 'string' ? error.code : 'HA_SUPERVISOR_UNREACHABLE',
+        message: typeof error?.message === 'string'
+          ? error.message
+          : 'Home Assistant ist über den internen App-Zugang nicht erreichbar.',
+      });
+    }
+  });
+}
+
+/* Same-Origin-Laufzeitauskunft: sagt Wizard und Runtime, ob dieser Server die
+   Home-Assistant-Verbindung selbst vermittelt. Antwortet in beiden Betriebsarten
+   und liefert nie Credentials. */
+function serveHaConnection(res, { connectionMode, supervisorAvailable }) {
+  jsonResponse(res, 200, {
+    ok: true,
+    mode: connectionMode,
+    credentialsRequired: connectionMode !== 'supervisor',
+    available: connectionMode === 'supervisor' ? supervisorAvailable : true,
+    gatewayPath: connectionMode === 'supervisor' ? HA_GATEWAY_PATH : null,
+  }, { 'cache-control': 'no-store' });
+}
+
+/* Areas, Geräte, Entitäten und States über den internen Zugang. Nur im
+   App-Modus erreichbar; im direkten Modus entdeckt weiterhin der Browser. */
+async function serveSetupDiscovery(res, { connectionMode, supervisorClientFactory }) {
+  if (connectionMode !== 'supervisor') {
+    jsonResponse(res, 404, {
+      ok: false,
+      code: 'SETUP_DISCOVERY_NOT_AVAILABLE',
+      message: 'Die serverseitige Entdeckung gibt es nur im Home-Assistant-App-Modus.',
+    });
+    return;
+  }
+  try {
+    const snapshot = await withSupervisorClient(supervisorClientFactory, readHaDiscoverySnapshot);
+    jsonResponse(res, 200, { ok: true, ...snapshot }, { 'cache-control': 'no-store' });
+  } catch (error) {
+    jsonResponse(res, Number.isInteger(error?.status) ? error.status : 502, {
+      ok: false,
+      code: typeof error?.code === 'string' ? error.code : 'HA_SUPERVISOR_UNREACHABLE',
+      message: typeof error?.message === 'string'
+        ? error.message
+        : 'Home Assistant ist über den internen App-Zugang nicht erreichbar.',
+    });
+  }
+}
+
 function serveSetupActivation(
   req,
   res,
@@ -6962,6 +7159,8 @@ function serveSetupActivation(
     latchSetupRecoveryFailure,
     assertSetupRecoveryHealthy,
     reconfigure = false,
+    connectionMode = 'direct',
+    supervisorConnectionVerifier = null,
   },
 ) {
   let body = '';
@@ -6983,7 +7182,8 @@ function serveSetupActivation(
     }
     let payload;
     try { payload = JSON.parse(body); } catch { payload = null; }
-    const result = setupPayloadError(payload);
+    const supervisor = connectionMode === 'supervisor';
+    const result = setupPayloadError(payload, connectionMode);
     if (!('householdConfig' in result)) {
       jsonResponse(res, 400, { ok: false, ...result });
       return;
@@ -7012,7 +7212,9 @@ function serveSetupActivation(
       });
       return;
     }
-    const connection = await setupConnectionVerifier(result.haUrl, result.haToken);
+    const connection = supervisor
+      ? await supervisorConnectionVerifier()
+      : await setupConnectionVerifier(result.haUrl, result.haToken);
     if (!connection.ok) {
       jsonResponse(res, 502, connection);
       return;
@@ -7032,8 +7234,10 @@ function serveSetupActivation(
     let activatedHouseholdConfig = result.householdConfig;
     const sharedConfigUpdates = {
       'hmi:backend': 'ha',
-      'hmi:ha-url': result.haUrl,
-      'hmi:ha-token': result.haToken,
+      /* Im App-Modus wird bewusst kein HA-Zugang in die Shared Config
+         geschrieben; der interne Zugang lebt nur im Serverprozess. */
+      'hmi:ha-url': supervisor ? null : result.haUrl,
+      'hmi:ha-token': supervisor ? null : result.haToken,
       'hmi:jf-url': result.jellyfin.enabled ? result.jellyfin.url : null,
       'hmi:jf-token': result.jellyfin.enabled ? result.jellyfin.accessToken : null,
       'hmi:jf-user': result.jellyfin.enabled ? result.jellyfin.userId : null,
@@ -7302,6 +7506,9 @@ async function laundryWebSocketMessage(socket, timeoutMs, accept) {
 export function createLaundryHomeAssistantClient({
   baseUrl,
   token,
+  /* Im App-Modus liegt der interne WebSocket nicht unter `/api/websocket`,
+     sondern wird vom Zugangsauflöser mitgeliefert. */
+  websocketUrl = null,
   fetchImpl = fetch,
   WebSocketImpl = WebSocket,
   timeoutMs = 5_000,
@@ -7321,9 +7528,14 @@ export function createLaundryHomeAssistantClient({
     if (socket?.readyState === WebSocketImpl.OPEN) return socket;
     if (connecting) return connecting;
     const attempt = (async () => {
-      const websocketUrl = new URL('/api/websocket', baseUrl);
-      websocketUrl.protocol = websocketUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-      const candidate = new WebSocketImpl(websocketUrl);
+      let target;
+      if (websocketUrl) {
+        target = websocketUrl;
+      } else {
+        target = haRestUrl(baseUrl, 'api/websocket');
+        target.protocol = target.protocol === 'https:' ? 'wss:' : 'ws:';
+      }
+      const candidate = new WebSocketImpl(target);
       candidateSocket = candidate;
       try {
         const required = await laundryWebSocketMessage(candidate, timeoutMs, (message) => message?.type === 'auth_required');
@@ -7354,7 +7566,7 @@ export function createLaundryHomeAssistantClient({
   async function rest(method, path, body = undefined) {
     let response;
     try {
-      response = await fetchImpl(new URL(path, baseUrl), {
+      response = await fetchImpl(haRestUrl(baseUrl, path), {
         method,
         headers: {
           accept: 'application/json',
@@ -7682,6 +7894,7 @@ async function resolveOwnedAutomation(
 
 function createLaundryCoordinator({
   configStore,
+  connectionMode = HA_CONNECTION_MODE,
   householdConfigPath,
   clientFactory,
   replaceConfig,
@@ -7746,13 +7959,10 @@ function createLaundryCoordinator({
   }
 
   function credentialSnapshot() {
-    const values = configStore.read();
-    const baseUrl = normalizeSetupHaUrl(values['hmi:ha-url']);
-    const token = values['hmi:ha-token'];
-    if (!baseUrl || typeof token !== 'string' || !token) {
+    const credentials = resolveServerHaAccess(configStore, connectionMode);
+    if (!credentials) {
       throw createLaundryError('LAUNDRY_HOME_ASSISTANT_NOT_CONFIGURED', 503, 'Home Assistant ist serverseitig nicht konfiguriert.');
     }
-    const credentials = { baseUrl, token };
     return {
       credentials,
       identity: laundryFingerprint(credentials),
@@ -10428,6 +10638,9 @@ export function createHmiServer(
     familyData = null,
     setupConnectionVerifier = verifySetupHomeAssistant,
     setupJellyfinVerifier = verifySetupJellyfin,
+    haConnectionMode = HA_CONNECTION_MODE,
+    haSupervisorClientFactory = createHaSupervisorClient,
+    haGatewayFactory = createHaWebSocketGateway,
     setupMutationStep = () => undefined,
     laundryClientFactory = createLaundryHomeAssistantClient,
     laundryReplaceConfig = renameSync,
@@ -10493,6 +10706,12 @@ export function createHmiServer(
       : { ok: true, status: 'shadow' }
   ));
   const configStore = createCentralConfigStore(configPath, { assertSetupRecoveryHealthy });
+  if (haConnectionMode === 'supervisor' && setupRecoveryResult.ok) {
+    /* Ab dem ersten Start im App-Modus existiert kein gespeicherter HA-Zugang
+       mehr — weder in `/data` noch in einer Antwort an den Browser. */
+    try { configMutations.runSync(() => purgeHaCredentialsFromSharedConfig(configStore)); }
+    catch (error) { console.warn('[hauser] HA-Credentials konnten nicht entfernt werden:', error?.code ?? error); }
+  }
   const householdConfigReader = createHouseholdConfigReader(householdConfigPath);
   const familyStore = familyData || createFamilyDataStore(familyDataPath);
   const ablageAccess = createAblageAccess(paperlessPin, paperlessToken);
@@ -10502,6 +10721,7 @@ export function createHmiServer(
   const hotelStays = hotelModeStayService || createHotelModeStayService({
     store: hotelStore,
     configStore,
+    connectionMode: haConnectionMode,
     householdConfigPath,
     now: hotelModeNow,
     calendarClientFactory: hotelCalendarClientFactory,
@@ -10509,6 +10729,7 @@ export function createHmiServer(
   const hotelGuestStates = hotelGuestStateService || createHotelGuestStateService({
     stays: hotelStays,
     configStore,
+    connectionMode: haConnectionMode,
     householdConfigPath,
     now: hotelModeNow,
     statesClientFactory: hotelStatesClientFactory,
@@ -10517,11 +10738,13 @@ export function createHmiServer(
     stays: hotelStays,
     guests: hotelGuestStates,
     configStore,
+    connectionMode: haConnectionMode,
     householdConfigPath,
     commandClientFactory: hotelCommandClientFactory,
   });
   const hotelActivationPreflight = hotelActivationPreflightService || createHotelActivationPreflight({
     configStore,
+    connectionMode: haConnectionMode,
     access: hotelAdminAccess,
     statesClientFactory: hotelStatesClientFactory,
     calendarClientFactory: hotelCalendarClientFactory,
@@ -10540,6 +10763,7 @@ export function createHmiServer(
     store: hotelStore,
     guests: hotelGuestStates,
     configStore,
+    connectionMode: haConnectionMode,
     householdConfigPath,
     now: hotelModeNow,
     eventClientFactory: hotelEventClientFactory,
@@ -10620,6 +10844,7 @@ export function createHmiServer(
   const roomImagePublishFlights = new Map();
   const laundry = createLaundryCoordinator({
     configStore,
+    connectionMode: haConnectionMode,
     householdConfigPath,
     clientFactory: laundryClientFactory,
     replaceConfig: laundryReplaceConfig,
@@ -10629,7 +10854,13 @@ export function createHmiServer(
     configMutations,
     assertSetupRecoveryHealthy,
   });
-  return http.createServer((req, res) => {
+  /* B-08E11: Der Live-Kanal des App-Modus. Im direkten Modus existiert er
+     nicht — dort spricht der Browser weiterhin selbst mit Home Assistant. */
+  const haGateway = haGatewayFactory({
+    connectionMode: haConnectionMode,
+    originAllowed: (req) => requestOriginAllowed(req, allowedOrigins),
+  });
+  const httpServer = http.createServer((req, res) => {
     const effectiveMigrationResult = setupRecoveryFailureLatched
       ? setupRecoveryFailure()
       : migrationResult;
@@ -10660,6 +10891,16 @@ export function createHmiServer(
       serveHmiHealth(req, res, readinessOptions);
     } else if ((req.url || '') === '/api/build-info') {
       serveBuildInfo(req, res, buildInfo);
+    } else if ((req.url || '') === '/api/ha/connection'
+        && setupReadRequestAllowed(req, allowedOrigins)) {
+      /* Sanitisierte Laufzeitauskunft: sagt Oberfläche und Runtime, ob dieser
+         Server Home Assistant selbst vermittelt. Enthält keine Credentials und
+         wird deshalb wie Health und Build-Info früh beantwortet. */
+      serveHaConnection(res, {
+        connectionMode: haConnectionMode,
+        supervisorAvailable: haConnectionMode !== 'supervisor'
+          || haSupervisorClientFactory().available,
+      });
     } else if (hotelAdminGate.blocked(req)) {
       // Vor jeder anderen Auswertung: bei eingerichtetem Hotel Mode verlangen
       // sensitive Routen eine Adminsitzung, unabhängig davon, was die
@@ -10698,6 +10939,18 @@ export function createHmiServer(
       // Room-image capability and private auth are independent of setup/readiness routes.
     } else if (!aiCustomizingEnabled && (req.url || '').startsWith('/hermes')) {
       jsonResponse(res, 404, { error: 'Route nicht gefunden' });
+    } else if ((req.url || '') === '/api/ha/caldav-flow'
+        && setupRequestAllowed(req, allowedOrigins)) {
+      void serveHaCaldavFlow(req, res, {
+        connectionMode: haConnectionMode,
+        supervisorClientFactory: haSupervisorClientFactory,
+      });
+    } else if ((req.url || '') === '/api/setup/discovery'
+        && setupReadRequestAllowed(req, allowedOrigins)) {
+      void serveSetupDiscovery(res, {
+        connectionMode: haConnectionMode,
+        supervisorClientFactory: haSupervisorClientFactory,
+      });
     } else if (setupIsRequired && (req.url || '') === '/api/setup/activate'
         && setupRequestAllowed(req, allowedOrigins)) {
       serveSetupActivation(req, res, {
@@ -10709,6 +10962,10 @@ export function createHmiServer(
         setupMutationStep,
         latchSetupRecoveryFailure,
         assertSetupRecoveryHealthy,
+        connectionMode: haConnectionMode,
+        supervisorConnectionVerifier: () => withSupervisorClient(
+          haSupervisorClientFactory, verifySetupSupervisorHomeAssistant,
+        ),
       });
     } else if (!setupIsRequired && readiness.ok
         && normalizedHouseholdConfigMode === 'active'
@@ -10724,6 +10981,10 @@ export function createHmiServer(
         latchSetupRecoveryFailure,
         assertSetupRecoveryHealthy,
         reconfigure: true,
+        connectionMode: haConnectionMode,
+        supervisorConnectionVerifier: () => withSupervisorClient(
+          haSupervisorClientFactory, verifySetupSupervisorHomeAssistant,
+        ),
       });
     } else if ((req.url || '') === '/api/setup/activate') {
       jsonResponse(res, 403, {
@@ -10843,6 +11104,17 @@ export function createHmiServer(
       serveStatic(req, res, staticRoot);
     }
   });
+  httpServer.on('upgrade', (req, socket, head) => {
+    /* Genau ein Pfad wird zum WebSocket erhoben; alles andere wird verworfen,
+       damit hier keine allgemeine Bridge entsteht. */
+    if (!haGateway.handlesUpgrade(req)) {
+      socket.destroy();
+      return;
+    }
+    haGateway.handleUpgrade(req, socket, head);
+  });
+  httpServer.on('close', () => haGateway.close());
+  return httpServer;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

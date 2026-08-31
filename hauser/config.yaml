@@ -1,6 +1,6 @@
 {
   "name": "Hauser",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "slug": "hauser",
   "description": "A calm, visual Home Assistant frontend for the people who live in the home",
   "url": "https://github.com/ralleur/hauser/tree/main/hauser",
@@ -12,6 +12,7 @@
   "init": false,
   "legacy": true,
   "backup": "cold",
+  "homeassistant_api": true,
   "webui": "http://[HOST]:[PORT:4173]",
   "ports": {
     "4173/tcp": 4173
@@ -20,6 +21,7 @@
     "4173/tcp": "Hauser web interface"
   },
   "environment": {
+    "HMI_HA_CONNECTION_MODE": "supervisor",
     "HMI_ALLOWED_ORIGINS": "http://localhost:4173,http://127.0.0.1:4173",
     "HMI_AI_CUSTOMIZING_ENABLED": "0",
     "HMI_HOUSEHOLD_CONFIG_PATH": "/data/household.json",

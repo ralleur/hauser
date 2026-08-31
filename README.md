@@ -43,7 +43,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.5.3` is current. The first installation by
+normal installation path; `v0.6.0` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -166,16 +166,28 @@ NAS systems use Docker Compose. Both end in the same guided setup wizard.
 2. Select **Hauser**, choose **Install**, then **Start**.
 3. Choose **Open Web UI** and run the setup wizard.
 
+The App connects to Home Assistant itself: it declares `homeassistant_api` and
+the Hauser server talks to Home Assistant Core over the internal Supervisor
+endpoints. There is no field for a Home Assistant URL and no Long-Lived Access
+Token, and neither is stored in `/data` or handed to the browser. The wizard
+ends by showing the exact address phones and tablets use, with a copy action and
+a QR code.
+
 The App is a thin packaging layer around the same multi-architecture image
 (`aarch64`, `amd64`) and stores all state in Home Assistant's persistent `/data`
-directory, so App backups cover the household configuration. This first
-packaging deliberately uses a direct LAN port instead of Ingress — keep it on a
-trusted network.
+directory, so App backups cover the household configuration. This packaging
+deliberately uses a direct LAN port instead of Ingress, and that port carries no
+separate login and no device pairing: every device that reaches it on the
+trusted network can operate Hauser. Keep it on a trusted network and do not
+publish it to the internet.
 
-The manifest declares `stage: experimental`: installation, startup, setup
-against real Home Assistant, one real entity command and persistence across an
-App restart have been verified on the maintainer's Home Assistant OS system, not
-yet across other people's installations.
+The manifest declares `stage: experimental`. On `v0.6.0` a fresh install,
+start, credential-free setup discovery, activation, the internal Home Assistant
+connection and opening the displayed address from a real phone were verified on
+an isolated Home Assistant OS test system; real device commands with state echo,
+reconnect after a restart and backup/restore last passed on an earlier version
+and were not re-verified here. None of it has been tried across other people's
+installations yet.
 [`hauser/DOCS.md`](hauser/DOCS.md) documents the packaging, persistence,
 backup/restore and current limitations in full.
 
@@ -195,9 +207,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.5.3` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.6.0` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.5.3` tag, which the Home Assistant Supervisor
+publish the plain `0.6.0` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 
@@ -213,7 +225,9 @@ backup, restore, update and rollback contract is documented in
 On first start, the setup wizard guides you through:
 
 1. choosing the interface language;
-2. testing the Home Assistant URL and long-lived access token;
+2. connecting to Home Assistant — as the Home Assistant App this is automatic
+   and asks for nothing; with Docker Compose it tests the Home Assistant URL and
+   long-lived access token you provide;
 3. discovering Areas and relevant entities;
 4. reviewing, renaming and ordering Hauser rooms and assigning devices;
 5. enabling or skipping Jellyfin;

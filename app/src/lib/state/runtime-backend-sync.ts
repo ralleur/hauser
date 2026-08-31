@@ -3,10 +3,25 @@ import { HaBackend } from '../adapter/ha-backend.ts';
 import {
   seed,
   backend,
+  configuredHaTransport,
   configuredHaUrl,
+  rememberHaTransport,
   setBackend,
 } from '../adapter/runtime.svelte.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
+
+const HA_TRANSPORT_TIMEOUT_MS = 3_000;
+
+/* Cutover im Browser: sobald dieser Server intern verbindet, hat ein früher
+ * eingegebener Long-Lived Access Token hier nichts mehr zu suchen. Direkte
+ * Installationen bleiben unberührt, weil sie diesen Zweig nie erreichen. */
+function forgetBrowserHaCredentials(): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem('hmi:ha-token');
+    localStorage.removeItem('hmi:ha-url');
+  } catch { /* Ohne Storage gibt es auch nichts zu entfernen. */ }
+}
 
 export function configuredBackendKind(
   storage: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage,
@@ -30,7 +45,30 @@ export function syncConfiguredBackend(): void {
     ? new FakeBackend(seed)
     : new HaBackend({
         url: () => configuredHaUrl(),
+        transport: () => configuredHaTransport(),
         entityIds: HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds,
         seed: seed,
       }));
+}
+
+/** Betriebsart des Live-Kanals vom Server übernehmen, bevor der Backend-Start
+ * eine Verbindung aufbaut. Scheitert die Auskunft, bleibt der zuletzt bekannte
+ * Wert stehen — geraten wird nichts. */
+export async function syncHaTransport(
+  fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    const response = await fetcher('/api/ha/connection', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+      /* Eine hängende lokale API darf den Verbindungsaufbau nicht sperren. */
+      signal: signal ?? AbortSignal.timeout(HA_TRANSPORT_TIMEOUT_MS),
+    });
+    if (!response.ok) return;
+    const payload = await response.json() as { mode?: unknown };
+    const transport = payload.mode === 'supervisor' ? 'gateway' : 'direct';
+    rememberHaTransport(transport);
+    if (transport === 'gateway') forgetBrowserHaCredentials();
+  } catch { /* Ohne Auskunft bleibt der zuletzt bekannte Kanal gültig. */ }
 }

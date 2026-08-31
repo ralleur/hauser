@@ -57,7 +57,7 @@ RUN npm run build && \
     npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.5.3
+ARG HAUSER_VERSION=0.6.0
 ARG HAUSER_REVISION=""
 ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \
@@ -87,6 +87,7 @@ COPY --from=build --chown=node:node /build/app/node_modules ./node_modules
 COPY --from=build --chown=node:node /build/server-contract ./server-contract
 COPY --from=build --chown=node:node /build/room-image-contract ./room-image-contract
 COPY --chown=node:node app/server.mjs app/package.json ./
+COPY --chown=node:node app/server/ ./server/
 COPY --chown=node:node container/healthcheck.mjs container/start.mjs ./container/
 RUN mkdir -p /config /data/songs /assets && chown -R node:node /opt/hauser /config /data /assets
 

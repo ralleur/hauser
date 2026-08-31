@@ -8,6 +8,7 @@
     jellyfin,
   } from '../adapter/jellyfin.ts';
   import { parseHouseholdConfig, type HouseholdConfigV4 } from '../config/household-config.ts';
+  import type { SetupDiscoverySnapshot } from '../config/setup-household.ts';
   import { refreshHouseholdConfigRuntimeCache } from '../config/household-config-runtime.ts';
   import {
     addSetupRoom,
@@ -33,6 +34,7 @@
   import { m } from '../../paraglide/messages.js';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import RoomListEditor from './settings/RoomListEditor.svelte';
+  import DeviceAddress from './DeviceAddress.svelte';
   import type { Snippet } from 'svelte';
 
   let {
@@ -50,7 +52,13 @@
   const reconfigure = $derived(mode === 'reconfigure');
   let haUrl = $state('http://homeassistant.local:8123');
   let token = $state('');
-  let status = $state<'idle' | 'loading' | 'connecting' | 'ready' | 'activating' | 'error'>('idle');
+  /* B-08E11: Im Home-Assistant-App-Modus verbindet der Hauser-Server intern.
+     Dann gibt es weder HA-Adresse noch Long-Lived Access Token in dieser
+     Oberfläche — bis die Auskunft da ist, wird nichts abgefragt. */
+  let connectionMode = $state<'direct' | 'supervisor' | 'unknown'>('unknown');
+  let supervisorAvailable = $state(true);
+  const supervisor = $derived(connectionMode === 'supervisor');
+  let status = $state<'idle' | 'loading' | 'connecting' | 'ready' | 'activating' | 'done' | 'error'>('idle');
   let message = $state('');
   let suggestion = $state<SetupHouseholdSuggestion | null>(null);
   let omittedCount = $state(0);
@@ -124,6 +132,30 @@
     location.replace(`${url.pathname}${url.search}${url.hash}`);
   }
 
+  async function loadConnectionMode(): Promise<void> {
+    try {
+      const response = await fetch('/api/ha/connection', {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('connection mode unavailable');
+      const payload = await response.json() as { mode?: string; available?: boolean };
+      connectionMode = payload.mode === 'supervisor' ? 'supervisor' : 'direct';
+      supervisorAvailable = payload.available !== false;
+    } catch {
+      connectionMode = 'direct';
+    }
+  }
+
+  async function discoverViaServer(): Promise<SetupDiscoverySnapshot> {
+    const response = await fetch('/api/setup/discovery', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('discovery failed');
+    return await response.json() as SetupDiscoverySnapshot;
+  }
+
   async function loadCurrentSetup(): Promise<void> {
     try {
       const [householdResponse, sharedResponse] = await Promise.all([
@@ -167,15 +199,21 @@
   }
 
   onMount(() => {
-    if (reconfigure) {
-      status = 'loading';
-      message = m.setup_loading();
-      void loadCurrentSetup();
-    }
+    void (async () => {
+      await loadConnectionMode();
+      if (reconfigure) {
+        status = 'loading';
+        message = m.setup_loading();
+        await loadCurrentSetup();
+      } else if (supervisor && supervisorAvailable) {
+        /* Ohne Credentialfrage gibt es nichts einzugeben: die App scannt sofort. */
+        await connectAndScan();
+      }
+    })();
   });
 
   async function connectAndScan(): Promise<void> {
-    if (!haUrl.trim() || !token.trim()) {
+    if (!supervisor && (!haUrl.trim() || !token.trim())) {
       status = 'error';
       message = m.setup_credentials_required();
       return;
@@ -187,7 +225,9 @@
     suggestion = null;
     omittedCount = 0;
     try {
-      const snapshot = await discoverHomeAssistant(haUrl, token);
+      const snapshot = supervisor
+        ? await discoverViaServer()
+        : await discoverHomeAssistant(haUrl, token);
       const discovered = buildSetupHouseholdSuggestion(snapshot);
       suggestion = previousSuggestion
         ? {
@@ -204,7 +244,7 @@
       suggestion = previousSuggestion;
       omittedCount = previousOmittedCount;
       status = 'error';
-      message = m.setup_connect_failed();
+      message = supervisor ? m.setup_app_mode_unreachable() : m.setup_connect_failed();
     }
   }
 
@@ -334,8 +374,8 @@
         method: 'POST',
         headers,
         body: JSON.stringify({
-          haUrl: haUrl.trim(),
-          haToken: token,
+          /* Im App-Modus trägt die Anfrage bewusst keine HA-Credentials. */
+          ...(supervisor ? {} : { haUrl: haUrl.trim(), haToken: token }),
           householdConfig: suggestion.config,
           jellyfin: jellyfinEnabled && jellyfinSession
             ? {
@@ -368,6 +408,9 @@
       jellyfinSession = null;
       await refreshHouseholdConfigRuntimeCache();
       if (reconfigure) returnToDashboard();
+      /* Erstlauf: erst die Adresse zeigen, unter der die Endgeräte Hauser
+         öffnen — danach übernimmt der normale Start. */
+      else if (!embedded) { status = 'done'; message = ''; }
       else location.reload();
     } catch (error) {
       status = 'error';
@@ -411,12 +454,15 @@
       {/if}
     </div>
     <p class="intro">
-      {reconfigure
-        ? m.setup_intro_reconfigure()
-        : m.setup_intro_first()}
+      {supervisor
+        ? m.setup_app_mode_intro()
+        : reconfigure
+          ? m.setup_intro_reconfigure()
+          : m.setup_intro_first()}
     </p>
 
     <form onsubmit={(event) => { event.preventDefault(); void connectAndScan(); }}>
+      {#if !supervisor}
       <label>
         <span>{m.setup_ha_url()}</span>
         <input type="url" bind:value={haUrl} autocomplete="url" spellcheck="false" required disabled={status === 'loading' || status === 'activating'} />
@@ -426,8 +472,11 @@
         <input type="password" bind:value={token} autocomplete="off" required disabled={status === 'loading' || status === 'activating'} />
         <small>{m.setup_token_hint_before()} <code>/data</code> {m.setup_token_hint_after()}</small>
       </label>
+      {/if}
       <button class="primary" type="submit" disabled={status === 'loading' || status === 'connecting' || status === 'activating'}>
-        {status === 'connecting' ? m.setup_connecting() : m.setup_connect_scan()}
+        {status === 'connecting'
+          ? m.setup_connecting()
+          : supervisor ? m.setup_app_mode_scan() : m.setup_connect_scan()}
       </button>
     </form>
     {/if}
@@ -653,6 +702,15 @@
         {/if}
       </div>
     {/if}
+
+    {#if status === 'done'}
+      <div class="done">
+        <p class="eyebrow">{m.setup_done_eyebrow()}</p>
+        <h2>{m.setup_done_title()}</h2>
+        <DeviceAddress />
+        <button class="primary" type="button" onclick={() => location.reload()}>{m.setup_done_open()}</button>
+      </div>
+    {/if}
   </section>
 </main>
 {/key}
@@ -668,6 +726,7 @@
   .language-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
   .language-option { border: 1px solid var(--color-border); background: var(--color-surface-0); color: var(--color-text-secondary); }
   .language-option.is-active { border-color: var(--color-accent-warm); background: color-mix(in srgb, var(--color-accent-warm) 14%, var(--color-surface-0)); color: var(--color-text-primary); }
+  .done { display: grid; gap: var(--space-4); margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
   .setup-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
   .eyebrow { margin: 0 0 var(--space-2); color: var(--color-text-secondary); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
   h1, h2 { margin: 0; font-weight: var(--font-weight-semibold); letter-spacing: var(--tracking-snug); }

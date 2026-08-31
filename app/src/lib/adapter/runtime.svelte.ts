@@ -9,7 +9,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { EntityStore } from './entity-store.svelte.ts';
 import { FakeBackend } from './fake-backend.ts';
 import { demoEnergySeed } from '../demo/demo-mode.ts';
-import { HaBackend } from './ha-backend.ts';
+import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
 import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate } from './types.ts';
@@ -252,6 +252,32 @@ export const seed = new Map<string, unknown>([
    Endpunkt. Ein Override greift wie der Backend-Wechsel erst nach dem Neuladen
    (Singleton entsteht beim App-Start). */
 const HA_URL_KEY = 'hmi:ha-url';
+/* B-08E11: Betriebsart des Live-Kanals, aus der sanitisierten Laufzeitauskunft
+   `/api/ha/connection` gespiegelt. Lokal zwischengespeichert, damit der beim
+   Modulimport entstehende Backend-Singleton sie synchron kennt; aufgelöst wird
+   sie erst beim Verbindungsaufbau. */
+const HA_TRANSPORT_KEY = 'hmi:ha-transport';
+
+export function configuredHaTransport(
+  storage?: Pick<Storage, 'getItem'>,
+): HaTransport {
+  try {
+    const source = storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
+    return source?.getItem(HA_TRANSPORT_KEY) === 'gateway' ? 'gateway' : 'direct';
+  } catch {
+    return 'direct';
+  }
+}
+
+export function rememberHaTransport(
+  transport: HaTransport,
+  storage?: Pick<Storage, 'setItem'>,
+): void {
+  try {
+    const target = storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
+    target?.setItem(HA_TRANSPORT_KEY, transport);
+  } catch { /* Der Server bleibt maßgeblich; ohne Cache wird neu gefragt. */ }
+}
 
 export function defaultHaUrl(protocol: string = typeof location === 'undefined' ? 'http:' : location.protocol): string {
   /* Eine HTTPS-PWA darf den lokalen HTTP-/WS-Endpunkt nicht laden (Mixed
@@ -287,6 +313,7 @@ export let backend: Backend = useFake()
       // Erst in start() nach dem Shared-Config-Sync auflösen; der Modulimport
       // darf noch mit dem lokalen letzten Stand die Shell erzeugen.
       url: () => configuredHaUrl(),
+      transport: () => configuredHaTransport(),
       entityIds: HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds,
       seed: seed,
       laundryEntityIds: Object.values(LAUNDRY_ENTITIES)

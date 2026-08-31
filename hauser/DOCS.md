@@ -2,10 +2,14 @@
 
 ## Install
 
-> **Experimental beta:** the App path passed installation, startup, setup
-> against real Home Assistant, one real entity command and persistence across an
-> App restart on the maintainer's Home Assistant OS system, last verified on
-> `0.4.0-beta.4`. It is not yet a broad compatibility or support promise.
+> **Experimental beta:** on `0.6.0` the App path was verified on an isolated
+> Home Assistant OS 18.2 test system running Home Assistant 2026.8.3: fresh
+> install, start, credential-free setup discovery, activation, the internal
+> Home Assistant connection, and opening the displayed address from a real
+> phone. Real device commands with state echo, reconnect after a Home Assistant
+> or App restart, and backup/restore were **not** re-verified on this version;
+> they last passed on `0.4.0-beta.4`. This is not a broad compatibility or
+> support promise.
 
 1. In Home Assistant, open **Settings → Apps → App Store → Repositories**.
 2. Add `https://github.com/ralleur/hauser`.
@@ -16,27 +20,30 @@ Apps are available only on Home Assistant OS and other installations that provid
 
 ## First setup
 
-Hauser keeps its existing connection model. In the setup wizard:
+The App connects to Home Assistant itself. In the setup wizard:
 
 1. select a language;
-2. enter a Home Assistant HTTP(S) URL that is reachable from both the browser and this App;
-3. enter a dedicated Home Assistant Long-Lived Access Token;
-4. discover and review Areas, rooms and entities;
-5. configure or skip Jellyfin;
-6. validate and activate the generated configuration.
+2. review the discovered Areas, rooms and entities;
+3. configure or skip Jellyfin;
+4. validate and activate the generated configuration;
+5. note the address shown at the end — that is where phones and tablets open Hauser.
 
-The App does not inject a Supervisor token and does not proxy Home Assistant Core. The wizard changes only Hauser configuration; it does not rename or delete Home Assistant Areas or entities.
+There is no field for a Home Assistant URL and no Long-Lived Access Token. The App declares `homeassistant_api: true` and the Hauser server talks to Home Assistant Core over the internal Supervisor endpoints; the Supervisor token stays inside the server process and is never written to `/data`, sent to the browser, or logged. If an earlier installation stored a Long-Lived Access Token, it is removed from `/data/config.json` on the first start in App mode.
+
+The wizard changes only Hauser configuration; it does not rename or delete Home Assistant Areas or entities.
 
 ## Web UI and network boundary
 
-Hauser listens on TCP port 4173. **Open Web UI** resolves the port selected by Home Assistant. This first App packaging deliberately uses direct HTTP access on the trusted LAN and does not use Ingress. Do not publish the port directly to the internet. A TLS reverse proxy remains supported when its exact browser origin is listed through the regular Hauser container configuration; the App itself does not configure such a proxy.
+Hauser listens on TCP port 4173. **Open Web UI** resolves the port selected by Home Assistant. This App packaging deliberately uses direct HTTP access on the trusted LAN and does not use Ingress: phones and tablets load Hauser alone, with no Home Assistant frontend, iframe or redirect in front of it.
+
+Port 4173 has no separate user login and no device pairing. Every device that can reach the port on the trusted home network can operate Hauser, exactly like the direct LAN contract of the container installation. Do not publish the port directly to the internet. A TLS reverse proxy remains supported when its exact browser origin is listed through the regular Hauser container configuration; the App itself does not configure such a proxy.
 
 ## Persistence
 
 Home Assistant's persistent App directory `/data` is the only persistent path used by this package. The wrapper maps all Hauser state below it:
 
 - `/data/household.json` — active household configuration and migration backups;
-- `/data/config.json` — shared Hauser settings, including the configured HA URL and token;
+- `/data/config.json` — shared Hauser settings; in App mode it holds no Home Assistant URL and no Home Assistant token;
 - `/data/family-data.json` — reminder and shopping data used by the built-in server;
 - `/data/room-image-auth.json` — optional ChatGPT or OpenAI API authorization for the room-image wizard;
 - `/data/assets/` — room-image sets published by the wizard;
@@ -67,19 +74,23 @@ migration remains fail-closed and makes the internal health probe fail.
 
 - This package is experimental and not an Ingress application.
 - App access does not add Home Assistant authentication; protect the direct LAN port.
-- The Home Assistant URL must be usable by both the browser and App container.
 - The App supports only `amd64` and `aarch64`, matching the published Hauser multi-architecture image.
-- No Supervisor token, Home Assistant API permission, host networking, privileged mode, hardware access or Home Assistant configuration mount is requested.
-- `0.5.3` is the current published App and Docker/Compose beta. Versions below
+- The App requests the Home Assistant API permission (`homeassistant_api`) and
+  uses the Supervisor token to reach Home Assistant Core internally. No host
+  networking, privileged mode, hardware access or Home Assistant configuration
+  mount is requested, and no further Supervisor role is claimed.
+- `0.6.0` is the current published App and Docker/Compose beta. Versions below
   `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
   that it is a beta. Hauser is licensed under the GNU Affero General Public
   License instead of MIT; everything up to and including `0.4.0-beta.6` stays
-  MIT, and nothing changes for people running Hauser at home. This release makes
-  scenes configurable per room — which devices a scene drives, what state each
-  takes, and scenes a room adds, renames or deletes for itself — and gives the
-  room tile optional temperature and humidity from the sensors of its Home
-  Assistant area. It carries `0.5.0`'s **Rooms & devices** settings page and the
-  earlier App fixes: the
+  MIT, and nothing changes for people running Hauser at home. This release
+  removes the Home Assistant URL and Long-Lived Access Token from the App
+  entirely: the Hauser server connects internally and the browser reaches live
+  state through a same-origin WebSocket, so no Home Assistant credential is
+  stored in `/data` or handed to the browser. Setup ends by showing the address
+  phones and tablets use, with a copy action and a QR code. It carries `0.5.3`'s
+  shared climate control, `0.5.0`'s per-room scenes and **Rooms & devices**
+  settings page, and the earlier App fixes: the
   room-image origin fix from `0.4.0-beta.10`, the reconfigure-flow ETag fix and
   the container source metadata from `0.4.0-beta.9`, the setup activation
   origin fix from `0.4.0-beta.6` (#8), the setup-wizard discovery fixes for
