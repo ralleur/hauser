@@ -63,6 +63,13 @@ const {
   buildRoomImagePrompt,
   validateRoomImagePromptSpec,
 } = await import(`${roomImageContractBase}/room-image-prompt-policy-v1.${roomImageContractExtension}`);
+const {
+  ROOM_IMAGE_PHONE_VARIANT_FILES,
+  ROOM_IMAGE_PHONE_VARIANT_SOURCES,
+} = await import(`${roomImageContractBase}/room-image-phone-variants.${roomImageContractExtension}`);
+const {
+  deriveRoomImagePhoneVariants,
+} = await import(`${roomImageContractBase}/room-image-phone-derivation-policy-v1.${roomImageContractExtension}`);
 const { default: sharp } = await import('sharp');
 
 /* B-08E11: Betriebsart des Home-Assistant-Zugangs. `direct` ist der heutige
@@ -199,9 +206,18 @@ const ROOM_IMAGE_TEMP_ROOT = ROOM_IMAGE_TEST_ROOT_OVERRIDE
 const ROOM_IMAGE_ASSET_ROOT = process.env.HMI_ROOM_IMAGE_ASSET_ROOT || '/assets';
 const ROOM_IMAGE_ASSET_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,126}[a-z0-9])?$/;
 const ROOM_IMAGE_ROOM_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
-const ROOM_IMAGE_VARIANT_FILES = Object.freeze({
+/* B-27 D2: Die Phone-Ableitungen gehoeren zum Asset, nicht zu einem
+   Nebenpfad. Damit kann kein Asset im Katalog aktiv sein, ohne dass seine
+   Phone-Fassung mit passendem Hash danebenliegt. */
+const ROOM_IMAGE_FINAL_VARIANT_FILES = Object.freeze({
   light: 'light.avif', dark: 'dark.avif', darkOff: 'dark-off.avif',
 });
+const ROOM_IMAGE_VARIANT_FILES = Object.freeze({
+  ...ROOM_IMAGE_FINAL_VARIANT_FILES, ...ROOM_IMAGE_PHONE_VARIANT_FILES,
+});
+const ROOM_IMAGE_VARIANT_KEYS = Object.freeze(Object.keys(ROOM_IMAGE_VARIANT_FILES));
+const ROOM_IMAGE_FINAL_VARIANT_KEYS = Object.freeze(Object.keys(ROOM_IMAGE_FINAL_VARIANT_FILES));
+const ROOM_IMAGE_MANIFEST_VERSION = 2;
 const SHARED_CONFIG_KEYS = new Set([
   'hmi:backend', 'hmi:ha-url', 'hmi:ha-token', 'hmi:jf-url', 'hmi:jf-token',
   'hmi:jf-user', 'hmi:library', 'hmi:lock-button',
@@ -2668,12 +2684,12 @@ function validRoomImageCatalogEntry(entry) {
     'assetId', 'variants', 'focus', 'createdAt', 'status', 'files', 'manifestSha256',
   ])
       || !ROOM_IMAGE_ASSET_ID_PATTERN.test(entry.assetId || '')
-      || !roomImageExactObject(entry.variants, ['light', 'dark', 'darkOff'])
+      || !roomImageExactObject(entry.variants, [...ROOM_IMAGE_VARIANT_KEYS])
       || !Object.entries(ROOM_IMAGE_VARIANT_FILES).every(([key, name]) => entry.variants[key] === name)
       || !validStoredRoomImageFocus(entry.focus)
       || typeof entry.createdAt !== 'string' || Number.isNaN(Date.parse(entry.createdAt))
       || !['active', 'tombstone'].includes(entry.status)
-      || !roomImageExactObject(entry.files, ['light', 'dark', 'darkOff'])
+      || !roomImageExactObject(entry.files, [...ROOM_IMAGE_VARIANT_KEYS])
       || !Object.values(entry.files).every(validRoomImageAssetFileInfo)
       || !/^[0-9a-f]{64}$/.test(entry.manifestSha256 || '')) return false;
   return true;
@@ -2793,9 +2809,9 @@ export function createRoomImageAssetStore({
       if (createHash('sha256').update(manifest).digest('hex') !== entry.manifestSha256) return false;
       const manifestDocument = JSON.parse(manifest.toString('utf8'));
       return roomImageExactObject(manifestDocument, ['version', 'assetId', 'files'])
-        && manifestDocument.version === 1
+        && manifestDocument.version === ROOM_IMAGE_MANIFEST_VERSION
         && manifestDocument.assetId === entry.assetId
-        && roomImageExactObject(manifestDocument.files, ['light', 'dark', 'darkOff'])
+        && roomImageExactObject(manifestDocument.files, [...ROOM_IMAGE_VARIANT_KEYS])
         && Object.entries(entry.files).every(([key, info]) => (
           validRoomImageAssetFileInfo(manifestDocument.files[key])
           && manifestDocument.files[key].sha256 === info.sha256
@@ -2829,7 +2845,7 @@ export function createRoomImageAssetStore({
   function publish(assetId, focus, variants) {
     assertMutable();
     if (!ROOM_IMAGE_ASSET_ID_PATTERN.test(assetId || '') || !validStoredRoomImageFocus(focus)
-        || !roomImageExactObject(variants, ['light', 'dark', 'darkOff'])
+        || !roomImageExactObject(variants, [...ROOM_IMAGE_VARIANT_KEYS])
         || !Object.values(variants).every((bytes) => bytes instanceof Uint8Array && bytes.byteLength > 0)) {
       throw roomImageAssetStoreError('Ungültiger Room-Image-Publishinput.');
     }
@@ -2859,7 +2875,7 @@ export function createRoomImageAssetStore({
         files[key] = { sha256: createHash('sha256').update(bytes).digest('hex'), byteLength: bytes.byteLength };
         transactionStep(`variant_${key}_written`, { assetId });
       }
-      const manifestDocument = { version: 1, assetId, files };
+      const manifestDocument = { version: ROOM_IMAGE_MANIFEST_VERSION, assetId, files };
       const manifest = Buffer.from(`${JSON.stringify(manifestDocument)}\n`);
       assertMutable();
       writeFileSync(join(stagePath, 'manifest.json'), manifest, { mode: 0o600, flush: true });
@@ -3002,6 +3018,123 @@ export function createRoomImageAssetStore({
     activeEntry, catalogPath: catalog, cleanupOrphans, deleteTombstonedFiles, list, publish,
     recoveryState, root, status, tombstone, variantBytes,
   };
+}
+
+/* ── B-27 D3: Backfill der Phone-Ableitungen ──
+   Zwingend, nicht optional. `verifyEntryFiles` und die Dateilistenprüfung
+   vergleichen gegen `ROOM_IMAGE_VARIANT_FILES`; ohne Migration gilt jedes
+   heutige Asset sofort als inkohärent und `createRoomImageAssetStore` wirft
+   schon beim Konstruieren. Der Lauf muss deshalb VOR dem Store passieren.
+
+   Er nimmt denselben Weg wie publish(): vollständiges Staging-Verzeichnis,
+   fsync, dann rename. Bricht er zwischen Abräumen und Umbenennen ab, liegt das
+   Staging noch vollständig da und der nächste Start schließt den Tausch ab —
+   ein abgebrochener Lauf hinterlässt keinen inkohärenten Katalog. Der Katalog
+   wird erst nach allen Dateitauschen geschrieben; ein Abbruch davor lässt den
+   nächsten Lauf einfach erneut ableiten. */
+export async function backfillRoomImagePhoneVariants({
+  catalogPath,
+  assetRoot = ROOM_IMAGE_ASSET_ROOT,
+  derive = deriveRoomImagePhoneVariants,
+  log = (message) => console.warn(message),
+} = {}) {
+  if (typeof catalogPath !== 'string' || !catalogPath || !existsSync(catalogPath)) {
+    return { status: 'skipped', migrated: [], failed: [] };
+  }
+  const setsRoot = join(canonicalRoomImageAssetPath(assetRoot), 'room-images');
+  if (!existsSync(setsRoot)) return { status: 'skipped', migrated: [], failed: [] };
+
+  let document;
+  try {
+    document = JSON.parse(readFileSync(catalogPath, 'utf8'));
+  } catch (error) {
+    log(`[hauser] Room-Image-Katalog für den Phone-Backfill nicht lesbar: ${error?.message ?? error}`);
+    return { status: 'unreadable', migrated: [], failed: [] };
+  }
+  if (!document || !Array.isArray(document.assets)) {
+    return { status: 'unreadable', migrated: [], failed: [] };
+  }
+
+  const migrated = [];
+  const failed = [];
+  let changed = false;
+
+  for (const entry of document.assets) {
+    if (!entry || entry.status !== 'active' || !ROOM_IMAGE_ASSET_ID_PATTERN.test(entry.assetId || '')) continue;
+    const directory = join(setsRoot, entry.assetId);
+    if (dirname(directory) !== setsRoot) continue;
+    const staging = join(setsRoot, `.phone-backfill-${entry.assetId}`);
+
+    // Wiederaufnahme eines abgebrochenen Tauschs.
+    if (existsSync(staging) && !existsSync(directory)) {
+      try {
+        renameSync(staging, directory);
+        flushDirectory(setsRoot);
+      } catch (error) {
+        failed.push(entry.assetId);
+        log(`[hauser] Phone-Backfill konnte ${entry.assetId} nicht wiederherstellen: ${error?.message ?? error}`);
+        continue;
+      }
+    }
+
+    const complete = ROOM_IMAGE_VARIANT_KEYS.every((key) => (
+      entry.files?.[key]?.sha256 && existsSync(join(directory, ROOM_IMAGE_VARIANT_FILES[key]))
+    ));
+    if (complete) continue;
+
+    try {
+      const finals = {};
+      for (const key of ROOM_IMAGE_FINAL_VARIANT_KEYS) {
+        finals[key] = readFileSync(join(directory, ROOM_IMAGE_FINAL_VARIANT_FILES[key]));
+      }
+      const phone = await derive(finals);
+      const bytesByKey = { ...finals, ...phone };
+
+      rmSync(staging, { recursive: true, force: true });
+      mkdirSync(staging, { mode: 0o700 });
+      const files = {};
+      for (const key of ROOM_IMAGE_VARIANT_KEYS) {
+        const bytes = Buffer.from(bytesByKey[key]);
+        const target = join(staging, ROOM_IMAGE_VARIANT_FILES[key]);
+        writeFileSync(target, bytes, { mode: 0o600, flush: true });
+        chmodSync(target, 0o600);
+        files[key] = {
+          sha256: createHash('sha256').update(bytes).digest('hex'),
+          byteLength: bytes.byteLength,
+        };
+      }
+      const manifest = Buffer.from(`${JSON.stringify({
+        version: ROOM_IMAGE_MANIFEST_VERSION, assetId: entry.assetId, files,
+      })}\n`);
+      writeFileSync(join(staging, 'manifest.json'), manifest, { mode: 0o600, flush: true });
+      chmodSync(join(staging, 'manifest.json'), 0o600);
+      flushDirectory(staging);
+
+      rmSync(directory, { recursive: true, force: true });
+      renameSync(staging, directory);
+      flushDirectory(setsRoot);
+
+      entry.files = files;
+      entry.variants = { ...ROOM_IMAGE_VARIANT_FILES };
+      entry.manifestSha256 = createHash('sha256').update(manifest).digest('hex');
+      migrated.push(entry.assetId);
+      changed = true;
+    } catch (error) {
+      failed.push(entry.assetId);
+      log(`[hauser] Phone-Backfill für ${entry.assetId} fehlgeschlagen: ${error?.message ?? error}`);
+      try { rmSync(staging, { recursive: true, force: true }); } catch { /* der naechste Start raeumt nach */ }
+    }
+  }
+
+  if (changed) {
+    const temporary = join(dirname(catalogPath), `.assets-${randomBytes(16).toString('hex')}.tmp`);
+    writeFileSync(temporary, `${JSON.stringify(document)}\n`, { mode: 0o600, flush: true });
+    chmodSync(temporary, 0o600);
+    renameSync(temporary, catalogPath);
+    flushDirectory(dirname(catalogPath));
+  }
+
+  return { status: failed.length ? 'partial' : 'ok', migrated, failed };
 }
 
 export function createRoomImageProviderBoundary() {
@@ -9443,7 +9576,7 @@ async function serveRoomImagePublish(req, res, identity, jobId, context) {
         if (started.type === 'expired') throw new RoomImageRequestError(410, 'ROOM_IMAGE_TEMP_EXPIRED', 'Der Finaljob ist abgelaufen.');
         if (started.type !== 'started') throw new RoomImageRequestError(409, 'JOB_NOT_PUBLISHABLE', 'Der Job ist nicht veröffentlichbar.');
         const record = started.record;
-        const variants = Object.fromEntries(['light', 'dark', 'darkOff'].map((key) => [key, context.jobStore.readTemp(record.temp.finals[key])]));
+        const variants = Object.fromEntries(ROOM_IMAGE_FINAL_VARIANT_KEYS.map((key) => [key, context.jobStore.readTemp(record.temp.finals[key])]));
         try {
           context.assertSetupRecoveryHealthy();
           await Promise.all(Object.entries(variants).map(([variant, bytes]) => context.previewValidator(bytes, 'heif', {
@@ -9456,11 +9589,24 @@ async function serveRoomImagePublish(req, res, identity, jobId, context) {
           context.jobStore.failPublish(jobId, 'PUBLISH_FAILED');
           throw new RoomImageRequestError(422, 'PUBLISH_FAILED', 'Der Finalsatz ist nicht vollständig AVIF-dekodierbar.');
         }
+        /* B-27 D2: Die Phone-Ableitungen entstehen aus genau diesen Final-AVIFs
+           und gehen in denselben atomaren Publish-Vorgang. Bewusst vor dem
+           Mutations-Lock: die Kodierung ist reine Rechenzeit auf bereits
+           feststehenden Bytes und muss die serialisierte Konfigurationsmutation
+           nicht blockieren. */
+        let publishVariants;
+        try {
+          publishVariants = { ...variants, ...await context.phoneDeriver(variants) };
+        } catch (error) {
+          context.assertSetupRecoveryHealthy();
+          context.jobStore.failPublish(jobId, 'PUBLISH_FAILED');
+          throw new RoomImageRequestError(422, 'PUBLISH_FAILED', 'Die Phone-Ableitungen konnten nicht erzeugt werden.');
+        }
         try {
           context.assertSetupRecoveryHealthy();
           const asset = await context.configMutations.run(() => {
             context.assertSetupRecoveryHealthy();
-            return context.assetStore.publish(record.reservedAssetId, record.request.focus, variants);
+            return context.assetStore.publish(record.reservedAssetId, record.request.focus, publishVariants);
           });
           context.publishStep('before_job_commit', { jobId, assetId: asset.assetId });
           context.assertSetupRecoveryHealthy();
@@ -9545,6 +9691,14 @@ async function serveManualRoomBackground(req, res, roomId, context) {
     }
     if (req.method === 'POST') variantBytes = await decodeManualRoomBackground(req);
 
+    /* B-27 D2: wie im Finaljob — ableiten, bevor der Mutations-Lock greift. */
+    const manualFinals = variantBytes
+      ? { light: variantBytes, dark: variantBytes, darkOff: variantBytes }
+      : null;
+    const manualVariants = manualFinals
+      ? { ...manualFinals, ...await context.phoneDeriver(manualFinals) }
+      : null;
+
     const result = await context.configMutations.run(() => {
       context.assertSetupRecoveryHealthy();
       const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
@@ -9554,12 +9708,10 @@ async function serveManualRoomBackground(req, res, roomId, context) {
 
       const previousAssetId = room.hero?.assetId ?? null;
       let createdAsset = null;
-      if (variantBytes) {
+      if (manualVariants) {
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
         const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
-        createdAsset = context.assetStore.publish(assetId, focus, {
-          light: variantBytes, dark: variantBytes, darkOff: variantBytes,
-        });
+        createdAsset = context.assetStore.publish(assetId, focus, manualVariants);
       }
       room.hero = createdAsset ? { assetId: createdAsset.assetId, focus: createdAsset.focus } : null;
 
@@ -9664,6 +9816,7 @@ function serveRoomImages(req, res, {
   jobStore,
   jobRunner,
   previewValidator,
+  phoneDeriver,
   testCapability,
   probeState,
   credentialStore,
@@ -9679,8 +9832,8 @@ function serveRoomImages(req, res, {
   const parsed = new URL(req.url || '/', 'http://hmi.local');
   const pathname = parsed.pathname;
   const context = {
-    assetStore, householdConfigPath, configMutations, jobStore, previewValidator, publishFlights, publishStep,
-    latchSetupRecoveryFailure, assertSetupRecoveryHealthy,
+    assetStore, householdConfigPath, configMutations, jobStore, previewValidator, phoneDeriver,
+    publishFlights, publishStep, latchSetupRecoveryFailure, assertSetupRecoveryHealthy,
   };
   if (pathname === '/api/room-images/access'
       || pathname === '/api/room-images/access/api-key'
@@ -10668,6 +10821,9 @@ export function createHmiServer(
     roomImageJobRunner = null,
     roomImageJobRunnerFactory = createRoomImageJobRunner,
     roomImagePreviewValidator = validateRoomImagePreviewBytes,
+    /* B-27 D2: Seam wie beim Preview-Validator — die Ableitung ist echte
+       Bildarbeit und in Fixtures ohne dekodierbares AVIF nicht ausfuehrbar. */
+    roomImagePhoneDeriver = deriveRoomImagePhoneVariants,
     roomImageAssetRoot = ROOM_IMAGE_ASSET_ROOT,
     roomImageAssetCatalogPath = undefined,
     roomImageAssetStore = null,
@@ -10924,6 +11080,7 @@ export function createHmiServer(
       jobStore: roomImageJobs,
       jobRunner: roomImageRunner,
       previewValidator: roomImagePreviewValidator,
+      phoneDeriver: roomImagePhoneDeriver,
       testCapability: roomImageTestCapability,
       probeState: roomImageProbeState,
       credentialStore: resolvedRoomImageCredentialStore,
@@ -11133,6 +11290,20 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       const issue = readiness.payload.issue;
       const issueText = issue ? ` ${issue.path}: ${issue.message}` : '';
       throw new Error(`[${readiness.payload.code}] ${readiness.payload.message}${issueText}`);
+    }
+    /* B-27 D3: vor dem Assetstore. Er verifiziert beim Konstruieren jedes
+       aktive Asset gegen ROOM_IMAGE_VARIANT_FILES und wuerfe ohne die
+       Migration sofort — der Dienst kaeme gar nicht hoch. */
+    if (setupRecoveryResult.ok && HOUSEHOLD_CONFIG_PATH) {
+      const result = await backfillRoomImagePhoneVariants({
+        catalogPath: join(dirname(HOUSEHOLD_CONFIG_PATH), 'room-images', 'assets.json'),
+      });
+      if (result.migrated.length > 0) {
+        console.log(`[hauser] Phone-Ableitungen ergaenzt fuer ${result.migrated.length} Raumbild-Asset(s).`);
+      }
+      if (result.failed.length > 0) {
+        console.warn(`[hauser] Phone-Backfill unvollstaendig: ${result.failed.join(', ')}`);
+      }
     }
     server = createHmiServer(undefined, {
       householdConfigMode,

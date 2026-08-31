@@ -44,6 +44,8 @@ RUN npm run build && \
       --ignoreConfig \
       src/lib/room-images/room-image-transform-policy-v1.ts \
       src/lib/room-images/room-image-prompt-policy-v1.ts \
+      src/lib/room-images/room-image-phone-variants.ts \
+      src/lib/room-images/room-image-phone-derivation-policy-v1.ts \
       --outDir /build/room-image-contract \
       --rootDir src/lib/room-images \
       --module nodenext \

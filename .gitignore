@@ -18,5 +18,8 @@ app/public/mdi-icons/
 # Paraglide: generated at build time (npm run paraglide:compile)
 app/src/paraglide/
 
+# Phone hero derivations: generated at build time (npm run hero:phone)
+app/public/hero/*-phone.avif
+
 # Automatic household migration rollback copies
 app/config/households/*.backup-v*-*

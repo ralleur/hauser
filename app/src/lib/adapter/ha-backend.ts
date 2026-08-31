@@ -37,6 +37,7 @@ import { calendarEventsMessage } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 import { reminderListMessage } from '../state/reminders.ts';
 import { sharedStorage } from '../state/shared-config.ts';
+import { markResumeStart } from '../state/startup-marks.svelte.ts';
 import { LAUNDRY_ENTITIES as CONFIGURED_LAUNDRY_ENTITIES } from '../config/household-runtime-data.ts';
 
 function markHaStartup(name: 'hmi:ha-connected' | 'hmi:fresh-data', label: string): void {
@@ -403,6 +404,7 @@ export class HaBackend implements Backend {
     this.#lifecycleInstalled = true;
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
+      markResumeStart(); // B-27 E1: hier beginnt das Warm-Resume-Fenster
       void this.#resume();
     });
     window.addEventListener('pagehide', () => this.#flushCache());

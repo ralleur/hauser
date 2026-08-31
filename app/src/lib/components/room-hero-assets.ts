@@ -1,5 +1,6 @@
 import type { SunValue } from '../adapter/types.ts';
 import type { RoomHeroConfig, RoomHeroFocus } from '../config/household-config.ts';
+import { roomImagePhoneVariantFile } from '../room-images/room-image-phone-variants.ts';
 
 export type HeroVariant = 'light' | 'dark' | 'dark-off';
 export type PhoneHeroVariant = Exclude<HeroVariant, 'dark-off'>;
@@ -79,9 +80,18 @@ export function normalizeHeroRoom(roomId: string | null | undefined): string {
   return roomId && HERO_ROOMS.has(roomId) ? roomId : 'all';
 }
 
-function projectAssetUrl(baseUrl: string, roomId: string, variant: HeroVariant): string {
+/* B-27 D6: Für Phone liefert der Resolver die Ableitung — dieselbe Geometrie
+   (106:75), nur rund ein Fünftel der Bytes. Die Kachel dekodiert damit keine
+   0,5–1,9-MB-Datei mehr, bevor sie ihren Hintergrund zeigt. */
+function projectAssetUrl(
+  baseUrl: string,
+  roomId: string,
+  variant: HeroVariant,
+  target: HeroTarget = 'panel',
+): string {
   const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${base}hero/${roomId}-${variant}.avif`;
+  const suffix = target === 'phone' && roomImagePhoneVariantFile(variant) ? '-phone' : '';
+  return `${base}hero/${roomId}-${variant}${suffix}.avif`;
 }
 
 export function heroAssetUrl({ baseUrl, roomId, sun, fallbackTheme, allAssignedLightsOff }: HeroAssetInput): string {
@@ -113,9 +123,16 @@ function userCandidate(
   if (!config || !ROOM_HERO_ASSET_ID.test(config.assetId)) return null;
   const focus = config.focus[target];
   if (!validFocus(focus)) return null;
+  /* Die Phone-Ableitung liegt seit B-27 D2 im selben atomaren Publish-Commit
+     wie die Vollfassung; sie kann also nicht fehlen, solange das Asset aktiv
+     ist. Für `dark-off` gibt es keine Phone-Ableitung, weil der Phone-Resolver
+     diese Variante nie anfragt — dann bleibt es bei der Vollfassung. */
+  const file = target === 'phone'
+    ? roomImagePhoneVariantFile(variant) ?? `${variant}.avif`
+    : `${variant}.avif`;
   return {
     source: 'user',
-    url: `/assets/room-images/${config.assetId}/${variant}.avif`,
+    url: `/assets/room-images/${config.assetId}/${file}`,
     position: focusPosition(focus),
   };
 }
@@ -134,7 +151,7 @@ export function resolveRoomHero(input: RoomHeroResolverInput): RoomHeroResolutio
     projectFallback: fallbackRoom
       ? {
           source: 'project',
-          url: projectAssetUrl(input.baseUrl, fallbackRoom, variant),
+          url: projectAssetUrl(input.baseUrl, fallbackRoom, variant, input.target),
           position: CENTER_POSITION,
         }
       : null,

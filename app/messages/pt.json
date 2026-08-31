@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Tamanho das superfícies de controlo",
   "layout_rooms_per_row": "Cômodos por linha",
   "home_control_surface": "Superfície de controlo {number}",
-  "climate_mode_label": "Modo"
+  "climate_mode_label": "Modo",
+  "pwa_update_ready": "Nova versão pronta",
+  "pwa_update_apply": "Recarregar"
 }

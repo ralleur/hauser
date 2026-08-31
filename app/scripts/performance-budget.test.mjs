@@ -16,15 +16,32 @@ const PRE_MOUNT_METADATA_PATH = 'hmi-performance-budget.json';
 const DEFAULT_PRE_MOUNT_SOURCE = 'src/default-pre-mount.ts';
 const DEFAULT_PRE_MOUNT_MARKER = `hmi-premount:required:${DEFAULT_PRE_MOUNT_SOURCE}`;
 
-test('declares both mandatory minimal-shell dynamic stages exactly once', () => {
+/* B-27 B2 (ADR-028): Der First Paint kommt aus dem validierten Active-Cache und
+   mountet direkt die produktive App. Gemessen wird deshalb genau diese Kette;
+   die Minimal-Shell ist Fehlerpfad und darf nicht mehr im Pre-Mount-Graphen
+   liegen. Frueher galt hier die umgekehrte Forderung. */
+test('measures the productive first-paint chain and excludes the minimal shell', () => {
   for (const suffix of [
-    '/src/lib/shells/minimal-shell-loader.ts',
-    '/src/lib/shells/MinimalAppShell.svelte',
+    '/src/App.svelte',
+    '/src/lib/config/household-config-runtime.ts',
+    '/src/lib/state/ui-mode.svelte.ts',
+    '/src/lib/state/nav.svelte.ts',
+    '/src/lib/state/app.svelte.ts',
   ]) {
     assert.equal(
       REQUIRED_PRE_MOUNT_MODULE_SUFFIXES.filter((candidate) => candidate === suffix).length,
       1,
       `${suffix} must be represented exactly once in build metadata`,
+    );
+  }
+  for (const suffix of [
+    '/src/lib/shells/minimal-shell-loader.ts',
+    '/src/lib/shells/MinimalAppShell.svelte',
+  ]) {
+    assert.equal(
+      REQUIRED_PRE_MOUNT_MODULE_SUFFIXES.includes(suffix),
+      false,
+      `${suffix} must stay out of the pre-mount graph after the cache-first mount`,
     );
   }
 });

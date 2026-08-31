@@ -59,17 +59,25 @@ const START_SCREEN_HERO_ROOMS = [
   'flur',
 ] as const;
 
-/* Beide normalen Varianten werden schon im Phone-Home für alle sechs Karten
-   angefordert. RoomHero kann außerdem jeden navigierbaren Raum bei Nacht mit
-   ausgeschalteten Lichtern zeigen; deshalb ist auch dark-off vollständig. */
+/* B-27 D5: Vorgehalten werden nur noch die Phone-Ableitungen — dieselben
+   Bilder in derselben Geometrie, aber rund ein Fünftel der Bytes. Das senkt den
+   Precache von 14,31 MB auf 708 KB und beschleunigt jede Service-Worker-
+   Installation spürbar; auf dem Telefon, dem Hauptclient, ist ein 14-MB-
+   Precache ohnehin nicht zu rechtfertigen.
+
+   Beide normalen Varianten werden im Phone-Home für alle sechs Karten
+   angefordert. `dark-off` und `all-*` fragt der Phone-Resolver nie an
+   (`PhoneHeroVariant`, `PHONE_HERO_ROOMS`), sie entstehen deshalb gar nicht
+   erst als Ableitung.
+
+   Die Vollbilder übernimmt der Runtime-Cache (`/hero/`-Muster, CacheFirst).
+   Der Preis trifft den Panel-Kiosk: nach einem Update lädt er die großen
+   Heroes einmalig bei erster Nutzung nach, danach liegen sie im Cache. */
 export const START_SCREEN_HERO_ASSETS = [
   ...START_SCREEN_HERO_ROOMS.flatMap((room) => [
-    `hero/${room}-dark.avif`,
-    `hero/${room}-dark-off.avif`,
-    `hero/${room}-light.avif`,
+    `hero/${room}-dark-phone.avif`,
+    `hero/${room}-light-phone.avif`,
   ]),
-  'hero/all-dark.avif',
-  'hero/all-light.avif',
 ].sort();
 
 /* Feste Masken der beiden Start-Shells. Geräte-spezifische Picker-Symbole und
@@ -108,10 +116,13 @@ export const START_SCREEN_PRECACHE_ASSETS = [
    Phone-Mount geladen. Das Plugin markiert jedes Modul eindeutig und schreibt
    zusätzlich die von Rollup erzeugte dynamische Facade sowie den tatsächlichen
    Marker-Chunk in deterministische Build-Metadaten. */
+/* B-27 B2 (ADR-028): Die Minimal-Shell steht hier nicht mehr. Sie ist seit dem
+   Cache-First-Mount reiner Fehlerpfad und wird erst bei fehlendem oder
+   unbrauchbarem Snapshot nachgeladen — sie gehört damit nicht mehr in den
+   Graphen, den das Gate vor dem ersten Paint misst. Das Limit selbst bleibt
+   unverändert (docs/03). */
 export const REQUIRED_PRE_MOUNT_MODULE_SUFFIXES = [
   '/src/lib/config/household-config-runtime.ts',
-  '/src/lib/shells/minimal-shell-loader.ts',
-  '/src/lib/shells/MinimalAppShell.svelte',
   '/src/lib/state/standalone.svelte.ts',
   '/src/App.svelte',
   '/src/lib/state/ui-mode.svelte.ts',
@@ -250,8 +261,13 @@ export default defineConfig({
         skipWaiting: false,
         // Sichtbare Raum-/Hero-Bilder und MDI-Piktogramme werden bei Nutzung
         // cache-first gehalten. API-/Live-Daten bleiben ausdrücklich außen vor.
+        //
+        // B-27 D5: `room-images` ist nicht `rooms` — die Nutzerbilder unter
+        // /assets/room-images/ fielen bisher durch das Muster und gingen bei
+        // jedem Kaltstart über Netz, obwohl `resolveRoomHero` genau sie
+        // bevorzugt.
         runtimeCaching: [{
-          urlPattern: /\/(?:hero|rooms|mdi-icons)\//,
+          urlPattern: /\/(?:hero|rooms|room-images|mdi-icons)\//,
           handler: 'CacheFirst',
           options: {
             cacheName: 'hmi-visual-assets-v1',

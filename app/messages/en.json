@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Control surface size",
   "layout_rooms_per_row": "Rooms per row",
   "home_control_surface": "Control surface {number}",
-  "climate_mode_label": "Mode"
+  "climate_mode_label": "Mode",
+  "pwa_update_ready": "New version ready",
+  "pwa_update_apply": "Reload"
 }

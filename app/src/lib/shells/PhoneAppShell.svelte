@@ -13,6 +13,7 @@
   import { appState } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomTemperature } from '../state/commands.ts';
   import { connection } from '../state/connection.svelte.ts';
+  import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
     projectPhoneRooms,
     reconcilePhoneRoomLayer,
@@ -506,6 +507,16 @@
   <div class="phone-navigation-frame">
     <PhoneBottomNav active={activeMain} {moreOpen} onselect={selectMain} bind:moreButton />
   </div>
+  <!-- B-27 C: Ein wartender Service Worker wird angeboten, nicht erzwungen.
+       Bewusst nicht modal und ohne Scrim: ohne Tap laeuft die alte Fassung
+       stoerungsfrei weiter. Auf dem Kiosk erscheint der Hinweis nicht — dort
+       aktiviert das Ambient-/Hidden-Gate unveraendert von selbst. -->
+  {#if pwaUpdatePrompt.pending}
+    <button class="phone-update-hint pressable" type="button" onclick={applyPwaUpdate}>
+      <span class="phone-update-hint-text">{m.pwa_update_ready()}</span>
+      <span class="phone-update-hint-action">{m.pwa_update_apply()}</span>
+    </button>
+  {/if}
   {#if moreOpen}
     {#if featureStylesReady && MoreSheetComponent}
       <MoreSheetComponent current={nav.screen} onclose={closeLayer} onselect={selectMore} onouteroutroend={handleOuterOutroEnd} />

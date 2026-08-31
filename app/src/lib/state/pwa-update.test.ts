@@ -4,14 +4,33 @@ import { readFileSync } from 'node:fs';
 import { createPwaUpdateCoordinator } from './pwa-update.ts';
 
 describe('PWA update activation', () => {
-  it('keeps a bounded cold-start window even if the first tap is immediate', () => {
+  /* B-27 C: Das frueher hier geforderte 15-s-Kaltstartfenster ist entfallen. Es
+     erlaubte genau den Reload waehrend der sichtbaren Nutzung, den der Hinweis
+     ersetzt. Uebrig bleibt das Ambient-/Hidden-Gate fuer den Kiosk. */
+  it('never activates a waiting worker while the app is visible', () => {
     const lifecycle = readFileSync(new URL('./pwa-lifecycle.ts', import.meta.url), 'utf8');
-    expect(lifecycle).toMatch(/let startupSafe = true/);
-    expect(lifecycle).toMatch(/startupSafe \|\| ambientActive \|\| document\.visibilityState === 'hidden'/);
-    expect(lifecycle).toMatch(/window\.setTimeout\(\(\) => \{/);
-    expect(lifecycle).toMatch(/startupSafe = false/);
-    expect(lifecycle).toMatch(/\}, 15_000\)/);
+    expect(lifecycle).toMatch(
+      /const safeToActivate = \(\) => ambientActive \|\| document\.visibilityState === 'hidden'/,
+    );
+    // Auf Code gepruefte Abwesenheit — der erklaerende Kommentar darf den
+    // Namen weiterhin nennen.
+    expect(lifecycle).not.toMatch(/let startupSafe/);
+    expect(lifecycle).not.toMatch(/startupSafe\s*=/);
+    expect(lifecycle).not.toMatch(/\}, 15_000\)/);
     expect(lifecycle).not.toMatch(/addEventListener\('pointerdown', markInteractive/);
+  });
+
+  it('offers the waiting worker to the user when it cannot activate on its own', () => {
+    const lifecycle = readFileSync(new URL('./pwa-lifecycle.ts', import.meta.url), 'utf8');
+    expect(lifecycle).toMatch(/if \(coordinator\.pending\) offerPwaUpdate\(/);
+    const shell = readFileSync(
+      new URL('../shells/PhoneAppShell.svelte', import.meta.url),
+      'utf8',
+    );
+    expect(shell).toMatch(/\{#if pwaUpdatePrompt\.pending\}/);
+    expect(shell).toMatch(/onclick=\{applyPwaUpdate\}/);
+    // Nicht modal: kein Scrim, keine Fokusfalle, kein dialog-Element.
+    expect(shell).not.toMatch(/phone-update-hint-scrim/);
   });
   it('keeps an update waiting while the app is being used', async () => {
     const activate = vi.fn(async () => undefined);

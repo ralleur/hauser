@@ -20,6 +20,11 @@ import {
 
 const APPEARANCE_KEY = 'hmi:appearance-mode';
 const LEGACY_OVERRIDE_KEY = 'hmi:theme-override';
+/* B-27 D7: Bis die HA-Daten eintreffen, ist `heroSun` undefiniert und die
+   Kacheln raten die Variante aus dem UI-Theme. Trifft der Sonnenstand dann
+   anders ein, kippt der Effect-Key und ALLE Kacheln dekodieren einen zweiten
+   Bildersatz. Der zuletzt beobachtete Stand ist der weitaus bessere Startwert. */
+const HERO_VARIANT_KEY = 'hmi:hero-variant';
 
 const appearance = $state<{ mode: AppearanceMode }>({ mode: loadAppearanceMode() });
 
@@ -42,6 +47,22 @@ function saveAppearanceMode(): void {
   } catch { /* best-effort */ }
 }
 
+function loadHeroSun(): SunValue | undefined {
+  if (typeof localStorage === 'undefined') return undefined;
+  try {
+    const stored = localStorage.getItem(HERO_VARIANT_KEY);
+    if (stored === 'day') return { day: true };
+    if (stored === 'night') return { day: false };
+    return undefined;
+  } catch { return undefined; }
+}
+
+function saveHeroSun(sun: SunValue): void {
+  if (typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(HERO_VARIANT_KEY, sun.day ? 'day' : 'night'); }
+  catch { /* best-effort */ }
+}
+
 /* DOM-Seiteneffekte (identisch zu Phase 2): data-theme, Crossfade, Meta-Farbe. */
 function applyThemeDom(theme: Theme, animate: boolean): void {
   if (typeof document === 'undefined') return;
@@ -62,7 +83,16 @@ function setTheme(theme: Theme, animate: boolean): void {
 function syncInterfaceTheme(animate: boolean): void {
   const sun = SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined;
   const heroPolicy = appearanceHeroPolicy(appearance.mode);
-  appState.heroSun = heroPolicy === 'auto' ? sun : { day: heroPolicy === 'day' };
+  if (heroPolicy === 'auto') {
+    /* Nur der real beobachtete Sonnenstand wird gemerkt; solange er fehlt,
+       traegt der letzte bekannte Stand den ersten Paint. Ein manuell gesetzter
+       Modus (heroPolicy !== 'auto') gewinnt weiterhin und wird nicht
+       persistiert — sonst ueberstimmte er spaeter das Auto-Verhalten. */
+    if (sun) saveHeroSun(sun);
+    appState.heroSun = sun ?? loadHeroSun();
+  } else {
+    appState.heroSun = { day: heroPolicy === 'day' };
+  }
   setTheme(appearanceTheme(appearance.mode, sun?.day, appState.theme), animate);
 }
 

@@ -6,7 +6,18 @@ import viteConfigSource from '../../../vite.config.ts?raw';
 const appCss = readFileSync(new URL('../../styles/app.css', import.meta.url), 'utf8');
 
 const visibleHeroRooms = ['wohnzimmer', 'kinderzimmer', 'schlafzimmer', 'bad', 'kueche', 'flur'];
+/* B-27 D5: Vorgehalten werden nur noch die Phone-Ableitungen. `dark-off` und
+   `all-*` fragt der Phone-Resolver nie an (PhoneHeroVariant, PHONE_HERO_ROOMS);
+   die Vollbilder uebernimmt der Runtime-Cache. */
 const expectedHeroAssets = [
+  ...visibleHeroRooms.flatMap((room) => [
+    `hero/${room}-dark-phone.avif`,
+    `hero/${room}-light-phone.avif`,
+  ]),
+].sort();
+/* Die Vollfassungen duerfen NICHT mehr im Precache liegen — sonst waere der
+   Gewinn von 14,31 MB auf 674 KB wieder weg. */
+const fullSizeHeroAssets = [
   ...visibleHeroRooms.flatMap((room) => [
     `hero/${room}-dark.avif`,
     `hero/${room}-dark-off.avif`,
@@ -47,7 +58,7 @@ describe('offline start shell assets', () => {
     expect(appCss).not.toContain('font-display: block;');
   });
 
-  it('precaches every reachable room hero variant and both all-room fallbacks', async () => {
+  it('precaches only the phone hero derivations and leaves the full images to the runtime cache', async () => {
     const config = await import('../../../vite.config.ts') as typeof import('../../../vite.config.ts') & {
       START_SCREEN_HERO_ASSETS?: readonly string[];
       START_SCREEN_PRECACHE_ASSETS?: readonly string[];
@@ -56,11 +67,21 @@ describe('offline start shell assets', () => {
     expect(config.START_SCREEN_HERO_ASSETS).toEqual(expectedHeroAssets);
     expect(config.START_SCREEN_PRECACHE_ASSETS?.filter((asset) => asset.startsWith('hero/')))
       .toEqual(expectedHeroAssets);
-    expect(expectedHeroAssets.every((asset) => existsSync(new URL(`../../../public/${asset}`, import.meta.url))))
+    /* Die Ableitungen entstehen deterministisch im prebuild und sind bewusst
+       nicht eingecheckt (siehe .gitignore) — in einem frischen Checkout gibt es
+       sie noch nicht. Geprueft wird deshalb ihre Quelle: fehlt eine der
+       eingecheckten Vollfassungen, erzeugt der prebuild die Ableitung still
+       nicht und der Precache liefe ins Leere. */
+    expect(fullSizeHeroAssets.every((asset) => existsSync(new URL(`../../../public/${asset}`, import.meta.url))))
       .toBe(true);
+    expect(viteConfigSource).toContain('-phone.avif');
     expect(config.START_SCREEN_PRECACHE_ASSETS?.some((asset) => asset.startsWith('rooms/'))).toBe(false);
     expect(config.START_SCREEN_PRECACHE_ASSETS?.some((asset) => asset.startsWith('api/'))).toBe(false);
-    expect(expectedHeroAssets).toHaveLength(20);
+    expect(expectedHeroAssets).toHaveLength(12);
+    for (const asset of fullSizeHeroAssets) {
+      expect(config.START_SCREEN_PRECACHE_ASSETS).not.toContain(asset);
+    }
+    expect(viteConfigSource).toMatch(/urlPattern: \/\\\/\(\?:hero\|rooms\|room-images\|mdi-icons\)\\\/\//);
     expect(viteConfigSource).toMatch(/clientsClaim:\s*false/);
     expect(viteConfigSource).toMatch(/skipWaiting:\s*false/);
   });

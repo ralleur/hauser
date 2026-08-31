@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Rozmiar paneli sterowania",
   "layout_rooms_per_row": "Pokoje w wierszu",
   "home_control_surface": "Panel sterowania {number}",
-  "climate_mode_label": "Tryb"
+  "climate_mode_label": "Tryb",
+  "pwa_update_ready": "Nowa wersja gotowa",
+  "pwa_update_apply": "Odśwież"
 }

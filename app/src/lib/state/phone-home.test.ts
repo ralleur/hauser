@@ -39,8 +39,9 @@ function readers(overrides: Partial<PhoneHomeReaders> = {}): PhoneHomeReaders {
 
 describe('phone home room projection', () => {
   it('builds the visible day/night card asset and preserves the unknown-room fallback', async () => {
-    await expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).resolves.toBe('/hero/wohnzimmer-light.avif');
-    await expect(phoneHeroUrl('/app', 'bad', 'dark')).resolves.toBe('/app/hero/bad-dark.avif');
+    // B-27 D6: Phone laedt die Ableitung, nicht die Vollfassung.
+    await expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).resolves.toBe('/hero/wohnzimmer-light-phone.avif');
+    await expect(phoneHeroUrl('/app', 'bad', 'dark')).resolves.toBe('/app/hero/bad-dark-phone.avif');
     await expect(phoneHeroUrl('/', 'garage', 'light')).resolves.toBeNull();
   });
 

@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Taille des zones de contrôle",
   "layout_rooms_per_row": "Pièces par ligne",
   "home_control_surface": "Zone de contrôle {number}",
-  "climate_mode_label": "Mode"
+  "climate_mode_label": "Mode",
+  "pwa_update_ready": "Nouvelle version prête",
+  "pwa_update_apply": "Recharger"
 }

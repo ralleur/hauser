@@ -1542,3 +1542,36 @@
     animation-name: phone-scrim-enter;
   }
 }
+
+/* B-27 C: Update-Hinweis — nicht modal, ohne Scrim, ueber der Bottom-Nav.
+   Er verdeckt keinen Inhalt dauerhaft und blockiert keine Bedienung: ohne Tap
+   laeuft die alte Fassung weiter. */
+.phone-update-hint {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: calc(var(--touch-min) + env(safe-area-inset-bottom, 0px) + var(--space-3));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100% - var(--space-8));
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full, 999px);
+  color: var(--color-text-primary);
+  background: var(--color-surface-3);
+  box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 25%));
+  transform: translateX(-50%);
+}
+
+.phone-update-hint-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-update-hint-action {
+  flex: none;
+  color: var(--color-accent-warm);
+  font-weight: var(--font-weight-semibold);
+}

@@ -81,20 +81,35 @@ describe('shared panel and phone hero resolver', () => {
     });
   });
 
+  /* B-27 D6: Phone bekommt die Ableitung — gleiche Geometrie (106:75), rund
+     ein Fuenftel der Bytes. Panel bleibt bei der Vollfassung. */
   it('keeps phone light/dark semantics, device focus and neutral unknown static rooms', () => {
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/app', roomId: 'bad', config, variant: 'dark',
     })).toMatchObject({
       variant: 'dark',
-      userCandidate: { url: '/assets/room-images/family-room_42/dark.avif', position: '60% 40%' },
-      projectFallback: { url: '/app/hero/bad-dark.avif', position: '50% 50%' },
+      userCandidate: { url: '/assets/room-images/family-room_42/phone-dark.avif', position: '60% 40%' },
+      projectFallback: { url: '/app/hero/bad-dark-phone.avif', position: '50% 50%' },
     });
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/', roomId: 'garage', config: null, variant: 'light',
     })).toEqual({ variant: 'light', userCandidate: null, projectFallback: null });
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/', roomId: 'garage', config, variant: 'light',
-    })).toMatchObject({ userCandidate: { url: '/assets/room-images/family-room_42/light.avif' }, projectFallback: null });
+    })).toMatchObject({
+      userCandidate: { url: '/assets/room-images/family-room_42/phone-light.avif' },
+      projectFallback: null,
+    });
+  });
+
+  it('leaves the panel target on the full-size variants', () => {
+    expect(resolveRoomHero({
+      target: 'panel', baseUrl: '/app', roomId: 'bad', config,
+      sun: { day: false }, fallbackTheme: 'dark',
+    })).toMatchObject({
+      userCandidate: { url: '/assets/room-images/family-room_42/dark.avif' },
+      projectFallback: { url: '/app/hero/bad-dark.avif' },
+    });
   });
 
   it.each([

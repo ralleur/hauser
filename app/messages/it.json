@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Dimensione delle superfici di controllo",
   "layout_rooms_per_row": "Stanze per riga",
   "home_control_surface": "Superficie di controllo {number}",
-  "climate_mode_label": "Modalità"
+  "climate_mode_label": "Modalità",
+  "pwa_update_ready": "Nuova versione pronta",
+  "pwa_update_apply": "Ricarica"
 }

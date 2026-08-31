@@ -1,5 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
 import { createPwaUpdateCoordinator } from './pwa-update.ts';
+import { offerPwaUpdate } from './pwa-update-prompt.svelte.ts';
 
 let started = false;
 
@@ -8,8 +9,12 @@ export function startPwaLifecycle(): void {
   started = true;
 
   let ambientActive = false;
-  let startupSafe = true;
-  const safeToActivate = () => startupSafe || ambientActive || document.visibilityState === 'hidden';
+  /* B-27 C: Das frühere `startupSafe`-Fenster hielt 15 s nach dem Start jede
+     Aktivierung für unbedenklich und lud die Seite deshalb mitten in der
+     sichtbaren Nutzung neu — genau der Reload, den der Plan beseitigt. Es
+     bleibt allein das Ambient-/Hidden-Gate: der Kiosk aktualisiert unverändert
+     von selbst, die sichtbare App fragt. */
+  const safeToActivate = () => ambientActive || document.visibilityState === 'hidden';
   let updateServiceWorker: (reloadPage?: boolean) => Promise<void> = async () => undefined;
   const coordinator = createPwaUpdateCoordinator(
     () => updateServiceWorker(true),
@@ -18,7 +23,12 @@ export function startPwaLifecycle(): void {
 
   updateServiceWorker = registerSW({
     immediate: true,
-    onNeedRefresh: () => coordinator.requestActivation(),
+    onNeedRefresh: () => {
+      coordinator.requestActivation();
+      /* Konnte der Coordinator sofort aktivieren, ist hier nichts mehr offen.
+         Bleibt das Update wartend, entscheidet der Benutzer per Tap. */
+      if (coordinator.pending) offerPwaUpdate(() => { void updateServiceWorker(true); });
+    },
     onOfflineReady: () => {
       document.documentElement.dataset.offlineReady = 'true';
     },
@@ -26,16 +36,6 @@ export function startPwaLifecycle(): void {
       document.documentElement.dataset.offlineReady = 'false';
     },
   });
-
-  // Eine installierte iOS-PWA startet zunächst aus dem alten Precache. Während
-  // eines kurzen, begrenzten Kaltstartfensters darf ein bereits wartendes Update
-  // übernehmen, auch wenn der erste Tap vor Safaris Updateprüfung erfolgt.
-  // Danach gilt wieder das Ambient-/Hidden-Gate gegen Reloads während der Nutzung.
-  const startupSafetyTimer = window.setTimeout(() => {
-    startupSafe = false;
-    coordinator.setSafeToActivate(safeToActivate());
-  }, 15_000);
-  window.addEventListener('pagehide', () => window.clearTimeout(startupSafetyTimer), { once: true });
 
   document.addEventListener('hmi:ambient-change', (event) => {
     ambientActive = (event as CustomEvent<{ active?: boolean }>).detail?.active === true;

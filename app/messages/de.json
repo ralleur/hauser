@@ -1230,5 +1230,7 @@
   "layout_size_aria": "Größe der Kontrollflächen",
   "layout_rooms_per_row": "Räume pro Zeile",
   "home_control_surface": "Kontrollfläche {number}",
-  "climate_mode_label": "Modus"
+  "climate_mode_label": "Modus",
+  "pwa_update_ready": "Neue Fassung bereit",
+  "pwa_update_apply": "Neu laden"
 }

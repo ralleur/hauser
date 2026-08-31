@@ -13,6 +13,7 @@ import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
 import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate } from './types.ts';
+import { markOperable, markResumeOperable } from '../state/startup-marks.svelte.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
@@ -58,7 +59,14 @@ export class AdapterRuntime {
     // Verbindungszustand aus dem Seam (ADR-017 Addendum): reaktiv für Banner,
     // Status-Dot und Command-Sperre.
     backend.onConnectionChange((status) => {
-      if (backend === this.#backend) this.#connection = status;
+      if (backend !== this.#backend) return;
+      this.#connection = status;
+      /* B-27 E1: Ab hier verwirft dispatch() keinen Command mehr — das ist der
+         Moment, den docs/03 als „reagierend" begrenzt. */
+      if (status === 'connected') {
+        markOperable();
+        markResumeOperable();
+      }
     });
     // Service-Error (docs/02, Funktionsumfang 6): der Command wurde abgelehnt —
     // Intent sofort verwerfen statt 5 s aufs Timeout zu warten.

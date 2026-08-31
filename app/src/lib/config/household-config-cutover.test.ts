@@ -305,7 +305,11 @@ describe('productive household bootstrap cutover', () => {
     expect(startAuthorizedApp).toHaveBeenCalledOnce();
   });
 
-  it('authorizes confirmed shadow as legacy when active-cache deletion throws', async () => {
+  /* B-27 B3: Der Rollback auf Shadow laesst sich hier nicht persistieren — der
+     Active-Snapshot ueberlebt. Ein Reload liefe deshalb in exakt dieselbe Lage
+     und damit in eine Schleife; die App bleibt auf dem zuvor validierten Modell
+     stehen und meldet den Zustand nur. */
+  it('does not reload into a loop when the shadow rollback cannot be persisted', async () => {
     const values = new MemoryStorage();
     values.cache('active', syntheticActiveConfig());
     const storage = {
@@ -314,12 +318,9 @@ describe('productive household bootstrap cutover', () => {
       removeItem: () => { throw new Error('storage is read-only'); },
     };
     const startAuthorizedApp = vi.fn(async () => {
-      expect(HOUSEHOLD_RUNTIME_MODEL).toBe(legacyHouseholdRuntimeModel);
-      expect(ROOM_SEED.map(({ id }) => id)).toEqual(
-        legacyHouseholdRuntimeModel.rooms.map(({ id }) => id),
-      );
-      expect(HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds).not.toContain('light.studio_ceiling');
-      return 'legacy-app';
+      // B-27 B2: Der First Paint kommt aus dem Active-Cache, nicht aus Legacy.
+      expect(HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds).toContain('light.studio_ceiling');
+      return 'cache-first-app';
     });
     const fetcher = vi.fn()
       .mockResolvedValueOnce(response({ mode: 'shadow' }, 'shadow'))
@@ -334,19 +335,24 @@ describe('productive household bootstrap cutover', () => {
       startAuthorizedApp,
       scheduleValidation: (task) => { validate = task; },
     });
+    expect(bootstrap).toMatchObject({ app: 'cache-first-app', source: 'active-cache' });
     validate?.();
 
     await expect(bootstrap.validation).resolves.toMatchObject({
-      status: 'authorized',
+      status: 'blocked',
       mode: 'shadow',
-      app: 'legacy-app',
+      code: 'HOUSEHOLD_CONFIG_MODE_CHANGED',
     });
     expect(startAuthorizedApp).toHaveBeenCalledOnce();
-    expect(HOUSEHOLD_RUNTIME_MODEL).toBe(legacyHouseholdRuntimeModel);
     expect(storage.getItem(HOUSEHOLD_CONFIG_CACHE_KEY)).not.toBeNull();
   });
 
-  it('reloads a successfully persisted active cutover at most once', async () => {
+  /* B-27 B3: Frueher lud der erste erfolgreiche Fetch die Seite neu, weil die
+     Bedingung an `!initialActiveModel` hing. Ohne produktiven Mount gibt es
+     jedoch keine Singletons gegen das alte Modell — es wird still installiert
+     und gemountet. Der zweite Start kommt cache-first und mountet ebenfalls nur
+     einmal: kein Mount-Teardown-Mount-Zyklus, kein Reload. */
+  it('cuts over an active config and remounts cache-first without any reload', async () => {
     const storage = new MemoryStorage();
     const validateRun = async (startAuthorizedApp: () => Promise<string>) => {
       let validate: (() => void) | undefined;
@@ -362,23 +368,29 @@ describe('productive household bootstrap cutover', () => {
         scheduleValidation: (task) => { validate = task; },
       });
       validate?.();
-      return bootstrap.validation;
+      return bootstrap;
     };
 
-    const firstStart = vi.fn(async () => 'must-not-start');
-    await expect(validateRun(firstStart)).resolves.toMatchObject({
-      status: 'reload_required',
-      mode: 'active',
-      code: 'HOUSEHOLD_CONFIG_CACHE_REFRESHED',
-    });
-    expect(firstStart).not.toHaveBeenCalled();
-
-    resetHouseholdDataToLegacy();
-    const secondStart = vi.fn(async () => 'authorized-app');
-    await expect(validateRun(secondStart)).resolves.toMatchObject({
+    const firstStart = vi.fn(async () => 'authorized-app');
+    const first = await validateRun(firstStart);
+    expect(first.source).toBe('legacy');
+    expect(first.app).toBe('local-shell');
+    await expect(first.validation).resolves.toMatchObject({
       status: 'authorized',
       mode: 'active',
       app: 'authorized-app',
+    });
+    expect(firstStart).toHaveBeenCalledOnce();
+
+    resetHouseholdDataToLegacy();
+    const secondStart = vi.fn(async () => 'cache-first-app');
+    const second = await validateRun(secondStart);
+    expect(second.source).toBe('active-cache');
+    expect(second.app).toBe('cache-first-app');
+    await expect(second.validation).resolves.toMatchObject({
+      status: 'authorized',
+      mode: 'active',
+      app: 'cache-first-app',
     });
     expect(secondStart).toHaveBeenCalledOnce();
   });
@@ -387,10 +399,7 @@ describe('productive household bootstrap cutover', () => {
     const storage = new MemoryStorage();
     storage.cache('active', syntheticActiveConfig());
     const startLocalShell = vi.fn(async () => 'cached-shell');
-    const startAuthorizedApp = vi.fn(async () => {
-      expect(HOUSEHOLD_RUNTIME_MODEL).toBe(legacyHouseholdRuntimeModel);
-      return 'legacy-app';
-    });
+    const startAuthorizedApp = vi.fn(async () => 'cache-first-app');
     const fetcher = vi.fn()
       .mockResolvedValueOnce(response({ mode: 'shadow' }, 'shadow'))
       .mockResolvedValueOnce(response({ code: 'HOUSEHOLD_CONFIG_NOT_FOUND' }, 'shadow', 404));
@@ -408,13 +417,17 @@ describe('productive household bootstrap cutover', () => {
     expect(HOUSEHOLD_RUNTIME_MODEL.subscriptionEntityIds).toContain('light.studio_ceiling');
 
     validate?.();
+    /* B-27 B2/B3: Der Baum steht bereits gegen das Active-Modell. Der geraeumte
+       Cache macht den Reload zum kleinsten sicheren Cutover auf Legacy — und er
+       startet nicht erneut cache-first, weil der Snapshot weg ist. */
     await expect(bootstrap.validation).resolves.toMatchObject({
-      status: 'authorized',
+      status: 'reload_required',
       mode: 'shadow',
-      app: 'legacy-app',
+      code: 'HOUSEHOLD_CONFIG_MODE_CHANGED',
     });
     expect(storage.getItem(HOUSEHOLD_CONFIG_CACHE_KEY)).toBeNull();
     expect(startAuthorizedApp).toHaveBeenCalledOnce();
+    expect(startLocalShell).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -439,14 +452,15 @@ describe('productive household bootstrap cutover', () => {
       ],
       expectedStatus: 'reload_required',
     },
-  ])('clears an active cache and authorizes no backend for $name', async ({
+  ])('clears an active cache and stops the cache-first mount for $name', async ({
     healthStatus,
     responses,
     expectedStatus,
   }) => {
     const storage = new MemoryStorage();
     storage.cache('active', syntheticActiveConfig());
-    const startAuthorizedApp = vi.fn(async () => 'must-not-start');
+    const startAuthorizedApp = vi.fn(async () => 'cache-first-app');
+    const startLocalShell = vi.fn(async () => 'cached-shell');
     const fetcher = vi.fn();
     for (const candidate of responses) fetcher.mockResolvedValueOnce(candidate);
     let validate: (() => void) | undefined;
@@ -455,7 +469,7 @@ describe('productive household bootstrap cutover', () => {
       storage,
       fetcher,
       healthStatus,
-      startLocalShell: async () => 'cached-shell',
+      startLocalShell,
       startAuthorizedApp,
       scheduleValidation: (task) => { validate = task; },
     });
@@ -463,7 +477,11 @@ describe('productive household bootstrap cutover', () => {
 
     await expect(bootstrap.validation).resolves.toMatchObject({ status: expectedStatus });
     expect(storage.getItem(HOUSEHOLD_CONFIG_CACHE_KEY)).toBeNull();
-    expect(startAuthorizedApp).not.toHaveBeenCalled();
+    /* B-27 B2: Der gueltige Snapshot traegt den First Paint; erst die
+       Validierung stellt fest, dass er nicht mehr gilt, und raeumt ihn. Die
+       Minimal-Shell bleibt dabei ungenutzt — sie ist reiner Fehlerpfad. */
+    expect(startAuthorizedApp).toHaveBeenCalledOnce();
+    expect(startLocalShell).not.toHaveBeenCalled();
   });
 
   it('installs a validated active snapshot before mounting without any network dependency', async () => {

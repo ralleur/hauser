@@ -139,6 +139,14 @@ async function startB4(options: Record<string, any> = {}) {
     roomImageAssetRoot: join(sandbox, 'assets'),
     roomImageAssetCatalogPath: join(sandbox, 'config', 'room-images', 'assets.json'),
     roomImagePreviewValidator: async () => undefined,
+    /* B-27 D2: Die Fixture arbeitet mit Platzhalterbytes statt dekodierbarem
+       AVIF. Die Ableitung wird deshalb wie der Preview-Validator gestellt —
+       geprueft wird hier, DASS die Phone-Varianten im selben atomaren Commit
+       landen, nicht wie sie kodiert sind. */
+    roomImagePhoneDeriver: async (finals: Record<string, Uint8Array>) => ({
+      phoneLight: new TextEncoder().encode(`phone:${new TextDecoder().decode(finals.light)}`),
+      phoneDark: new TextEncoder().encode(`phone:${new TextDecoder().decode(finals.dark)}`),
+    }),
     configMutationCoordinator: options.coordinator ?? createConfigMutationCoordinator(),
     ...(options.serverOptions ?? {}),
   });
@@ -186,6 +194,19 @@ function assignmentRequest(
     headers: privateHeaders({ 'content-type': 'application/json', 'if-match': etag }),
     body: body ?? JSON.stringify({ asset }),
   });
+}
+
+/* B-27 D2: publish() nimmt seit der Phone-Ableitung den vollstaendigen
+   Variantensatz entgegen — die Ableitungen gehoeren in denselben atomaren
+   Commit, nicht in einen Nebenpfad. */
+function variantSet(prefix: string) {
+  return {
+    light: bytes(`${prefix}light`),
+    dark: bytes(`${prefix}dark`),
+    darkOff: bytes(`${prefix}dark-off`),
+    phoneLight: bytes(`${prefix}phone-light`),
+    phoneDark: bytes(`${prefix}phone-dark`),
+  };
 }
 
 async function publishAsset(app: { base: string; finalJobId: string }) {
@@ -498,7 +519,10 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect(replay.status).toBe(200);
     await expect(replay.json()).resolves.toEqual(first);
     expect(readdirSync(join(app.sandbox, 'assets', 'room-images', first.assetId)).sort())
-      .toEqual(['dark-off.avif', 'dark.avif', 'light.avif', 'manifest.json']);
+      .toEqual([
+        'dark-off.avif', 'dark.avif', 'light.avif', 'manifest.json',
+        'phone-dark.avif', 'phone-light.avif',
+      ]);
     expect(readdirSync(join(app.sandbox, 'config', 'room-images')).sort()).toEqual(['assets.json']);
     expect(app.jobStore.publicJob(app.jobStore.get(app.finalJobId))).toMatchObject({
       status: 'succeeded', phase: 'complete', asset: first,
@@ -571,7 +595,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const asset = seed.publish(
       'public_asset',
       { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } },
-      { light: bytes('public-light'), dark: bytes('public-dark'), darkOff: bytes('public-dark-off') },
+      variantSet('public-'),
     );
     const server = createHmiServer('', {
       staticRoot,
@@ -860,7 +884,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const asset = store.publish(
       'commit_aware_asset',
       { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } },
-      { light: bytes('light'), dark: bytes('dark'), darkOff: bytes('dark-off') },
+      variantSet(''),
     );
     expect(injected).toBe(true);
     expect(asset.assetId).toBe('commit_aware_asset');
@@ -1773,7 +1797,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const publicAsset = assetStore.publish(
       'executable_public_asset',
       { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } },
-      { light: bytes('executable-light'), dark: bytes('executable-dark'), darkOff: bytes('executable-dark-off') },
+      variantSet('executable-'),
     );
     const prepared = awaitingFinalJob(join(configDirectory, 'room-images'));
     expect(prepared.jobStore.beginPublish('fixture-user', prepared.finalJobId).type).toBe('started');
@@ -1853,7 +1877,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const publicAsset = seed.publish(
       'startup_public_asset',
       { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } },
-      { light: bytes('startup-light'), dark: bytes('startup-dark'), darkOff: bytes('startup-dark-off') },
+      variantSet('startup-'),
     );
     const prepared = awaitingFinalJob(sandbox);
     expect(prepared.jobStore.beginPublish('fixture-user', prepared.finalJobId).type).toBe('started');
@@ -2220,7 +2244,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const asset = store.publish(
       'manifest_asset',
       { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } },
-      { light: bytes('light'), dark: bytes('dark'), darkOff: bytes('dark-off') },
+      variantSet(''),
     );
     const manifestPath = join(assetRoot, 'room-images', asset.assetId, 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

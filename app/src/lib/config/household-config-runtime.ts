@@ -99,8 +99,27 @@ function blockedRuntimeResult(
   return result;
 }
 
+/**
+ * B-27 B3: Ein Reload lohnt nur, wenn der persistierte Snapshot sich geändert
+ * hat — ersetzt oder geräumt. Überlebt der alte Snapshot (`retain`, etwa weil
+ * der Speicher schreibgeschützt ist), führte der Neustart in exakt dieselbe
+ * Lage und damit in eine Reload-Schleife. Dann bleibt die App auf dem zuvor
+ * validierten Modell stehen und meldet den Zustand nur.
+ */
+function reloadUnlessCacheUnchanged<T>(
+  candidate: HouseholdConfigCandidate,
+  mode: HouseholdConfigMode | 'unknown',
+  code: string,
+): HouseholdConfigFirstPaintValidation<T> {
+  return candidate.cacheDisposition === 'retain'
+    ? { status: 'blocked', mode, code }
+    : { status: 'reload_required', mode, code };
+}
+
 async function validateHouseholdConfigAfterFirstPaint<T>(
   initialActiveModel: HouseholdRuntimeModel | null,
+  /** Bereits gemountete produktive App (B-27 B2) oder `null` bei Minimal-Shell. */
+  mountedApp: T | null,
   {
     startAuthorizedApp,
     healthStatus,
@@ -108,9 +127,16 @@ async function validateHouseholdConfigAfterFirstPaint<T>(
     ...candidateDependencies
   }: HouseholdConfigFirstPaintDependencies<T>,
 ): Promise<HouseholdConfigFirstPaintValidation<T>> {
-  let health: HouseholdConfigHealthStatus = null;
-  try { health = await healthStatus(); } catch { /* config route still decides */ }
+  /* B-27 B1: Health und Config-Kandidat hängen nicht voneinander ab. Seriell
+     kostete der schlechteste Fall zwei volle Timeouts nacheinander. */
+  const [health, candidate] = await Promise.all([
+    healthStatus().catch((): HouseholdConfigHealthStatus => null),
+    loadHouseholdConfigCandidate({ ...candidateDependencies, storage }),
+  ]);
+
   if (health === 'setup_required') {
+    /* Nach dem Kandidatenlauf geräumt, damit ein paralleler Cache-Schreibvorgang
+       den Setup-Zustand nicht überlebt. */
     clearHouseholdConfigCache(storage);
     resetHouseholdDataToLegacy();
     blockedRuntimeResult('unknown', {
@@ -125,24 +151,33 @@ async function validateHouseholdConfigAfterFirstPaint<T>(
     };
   }
 
-  const candidate = await loadHouseholdConfigCandidate({
-    ...candidateDependencies,
-    storage,
-  });
   publishHouseholdConfigShadowResult(candidate.shadow);
 
+  /* B-27 B3: Ein Reload ist genau dann nötig, wenn bereits produktive
+     Singletons gegen das alte Modell gebaut wurden — nach B2 ist das der
+     Cache-First-Mount. Die frühere Bedingung hing an `!initialActiveModel` und
+     lud deshalb jeden ersten erfolgreichen Fetch neu, obwohl sich nichts
+     geändert hatte. Ohne produktiven Mount korrigiert die Validierung still. */
+  const productiveMounted = mountedApp !== null;
+
   if (candidate.mode === 'unknown') {
-    resetHouseholdDataToLegacy();
     const code = candidate.shadow.status === 'unavailable'
       ? candidate.shadow.code ?? 'HOUSEHOLD_CONFIG_MODE_UNAVAILABLE'
       : 'HOUSEHOLD_CONFIG_MODE_UNAVAILABLE';
     blockedRuntimeResult('unknown', candidate.shadow, code);
-    return initialActiveModel && candidate.cacheDisposition === 'clear'
-      ? { status: 'reload_required', mode: 'unknown', code }
-      : { status: 'blocked', mode: 'unknown', code };
+    if (productiveMounted) {
+      return reloadUnlessCacheUnchanged(candidate, 'unknown', code);
+    }
+    resetHouseholdDataToLegacy();
+    return { status: 'blocked', mode: 'unknown', code };
   }
 
   if (candidate.mode === 'shadow') {
+    /* Der Server ist auf Shadow zurückgefallen. Ein aus dem Active-Cache
+       gestarteter Baum läuft dann gegen das falsche Modell. */
+    if (productiveMounted) {
+      return reloadUnlessCacheUnchanged(candidate, 'shadow', 'HOUSEHOLD_CONFIG_MODE_CHANGED');
+    }
     resetHouseholdDataToLegacy();
     const app = await startAuthorizedApp();
     const result: HouseholdConfigRuntimeResult<T> = {
@@ -156,34 +191,49 @@ async function validateHouseholdConfigAfterFirstPaint<T>(
   }
 
   if (!candidate.model) {
-    resetHouseholdDataToLegacy();
     const code = activeErrorCode(candidate.shadow);
     blockedRuntimeResult('active', candidate.shadow, code);
-    return initialActiveModel && candidate.cacheDisposition === 'clear'
-      ? { status: 'reload_required', mode: 'active', code }
-      : { status: 'blocked', mode: 'active', code };
+    if (productiveMounted) {
+      return reloadUnlessCacheUnchanged(candidate, 'active', code);
+    }
+    resetHouseholdDataToLegacy();
+    return { status: 'blocked', mode: 'active', code };
   }
 
   try {
     projectActiveHouseholdData(candidate.model);
   } catch (error) {
     const cacheCleared = clearHouseholdConfigCache(storage);
-    resetHouseholdDataToLegacy();
     const code = projectionErrorCode(error);
     blockedRuntimeResult('active', candidate.shadow, code);
-    return initialActiveModel && cacheCleared
-      ? { status: 'reload_required', mode: 'active', code }
-      : { status: 'blocked', mode: 'active', code };
+    if (productiveMounted) {
+      return cacheCleared
+        ? { status: 'reload_required', mode: 'active', code }
+        : { status: 'blocked', mode: 'active', code };
+    }
+    resetHouseholdDataToLegacy();
+    return { status: 'blocked', mode: 'active', code };
   }
 
-  if (!initialActiveModel || !compareRuntimeModels(initialActiveModel, candidate.model).equal) {
-    if (candidate.cacheDisposition === 'replace') {
-      return {
-        status: 'reload_required',
-        mode: 'active',
-        code: 'HOUSEHOLD_CONFIG_CACHE_REFRESHED',
-      };
+  const unchanged = initialActiveModel !== null
+    && compareRuntimeModels(initialActiveModel, candidate.model).equal;
+
+  if (productiveMounted) {
+    /* Abweichung unter einem laufenden Baum: die Singletons stehen bereits, ein
+       Reload ist der kleinste sichere Cutover. Bei Gleichstand bleibt alles
+       stehen — insbesondere wird das Modell NICHT erneut installiert, sonst
+       würden die Bindings unter den gemounteten Komponenten getauscht. */
+    if (!unchanged) {
+      return reloadUnlessCacheUnchanged(candidate, 'active', 'HOUSEHOLD_CONFIG_CACHE_REFRESHED');
     }
+    const result: HouseholdConfigRuntimeResult<T> = {
+      mode: 'active',
+      status: 'active',
+      parity: candidate.shadow.status,
+      app: mountedApp,
+    };
+    publishRuntimeResult(result);
+    return { status: 'authorized', mode: 'active', app: mountedApp };
   }
 
   installActiveHouseholdData(candidate.model);
@@ -199,14 +249,24 @@ async function validateHouseholdConfigAfterFirstPaint<T>(
 }
 
 /**
- * Installs a valid last-known snapshot synchronously and mounts the isolated
- * local shell before the caller may schedule health/config requests. The shell
- * has no productive state, theme-effect, device-manager or backend imports.
+ * Installs a valid last-known snapshot synchronously and mounts from it before
+ * the caller may schedule health/config requests.
+ *
+ * B-27 B2: Liegt ein gültiger, zuvor validierter Active-Snapshot vor, mountet
+ * direkt die produktive App — die Validierung läuft danach und korrigiert nur
+ * bei Abweichung. Die Minimal-Shell ist damit reiner Fehlerpfad (fehlender oder
+ * unbrauchbarer Cache, Shadow-Modus). Siehe ADR-028.
  */
 export async function bootstrapHouseholdConfigFirstPaint<T>(
   dependencies: HouseholdConfigFirstPaintDependencies<T>,
 ): Promise<HouseholdConfigFirstPaintBootstrap<T>> {
-  const { storage, legacyModel, startLocalShell, scheduleValidation } = dependencies;
+  const {
+    storage,
+    legacyModel,
+    startLocalShell,
+    startAuthorizedApp,
+    scheduleValidation,
+  } = dependencies;
   resetHouseholdDataToLegacy();
   let cached: HouseholdConfigCandidate | null = readCachedHouseholdConfigCandidate({
     storage,
@@ -229,14 +289,32 @@ export async function bootstrapHouseholdConfigFirstPaint<T>(
     }
   }
 
-  const app = await startLocalShell();
+  let app: T;
+  let mountedApp: T | null = null;
+  if (initialActiveModel) {
+    try {
+      app = await startAuthorizedApp();
+      mountedApp = app;
+    } catch {
+      /* Die produktiven Module sind nicht ladbar — zurück auf den Fehlerpfad.
+         Das Modell wird verworfen, damit die Validierung nicht von produktiven
+         Singletons ausgeht, die es nicht gibt. */
+      resetHouseholdDataToLegacy();
+      initialActiveModel = null;
+      source = 'legacy';
+      app = await startLocalShell();
+    }
+  } else {
+    app = await startLocalShell();
+  }
+
   let resolveValidation!: (result: HouseholdConfigFirstPaintValidation<T>) => void;
   const validation = new Promise<HouseholdConfigFirstPaintValidation<T>>((resolve) => {
     resolveValidation = resolve;
   });
   try {
     scheduleValidation(() => {
-      void validateHouseholdConfigAfterFirstPaint(initialActiveModel, dependencies)
+      void validateHouseholdConfigAfterFirstPaint(initialActiveModel, mountedApp, dependencies)
         .then(resolveValidation)
         .catch(() => resolveValidation({
           status: 'blocked',
