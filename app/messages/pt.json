@@ -278,6 +278,8 @@
   "scene_scenes": "Cenas",
   "scene_pick": "Escolher cena",
   "scene_reset": "Repor predefinições",
+  "scene_edit_included": "Incluídos · {count}",
+  "scene_edit_default_hint": "Padrão: todas as luzes da divisão",
   "shopping_sort_label": "Ordenar a lista de compras por categoria",
   "shopping_undo_label": "Anular a ordenação",
   "shopping_sort": "Ordenar",

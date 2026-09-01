@@ -278,6 +278,8 @@
   "scene_scenes": "Scene",
   "scene_pick": "Scegli la scena",
   "scene_reset": "Ripristina i valori predefiniti",
+  "scene_edit_included": "Inclusi · {count}",
+  "scene_edit_default_hint": "Predefinito: tutte le luci della stanza",
   "shopping_sort_label": "Ordina la lista della spesa per categoria",
   "shopping_undo_label": "Annulla l'ordinamento",
   "shopping_sort": "Ordina",

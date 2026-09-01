@@ -20,7 +20,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)">
+<link rel="preload" href="fonts/InterVariable-subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css">
+<script>document.documentElement.classList.add('has-js');</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -29,6 +31,7 @@
   "description": "A self-hosted, room-first Home Assistant frontend for wall panels, tablets and phones — a calm everyday interface for the whole household.",
   "applicationCategory": "Home automation",
   "operatingSystem": "Any",
+  "softwareVersion": "0.6.2",
   "url": "https://ralleur.github.io/hauser/",
   "sameAs": "https://github.com/ralleur/hauser",
   "license": "https://github.com/ralleur/hauser/blob/main/LICENSE"
@@ -53,8 +56,9 @@
       <span class="brand-word">hauser</span>
     </a>
     <div class="nav-actions">
-      <a class="nav-link" href="https://github.com/ralleur/hauser">GitHub</a>
-      <a class="nav-link" href="#install">Install</a>
+      <a class="nav-link" href="#whats-new">What's new</a>
+      <a class="nav-link nav-link-wide" href="https://github.com/ralleur/hauser">GitHub</a>
+      <a class="nav-link nav-link-wide" href="#install">Install</a>
       <a class="btn btn-sm btn-primary" href="demo/">Demo</a>
     </div>
   </div>
@@ -63,6 +67,11 @@
 <!-- ── Hero ──────────────────────────────────────────────────────────── -->
 <header class="hero" id="main">
   <div class="wrap">
+    <a class="version-pill" href="https://github.com/ralleur/hauser/blob/main/CHANGELOG.md">
+      <span class="version-dot" aria-hidden="true"></span>
+      v0.6.2 · released 1 September 2026
+      <span class="version-arrow" aria-hidden="true">→</span>
+    </a>
     <h1>Your home,<br>with an interface<br><span class="mark">worth touching.<svg class="mark-line" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M4 8.2 C 70 2.4, 140 3.6, 204 6.4 S 268 9.6, 296 4.2"/></svg></span></h1>
     <p class="lead">
       Hauser is a self-hosted, room-first Home Assistant frontend for the people
@@ -74,7 +83,7 @@
       <a class="btn btn-primary" href="demo/">Explore the live demo</a>
       <a class="btn" href="#install">Install the beta</a>
     </div>
-    <p class="hero-note">Technical beta v0.6.2 · self-hosted · AGPL code and docs</p>
+    <p class="hero-note">Technical beta · self-hosted · AGPL code and docs · Svelte 5</p>
     <ul class="badge-row" aria-label="What installing Hauser involves">
       <li>Home Assistant App</li>
       <li>or Docker Compose</li>
@@ -84,14 +93,23 @@
   </div>
 
   <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/hero-home.webp"
-           srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw"
-           width="1696" height="960" fetchpriority="high"
-           alt="The Hauser home screen: a compact room-control panel on the left and a warm illustration of the living room on the right, with the room's lights, climate and scenes reachable in one touch.">
+    <div class="hero-stage reveal">
+      <div class="device hero-panel">
+        <img src="media/home-day.webp"
+             srcset="media/home-day-700.webp 700w, media/home-day-1100.webp 1100w, media/home-day.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1200" fetchpriority="high"
+             alt="The Hauser home screen: a compact room-control panel on the left with room tiles, scene chips, lamp tiles and the thermostat, and a warm illustration of the living room on the right.">
+      </div>
+      <div class="phone-frame hero-phone">
+        <img src="media/phone-home-390.webp"
+             srcset="media/phone-home-390.webp 390w, media/phone-home.webp 780w"
+             sizes="(min-width: 900px) 240px, 160px"
+             width="780" height="1688" loading="eager" decoding="async"
+             alt="The same home on a phone: six room cards with their illustrations, and a quick-action row with a shared thermostat at the bottom.">
+      </div>
     </div>
-    <p class="device-caption">The room comes first. Controls stay to the side, where they belong.</p>
+    <p class="device-caption">The room comes first. Controls stay to the side, where they belong — and the phone gets the same rooms, one-handed.</p>
   </div>
 </header>
 
@@ -102,16 +120,210 @@
     <h2>Open it before you install it.</h2>
     <p class="lead centered-lead">
       The real interface runs in your browser against simulated devices — no
-      Home Assistant, no account, no private household data behind it.
+      Home Assistant, no account, no private household data behind it. Every
+      screenshot on this page was taken from it.
     </p>
     <div class="actions centered-actions">
       <a class="btn btn-primary" href="demo/">Explore the live demo</a>
+      <a class="btn" href="#press">See what a long press does</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── What's new: Release-Filmstreifen ──────────────────────────────────
+     Eine Karte pro Oberfläche, die in den letzten Releases neu gebaut oder
+     umgebaut wurde. Horizontal, mit Scroll-Snap; die Pfeile sind Komfort,
+     nicht Voraussetzung — der Streifen scrollt auch mit Finger und Trackpad. -->
+<section id="whats-new">
+  <div class="wrap">
+    <div class="rail-head">
+      <div class="showcase-head">
+        <p class="eyebrow">What's new</p>
+        <h2>Seven releases in a week. Here is what they look like.</h2>
+        <p class="body-text">
+          The beta moves fast, and most of what moved is on screen: a scene
+          editor, a real room list, a live layout drawer, one thermostat for the
+          whole house, a settings surface that reads like a product. Scroll
+          through the strip — every card is a real capture from the demo build.
+        </p>
+      </div>
+      <div class="rail-nav has-js-only">
+        <button type="button" class="rail-btn" data-rail-prev aria-label="Previous cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-rail-next aria-label="Next cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rail" role="list" aria-label="Recently redesigned screens">
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/scene-editor-1100.webp"
+             srcset="media/scene-editor-700.webp 700w, media/scene-editor-1100.webp 1100w, media/scene-editor.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The scene editor over a blurred home screen: the three scenes of the living room as chips, a scene name field, and the four lamps the Cozy scene drives with their on-state and brightness.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.5.1</span> Scenes</p>
+        <h3>Scenes, configured where they live.</h3>
+        <p>A long press on a scene chip opens its editor. Every change runs on the lights straight away as a preview and is taken back when the editor closes — the room is never left in an editing state.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/layout-drawer-1100.webp"
+             srcset="media/layout-drawer-700.webp 700w, media/layout-drawer-1100.webp 1100w, media/layout-drawer.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The layout drawer on the right edge of the home screen: a continuous size slider for the control surface, a rooms-per-row slider and Apply, with the room illustration still visible behind it.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.5.2</span> Home layout</p>
+        <h3>Layout is a live drawer, not a settings page.</h3>
+        <p>A long press on the room background opens an unblurred panel with the same dimensions as a control surface. Width and room tiles per row are continuous controls with a direct preview.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/room-editor-1100.webp"
+             srcset="media/room-editor-700.webp 700w, media/room-editor-1100.webp 1100w, media/room-editor.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The room editor: a quick-setup grid with Room image, Adjust scenes, Assign lamps and Advanced above an ordered device list with six-dot drag handles.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.5.1</span> Room editor</p>
+        <h3>Four tiles, then the device list.</h3>
+        <p>Room image, scenes, lamp placement and the advanced view sit as a quick-setup grid. Reordering is a six-dot handle that drags, with the arrow keys as the keyboard path.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot rail-shot-crop">
+        <img src="media/crop-roomlist.webp"
+             width="1760" height="1120" loading="lazy" decoding="async"
+             alt="The Rooms and devices list in settings: each room with its illustration thumbnail, its name, a device count, a Configure devices button and a Rename button.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.5.0</span> Rooms &amp; devices</p>
+        <h3>A room list that looks like the rooms.</h3>
+        <p>Every room shows its current image, its name and how many devices it holds. Tapping the thumbnail opens the image editor; Rename edits in place; the handle drags the room into position.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot rail-shot-crop">
+        <img src="media/crop-climate.webp"
+             width="1168" height="580" loading="lazy" decoding="async"
+             alt="The thermostat card of a room: the current temperature, the target temperature with plus and minus, and Heat, Cool and Off.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.5.3</span> Climate</p>
+        <h3>One control sets every thermostat.</h3>
+        <p>Each room keeps its own card. The All rooms pill in the status bar and the phone's quick actions show the shared target and raise or lower every configured climate entity together. Steps are plus and minus, everywhere.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/settings-services-1100.webp"
+             srcset="media/settings-services-700.webp 700w, media/settings-services-1100.webp 1100w, media/settings-services.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The Services settings page: Home Assistant shown as connected, the address phones and tablets use with a Copy button and a QR code beneath it.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.6.0</span> Setup</p>
+        <h3>Setup ends with the address your phone needs.</h3>
+        <p>As a Home Assistant App there is no address and no token to type. The wizard's last step shows the URL the household will use, with a copy action and a QR code — and it stays under System → Services.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/settings-ambient-1100.webp"
+             srcset="media/settings-ambient-700.webp 700w, media/settings-ambient-1100.webp 1100w, media/settings-ambient.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The Ambient and standby settings page: Standby, Deep night and AI text toggles, and a City map card with Use Home Assistant, Locate this device, a place search and manual coordinates.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.6.1</span> Ambient &amp; standby</p>
+        <h3>A street map of your town behind the clock.</h3>
+        <p>The place comes from Home Assistant, from the device's own location or from a place search. The map is rendered once on the server as a small monochrome image; what leaves the server is a search term, never your address.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/settings-interface-1100.webp"
+             srcset="media/settings-interface-700.webp 700w, media/settings-interface-1100.webp 1100w, media/settings-interface.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The Interface and controls settings page: five appearance tiles from Auto to Evening fixed, an interface language row, and control-surface configuration.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">v0.6.1</span> Interface &amp; controls</p>
+        <h3>Appearance and layout are one section now.</h3>
+        <p>Auto follows the sun; the interface and the room images can also be fixed separately. Hotel Mode and guest access moved into an Experimental group at the end of the list, where experiments belong.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/device-detail-1100.webp"
+             srcset="media/device-detail-700.webp 700w, media/device-detail-1100.webp 1100w, media/device-detail.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The lamp detail sheet: a vertical brightness bar at 68 percent, a colour-temperature slider at 2700 kelvin, and a row of colour swatches.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">Room UI</span> Device detail</p>
+        <h3>Long-press a lamp, get the lamp.</h3>
+        <p>Brightness as a bar you drag, colour temperature as a warm-to-cool strip, colour as swatches. Only what the lamp actually supports is shown; a plain switch gets none of it.</p>
+      </div>
+    </article>
+
+    <article class="rail-card reveal" role="listitem">
+      <div class="rail-shot">
+        <img src="media/room-image-library-1100.webp"
+             srcset="media/room-image-library-700.webp 700w, media/room-image-library-1100.webp 1100w, media/room-image-library.webp 1696w"
+             sizes="(min-width: 760px) 560px, 82vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The image-set library dialog: two generated room image sets with preview, size and creation date, each with a room picker, an Assign button and a Delete button.">
+      </div>
+      <div class="rail-body">
+        <p class="rail-meta"><span class="ver">Room images</span> Library</p>
+        <h3>Generated sets have a home of their own.</h3>
+        <p>Every image set with a preview, its size, its date and the room it is assigned to. Assign it, remove the assignment, or delete it after a confirmation. The header keeps count of the storage used.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="wrap">
+    <ol class="timeline reveal" aria-label="Release history">
+      <li><span class="tl-ver">0.6.2</span><span class="tl-date">1 Sep</span><span class="tl-text">The Home Assistant App no longer sticks on "Connecting…" when Core bundles messages.</span></li>
+      <li><span class="tl-ver">0.6.1</span><span class="tl-date">1 Sep</span><span class="tl-text">City map on standby, place search, faster start, phone room images a fifth of their size, offline cache 17 → 3.5 MB, updates offered instead of forced.</span></li>
+      <li><span class="tl-ver">0.6.0</span><span class="tl-date">31 Aug</span><span class="tl-text">As a Home Assistant App: no address, no token. Setup ends with the address phones use, plus a QR code.</span></li>
+      <li><span class="tl-ver">0.5.3</span><span class="tl-date">31 Aug</span><span class="tl-text">One climate control for every thermostat; clearer, more compact climate on phones.</span></li>
+      <li><span class="tl-ver">0.5.2</span><span class="tl-date">28 Aug</span><span class="tl-text">Camera feeds become movable pop-outs; one to four room tiles per row; the layout drawer.</span></li>
+      <li><span class="tl-ver">0.5.1</span><span class="tl-date">28 Aug</span><span class="tl-text">Scenes per room with an editor; the active scene is highlighted; the room editor opens on a quick-setup grid.</span></li>
+      <li><span class="tl-ver">0.5.0</span><span class="tl-date">27 Aug</span><span class="tl-text">Rooms &amp; devices is a real room list; tapping a room's image opens the image editor.</span></li>
+    </ol>
+    <div class="actions centered-actions" style="margin-top:28px">
+      <a class="btn" href="https://github.com/ralleur/hauser/blob/main/CHANGELOG.md">Read the full changelog</a>
     </div>
   </div>
 </section>
 
 <!-- ── Warum ─────────────────────────────────────────────────────────── -->
-<section id="why">
+<section class="band" id="why">
   <div class="wrap section-narrow">
     <p class="eyebrow">Why this exists</p>
     <h2>Most home dashboards are assembled. This one is designed.</h2>
@@ -144,8 +356,65 @@
   </div>
 </section>
 
+<!-- ── Long press: interaktive Karte ─────────────────────────────────────
+     Ein Home-Screen, fünf Stellen. Tippt man eine an, blendet das Bild zu
+     dem Overlay über, das ein langer Druck dort öffnet. Ohne JavaScript
+     bleibt der Home-Screen stehen und die Liste rechts erklärt es in Worten. -->
+<section id="press">
+  <div class="wrap">
+    <div class="showcase-head">
+      <p class="eyebrow">Interaction model</p>
+      <h2>One gesture opens everything. Hold what you want to change.</h2>
+      <p class="body-text">
+        There is no edit mode and no gear icon in the corner. A tap does the
+        everyday thing — turns the lamp on, applies the scene, selects the room.
+        A long press on the same spot opens the editor for exactly that thing.
+        Try it below: pick a spot, or press a marker.
+      </p>
+    </div>
+  </div>
+
+  <div class="showcase-wide">
+    <div class="press reveal" data-active="home">
+      <div class="device press-stage">
+        <img class="press-base" src="media/home-day.webp"
+             srcset="media/home-day-700.webp 700w, media/home-day-1100.webp 1100w, media/home-day.webp 1696w"
+             sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The Hauser home screen by day: room tiles with temperature, scene chips, lamp tiles and the thermostat on the left, the living room illustration on the right.">
+        <img class="press-layer" data-view="room" src="media/room-editor-1100.webp" srcset="media/room-editor-700.webp 700w, media/room-editor-1100.webp 1100w, media/room-editor.webp 1696w" sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw" width="1696" height="1200" loading="lazy" decoding="async" alt="The room editor for the living room, opened by a long press on its tile.">
+        <img class="press-layer" data-view="scene" src="media/scene-editor-1100.webp" srcset="media/scene-editor-700.webp 700w, media/scene-editor-1100.webp 1100w, media/scene-editor.webp 1696w" sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw" width="1696" height="1200" loading="lazy" decoding="async" alt="The scene editor for Cozy, opened by a long press on the scene chip.">
+        <img class="press-layer" data-view="lamp" src="media/device-detail-1100.webp" srcset="media/device-detail-700.webp 700w, media/device-detail-1100.webp 1100w, media/device-detail.webp 1696w" sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw" width="1696" height="1200" loading="lazy" decoding="async" alt="The lamp detail sheet for the dining-table light, opened by a long press on its tile.">
+        <img class="press-layer" data-view="layout" src="media/layout-drawer-1100.webp" srcset="media/layout-drawer-700.webp 700w, media/layout-drawer-1100.webp 1100w, media/layout-drawer.webp 1696w" sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw" width="1696" height="1200" loading="lazy" decoding="async" alt="The layout drawer, opened by a long press on the room background.">
+        <img class="press-layer" data-view="standby" src="media/ambient-day-1100.webp" srcset="media/ambient-day-700.webp 700w, media/ambient-day-1100.webp 1100w, media/ambient-day.webp 1696w" sizes="(min-width: 1360px) 860px, (min-width: 900px) 62vw, 100vw" width="1696" height="1200" loading="lazy" decoding="async" alt="The ambient standby screen with the clock, the shopping list, reminders and the week strip.">
+
+        <div class="press-hit">
+          <button type="button" class="hotspot has-js-only" data-view="room" style="--x:6.56%;--y:9.75%" aria-label="Room tile: show the room editor"><span></span></button>
+          <button type="button" class="hotspot has-js-only" data-view="scene" style="--x:5.07%;--y:36.83%" aria-label="Scene chip: show the scene editor"><span></span></button>
+          <button type="button" class="hotspot has-js-only" data-view="lamp" style="--x:8.67%;--y:42.65%" aria-label="Lamp tile: show the lamp detail"><span></span></button>
+          <button type="button" class="hotspot has-js-only" data-view="layout" style="--x:66%;--y:58%" aria-label="Room background: show the layout drawer"><span></span></button>
+          <button type="button" class="hotspot has-js-only" data-view="standby" style="--x:89.82%;--y:1.96%" aria-label="Standby button: show the ambient screen"><span></span></button>
+        </div>
+        <button type="button" class="press-release has-js-only" data-view="home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          Let go
+        </button>
+      </div>
+
+      <ol class="press-list">
+        <li><button type="button" class="press-item" data-view="room" aria-pressed="false"><b>The room tile</b><span>Tap selects the room. Hold opens the room editor: image, scenes, lamp placement, devices.</span></button></li>
+        <li><button type="button" class="press-item" data-view="scene" aria-pressed="false"><b>A scene chip</b><span>Tap applies it. Hold opens the scene editor, previewing every change on the real lights.</span></button></li>
+        <li><button type="button" class="press-item" data-view="lamp" aria-pressed="false"><b>A lamp tile</b><span>Tap toggles it. Hold opens brightness, colour temperature and colour — if the lamp has them.</span></button></li>
+        <li><button type="button" class="press-item" data-view="layout" aria-pressed="false"><b>The room background</b><span>Tap does nothing on purpose. Hold opens the layout drawer for this panel.</span></button></li>
+        <li><button type="button" class="press-item" data-view="standby" aria-pressed="false"><b>The standby button</b><span>Tap puts the panel to rest. Hold opens the menu that decides where the button lives.</span></button></li>
+      </ol>
+    </div>
+    <p class="device-caption">Five captures from the same demo build. The long press fires after 400 ms; moving more than 10 px cancels it, so a scroll never opens an editor.</p>
+  </div>
+</section>
+
 <!-- ── Room UI ───────────────────────────────────────────────────────── -->
-<section id="home">
+<section class="band" id="home">
   <div class="wrap">
     <div class="showcase-head">
       <p class="eyebrow">Room UI</p>
@@ -180,24 +449,39 @@
         </button>
       </div>
       <div class="device theme-stack reveal">
-        <img class="theme-shot-day" src="media/hero-home.webp"
-             srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
+        <img class="theme-shot-day" src="media/home-day.webp"
+             srcset="media/home-day-700.webp 700w, media/home-day-1100.webp 1100w, media/home-day.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
+             width="1696" height="1200" loading="lazy" decoding="async"
              alt="The Hauser home screen by day: a compact room-control panel on the left, the sunlit room illustration on the right.">
         <img class="theme-shot-night" src="media/home-dark.webp"
              srcset="media/home-dark-700.webp 700w, media/home-dark-1100.webp 1100w, media/home-dark.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
+             width="1696" height="1200" loading="lazy" decoding="async"
              alt="The same home screen after dark: identical layout, dark surfaces, and the room illustration lit only by its lamps.">
       </div>
-      <p class="device-caption">The same panel, the same second — only the sun moved.</p>
+      <p class="device-caption">The same panel, the same room, the same lamps — only the sun moved.</p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="detail-grid">
+      <figure class="detail reveal">
+        <img src="media/crop-rooms.webp" width="1168" height="612" loading="lazy" decoding="async"
+             alt="Six room tiles in two columns; the selected living room is dark with its temperature and a lit lamp icon, the others show temperature and lamp state.">
+        <figcaption><b>Room tiles</b> carry temperature, humidity or neither — the sensor behind each is picked from the Home Assistant area the room maps to.</figcaption>
+      </figure>
+      <figure class="detail reveal">
+        <img src="media/crop-scenes.webp" width="1168" height="460" loading="lazy" decoding="async"
+             alt="Scene chips Cozy, Bright and Off above four lamp tiles, two of them lit in amber.">
+        <figcaption><b>Scenes and lamps</b> in one surface. The active scene lights up when the room actually stands at its target state, however it got there.</figcaption>
+      </figure>
     </div>
   </div>
 </section>
 
 <!-- ── Raumbild-Wizard ───────────────────────────────────────────────── -->
-<section class="band" id="room-images">
+<section id="room-images">
   <div class="wrap">
     <div class="showcase-head">
       <p class="eyebrow">Room images</p>
@@ -269,12 +553,36 @@
         </p>
       </div>
     </div>
-    <p class="body-text" style="margin-top:36px">
+  </div>
+  <div class="showcase-wide">
+    <div class="pair pair-tight">
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/room-image-wizard-1100.webp"
+               srcset="media/room-image-wizard-700.webp 700w, media/room-image-wizard-1100.webp 1100w, media/room-image-wizard.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The room-image wizard dialog: step one, choose and frame the photo, with six sample photographs, a How-it-works list and a before-and-after band at the bottom.">
+        </div>
+        <p class="device-caption">The wizard leads with the photograph. Access and consent appear only when they are missing.</p>
+      </div>
+      <div class="pair-item reveal">
+        <div class="device">
+          <img src="media/home-onboarding-1100.webp"
+               srcset="media/home-onboarding-700.webp 700w, media/home-onboarding-1100.webp 1100w, media/home-onboarding.webp 1696w"
+               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="The home screen with an onboarding card on the right: Your home as a personal background image, a before-and-after band, three steps, and buttons to generate, pick manually or close.">
+        </div>
+        <p class="device-caption">A room without an image explains how to get one — and can be told to stop, for good, on this device.</p>
+      </div>
+    </div>
+    <p class="body-text centered" style="margin-top:36px;max-width:62ch">
       This is the one place where Hauser talks to a paid third party: the wizard
       needs your own OpenAI access, and your photo is sent there to be redrawn.
       That trade is stated before anything is uploaded, every paid step is
       confirmed by hand, and a running count of provider calls stays on screen.
-      The wizard is not part of the public demo.
+      The public demo runs the wizard on prepared sample photographs instead.
     </p>
   </div>
 </section>
@@ -283,7 +591,7 @@
      Der Split-Screen läuft rein in CSS: zwei identische Panels, zwei
      Zeitpläne. Links wartet die Oberfläche auf das Backend, rechts reagiert
      sie sofort und lässt die Bestätigung leise nachkommen. -->
-<section id="interaction">
+<section class="band" id="interaction">
   <div class="wrap section-narrow centered">
     <p class="eyebrow">Interaction</p>
     <h2>It answers before the house does.</h2>
@@ -337,8 +645,34 @@
   </div>
 </section>
 
+<!-- ── Settings ──────────────────────────────────────────────────────── -->
+<section id="settings">
+  <div class="wrap">
+    <div class="showcase-head">
+      <p class="eyebrow">Settings</p>
+      <h2>Settings that read like a product, not a YAML file.</h2>
+      <p class="body-text">
+        Rooms, appearance, content, connections, system — and a search box, because
+        nobody remembers where the confirmation for "Off" lives. Settings open on
+        Rooms &amp; devices, the page where a home is actually set up, and unfinished
+        room edits survive a detour to another section.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="device reveal">
+      <img src="media/settings-rooms.webp"
+           srcset="media/settings-rooms-700.webp 700w, media/settings-rooms-1100.webp 1100w, media/settings-rooms.webp 1696w"
+           sizes="(min-width: 1360px) 1296px, 100vw"
+           width="1696" height="1200" loading="lazy" decoding="async"
+           alt="The System screen: a settings navigation on the left grouped into Home, Appearance, Content, Connections, System and Experimental, and the Rooms and devices page on the right with a room list and cards for creating room images.">
+    </div>
+    <p class="device-caption">One navigation, six groups. Experimental things are labelled experimental and sit at the end.</p>
+  </div>
+</section>
+
 <!-- ── Alltag ────────────────────────────────────────────────────────── -->
-<section id="everyday">
+<section class="band" id="everyday">
   <div class="wrap">
     <div class="showcase-head">
       <p class="eyebrow">Everyday</p>
@@ -365,14 +699,25 @@
         <p class="device-caption">Shopping list grouped by shop, reminders as post-its per person.</p>
       </div>
       <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/lockscreen.webp"
-               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The Hauser ambient lock screen with a large clock, the date, the week's appointments, reminder post-its and the shopping list arranged for glanceable use on a wall panel.">
+        <div class="theme-demo theme-demo-plain" data-mode="day">
+          <div class="device theme-stack">
+            <img class="theme-shot-day" src="media/lockscreen.webp"
+                 srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The Hauser ambient lock screen by day with a large clock, the date, the week's appointments, reminder post-its and the shopping list arranged for glanceable use on a wall panel.">
+            <img class="theme-shot-night" src="media/ambient-evening.webp"
+                 srcset="media/ambient-evening-700.webp 700w, media/ambient-evening-1100.webp 1100w, media/ambient-evening.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The same ambient screen in the evening: a dimmed clock, dimmed post-its and the shopping list on a black background.">
+          </div>
+          <div class="theme-switch theme-switch-mini" role="group" aria-label="Show the standby screen by day or in the evening">
+            <button type="button" class="theme-btn" data-mode="day" aria-pressed="true">Day</button>
+            <button type="button" class="theme-btn" data-mode="night" aria-pressed="false">Evening</button>
+          </div>
         </div>
-        <p class="device-caption">The same lists on the resting screen — touch one and you are in it.</p>
+        <p class="device-caption">The same lists on the resting screen — touch one and you are in it. After 22:00 only the time remains, in dimmed red.</p>
       </div>
     </div>
   </div>
@@ -407,10 +752,36 @@
   </div>
 </section>
 
+<!-- ── Kalender ──────────────────────────────────────────────────────── -->
+<section id="calendar">
+  <div class="wrap">
+    <div class="split">
+      <div class="split-text">
+        <p class="eyebrow">Calendar</p>
+        <h2>The month, at wall-reading distance.</h2>
+        <p class="body-text">
+          Calendars come from Home Assistant — every <code>calendar.*</code>
+          entity you select, read through its own WebSocket command, so iCloud,
+          CalDAV and Google land in the same grid. Multi-day events run as bars,
+          today is marked, and the settings page can start Home Assistant's own
+          iCloud config flow without leaving the panel.
+        </p>
+      </div>
+      <div class="device reveal">
+        <img src="media/calendar-1100.webp"
+             srcset="media/calendar-700.webp 700w, media/calendar-1100.webp 1100w, media/calendar.webp 1696w"
+             sizes="(min-width: 880px) 540px, 100vw"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The calendar screen showing September 2026 as a month grid with timed events, all-day entries and multi-day bars for a weekend trip and the summer holidays.">
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── Energie ───────────────────────────────────────────────────────── -->
 <section class="band" id="energy">
   <div class="wrap">
-    <div class="split">
+    <div class="split reverse">
       <div class="split-text">
         <p class="eyebrow">Energy</p>
         <h2>Honest about what it cannot measure.</h2>
@@ -460,25 +831,62 @@
 </section>
 
 <!-- ── Phone ─────────────────────────────────────────────────────────── -->
-<section id="phone">
+<section class="band" id="phone">
   <div class="wrap">
-    <div class="split reverse">
-      <div class="split-text">
-        <p class="eyebrow">Two shells</p>
-        <h2>Same language, different hand.</h2>
-        <p class="body-text">
-          The phone layout is not a squeezed panel. Navigation moves to the
-          thumb, rooms become a drill-down instead of an overlay, and the
-          destinations you use most sit in the bottom bar in an order you
-          choose. The tokens, motion and interaction rules stay identical.
-        </p>
+    <div class="showcase-head">
+      <p class="eyebrow">Two shells</p>
+      <h2>Same language, different hand.</h2>
+      <p class="body-text">
+        The phone layout is not a squeezed panel. Navigation moves to the
+        thumb, rooms become a drill-down instead of an overlay, and the
+        destinations you use most sit in the bottom bar in an order you
+        choose. The tokens, motion and interaction rules stay identical —
+        and since 0.6.1 a room card shows its picture in the first paint, at a
+        fifth of the panel's file size.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="theme-demo phones" data-mode="day">
+      <div class="phone-fan">
+        <div class="phone-frame reveal">
+          <img src="media/phone-reminders-390.webp"
+               srcset="media/phone-reminders-390.webp 390w, media/phone-reminders.webp 780w"
+               sizes="(min-width: 900px) 300px, 60vw"
+               width="780" height="1688" loading="lazy" decoding="async"
+               alt="The phone reminders screen: post-its per person, one already ticked off.">
+        </div>
+        <div class="phone-frame phone-frame-lead reveal theme-stack">
+          <img class="theme-shot-day" src="media/phone-home-390.webp"
+               srcset="media/phone-home-390.webp 390w, media/phone-home.webp 780w"
+               sizes="(min-width: 900px) 300px, 60vw"
+               width="780" height="1688" loading="lazy" decoding="async"
+               alt="The phone home feed by day: six room cards with illustrations and the quick-action row.">
+          <img class="theme-shot-night" src="media/phone-home-dark-390.webp"
+               srcset="media/phone-home-dark-390.webp 390w, media/phone-home-dark.webp 780w"
+               sizes="(min-width: 900px) 300px, 60vw"
+               width="780" height="1688" loading="lazy" decoding="async"
+               alt="The phone home feed at night: the same six rooms, lit only by their lamps.">
+        </div>
+        <div class="phone-frame reveal theme-stack">
+          <img class="theme-shot-day" src="media/phone-room-390.webp"
+               srcset="media/phone-room-390.webp 390w, media/phone-room.webp 780w"
+               sizes="(min-width: 900px) 300px, 60vw"
+               width="780" height="1688" loading="lazy" decoding="async"
+               alt="The phone room sheet for the living room: scene chips, lamp tiles, the camera slot and a compact thermostat with Heat, Cool and Off.">
+          <img class="theme-shot-night" src="media/phone-room-dark-390.webp"
+               srcset="media/phone-room-dark-390.webp 390w, media/phone-room-dark.webp 780w"
+               sizes="(min-width: 900px) 300px, 60vw"
+               width="780" height="1688" loading="lazy" decoding="async"
+               alt="The same room sheet at night, on dark surfaces.">
+        </div>
       </div>
-      <div class="device reveal" style="max-width:340px;margin-inline:auto">
-        <img src="media/phone.webp" width="390" height="844" loading="lazy" decoding="async"
-             sizes="(min-width: 880px) 316px, 316px"
-             alt="The phone layout showing room cards stacked vertically with a four-item bottom navigation bar.">
+      <div class="theme-switch theme-switch-mini" role="group" aria-label="Show the phone by day or by night">
+        <button type="button" class="theme-btn" data-mode="day" aria-pressed="true">Day</button>
+        <button type="button" class="theme-btn" data-mode="night" aria-pressed="false">Night</button>
       </div>
     </div>
+    <p class="device-caption">Reminders, the home feed and a room sheet. The quick-action row carries the shared thermostat, all-off and holiday mode.</p>
   </div>
 </section>
 
@@ -558,10 +966,10 @@
         </ol>
         <a class="btn btn-primary" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser">Add the repository</a>
         <p class="path-note">
-          A thin wrapper around the same image, with all state in Home
-          Assistant's persistent storage — so App backups cover your household
-          configuration. The packaging is marked experimental and has been
-          verified on the maintainer's Home Assistant OS system so far.
+          No address and no token to type: the App talks to Home Assistant over
+          the Supervisor, the token stays inside the server process, and App
+          backups cover your household configuration. Setup ends with the
+          address your phones use, as text and as a QR code.
         </p>
       </div>
 
@@ -584,6 +992,7 @@
 
     <div class="actions centered-actions">
       <a class="btn" href="https://github.com/ralleur/hauser/releases">Release notes</a>
+      <a class="btn" href="https://github.com/ralleur/hauser/blob/main/docs/00-architecture.md">Architecture</a>
     </div>
   </div>
 </section>
@@ -594,6 +1003,7 @@
     <div class="footer-links">
       <a href="https://github.com/ralleur/hauser">GitHub</a>
       <a href="demo/">Live demo</a>
+      <a href="https://github.com/ralleur/hauser/blob/main/CHANGELOG.md">Changelog</a>
       <a href="https://github.com/ralleur/hauser/blob/main/docs/00-architecture.md">Architecture</a>
       <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">Design system</a>
       <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">Roadmap</a>
@@ -605,75 +1015,213 @@
       Code, design tokens and technical documentation are under AGPL-3.0-only.
       Original artwork and public screenshots are CC&nbsp;BY&nbsp;4.0. Official
       Hauser branding is reserved. Typeset in Inter, under the SIL Open Font
-      License.
+      License. Screenshots were captured from the public demo build at
+      1696&nbsp;×&nbsp;1200 CSS pixels and 390&nbsp;×&nbsp;844 at 2×.
     </p>
     <p>Not affiliated with Home Assistant or Jellyfin.</p>
   </div>
 </footer>
 
+<!-- ── Lightbox ────────────────────────────────────────────────────────
+     Ein natives <dialog>; wird nur per Skript gefüllt und geöffnet. -->
+<dialog class="lightbox" id="lightbox" aria-label="Screenshot, enlarged">
+  <button type="button" class="lightbox-close" data-lightbox-close aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <figure class="lightbox-figure">
+    <img alt="" decoding="async">
+    <figcaption></figcaption>
+  </figure>
+</dialog>
+
 <script>
-  // Tag/Nacht-Vorführung. Startzustand folgt dem Farbschema des Besuchers —
-  // wer die Seite nachts dunkel öffnet, sieht das Panel zuerst nachts.
+  // Tag/Nacht-Vorführungen. Es gibt mehrere auf der Seite (Panel, Standby,
+  // Phone); jede hat ihren eigenen Umschalter. Startzustand folgt dem
+  // Farbschema des Besuchers — wer die Seite nachts dunkel öffnet, sieht
+  // das Panel zuerst nachts.
   (function () {
-    var demo = document.querySelector('.theme-demo');
-    if (!demo) return;
+    var demos = document.querySelectorAll('.theme-demo');
+    if (!demos.length) return;
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    var buttons = demo.querySelectorAll('.theme-btn');
-    var shots = {
-      day: demo.querySelector('.theme-shot-day'),
-      night: demo.querySelector('.theme-shot-night')
-    };
+    Array.prototype.forEach.call(demos, function (demo) {
+      var buttons = demo.querySelectorAll('.theme-btn');
+      var days = demo.querySelectorAll('.theme-shot-day');
+      var nights = demo.querySelectorAll('.theme-shot-night');
 
-    function apply(mode) {
-      demo.dataset.mode = mode;
+      function apply(mode) {
+        demo.dataset.mode = mode;
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.mode === mode));
+        }
+        for (var d = 0; d < days.length; d++) days[d].setAttribute('aria-hidden', String(mode !== 'day'));
+        for (var n = 0; n < nights.length; n++) nights[n].setAttribute('aria-hidden', String(mode !== 'night'));
+      }
+
       for (var i = 0; i < buttons.length; i++) {
-        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.mode === mode));
+        buttons[i].addEventListener('click', function (event) {
+          apply(event.currentTarget.dataset.mode);
+        });
       }
-      for (var key in shots) {
-        if (shots[key]) shots[key].setAttribute('aria-hidden', String(key !== mode));
-      }
-    }
-
-    for (var i = 0; i < buttons.length; i++) {
-      buttons[i].addEventListener('click', function (event) {
-        apply(event.currentTarget.dataset.mode);
-      });
-    }
-
-    apply(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
+      apply(prefersDark && nights.length ? 'night' : 'day');
+    });
   })();
-</script>
 
-<script>
-  // Scroll-Reveal. `.has-js` schaltet den Effekt überhaupt erst scharf — ohne
-  // JavaScript bleibt die Seite vollständig sichtbar.
+  // Scroll-Reveal. Nur Sichtbarkeit, keine Layout-Arbeit; ein Element wird
+  // einmal sichtbar und bleibt es.
   (function () {
-    var root = document.documentElement;
-    var targets = document.querySelectorAll('.reveal');
-
-    function revealAll() {
-      for (var i = 0; i < targets.length; i++) targets[i].classList.add('is-visible');
+    var items = document.querySelectorAll('.reveal');
+    if (!items.length) return;
+    if (!('IntersectionObserver' in window)) {
+      for (var i = 0; i < items.length; i++) items[i].classList.add('is-visible');
+      return;
     }
-
-    if (!('IntersectionObserver' in window)) { revealAll(); return; }
-
-    root.classList.add('has-js');
-
-    var observer = new IntersectionObserver(function (entries) {
+    var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
       });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.06 });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    for (var j = 0; j < items.length; j++) io.observe(items[j]);
+  })();
 
-    for (var i = 0; i < targets.length; i++) observer.observe(targets[i]);
+  // Release-Streifen: die Pfeile scrollen um eine Kartenbreite; der Streifen
+  // selbst ist ein normaler Scroll-Container mit Snap.
+  (function () {
+    var rail = document.querySelector('.rail');
+    var prev = document.querySelector('[data-rail-prev]');
+    var next = document.querySelector('[data-rail-next]');
+    if (!rail || !prev || !next) return;
 
-    // Sicherheitsnetz: falls der Observer in einem gedrosselten oder
-    // unsichtbaren Tab nie feuert, wird nach kurzer Zeit alles gezeigt.
-    setTimeout(revealAll, 2500);
+    function cardWidth() {
+      var card = rail.querySelector('.rail-card');
+      if (!card) return 320;
+      var gap = parseFloat(getComputedStyle(rail).columnGap) || 20;
+      return card.getBoundingClientRect().width + gap;
+    }
+    function update() {
+      var max = rail.scrollWidth - rail.clientWidth - 2;
+      prev.disabled = rail.scrollLeft <= 2;
+      next.disabled = rail.scrollLeft >= max;
+    }
+    prev.addEventListener('click', function () { rail.scrollBy({ left: -cardWidth(), behavior: 'smooth' }); });
+    next.addEventListener('click', function () { rail.scrollBy({ left: cardWidth(), behavior: 'smooth' }); });
+    rail.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  })();
+
+  // Long-Press-Karte: ein Home-Screen, fünf Stellen, fünf Overlays.
+  (function () {
+    var press = document.querySelector('.press');
+    if (!press) return;
+    var triggers = press.querySelectorAll('button[data-view]');
+    var items = press.querySelectorAll('.press-item');
+
+    function show(view) {
+      press.dataset.active = view;
+      for (var i = 0; i < items.length; i++) {
+        items[i].setAttribute('aria-pressed', String(items[i].dataset.view === view));
+      }
+    }
+    for (var t = 0; t < triggers.length; t++) {
+      triggers[t].addEventListener('click', function (event) {
+        var view = event.currentTarget.dataset.view;
+        show(view !== 'home' && press.dataset.active === view ? 'home' : view);
+      });
+    }
+    press.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && press.dataset.active !== 'home') {
+        show('home');
+        event.preventDefault();
+      }
+    });
+    // Ein Tipp auf das Overlay selbst lässt wieder los.
+    var layers = press.querySelectorAll('.press-layer');
+    for (var l = 0; l < layers.length; l++) {
+      layers[l].addEventListener('click', function () { show('home'); });
+    }
+  })();
+
+  // Hero: das Panel neigt sich leicht zum Zeiger hin. Nur mit echtem Hover,
+  // nur ohne reduzierte Bewegung, nur transform — nichts, was Layout kostet.
+  (function () {
+    var stage = document.querySelector('.hero-stage');
+    if (!stage) return;
+    var hover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!hover || reduce) return;
+    var raf = 0, rx = 0, ry = 0;
+    function paint() {
+      raf = 0;
+      stage.style.setProperty('--rx', rx.toFixed(2) + 'deg');
+      stage.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+    }
+    stage.addEventListener('pointermove', function (event) {
+      var r = stage.getBoundingClientRect();
+      var px = (event.clientX - r.left) / r.width - 0.5;
+      var py = (event.clientY - r.top) / r.height - 0.5;
+      ry = px * 5;
+      rx = -py * 4;
+      if (!raf) raf = requestAnimationFrame(paint);
+    });
+    stage.addEventListener('pointerleave', function () {
+      rx = 0; ry = 0;
+      if (!raf) raf = requestAnimationFrame(paint);
+    });
+    stage.classList.add('is-tilting');
+  })();
+
+  // Lightbox: jeder Screenshot lässt sich vergrößern. Die größte Quelle aus
+  // dem srcset wird genommen; die Bildunterschrift ist der Alt-Text.
+  (function () {
+    var box = document.getElementById('lightbox');
+    if (!box || typeof box.showModal !== 'function') return;
+    var img = box.querySelector('img');
+    var cap = box.querySelector('figcaption');
+    var close = box.querySelector('[data-lightbox-close]');
+
+    function largest(el) {
+      var set = el.getAttribute('srcset');
+      if (!set) return el.currentSrc || el.src;
+      var best = null, bestW = 0;
+      set.split(',').forEach(function (entry) {
+        var parts = entry.trim().split(/\s+/);
+        var w = parseInt(parts[1] || '0', 10);
+        if (w > bestW) { bestW = w; best = parts[0]; }
+      });
+      return best || el.src;
+    }
+    function open(el) {
+      img.src = largest(el);
+      img.alt = el.alt;
+      cap.textContent = el.alt;
+      box.showModal();
+    }
+    var shots = document.querySelectorAll('.device img, .rail-shot img, .phone-frame img, .detail img');
+    Array.prototype.forEach.call(shots, function (el) {
+      // Im Long-Press-Stadium öffnet ein Klick das Overlay, nicht die Lupe.
+      if (el.closest('.press-stage')) return;
+      el.classList.add('zoomable');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.addEventListener('click', function () {
+        // In einem Tag/Nacht-Stapel nur das sichtbare Bild.
+        if (el.getAttribute('aria-hidden') === 'true') return;
+        open(el);
+      });
+      el.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(el); }
+      });
+    });
+    close.addEventListener('click', function () { box.close(); });
+    box.addEventListener('click', function (event) {
+      if (event.target === box) box.close();
+    });
+    box.addEventListener('close', function () { img.removeAttribute('src'); });
   })();
 </script>
-
 </body>
 </html>

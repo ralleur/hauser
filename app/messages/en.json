@@ -290,6 +290,8 @@
   "scene_scenes": "Scenes",
   "scene_pick": "Choose scene",
   "scene_reset": "Reset to default",
+  "scene_edit_included": "Included · {count}",
+  "scene_edit_default_hint": "Default: all lights in the room",
   "shopping_sort_label": "Sort shopping list by category",
   "shopping_undo_label": "Undo sorting",
   "shopping_sort": "Sort",
