@@ -162,7 +162,7 @@ export const appState = $state({
       },
       {
         id: 'nordwind', type: 'movie', title: 'Nordwind', year: 2023, fsk: 6,
-        genres: ['Abenteuer'], hue: 150, runtime: 5760, added: 8, pos: 0, cw: 0,
+        genres: ['Adventure'], hue: 150, runtime: 5760, added: 8, pos: 0, cw: 0,
         overview: 'Die zwölfjährige Juno segelt mit ihrem Großvater das alte Postboot die Küste hinauf — gegen den Wind, gegen die Zeit und gegen den Plan ihrer Eltern, das Boot zu verkaufen.',
       },
       {
@@ -182,22 +182,22 @@ export const appState = $state({
       },
       {
         id: 'sommer-marseille', type: 'movie', title: 'Sommer in Marseille', year: 2023, fsk: 6,
-        genres: ['Komödie'], hue: 45, runtime: 6060, added: 6, pos: 0, cw: 0,
+        genres: ['Comedy'], hue: 45, runtime: 6060, added: 6, pos: 0, cw: 0,
         overview: 'Der pensionierte Lokführer Herbert Kaminski will nur seinen Koffer zurück. Die Fluggesellschaft schickt ihn dafür quer durch Marseille — und mitten in die Familienfeier der Fahrerin Amira.',
       },
       {
         id: 'kartograf', type: 'movie', title: 'Der Kartograf', year: 2020, fsk: 12,
-        genres: ['Historie'], hue: 190, runtime: 8040, added: 13, pos: 0, cw: 0,
+        genres: ['History'], hue: 190, runtime: 8040, added: 13, pos: 0, cw: 0,
         overview: '1783: Der junge Kartograf Elias Vogt soll das Erzgebirge neu vermessen. Doch seine Karten zeigen, was der Hof nicht sehen will — leere Dörfer, verlassene Gruben, hungernde Täler.',
       },
       {
         id: 'blaupause', type: 'movie', title: 'Blaupause', year: 2025, fsk: 0,
-        genres: ['Dokumentation'], hue: 220, runtime: 5220, added: 4, pos: 0, cw: 0,
+        genres: ['Documentary'], hue: 220, runtime: 5220, added: 4, pos: 0, cw: 0,
         overview: 'Wie baut man eine Stadt, die es noch nicht gibt? Zwei Jahre hinter den Kulissen des größten Holzbau-Quartiers Europas — vom ersten Modell bis zum Einzug.',
       },
       {
         id: 'halbmond', type: 'series', title: 'Halbmond', year: 2024, fsk: 16,
-        genres: ['Spionage', 'Drama'], hue: 230, added: 5, cw: 4,
+        genres: ['Spy', 'Drama'], hue: 230, added: 5, cw: 4,
         lastPlayed: { season: 2, ep: 4 },
         overview: 'Ost-Berlin, 1983: Die Übersetzerin Vera Salt führt ein Doppelleben zwischen zwei Diensten. Als ihr Führungsoffizier verschwindet, weiß sie nicht mehr, für wen ihre Berichte eigentlich bestimmt sind.',
         seasons: [
@@ -225,7 +225,7 @@ export const appState = $state({
       },
       {
         id: 'revier', type: 'series', title: 'Revier', year: 2023, fsk: 12,
-        genres: ['Krimi'], hue: 80, added: 10, cw: 0, lastPlayed: null,
+        genres: ['Crime'], hue: 80, added: 10, cw: 0, lastPlayed: null,
         overview: 'Eine Kommissarin kehrt aus Hamburg zurück ins Ruhrgebiet ihrer Jugend. Jeder Fall führt tiefer in ein Geflecht aus Zechen-Erbe, Familienbanden und Dingen, über die man im Revier nicht spricht.',
         seasons: [makeSeason(1, 6, 2700, 6), makeSeason(2, 6, 2700, 6), makeSeason(3, 6, 2760, 2)],
       },
@@ -378,7 +378,7 @@ export function resumeTarget(item: LibraryItem): ResumeTarget {
 export function continueInfo(item: LibraryItem): { frac: number; meta: string } | null {
   if (item.type === 'movie') {
     return item.pos! > 0
-      ? { frac: item.pos! / item.runtime!, meta: `Noch ${Math.round((item.runtime! - item.pos!) / 60)} min` }
+      ? { frac: item.pos! / item.runtime!, meta: m.library_remaining({ minutes: Math.round((item.runtime! - item.pos!) / 60) }) }
       : null;
   }
   if (!item.lastPlayed) return null;
