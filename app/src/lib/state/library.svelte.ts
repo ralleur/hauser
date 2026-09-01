@@ -9,6 +9,7 @@
    Schicht ist reiner Lese-/Browse-Pfad: Shelves + Detail-Hydration + Login.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import { appState, libItem, resumeTarget, continueInfo, type LibraryItem } from './app.svelte.ts';
 import { backend } from '../adapter/runtime.svelte.ts';
 import { FakeBackend } from '../adapter/fake-backend.ts';
@@ -92,10 +93,10 @@ function fakeShelves(): LiveShelf[] {
   const series = items.filter((i) => i.type === 'series');
   const movies = items.filter((i) => i.type === 'movie');
   return [
-    { label: 'Weiterschauen', list: cont },
-    { label: 'Zuletzt hinzugefügt', list: latest },
-    { label: `Serien · ${series.length}`, list: series },
-    { label: `Filme · ${movies.length}`, list: movies },
+    { label: m.library_continue(), list: cont },
+    { label: m.library_recent(), list: latest },
+    { label: m.library_shelf_series({ count: series.length }), list: series },
+    { label: m.library_shelf_movies({ count: movies.length }), list: movies },
   ];
 }
 

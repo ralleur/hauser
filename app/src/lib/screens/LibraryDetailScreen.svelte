@@ -110,7 +110,7 @@
                 {#if ep.watched}
                   <Icon name="i-check" cls="icon icon-sm" /><span>{m.library_watched()}</span>
                 {:else if ep.pos > 0}
-                  <span class="ep-progress"><span class="ep-progress-fill" style="transform:scaleX({(ep.pos / ep.dur).toFixed(3)})"></span></span><span class="num">Noch {Math.round((ep.dur - ep.pos) / 60)} min</span>
+                  <span class="ep-progress"><span class="ep-progress-fill" style="transform:scaleX({(ep.pos / ep.dur).toFixed(3)})"></span></span><span class="num">{m.library_remaining({ minutes: Math.round((ep.dur - ep.pos) / 60) })}</span>
                 {:else}
                   <span class="num">{Math.round(ep.dur / 60)} min</span>
                 {/if}
