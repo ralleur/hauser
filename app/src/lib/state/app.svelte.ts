@@ -77,6 +77,9 @@ export interface LibraryItem {
      bleiben beim `hue`-Platzhalter. Die Poster-URL baut die UI über
      `jellyfin.imageUrl(id, { tag })` zur passenden Render-Größe. */
   primaryTag?: string; backdropTag?: string; logoTag?: string;
+  /* Statisches Poster der Fake-Bibliothek (relative URL unter dem Basispfad
+     des Builds). Nur die Demo-Daten setzen es; die Jellyfin-Zuordnung nie. */
+  poster?: string;
 }
 
 export interface Playback {
@@ -97,14 +100,18 @@ export interface SystemService {
   id: string; name: string; status: 'online' | 'degraded' | 'offline'; detail: string;
 }
 
-/* Generische Staffel für die Fake-Bibliothek (nur nicht-Feature-Serien —
+/* Generische Staffel für die Fake-Bibliothek — englische Folgentitel wie der
+   Rest der erfundenen Inhalte; bewusst kein Message-Aufruf beim Modulstart,
+   weil Tests das Modul ohne Browser-Speicher laden (nur nicht-Feature-Serien —
    „Halbmond" hat handgeschriebene Folgentitel). watchedThrough = Folgen 1…n
    gelten als gesehen. */
+const POSTER_BASE = `${import.meta.env.BASE_URL}demo-posters/`;
+
 function makeSeason(n: number, count: number, dur: number, watchedThrough = 0): Season {
   return {
     n,
     episodes: Array.from({ length: count }, (_, i) => ({
-      n: i + 1, title: `Folge ${i + 1}`, dur, watched: i < watchedThrough, pos: 0,
+      n: i + 1, title: `Episode ${i + 1}`, dur, watched: i < watchedThrough, pos: 0,
     })),
   };
 }
@@ -138,120 +145,144 @@ export const appState = $state({
     ],
   },
   /* Jellyfin-Bibliothek (docs/07 Screens 6–8, docs/08): Fake-Daten mit
-     Poster-Platzhaltern — pro Item ein Farbton (--ph) statt Artwork;
-     echte Poster kommen über /Items/{id}/Images/Primary?maxWidth&tag.
+     eigenen Postern — sechzehn erfundene Filme und Serien, deren Titel mit
+     Begriffen aus dem Alltag am Rechner spielen (Ctrl+Z, 404, ein Stapel
+     Pfannkuchen ohne Limit). Die Poster liegen als kleine WebP-Dateien unter
+     public/demo-posters/ und sind bewusst nicht im Offline-Precache; `hue`
+     bleibt der Platzhalter, falls ein Poster fehlt. Echte Poster kommen über
+     /Items/{id}/Images/Primary?maxWidth&tag.
      pos/ep.pos in Sekunden = Resume-Punkt (Jellyfin: PositionTicks). */
   library: {
     currentId: null as string | null,
     season: 1, // im Detail ausgewählte Staffel
     items: [
       {
-        id: 'signal', type: 'movie', title: 'Signal aus der Tiefe', year: 2025, fsk: 12,
-        genres: ['Science-Fiction'], hue: 258, runtime: 8280, added: 1, pos: 0, cw: 0,
-        overview: 'Eine Forschungsstation im Nordatlantik empfängt ein Muster, das es nicht geben dürfte. Die Ozeanografin Marla Jansen muss entscheiden, wem sie die Entdeckung meldet — und wem besser nicht.',
+        id: 'off-by-one', type: 'movie', title: "Off by One", year: 2025, fsk: 12,
+        genres: ["Heist", "Comedy"], hue: 258, runtime: 6480, added: 1, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}off-by-one.webp`,
+        overview: "Eleven friends plan the perfect heist and buy ten ski masks. The eleventh, a maths teacher, insists the plan is correct and the world is counting wrong.",
       },
       {
-        id: 'gletscherlicht', type: 'movie', title: 'Gletscherlicht', year: 2025, fsk: 12,
-        genres: ['Drama'], hue: 205, runtime: 7680, added: 2, pos: 2880, cw: 3,
-        overview: 'Nach dem Tod ihres Vaters kehrt die Glaziologin Ada Brenner ins Hochtal ihrer Kindheit zurück. Zwischen schmelzendem Eis und alten Rechnungen findet sie ein Tagebuch, das die Geschichte des Dorfes neu schreibt.',
+        id: 'ctrl-z', type: 'movie', title: "Ctrl+Z", year: 2023, fsk: 12,
+        genres: ["Drama", "Science Fiction"], hue: 180, runtime: 7680, added: 2, pos: 2880, cw: 3,
+        poster: `${POSTER_BASE}ctrl-z.webp`,
+        overview: "After a lab accident, Mira can undo the last thing she did. Only the last thing. Her sister is about to say something she cannot take back.",
       },
       {
-        id: 'letzte-schicht', type: 'movie', title: 'Die letzte Schicht', year: 2024, fsk: 16,
-        genres: ['Thriller'], hue: 12, runtime: 6240, added: 9, pos: 0, cw: 0,
-        overview: 'Im stillgelegten Bergwerk Konrad II soll eine letzte Nachtschicht die Pumpen abstellen. Als der Aufzug ausfällt, merkt Steiger Wollny, dass jemand von der Belegschaft nicht auf der Liste steht.',
+        id: 'hello-world', type: 'movie', title: "Hello, World", year: 2025, fsk: 0,
+        genres: ["Documentary"], hue: 205, runtime: 5220, added: 4, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}hello-world.webp`,
+        overview: "The first words of every programmer, spoken by people who never wrote a line. A documentary about a greeting that went around the planet, and the twelve countries that answered.",
       },
       {
-        id: 'nordwind', type: 'movie', title: 'Nordwind', year: 2023, fsk: 6,
-        genres: ['Adventure'], hue: 150, runtime: 5760, added: 8, pos: 0, cw: 0,
-        overview: 'Die zwölfjährige Juno segelt mit ihrem Großvater das alte Postboot die Küste hinauf — gegen den Wind, gegen die Zeit und gegen den Plan ihrer Eltern, das Boot zu verkaufen.',
+        id: 'love-not-found', type: 'movie', title: "404: Love Not Found", year: 2022, fsk: 6,
+        genres: ["Romantic Comedy"], hue: 350, runtime: 6060, added: 6, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}love-not-found.webp`,
+        overview: "He is a page nobody links to. She is the search engine. A romantic comedy about being found by the one person who was actually looking.",
       },
       {
-        id: 'kastanienjahre', type: 'movie', title: 'Kastanienjahre', year: 2022, fsk: 12,
-        genres: ['Drama'], hue: 35, runtime: 6720, added: 11, pos: 0, cw: 0,
-        overview: 'Drei Geschwister erben das Gasthaus ihrer Mutter — und mit ihm die Frage, warum der Vater 1989 nicht zurückkam. Ein Sommer zwischen Renovierung und Wahrheit.',
+        id: 'dark-mode', type: 'movie', title: "Dark Mode", year: 2023, fsk: 16,
+        genres: ["Noir", "Crime"], hue: 230, runtime: 7260, added: 7, pos: 1080, cw: 1,
+        poster: `${POSTER_BASE}dark-mode.webp`,
+        overview: "A city switched to night and never switched back. A detective who works only by the light of her phone hunts the one who flipped the switch.",
       },
       {
-        id: 'paralleltal', type: 'movie', title: 'Paralleltal', year: 2024, fsk: 16,
-        genres: ['Mystery'], hue: 290, runtime: 7260, added: 7, pos: 1080, cw: 1,
-        overview: 'Ein Vermessungsingenieur findet in den Karten zweier Jahrzehnte dasselbe Seitental — nur liegt es jedes Mal woanders. Je genauer er misst, desto weniger stimmt die Landschaft.',
+        id: 'rubber-duck', type: 'movie', title: "The Rubber Duck", year: 2024, fsk: 0,
+        genres: ["Family", "Animation"], hue: 45, runtime: 5460, added: 8, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}rubber-duck.webp`,
+        overview: "A small yellow duck never says a word, yet everyone who explains their problem to it walks away with the answer. Now the duck is missing, and the town has questions.",
       },
       {
-        id: 'acht-stunden', type: 'movie', title: 'Acht Stunden', year: 2021, fsk: 16,
-        genres: ['Thriller'], hue: 0, runtime: 5340, added: 12, pos: 0, cw: 0,
-        overview: 'Eine Nachtdienst-Ärztin, ein abgeriegeltes Kreiskrankenhaus, ein Patient ohne Akte. Acht Stunden bis zur Frühschicht — erzählt in Echtzeit.',
+        id: 'race-condition', type: 'movie', title: "Race Condition", year: 2024, fsk: 16,
+        genres: ["Thriller"], hue: 12, runtime: 6240, added: 9, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}race-condition.webp`,
+        overview: "Two couriers are handed the same key to a vault that opens exactly once. Whoever arrives second was never there. Told twice, from both sides.",
       },
       {
-        id: 'sommer-marseille', type: 'movie', title: 'Sommer in Marseille', year: 2023, fsk: 6,
-        genres: ['Comedy'], hue: 45, runtime: 6060, added: 6, pos: 0, cw: 0,
-        overview: 'Der pensionierte Lokführer Herbert Kaminski will nur seinen Koffer zurück. Die Fluggesellschaft schickt ihn dafür quer durch Marseille — und mitten in die Familienfeier der Fahrerin Amira.',
+        id: 'cache-also-rises', type: 'movie', title: "The Cache Also Rises", year: 2020, fsk: 12,
+        genres: ["Drama"], hue: 25, runtime: 7020, added: 11, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}cache-also-rises.webp`,
+        overview: "A village bakery remembers every order ever placed and bakes it again before you ask. Then a stranger orders something new.",
       },
       {
-        id: 'kartograf', type: 'movie', title: 'Der Kartograf', year: 2020, fsk: 12,
-        genres: ['History'], hue: 190, runtime: 8040, added: 13, pos: 0, cw: 0,
-        overview: '1783: Der junge Kartograf Elias Vogt soll das Erzgebirge neu vermessen. Doch seine Karten zeigen, was der Hof nicht sehen will — leere Dörfer, verlassene Gruben, hungernde Täler.',
+        id: 'kernel-panic', type: 'movie', title: "Kernel Panic", year: 2021, fsk: 12,
+        genres: ["Disaster"], hue: 0, runtime: 5340, added: 12, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}kernel-panic.webp`,
+        overview: "The world's biggest cinema installs a popcorn machine with a mind of its own. On opening night it decides the show will not go on.",
       },
       {
-        id: 'blaupause', type: 'movie', title: 'Blaupause', year: 2025, fsk: 0,
-        genres: ['Documentary'], hue: 220, runtime: 5220, added: 4, pos: 0, cw: 0,
-        overview: 'Wie baut man eine Stadt, die es noch nicht gibt? Zwei Jahre hinter den Kulissen des größten Holzbau-Quartiers Europas — vom ersten Modell bis zum Einzug.',
+        id: 'big-endian', type: 'movie', title: "Big Endian", year: 2019, fsk: 12,
+        genres: ["Western"], hue: 35, runtime: 8040, added: 13, pos: 0, cw: 0,
+        poster: `${POSTER_BASE}big-endian.webp`,
+        overview: "A frontier town has argued for forty years about which end of Main Street is the beginning. A stranger arrives with a measuring tape and no opinion.",
       },
       {
-        id: 'halbmond', type: 'series', title: 'Halbmond', year: 2024, fsk: 16,
-        genres: ['Spy', 'Drama'], hue: 230, added: 5, cw: 4,
+        id: 'infinite-loop', type: 'series', title: "Infinite Loop", year: 2024, fsk: 16,
+        genres: ["Mystery"], hue: 265, added: 5, cw: 4,
         lastPlayed: { season: 2, ep: 4 },
-        overview: 'Ost-Berlin, 1983: Die Übersetzerin Vera Salt führt ein Doppelleben zwischen zwei Diensten. Als ihr Führungsoffizier verschwindet, weiß sie nicht mehr, für wen ihre Berichte eigentlich bestimmt sind.',
+        poster: `${POSTER_BASE}infinite-loop.webp`,
+        overview: "Every morning the 7:42 leaves the station and arrives at the station it just left. Only the conductor notices, and she is running out of ways to say so.",
         seasons: [
           { n: 1, episodes: [
-            { n: 1, title: 'Ankunft', dur: 3060, watched: true, pos: 0 },
-            { n: 2, title: 'Deckname Aster', dur: 2940, watched: true, pos: 0 },
-            { n: 3, title: 'Der Brief', dur: 3000, watched: true, pos: 0 },
-            { n: 4, title: 'Tote Winkel', dur: 3120, watched: true, pos: 0 },
-            { n: 5, title: 'Grenzverkehr', dur: 2880, watched: true, pos: 0 },
-            { n: 6, title: 'Das Archiv', dur: 3060, watched: true, pos: 0 },
-            { n: 7, title: 'Nachtfahrt', dur: 2940, watched: true, pos: 0 },
-            { n: 8, title: 'Übergabe', dur: 3300, watched: true, pos: 0 },
+            { n: 1, title: 'Departure', dur: 3060, watched: true, pos: 0 },
+            { n: 2, title: 'Arrival', dur: 2940, watched: true, pos: 0 },
+            { n: 3, title: 'Departure', dur: 3000, watched: true, pos: 0 },
+            { n: 4, title: 'Arrival', dur: 3120, watched: true, pos: 0 },
+            { n: 5, title: 'Loop Line', dur: 2880, watched: true, pos: 0 },
+            { n: 6, title: 'Terminus', dur: 3060, watched: true, pos: 0 },
+            { n: 7, title: 'Terminus', dur: 2940, watched: true, pos: 0 },
+            { n: 8, title: 'Terminus', dur: 3300, watched: true, pos: 0 },
           ] },
           { n: 2, episodes: [
-            { n: 1, title: 'Rückkehr', dur: 3060, watched: true, pos: 0 },
-            { n: 2, title: 'Alte Schulden', dur: 2940, watched: true, pos: 0 },
-            { n: 3, title: 'Doppelgänger', dur: 3000, watched: true, pos: 0 },
-            { n: 4, title: 'Das Netz', dur: 3120, watched: false, pos: 1250 },
-            { n: 5, title: 'Stille Post', dur: 2940, watched: false, pos: 0 },
-            { n: 6, title: 'Gegenlicht', dur: 3060, watched: false, pos: 0 },
-            { n: 7, title: 'Maulwurf', dur: 2940, watched: false, pos: 0 },
-            { n: 8, title: 'Endspiel', dur: 3480, watched: false, pos: 0 },
+            { n: 1, title: 'Same Train', dur: 3060, watched: true, pos: 0 },
+            { n: 2, title: 'Different Day', dur: 2940, watched: true, pos: 0 },
+            { n: 3, title: 'The Timetable', dur: 3000, watched: true, pos: 0 },
+            { n: 4, title: 'Signal Failure', dur: 3120, watched: false, pos: 1250 },
+            { n: 5, title: 'Return Ticket', dur: 2940, watched: false, pos: 0 },
+            { n: 6, title: 'Platform Nine', dur: 3060, watched: false, pos: 0 },
+            { n: 7, title: 'Last Stop', dur: 2940, watched: false, pos: 0 },
+            { n: 8, title: 'First Stop', dur: 3480, watched: false, pos: 0 },
           ] },
         ],
       },
       {
-        id: 'revier', type: 'series', title: 'Revier', year: 2023, fsk: 12,
-        genres: ['Crime'], hue: 80, added: 10, cw: 0, lastPlayed: null,
-        overview: 'Eine Kommissarin kehrt aus Hamburg zurück ins Ruhrgebiet ihrer Jugend. Jeder Fall führt tiefer in ein Geflecht aus Zechen-Erbe, Familienbanden und Dingen, über die man im Revier nicht spricht.',
-        seasons: [makeSeason(1, 6, 2700, 6), makeSeason(2, 6, 2700, 6), makeSeason(3, 6, 2760, 2)],
+        id: 'merge-conflict', type: 'series', title: "Merge Conflict", year: 2023, fsk: 6,
+        genres: ["Romantic Comedy"], hue: 150, added: 10, cw: 0,
+        lastPlayed: null,
+        poster: `${POSTER_BASE}merge-conflict.webp`,
+        overview: "Two families move into one house with two sets of rules. Nobody will delete a line, so they keep both. A comedy about the parts that overlap.",
+        seasons: [makeSeason(1, 8, 1560, 8), makeSeason(2, 8, 1560, 3)],
       },
       {
-        id: 'station-nord', type: 'series', title: 'Station Nord', year: 2025, fsk: 12,
-        genres: ['Science-Fiction'], hue: 180, added: 3, cw: 0, lastPlayed: null,
-        overview: 'Sechs Überwinterer, eine Polarstation, neun Monate Dunkelheit. Als der Funkkontakt abbricht, empfängt die Station weiter Nachrichten — abgestempelt mit dem Datum des nächsten Frühjahrs.',
+        id: 'the-daemon', type: 'series', title: "The Daemon", year: 2025, fsk: 16,
+        genres: ["Horror"], hue: 120, added: 3, cw: 0,
+        lastPlayed: null,
+        poster: `${POSTER_BASE}the-daemon.webp`,
+        overview: "Something in the house has been running since before the family moved in. It is quiet, it is helpful, and it does not like being stopped.",
         seasons: [makeSeason(1, 8, 2820)],
       },
       {
-        id: 'werkstatt', type: 'series', title: 'Die Werkstatt', year: 2022, fsk: 6,
-        genres: ['Comedy'], hue: 25, added: 14, cw: 0, lastPlayed: null,
-        overview: 'Halb Autowerkstatt, halb Dorfparlament: Bei Meisterin Rosi Lindner wird mehr repariert als nur Autos. Vier Staffeln über Kundschaft, Kaffee und die große Frage, wem der Parkplatz vorm Tor gehört.',
-        seasons: [makeSeason(1, 10, 1560, 10), makeSeason(2, 10, 1560, 10), makeSeason(3, 10, 1620, 10), makeSeason(4, 10, 1620, 4)],
+        id: 'legacy-code', type: 'series', title: "Legacy Code", year: 2022, fsk: 12,
+        genres: ["Family Drama"], hue: 30, added: 14, cw: 0,
+        lastPlayed: null,
+        poster: `${POSTER_BASE}legacy-code.webp`,
+        overview: "Three siblings inherit their grandfather's workshop, a customer list from 1974 and a manual nobody can read. Everything still works. Nobody knows why.",
+        seasons: [makeSeason(1, 6, 2700, 6), makeSeason(2, 6, 2760, 2)],
       },
       {
-        id: 'tiefgang', type: 'series', title: 'Tiefgang', year: 2024, fsk: 16,
-        genres: ['Drama'], hue: 320, added: 15, cw: 2,
+        id: 'stack-overflow', type: 'series', title: "Stack Overflow", year: 2020, fsk: 6,
+        genres: ["Comedy"], hue: 40, added: 15, cw: 2,
         lastPlayed: { season: 1, ep: 2 },
-        overview: 'Eine Binnenschifferfamilie, drei Generationen, ein Frachter mit Hypothek. Zwischen Rotterdam und Basel verhandelt jede Fahrt neu, wer an Bord das Sagen hat — und wer von Bord geht.',
-        seasons: [makeSeason(1, 6, 2580, 1), makeSeason(2, 6, 2640)],
+        poster: `${POSTER_BASE}stack-overflow.webp`,
+        overview: "A pancake diner with one rule: the plate has no limit. Four seasons of regulars, rivals and a stack that has never once been finished.",
+        seasons: [makeSeason(1, 10, 1560, 1), makeSeason(2, 10, 1560), makeSeason(3, 10, 1620), makeSeason(4, 10, 1620)],
       },
       {
-        id: 'funkstille', type: 'series', title: 'Funkstille', year: 2021, fsk: 12,
-        genres: ['Mystery'], hue: 265, added: 16, cw: 0, lastPlayed: null,
-        overview: 'Ein Küstenort verliert für sieben Minuten jede Verbindung zur Außenwelt — Netz, Radio, Festnetz. Niemand erinnert sich an die Zeit dazwischen. Dann tauchen die ersten Aufnahmen auf.',
+        id: 'serial-port', type: 'series', title: "Serial Port", year: 2021, fsk: 16,
+        genres: ["Crime"], hue: 215, added: 16, cw: 0,
+        lastPlayed: null,
+        poster: `${POSTER_BASE}serial-port.webp`,
+        overview: "A harbour detective takes cases one at a time, in the order they arrive, and refuses to be rushed. The harbour does not agree.",
         seasons: [makeSeason(1, 8, 2640, 8), makeSeason(2, 8, 2640, 8), makeSeason(3, 8, 2700)],
       },
     ] as LibraryItem[],
@@ -277,7 +308,7 @@ export const appState = $state({
 });
 
 /* Resume-Punkt in einer generierten Staffel nachtragen (Tiefgang S1E2 läuft) */
-appState.library.items.find((i) => i.id === 'tiefgang')!.seasons![0].episodes[1].pos = 2050;
+appState.library.items.find((i) => i.id === 'stack-overflow')!.seasons![0].episodes[1].pos = 900;
 
 // Dev-Handle: appState im Preview-Browser inspizierbar (window.__hmi.appState).
 if (typeof window !== 'undefined') {
