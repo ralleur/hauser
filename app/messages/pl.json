@@ -278,6 +278,8 @@
   "scene_scenes": "Sceny",
   "scene_pick": "Wybierz scenę",
   "scene_reset": "Przywróć domyślne",
+  "scene_edit_included": "Uwzględnione · {count}",
+  "scene_edit_default_hint": "Domyślnie: wszystkie światła w pokoju",
   "shopping_sort_label": "Sortuj listę zakupów według kategorii",
   "shopping_undo_label": "Cofnij sortowanie",
   "shopping_sort": "Sortuj",

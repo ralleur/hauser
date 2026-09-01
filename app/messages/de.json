@@ -565,6 +565,8 @@
   "scene_scenes": "Szenen",
   "scene_pick": "Szene wählen",
   "scene_reset": "Auf Standard zurücksetzen",
+  "scene_edit_included": "Enthalten · {count}",
+  "scene_edit_default_hint": "Standard: alle Lichter des Raums",
   "icon_all": "Alle",
   "icon_recent": "Zuletzt",
   "icon_light": "Licht",

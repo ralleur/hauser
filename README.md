@@ -121,10 +121,16 @@ configured live service are not the same thing:
 
 | | |
 |---|---|
-| ![Home screen in light mode with a compact control panel](website/media/hero-home.webp) | ![Notes screen in light mode](website/media/notes.webp) |
+| ![Home screen in light mode with a compact control panel](website/media/home-day.webp) | ![Notes screen in light mode](website/media/notes.webp) |
 | **Home** — compact controls leave the room illustration visible | **Everyday** — shopping and reminders without a second app |
 | ![Library screen with shelves of cover art](website/media/library.webp) | ![Energy screen with load, consumption and an hourly chart](website/media/energy.webp) |
 | **Library** — Jellyfin, in the same design system | **Energy** — real sensors, honest gaps |
+| ![The scene editor over the home screen, listing the lamps a scene drives](website/media/scene-editor.webp) | ![The Rooms and devices settings page with a room list and image cards](website/media/settings-rooms.webp) |
+| **Scenes** — long-press a chip, edit the scene with live preview | **Settings** — rooms, appearance, content, connections, system |
+
+More captures — the layout drawer, the room editor, the lamp detail, the phone
+shell by day and by night — are on the
+[project page](https://ralleur.github.io/hauser/#whats-new).
 
 ## Architecture
 

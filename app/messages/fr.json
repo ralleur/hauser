@@ -290,6 +290,8 @@
   "scene_scenes": "Scènes",
   "scene_pick": "Choisir une scène",
   "scene_reset": "Réinitialiser",
+  "scene_edit_included": "Inclus · {count}",
+  "scene_edit_default_hint": "Par défaut : toutes les lumières de la pièce",
   "shopping_sort_label": "Trier la liste de courses par catégorie",
   "shopping_undo_label": "Annuler le tri",
   "shopping_sort": "Trier",
