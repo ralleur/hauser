@@ -5,6 +5,19 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-09-01
+
+### Fixed
+
+- **The Home Assistant add-on stayed on "Connecting…" even though it was
+  connected.** Home Assistant may bundle several messages into a single packet,
+  and the add-on's connection relay discarded such bundles because a bundle
+  carries no message type of its own. The confirmation the app waits for to
+  finish subscribing arrives in exactly such a bundle, so the app kept showing
+  "Connecting…" while live values were already updating behind it. Bundles are
+  now unpacked. This only affected the add-on; installations where the browser
+  talks to Home Assistant directly were never impacted.
+
 ## [0.6.1] - 2026-09-01
 
 ### Added

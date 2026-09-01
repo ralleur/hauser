@@ -6,10 +6,12 @@
 > Home Assistant OS 18.2 test system running Home Assistant 2026.8.3: fresh
 > install, start, credential-free setup discovery, activation, the internal
 > Home Assistant connection, and opening the displayed address from a real
-> phone. Real device commands with state echo, reconnect after a Home Assistant
-> or App restart, and backup/restore were **not** re-verified on this version;
-> they last passed on `0.4.0-beta.4`. This is not a broad compatibility or
-> support promise.
+> phone. `0.6.2` changes only the internal connection relay, where a defect that
+> left the app on "Connecting…" was reproduced against a live Home Assistant and
+> is covered by tests; the install path itself was not re-run on that version.
+> Real device commands with state echo, reconnect after a Home Assistant or App
+> restart, and backup/restore were **not** re-verified on this version; they
+> last passed on `0.4.0-beta.4`. This is not a broad compatibility or support promise.
 
 1. In Home Assistant, open **Settings → Apps → App Store → Repositories**.
 2. Add `https://github.com/ralleur/hauser`.
@@ -99,7 +101,7 @@ migration remains fail-closed and makes the internal health probe fail.
   uses the Supervisor token to reach Home Assistant Core internally. No host
   networking, privileged mode, hardware access or Home Assistant configuration
   mount is requested, and no further Supervisor role is claimed.
-- `0.6.1` is the current published App and Docker/Compose beta. Versions below
+- `0.6.2` is the current published App and Docker/Compose beta. Versions below
   `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
   that it is a beta. Hauser is licensed under the GNU Affero General Public
   License instead of MIT; everything up to and including `0.4.0-beta.6` stays

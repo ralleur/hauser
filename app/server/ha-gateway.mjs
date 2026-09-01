@@ -65,6 +65,25 @@ function parseFrame(data) {
   }
 }
 
+/* Hat der Browser `coalesce_messages` ausgehandelt, buendelt Home Assistant
+   mehrere Nachrichten zu EINEM Array-Frame. Ein Buendel traegt selbst keinen
+   `type` und fiel deshalb der Einzelframe-Pruefung zum Opfer — mitsamt der
+   `result`-Antwort, auf die der Client seine Subscription stuetzt. Genau die
+   wird gebuendelt, weil sie zusammen mit dem ersten Zustandsereignis anfaellt.
+   Ausgepackt wird deshalb hier; die Allowlist gilt unveraendert je Nachricht. */
+function parseServerFrames(data) {
+  try {
+    const parsed = JSON.parse(typeof data === 'string' ? data : Buffer.from(data).toString('utf8'));
+    const list = Array.isArray(parsed) ? parsed : [parsed];
+    return {
+      batched: Array.isArray(parsed),
+      frames: list.filter((frame) => frame && typeof frame === 'object' && typeof frame.type === 'string'),
+    };
+  } catch {
+    return { batched: false, frames: [] };
+  }
+}
+
 async function upstreamFrame(socket, timeoutMs, accept) {
   return new Promise((resolvePromise, rejectPromise) => {
     let settled = false;
@@ -207,12 +226,13 @@ export function createHaWebSocketGateway({
       upstream.addEventListener('close', () => shutdown());
       upstream.addEventListener('error', () => shutdown());
       upstream.addEventListener('message', async (event) => {
-        const message = parseFrame(typeof event.data === 'string'
+        const { batched, frames } = parseServerFrames(typeof event.data === 'string'
           ? event.data
           : event.data instanceof Blob ? await event.data.text() : event.data);
         /* Unbekannte oder Auth-Frames erreichen den Browser nicht. */
-        if (!message || !allowedServerTypes.has(message.type)) return;
-        toDownstream(message);
+        const allowed = frames.filter((frame) => allowedServerTypes.has(frame.type));
+        if (!allowed.length) return;
+        toDownstream(batched ? allowed : allowed[0]);
       });
 
       ready = true;

@@ -59,7 +59,7 @@ RUN npm run build && \
     npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.6.1
+ARG HAUSER_VERSION=0.6.2
 ARG HAUSER_REVISION=""
 ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \

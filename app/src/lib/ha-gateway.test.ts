@@ -217,6 +217,37 @@ describe('Nachrichtenallowlist', () => {
     expect(client.frames.map((frame: any) => frame.type)).toEqual(['auth_required', 'auth_ok', 'result']);
   });
 
+  /* Hat der Browser `coalesce_messages` ausgehandelt, buendelt Home Assistant
+     mehrere Nachrichten zu EINEM Array-Frame. Genau darin steckt die
+     `result`-Antwort auf `subscribe_entities` — sie faellt zusammen mit dem
+     ersten Zustandsereignis an. Verwirft das Gateway das Buendel, wartet der
+     Client ewig auf seine Subscription und bleibt auf „Verbindet…" stehen,
+     obwohl spaetere Einzelereignisse durchkommen. */
+  it('reicht ein gebündeltes HA-Paket weiter, statt es als typlos zu verwerfen', async () => {
+    const { url } = await serve();
+    const client = await authenticate(url);
+    FakeUpstream.instances[0].receive([
+      { id: 3, type: 'result', success: true, result: null },
+      { id: 3, type: 'event', event: { a: { 'light.k': { s: 'on' } } } },
+    ]);
+    await waitFor(() => client.frames.length > 2, 'gebündeltes Paket');
+    expect(client.frames[2]).toEqual([
+      { id: 3, type: 'result', success: true, result: null },
+      { id: 3, type: 'event', event: { a: { 'light.k': { s: 'on' } } } },
+    ]);
+  });
+
+  it('entfernt nicht freigegebene Nachrichten aus einem Bündel, statt das ganze Bündel zu liefern', async () => {
+    const { url } = await serve();
+    const client = await authenticate(url);
+    FakeUpstream.instances[0].receive([
+      { type: 'auth_ok', ha_version: '2026.8.1' },
+      { id: 4, type: 'result', success: true, result: null },
+    ]);
+    await waitFor(() => client.frames.length > 2, 'gefiltertes Bündel');
+    expect(client.frames[2]).toEqual([{ id: 4, type: 'result', success: true, result: null }]);
+  });
+
   it('lässt vor dem Browser-Handshake keine Kommandos durch', async () => {
     const { url } = await serve();
     const client = connect(url);

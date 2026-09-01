@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.2 - 2026-09-01
+
+### Fixed
+
+- The add-on could stay on "Connecting…" although it was already connected and
+  values were updating. Home Assistant sometimes bundles several messages into
+  one packet, and those bundles were being dropped — including the confirmation
+  the app waits for. Bundles are now unpacked.
+
 ## 0.6.1 - 2026-09-01
 
 ### Added
