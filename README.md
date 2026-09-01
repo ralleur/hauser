@@ -132,8 +132,8 @@ phone captures are 390 × 844 at 2×. All of them come from the demo build.
 | **Settings** — six groups and a search box | **Services** — the address your phone needs, as text and QR |
 | ![The notes screen with a shopping list grouped by shop and reminders as coloured post-its per person.](website/media/notes.webp) | ![The calendar screen showing a month grid with timed events, all-day entries and multi-day bars.](website/media/calendar.webp) |
 | **Everyday** — shopping and reminders without a second app | **Calendar** — every `calendar.*` entity you select, in one grid |
-| ![The library screen with horizontal shelves of cover art.](website/media/library.webp) | ![The energy screen with measured load, daily consumption, a flow diagram and an hourly chart; solar and grid left blank.](website/media/energy.webp) |
-| **Library** — Jellyfin, in the same design system | **Energy** — real sensors, honest gaps |
+| ![The library screen with shelves of poster art for fictional films and series.](website/media/library.webp) | ![The energy screen with measured load, daily consumption, a flow diagram and an hourly chart; solar and grid left blank.](website/media/energy.webp) |
+| **Library** — Jellyfin, in the same design system; the sixteen titles and their posters are the demo's own inventions | **Energy** — real sensors, honest gaps |
 
 <p align="center">
   <img src="website/media/phone-reminders-390.webp" width="200" alt="The phone reminders screen: post-its per person.">&nbsp;&nbsp;

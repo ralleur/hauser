@@ -10,9 +10,11 @@
 
   let imgFailed = $state(false);
   const posterUrl = $derived(
-    item.primaryTag && !imgFailed
-      ? jellyfin.imageUrl(item.id, { type: 'Primary', tag: item.primaryTag, maxWidth: 300 })
-      : null,
+    imgFailed
+      ? null
+      : item.primaryTag
+        ? jellyfin.imageUrl(item.id, { type: 'Primary', tag: item.primaryTag, maxWidth: 300 })
+        : item.poster ?? null,
   );
 
   const cw = $derived(continueInfo(item));

@@ -60,6 +60,8 @@ cc_roots = (
     Path('app/public/energy'),
     Path('app/public/notes'),
     Path('app/public/wizard'),
+    # Poster der erfundenen Demo-Bibliothek: eigene Vektorgrafik, CC BY.
+    Path('app/public/demo-posters'),
     Path('website/media'),
 )
 brand_roots = (

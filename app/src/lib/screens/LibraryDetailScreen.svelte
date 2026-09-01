@@ -97,7 +97,7 @@
           {#each item.seasons! as s (s.n)}
             <button class="season-pill pressable" class:is-active={s.n === appState.library.season}
                     type="button" role="radio" aria-checked={s.n === appState.library.season}
-                    onclick={() => { appState.library.season = s.n; }}>Staffel {s.n}</button>
+                    onclick={() => { appState.library.season = s.n; }}>{m.library_season()} {s.n}</button>
           {/each}
         </div>
         <div class="episode-list">
