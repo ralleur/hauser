@@ -30,17 +30,18 @@ export type SettingsGroupId =
   | 'appearance'
   | 'content'
   | 'connectivity'
-  | 'system';
+  | 'system'
+  /* Zuletzt und bewusst getrennt: was hier steht, ist noch nicht fertig. */
+  | 'experimental';
 
 export type SettingsSectionId =
   /* Zuhause */
   | 'rooms-devices'
   | 'laundry'
-  | 'hotel-mode'
-  | 'hotel-guest-access'
-  /* Darstellung */
+  /* Darstellung — `appearance` fasst Erscheinungsbild und Bedienung zusammen:
+     getrennt waren es zwei sehr kurze Abschnitte, zwischen denen niemand
+     zuverlässig raten konnte, wo eine Einstellung wohnt. */
   | 'appearance'
-  | 'layout'
   | 'ambient'
   /* Inhalte */
   | 'calendar'
@@ -51,7 +52,10 @@ export type SettingsSectionId =
   /* System */
   | 'status'
   | 'ai-customizing'
-  | 'maintenance';
+  | 'maintenance'
+  /* Experimentell — noch nicht fertig, deshalb bewusst am Ende und getrennt. */
+  | 'hotel-mode'
+  | 'hotel-guest-access';
 
 export type SettingsTint = 'success' | 'cool' | 'warm' | 'neutral';
 
@@ -83,6 +87,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
   { id: 'content', get label() { return m.settings_group_content_label(); } },
   { id: 'connectivity', get label() { return m.settings_group_connectivity_label(); } },
   { id: 'system', get label() { return m.settings_group_system_label(); } },
+  { id: 'experimental', get label() { return m.settings_group_experimental_label(); } },
 ];
 
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
@@ -97,24 +102,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_laundry_desc(); },
   },
   {
-    id: 'hotel-mode', group: 'home',
-    get label() { return m.settings_section_hotel_mode_label(); }, icon: 'i-bed', tint: 'cool',
-    get description() { return m.settings_section_hotel_mode_desc(); },
-  },
-  {
-    id: 'hotel-guest-access', group: 'home',
-    get label() { return m.settings_section_hotel_access_label(); }, icon: 'i-account-key', tint: 'warm',
-    get description() { return m.settings_section_hotel_access_desc(); },
-  },
-  {
     id: 'appearance', group: 'appearance',
-    get label() { return m.settings_section_appearance_label(); }, icon: 'i-theme-light-dark', tint: 'warm',
-    get description() { return m.settings_section_appearance_desc(); },
-  },
-  {
-    id: 'layout', group: 'appearance',
-    get label() { return m.settings_section_layout_label(); }, icon: 'i-view-dashboard', tint: 'neutral',
-    get description() { return m.settings_section_layout_desc(); },
+    get label() { return m.settings_section_interface_label(); }, icon: 'i-theme-light-dark', tint: 'warm',
+    get description() { return m.settings_section_interface_desc(); },
   },
   {
     id: 'ambient', group: 'appearance',
@@ -155,6 +145,16 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'maintenance', group: 'system',
     get label() { return m.settings_section_maintenance_label(); }, icon: 'i-wrench', tint: 'neutral',
     get description() { return m.settings_section_maintenance_desc(); },
+  },
+  {
+    id: 'hotel-mode', group: 'experimental',
+    get label() { return m.settings_section_hotel_mode_label(); }, icon: 'i-bed', tint: 'cool',
+    get description() { return m.settings_section_hotel_mode_desc(); },
+  },
+  {
+    id: 'hotel-guest-access', group: 'experimental',
+    get label() { return m.settings_section_hotel_access_label(); }, icon: 'i-account-key', tint: 'warm',
+    get description() { return m.settings_section_hotel_access_desc(); },
   },
 ];
 
@@ -204,11 +204,11 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['theme', 'dunkel', 'hell', 'dark', 'light', 'nacht', 'tag', 'automatisch', 'sonne', 'design', 'farben'] },
   { id: 'ui-language', section: 'appearance', get label() { return m.settings_entry_ui_language_label(); },
     keywords: ['sprache', 'language', 'deutsch', 'englisch', 'locale', 'übersetzung'] },
-  { id: 'layout-config', section: 'layout', get label() { return m.settings_entry_layout_config_label(); },
+  { id: 'layout-config', section: 'appearance', get label() { return m.settings_entry_layout_config_label(); },
     keywords: ['layout', 'raum', 'kontext', 'breite', 'flächen', 'panel', 'hero', 'kacheln', 'energie'] },
-  { id: 'layout-reset', section: 'layout', get label() { return m.settings_entry_layout_reset_label(); },
+  { id: 'layout-reset', section: 'appearance', get label() { return m.settings_entry_layout_reset_label(); },
     keywords: ['standard', 'default', 'reset', 'werkseinstellung'] },
-  { id: 'off-confirm-before', section: 'layout', get label() { return m.settings_entry_off_confirm_before_label(); },
+  { id: 'off-confirm-before', section: 'appearance', get label() { return m.settings_entry_off_confirm_before_label(); },
     keywords: ['mobile', 'lichter', 'fernseher', 'tv', 'uhrzeit', 'bestätigung', 'nachfrage', 'deaktivieren'] },
   { id: 'standby-now', section: 'ambient', get label() { return m.settings_entry_standby_now_label(); },
     keywords: ['ruhezustand', 'idle', 'bildschirmschoner', 'screensaver', 'schlafen', 'aus'] },

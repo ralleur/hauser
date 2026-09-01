@@ -5,6 +5,58 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-01
+
+### Added
+
+- **A city map on the standby screen.** When the panel rests, Hauser can place a
+  subtle street map of your surroundings behind the clock and notes. The place
+  comes from Home Assistant, from the device's own location, from a place search
+  ("Dortmund, Germany") or from coordinates you type. The map is rendered once on
+  the server and stored as a small monochrome image; light and dark share the
+  same file, and Deep Night shows no map at all. Setup offers it as an opt-out
+  with an example picture, and it can be turned off at any time under
+  **Appearance → Ambient & standby**.
+- **Place search instead of coordinates.** Type a town and pick it from a list.
+  The search runs on the server against OpenStreetMap's geocoder; what leaves the
+  server is a search term, never your address.
+
+### Changed
+
+- **The app starts noticeably faster and reaches a usable state sooner.** When a
+  validated configuration is already known, the real interface is mounted
+  directly instead of a placeholder shell that is torn down again a moment later.
+  Independent startup requests now run in parallel, and the Home Assistant
+  connection no longer waits for unrelated configuration.
+- **Room pictures on phones are about a fifth of their previous size.** Hauser
+  now derives a phone-sized variant of every room image when the image enters the
+  library, so a room tile shows its background in the first paint instead of
+  decoding a multi-megabyte file. Existing libraries are migrated automatically
+  on the first start after the update.
+- **The offline cache shrank from roughly 17 MB to 3.5 MB**, which makes every
+  service worker installation faster. Full-size room pictures are fetched when
+  they are first shown and cached from then on.
+- **A waiting update is offered, not forced.** Hauser no longer reloads itself
+  while you are looking at it. A quiet hint appears and applies the update when
+  you tap it; without a tap the running version keeps working. Wall panels still
+  update on their own while idle.
+- **Automatic appearance follows the time of day when Home Assistant has not
+  reported a sun position yet**, instead of staying dark until it does.
+- **Settings are easier to navigate.** "Appearance" and "Layout & controls" are
+  now one section, **Interface & controls**. Hotel Mode and guest access moved
+  into a new **Experimental** group at the end of the list.
+- **Unfinished room edits survive leaving the section.** Renaming rooms,
+  reordering them or adding devices and then switching to another settings
+  section no longer discards the draft silently. A restored draft is marked as
+  such and can be discarded deliberately.
+
+### Fixed
+
+- Reconnecting after the app returns from the background no longer waits for the
+  next retry window; a connection that only looks alive is detected and replaced.
+- Room tiles no longer decode a second set of images when Home Assistant data
+  arrives shortly after start.
+
 ## [0.6.0] - 2026-08-31
 
 ### Changed

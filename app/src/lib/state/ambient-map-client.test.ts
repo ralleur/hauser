@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   AMBIENT_MAP_ADMIN_STATUS_URL,
@@ -97,6 +97,7 @@ describe('parseAmbientMapStatus', () => {
   it('übernimmt eine gültige Antwort vollständig', () => {
     expect(parseAmbientMapStatus(readyStatus({ source: 'manual', label: ' Saarburg ' }))).toEqual({
       state: 'ready',
+      errorCode: null,
       radiusMetres: 2_000,
       assetUrl: ASSET_URL,
       source: 'manual',
@@ -491,5 +492,103 @@ describe('onChange', () => {
     const c = client([jsonResponse(200, readyStatus())], { onChange: () => { changes += 1; } });
     await c.refresh();
     expect(changes).toBeGreaterThan(0);
+  });
+});
+
+/* B-27/AMBIENT-MAP: Ortssuche. Nominatim ist ein von Freiwilligen betriebener
+   Dienst mit einer harten Grenze von einer Anfrage pro Sekunde — die Entprellung
+   ist deshalb kein Komfort, sondern Vertragserfuellung. */
+describe('Ortssuche', () => {
+  function harness(fetchImpl: typeof fetch) {
+    const timers: Array<{ run: () => void; delay: number }> = [];
+    const client = createAmbientMapClient({
+      fetcher: fetchImpl,
+      geolocation: null,
+      scheduleTimer: (run, delay) => { timers.push({ run, delay }); return timers.length; },
+      cancelTimer: (handle) => { timers[(handle as number) - 1] = { run: () => {}, delay: 0 }; },
+      searchDebounceMs: 600,
+    });
+    return { client, timers, flush: () => { const t = timers.at(-1); t?.run(); } };
+  }
+
+  const okResponse = (results: unknown) => new Response(JSON.stringify({ results }), {
+    status: 200, headers: { 'content-type': 'application/json' },
+  });
+
+  it('sucht erst nach der Entprellung und nie unter drei Zeichen', async () => {
+    const fetchImpl = vi.fn(async () => okResponse([]));
+    const { client, timers } = harness(fetchImpl as unknown as typeof fetch);
+
+    client.search('Do');
+    expect(timers).toHaveLength(0);
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    client.search('Dortmund');
+    expect(timers).toHaveLength(1);
+    expect(timers[0].delay).toBe(600);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('übernimmt nur wohlgeformte Treffer und verwirft den Rest', async () => {
+    const fetchImpl = vi.fn(async () => okResponse([
+      { label: 'Dortmund, NRW, Deutschland', latitude: 51.5142, longitude: 7.4653 },
+      { label: 'kaputt', latitude: 999, longitude: 0 },
+      { label: '', latitude: 50, longitude: 7 },
+      { latitude: 50, longitude: 7 },
+    ]));
+    const { client, flush } = harness(fetchImpl as unknown as typeof fetch);
+
+    client.search('Dortmund');
+    flush();
+    await vi.waitFor(() => expect(client.state.searchResults).toHaveLength(1));
+    expect(client.state.searchResults[0]).toEqual({
+      label: 'Dortmund, NRW, Deutschland', latitude: 51.5142, longitude: 7.4653,
+    });
+    expect(client.state.searching).toBe(false);
+  });
+
+  /* Eine langsame Antwort darf eine neuere Trefferliste nicht ueberschreiben —
+     sonst zeigt die Liste Orte zu einem Begriff, der laengst weitergetippt ist. */
+  it('verwirft eine überholte Antwort', async () => {
+    let releaseFirst!: (value: Response) => void;
+    const first = new Promise<Response>((resolve) => { releaseFirst = resolve; });
+    const fetchImpl = vi.fn()
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce(okResponse([{ label: 'Marseille, France', latitude: 43.2965, longitude: 5.3698 }]));
+    const { client, timers } = harness(fetchImpl as unknown as typeof fetch);
+
+    client.search('Dortmund');
+    timers[0].run();
+    client.search('Marseille');
+    timers.at(-1)!.run();
+    await vi.waitFor(() => expect(client.state.searchResults).toHaveLength(1));
+    releaseFirst(okResponse([{ label: 'Dortmund', latitude: 51.5, longitude: 7.4 }]));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(client.state.searchResults[0].label).toBe('Marseille, France');
+  });
+
+  it('meldet die Ratengrenze des Dienstes eigenständig', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ code: 'GEOCODE_RATE_LIMITED' }), { status: 429 }));
+    const { client, flush } = harness(fetchImpl as unknown as typeof fetch);
+
+    client.search('Dortmund');
+    flush();
+
+    await vi.waitFor(() => expect(client.state.problem).toBe('search_rate_limited'));
+    expect(client.state.searchResults).toEqual([]);
+  });
+
+  it('räumt die Liste, sobald die Eingabe zu kurz wird', async () => {
+    const fetchImpl = vi.fn(async () => okResponse([{ label: 'Dortmund', latitude: 51.5, longitude: 7.4 }]));
+    const { client, flush } = harness(fetchImpl as unknown as typeof fetch);
+
+    client.search('Dortmund');
+    flush();
+    await vi.waitFor(() => expect(client.state.searchResults).toHaveLength(1));
+
+    client.search('Do');
+    expect(client.state.searchResults).toEqual([]);
+    expect(client.state.searching).toBe(false);
   });
 });

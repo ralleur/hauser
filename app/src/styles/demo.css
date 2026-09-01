@@ -32,6 +32,17 @@
   user-select: none;
 }
 
+/* In der Mobilansicht sitzt unten rechts der Daumen — dort ist das Badge im
+   Weg, obwohl es nichts verdeckt. Auf schmalen Schirmen wandert es deshalb an
+   den oberen Rand, wo nichts bedient wird. Panel und Desktop bleiben, wie sie
+   waren: dort ist unten rechts die ruhigste Ecke. */
+@media (max-width: 768px) {
+  .demo-badge {
+    inset-block-end: auto;
+    inset-block-start: max(var(--space-3, 12px), env(safe-area-inset-top));
+  }
+}
+
 .demo-badge::before {
   content: '';
   inline-size: 6px;

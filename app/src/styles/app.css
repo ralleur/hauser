@@ -2677,25 +2677,7 @@ body.theme-fade * {
 }
 /* Tiefnacht zeigt ausschließlich die gedämpfte rote Uhr — die Markup-Bedingung
    entfernt beide Knoten bereits, die Regel hält den Vertrag auch dann. */
-.ambient.deep-night .ambient-map,
-.ambient.deep-night .ambient-map-credit { display: none; }
-
-/* Attribution: lesbar, aber sekundär — und bewusst außerhalb der
-   Maskenopacity. `pointer-events: none` hält die bestehenden Weckzonen frei.
-   Farbe und Größe folgen `docs/01-design-system.md`: `--color-text-tertiary`
-   ist dort ausdrücklich auf nicht-essenzielle Labels ab 14px begrenzt, die
-   ODbL-Attribution ist aber rechtlich verpflichtend und damit
-   bedeutungstragend. Verwendet wird deshalb das dort belegte Mikro-Label-Paar
-   `--text-2xs` + `--color-text-secondary`. */
-.ambient-map-credit {
-  position: absolute;
-  right: clamp(var(--space-3), 2vw, var(--space-6));
-  bottom: var(--space-2);
-  pointer-events: none;
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-text-secondary);
-}
+.ambient.deep-night .ambient-map { display: none; }
 
 .ambient-content {
   display: flex;
@@ -2937,7 +2919,11 @@ body.theme-fade * {
   color: var(--color-text-tertiary);
   transform: rotate(-0.8deg);
 }
-:root[data-theme='dark'] .ambient-postits { opacity: 0.6; }
+/* Gedämpft, aber DECKEND: `opacity` liess seit dem Kartenlayer die
+   Strassen durch das Papier lesen — ein Zettel, durch den man die Stadt
+   sieht, wirkt schmutzig statt ruhig. `brightness` dunkelt dieselbe
+   Papierfarbe ab, ohne sie durchsichtig zu machen. */
+:root[data-theme='dark'] .ambient-postits { filter: brightness(0.6); }
 
 /* ── Einkaufsliste auf dem Standby: ein langer weißlicher Zettel in der
    oberen linken Ecke — Gegenstück zu den Post-its, gleiche Papier-Sprache
@@ -2986,7 +2972,11 @@ body.theme-fade * {
   overflow-wrap: break-word;
   hyphens: auto;
 }
-:root[data-theme='dark'] .ambient-shopping { opacity: 0.6; }
+/* Gedämpft, aber DECKEND: `opacity` liess seit dem Kartenlayer die
+   Strassen durch das Papier lesen — ein Zettel, durch den man die Stadt
+   sieht, wirkt schmutzig statt ruhig. `brightness` dunkelt dieselbe
+   Papierfarbe ab, ohne sie durchsichtig zu machen. */
+:root[data-theme='dark'] .ambient-shopping { filter: brightness(0.6); }
 
 /* ── B-10 Kalender: durchscrollbares Monatsraster im Stil des Ambient-Wochenbands.
    Woche beginnt montags; die klebende Kopfzeile trägt den mitscrollenden Monat. ── */

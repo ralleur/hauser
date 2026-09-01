@@ -304,6 +304,35 @@
   font-size: var(--text-sm);
 }
 
+/* Trefferliste der Ortssuche: hoechstens fuenf Eintraege, jeder ein volles
+   Tap-Ziel. Bewusst untereinander statt als Aufklappmenue — auf einem
+   Wandpanel trifft man Listen zuverlaessiger als Menues. */
+.map-search-results {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.map-search-results button {
+  width: 100%;
+  min-height: var(--touch-min);
+  text-align: start;
+}
+
+/* Pflichtangabe, keine Fussnote: die OSM-Namensnennung ist aus dem Standby
+   hierher gewandert und muss deshalb an dieser Stelle auch wirklich auffindbar
+   sein — abgesetzt statt eingeklemmt, und mit sichtbarem Link. */
+.settings-note-license {
+  margin-block: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid color-mix(in srgb, var(--color-accent-warm) 45%, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  background: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
+  color: var(--color-text-secondary);
+}
+.settings-note-license a { color: var(--color-accent-warm); }
+
 /* Sprung-Highlight aus der Suche: nur Opacity animieren (docs/01) */
 [data-setting-id].is-highlighted::after {
   content: '';

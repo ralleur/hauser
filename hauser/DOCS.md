@@ -2,7 +2,7 @@
 
 ## Install
 
-> **Experimental beta:** on `0.6.0` the App path was verified on an isolated
+> **Experimental beta:** on `0.6.1` the App path was verified on an isolated
 > Home Assistant OS 18.2 test system running Home Assistant 2026.8.3: fresh
 > install, start, credential-free setup discovery, activation, the internal
 > Home Assistant connection, and opening the displayed address from a real
@@ -99,7 +99,7 @@ migration remains fail-closed and makes the internal health probe fail.
   uses the Supervisor token to reach Home Assistant Core internally. No host
   networking, privileged mode, hardware access or Home Assistant configuration
   mount is requested, and no further Supervisor role is claimed.
-- `0.6.0` is the current published App and Docker/Compose beta. Versions below
+- `0.6.1` is the current published App and Docker/Compose beta. Versions below
   `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
   that it is a beta. Hauser is licensed under the GNU Affero General Public
   License instead of MIT; everything up to and including `0.4.0-beta.6` stays

@@ -30,6 +30,12 @@ export const AMBIENT_MAP_REGENERATE_URL = '/api/admin/ambient-map/regenerate';
 export const AMBIENT_MAP_ASSET_URL_PATTERN = /^\/assets\/ambient-maps\/[0-9a-f]{64}\.svg$/;
 
 export const AMBIENT_MAP_POLL_INTERVAL_MS = 1_500;
+/* Nominatim erlaubt hoechstens eine Anfrage pro Sekunde. Echtes
+   Tippen-fuer-Tippen-Autocomplete wuerde das verletzen; deshalb wird erst
+   gesucht, wenn die Eingabe kurz ruht. Der Server setzt dieselbe Grenze
+   nochmal durch — die Oberflaeche ist hoeflich, der Server verbindlich. */
+export const AMBIENT_MAP_SEARCH_DEBOUNCE_MS = 600;
+export const AMBIENT_MAP_SEARCH_MIN_LENGTH = 3;
 /* Obergrenze statt Endlosschleife: ein Job, der nach einer Minute nicht fertig
    ist, wird nicht durch weiteres Pollen fertig. Der Serverauftrag läuft
    unabhängig weiter, der nächste Statusabruf holt ihn ein. */
@@ -39,6 +45,30 @@ export const AMBIENT_MAP_GEOLOCATION_TIMEOUT_MS = 15_000;
 export type AmbientMapState = 'empty' | 'queued' | 'running' | 'ready' | 'error';
 export type AmbientMapSource = 'home_assistant' | 'browser' | 'manual';
 
+export interface AmbientMapPlace {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+/* Auch die Trefferliste kommt aus dem Netz und wird deshalb streng geprueft,
+   nicht bloss durchgereicht. */
+export function parseAmbientMapPlaces(value: unknown): AmbientMapPlace[] {
+  const list = isRecord(value) && Array.isArray(value.results) ? value.results : null;
+  if (!list) return [];
+  const places: AmbientMapPlace[] = [];
+  for (const entry of list) {
+    if (!isRecord(entry)) continue;
+    const { label, latitude, longitude } = entry;
+    if (typeof label !== 'string' || !label.trim() || label.length > 200) continue;
+    if (typeof latitude !== 'number' || !isValidAmbientMapCoordinates(latitude, 0)) continue;
+    if (typeof longitude !== 'number' || !isValidAmbientMapCoordinates(0, longitude)) continue;
+    places.push({ label: label.trim(), latitude, longitude });
+    if (places.length >= 5) break;
+  }
+  return places;
+}
+
 export type AmbientMapProblem =
   | 'status_unavailable'
   | 'unavailable'
@@ -46,6 +76,8 @@ export type AmbientMapProblem =
   | 'admin_required'
   | 'home_assistant_unavailable'
   | 'invalid_coordinates'
+  | 'search_failed'
+  | 'search_rate_limited'
   | 'geolocation_denied'
   | 'geolocation_unavailable'
   | 'geolocation_timeout'
@@ -58,6 +90,11 @@ export interface AmbientMapClientState {
   assetUrl: string | null;
   source: AmbientMapSource | null;
   label: string | null;
+  /** Ursache des letzten gescheiterten Auftrags, rein diagnostisch. */
+  errorCode: string | null;
+  /** Treffer der Ortssuche; leer heisst „nichts gesucht" oder „nichts gefunden". */
+  searchResults: AmbientMapPlace[];
+  searching: boolean;
   /** Mindestens eine Statusantwort wurde verarbeitet. */
   loaded: boolean;
   /** Eine Mutation ist unterwegs (der Job selbst wird nicht abgewartet). */
@@ -89,6 +126,7 @@ export interface AmbientMapClientOptions {
   cancelTimer?: (handle: unknown) => void;
   pollIntervalMs?: number;
   pollMaxAttempts?: number;
+  searchDebounceMs?: number;
   onChange?: () => void;
 }
 
@@ -99,6 +137,9 @@ export function initialAmbientMapState(): AmbientMapClientState {
     assetUrl: null,
     source: null,
     label: null,
+    errorCode: null,
+    searchResults: [],
+    searching: false,
     loaded: false,
     busy: false,
     locating: false,
@@ -121,6 +162,10 @@ export function parseAmbientMapStatus(value: unknown): {
   assetUrl: string | null;
   source: AmbientMapSource | null;
   label: string | null;
+  /* Warum der letzte Auftrag scheiterte. Nur im Adminstatus vorhanden, rein
+     diagnostisch — sonst bliebe der Benutzer bei „Erzeugung fehlgeschlagen"
+     ohne jeden Hinweis auf die Ursache. */
+  errorCode: string | null;
 } | null {
   if (!isRecord(value) || typeof value.state !== 'string' || !STATES.has(value.state as AmbientMapState)) {
     return null;
@@ -137,7 +182,14 @@ export function parseAmbientMapStatus(value: unknown): {
   const label = typeof value.label === 'string' && value.label.trim() && value.label.length <= 120
     ? value.label.trim()
     : null;
+  /* Enge Form: nur Großbuchstaben-Codes, längenbegrenzt. Der Server sendet
+     ausschließlich eigene Codes; alles andere wird verworfen statt angezeigt. */
+  const errorCode = typeof value.errorCode === 'string'
+    && /^[A-Z][A-Z0-9_]{0,63}$/.test(value.errorCode)
+    ? value.errorCode
+    : null;
   return {
+    errorCode,
     state: value.state as AmbientMapState,
     /* Radius und Quelle gehören zum aktiven Asset; ohne gültiges Asset sind sie
        bedeutungslos und werden verworfen. */
@@ -205,6 +257,7 @@ export function createAmbientMapClient(options: AmbientMapClientOptions = {}) {
     ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   const pollIntervalMs = options.pollIntervalMs ?? AMBIENT_MAP_POLL_INTERVAL_MS;
   const pollMaxAttempts = options.pollMaxAttempts ?? AMBIENT_MAP_POLL_MAX_ATTEMPTS;
+  const searchDebounceMs = options.searchDebounceMs ?? AMBIENT_MAP_SEARCH_DEBOUNCE_MS;
   const onChange = options.onChange ?? (() => {});
 
   const state = initialAmbientMapState();
@@ -346,6 +399,61 @@ export function createAmbientMapClient(options: AmbientMapClientOptions = {}) {
     await mutate(AMBIENT_MAP_LOCATION_URL, { source, latitude, longitude });
   }
 
+  let searchHandle: unknown = null;
+  let searchGeneration = 0;
+
+  function clearSearchTimer(): void {
+    if (searchHandle !== null) {
+      cancelTimer(searchHandle);
+      searchHandle = null;
+    }
+  }
+
+  /* Entprellt: gesucht wird erst, wenn die Eingabe ruht. Jede neue Eingabe
+     verwirft die vorherige Anfrage ueber die Generation — eine langsame
+     Antwort darf keine neuere Trefferliste ueberschreiben. */
+  function search(term: string): void {
+    clearSearchTimer();
+    const query = term.trim();
+    if (query.length < AMBIENT_MAP_SEARCH_MIN_LENGTH) {
+      searchGeneration += 1;
+      patch({ searchResults: [], searching: false });
+      return;
+    }
+    patch({ searching: true });
+    searchHandle = scheduleTimer(() => {
+      searchHandle = null;
+      void runSearch(query);
+    }, searchDebounceMs);
+  }
+
+  async function runSearch(query: string): Promise<void> {
+    const reserved = ++searchGeneration;
+    let results: AmbientMapPlace[] = [];
+    let problem: AmbientMapProblem | null = null;
+    try {
+      const response = await fetcher(
+        `/api/admin/ambient-map/search?q=${encodeURIComponent(query)}`,
+        { headers: { Accept: 'application/json' }, cache: 'no-store' },
+      );
+      if (response.ok) results = parseAmbientMapPlaces(await response.json());
+      else if (response.status === 429) problem = 'search_rate_limited';
+      else if (response.status !== 400) problem = 'search_failed';
+    } catch {
+      problem = 'search_failed';
+    }
+    if (reserved !== searchGeneration) return;
+    patch({ searchResults: results, searching: false, ...(problem ? { problem } : {}) });
+  }
+
+  /** Treffer uebernehmen: derselbe Weg wie eine manuelle Eingabe. */
+  async function selectPlace(place: AmbientMapPlace): Promise<void> {
+    clearSearchTimer();
+    searchGeneration += 1;
+    patch({ searchResults: [], searching: false });
+    await selectCoordinates('manual', place.latitude, place.longitude);
+  }
+
   async function submitManual(latitude: string, longitude: string): Promise<void> {
     const lat = parseAmbientMapCoordinate(latitude);
     const lon = parseAmbientMapCoordinate(longitude);
@@ -404,8 +512,10 @@ export function createAmbientMapClient(options: AmbientMapClientOptions = {}) {
     useHomeAssistant,
     locateDevice,
     submitManual,
+    search,
+    selectPlace,
     regenerate,
-    stop: stopPolling,
+    stop: () => { clearSearchTimer(); stopPolling(); },
     /** Nur für Tests: verbleibende Pollversuche dieses Auftrags. */
     pollAttemptsLeft: () => Math.max(0, pollMaxAttempts - pollAttempts),
   };

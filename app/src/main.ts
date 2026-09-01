@@ -85,10 +85,21 @@ async function mountSetup(mode: 'first-run' | 'reconfigure'): Promise<unknown> {
 }
 
 let mountedApp: Record<string, any> | null = null;
-const reconfigureRequested = new URL(location.href).searchParams.get('setup') === 'reconfigure';
+const setupParam = new URL(location.href).searchParams.get('setup');
+const reconfigureRequested = setupParam === 'reconfigure';
+/* Den Erstlauf des Assistenten ansehen, ohne eine echte Anlage umzukonfigurieren.
+   Erlaubt in der Entwicklungsfassung und in der Demo — dort beantwortet
+   `installDemoApi()` jeden Aufruf des Assistenten isoliert, es kann also nichts
+   geschrieben werden. Beide Flags sind im Produktionsbuild statisch `false`,
+   der Zweig wird dort restlos wegoptimiert; im ausgelieferten Bundle existiert
+   diese Adresse nicht. */
+const firstRunPreview = (import.meta.env.DEV || import.meta.env.VITE_DEMO === '1')
+  && setupParam === 'first-run';
 
 if (reconfigureRequested) {
   mountedApp = await mountSetup('reconfigure') as Record<string, any>;
+} else if (firstRunPreview) {
+  mountedApp = await mountSetup('first-run') as Record<string, any>;
 } else {
   const householdRuntime = await import('./lib/config/household-config-runtime.ts');
 

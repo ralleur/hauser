@@ -51,6 +51,7 @@
   } from '../state/locale.svelte.ts';
   import { m } from '../../paraglide/messages.js';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
+  import { setAmbientCityMap } from '../state/settings.svelte.ts';
   import RoomListEditor from './settings/RoomListEditor.svelte';
   import DeviceAddress from './DeviceAddress.svelte';
   import type { Snippet } from 'svelte';
@@ -82,6 +83,12 @@
   let suggestion = $state<SetupHouseholdSuggestion | null>(null);
   let omittedCount = $state(0);
   let jellyfinEnabled = $state(false);
+  /* Opt-out: standardmäßig an, weil Hauser den Ort ohnehin aus Home Assistant
+     kennt und ohne Zutun etwas Schönes daraus macht. Sichtbar an dieser Stelle,
+     mit Beispielbild und dem Hinweis, dass für die Straßendaten einmalig ein
+     ungefährer Bereich an OpenStreetMap geht — die Entscheidung fällt damit
+     informiert und vor dem ersten Abruf. */
+  let cityMapEnabled = $state(true);
   let jellyfinUrl = $state(JELLYFIN_URL_DEFAULT);
   let jellyfinUsername = $state('');
   let jellyfinPassword = $state('');
@@ -262,6 +269,20 @@
     status = 'loading';
     message = m.setup_loading();
     await loadCurrentSetup();
+  }
+
+  /* Gerätelokale Sichtbarkeit setzen und — bei Zustimmung — den ersten Auftrag
+     anstoßen. Bewusst ohne Warten: der Renderjob läuft serverseitig weiter,
+     der Abschluss der Einrichtung hängt nicht daran. Schlägt er fehl, bleibt es
+     beim leeren Standby, den es ohne diese Funktion ohnehin gäbe. */
+  function applyCityMapChoice(): void {
+    setAmbientCityMap(cityMapEnabled);
+    if (!cityMapEnabled) return;
+    void fetch('/api/admin/ambient-map/location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'home_assistant' }),
+    }).catch(() => { /* ohne Ort bleibt der Standby der bisherige */ });
   }
 
   async function connectAndScan(): Promise<void> {
@@ -458,6 +479,9 @@
       token = '';
       jellyfinPassword = '';
       jellyfinSession = null;
+      /* Nur im Erstlauf: die Reconfigure-Ansicht zeigt den Schritt nicht und
+         darf eine später getroffene Wahl nicht überschreiben. */
+      if (!reconfigure) applyCityMapChoice();
       await refreshHouseholdConfigRuntimeCache();
       if (reconfigure) {
         reconfigureDraft = null;
@@ -738,6 +762,29 @@
             <p class="message" role="status">{m.setup_jellyfin_disabled()}</p>
           {/if}
         </section>
+
+        <section class="service-step" aria-labelledby="setup-map-title">
+          <p class="eyebrow">{m.setup_step_map()}</p>
+          <h2 id="setup-map-title">{m.setup_map_title()}</h2>
+          <p class="service-hint">{m.setup_map_hint()}</p>
+          <!-- Bewusst ein mitgeliefertes Beispiel und NICHT der eigene Ort:
+               dessen Karte zu rendern hieße, die Anfrage schon vor der
+               Entscheidung zu stellen. -->
+          <div class="map-example" role="img" aria-label={m.setup_map_example_alt()}>
+            <span class="map-example-ink"></span>
+          </div>
+          <label class="service-toggle">
+            <input
+              type="checkbox"
+              bind:checked={cityMapEnabled}
+              disabled={status === 'activating'}
+            />
+            <span>
+              <strong>{m.setup_map_enable()}</strong>
+              <small>{m.setup_map_enable_hint()}</small>
+            </span>
+          </label>
+        </section>
         {/if}
 
         <!-- Sichtbarer Vorrang des Entwurfs: ohne diesen Hinweis zeigte die
@@ -856,6 +903,31 @@
   .service-toggle input { width: var(--space-5); min-height: var(--space-5); margin: 0; accent-color: var(--color-accent-warm); }
   .service-toggle span { display: grid; gap: var(--space-1); }
   .jellyfin-form { padding-top: var(--space-2); }
+  /* Dieselbe Maskentechnik wie im Standby, auf eine dunkle Fläche gelegt —
+     so liest sich die Miniatur wie der spätere Vollbildeindruck. Die 10 %
+     des Standbys wären hier falsch: dort füllt die Karte den ganzen Schirm,
+     in einer kleinen Kachel bliebe davon nichts Sichtbares übrig. */
+  .map-example {
+    position: relative;
+    overflow: hidden;
+    height: clamp(120px, 22vw, 200px);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-0);
+  }
+  .map-example-ink {
+    position: absolute;
+    inset: 0;
+    background: var(--color-text-primary);
+    opacity: 0.3;
+    -webkit-mask-image: url('/assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg');
+    mask-image: url('/assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg');
+    -webkit-mask-size: cover;
+    mask-size: cover;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
   .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .message.success { color: var(--color-success); }
   .save-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-6); }

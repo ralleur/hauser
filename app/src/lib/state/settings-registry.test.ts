@@ -167,4 +167,35 @@ describe('searchSettings', () => {
     const [first] = searchSettings('luna');
     expect(first.section.id).toBe('services');
   });
+
+  /* Aufraeumen der Systemeinstellungen: Hotel Mode und Gastfreigaben sind
+     experimentell und standen bis dahin unter „Zuhause", also zwischen
+     Dingen, die jeden Tag benutzt werden. Erscheinungsbild und „Layout &
+     Bedienung" waren zwei sehr kurze Abschnitte, zwischen denen niemand
+     zuverlaessig raten konnte, wo eine Einstellung wohnt. */
+  it('führt Experimentelles in einer eigenen, letzten Gruppe', () => {
+    const groupIds = SETTINGS_GROUPS.map((group) => group.id);
+    expect(groupIds).toContain('experimental');
+    expect(groupIds.at(-1)).toBe('experimental');
+
+    const experimental = SETTINGS_SECTIONS
+      .filter((section) => section.group === 'experimental')
+      .map((section) => section.id);
+    expect(experimental).toEqual(['hotel-mode', 'hotel-guest-access']);
+  });
+
+  it('fasst Erscheinungsbild und Bedienung zu einem Abschnitt zusammen', () => {
+    const sectionIds = SETTINGS_SECTIONS.map((section) => section.id);
+    expect(sectionIds).toContain('appearance');
+    expect(sectionIds).not.toContain('layout');
+
+    /* Die Einträge beider früherer Abschnitte müssen mitgewandert sein —
+       sonst wären sie über die Suche unerreichbar geworden. */
+    const entries = SETTINGS_ENTRIES
+      .filter((entry) => entry.section === 'appearance')
+      .map((entry) => entry.id);
+    for (const id of ['theme-mode', 'ui-language', 'layout-config', 'layout-reset', 'off-confirm-before']) {
+      expect(entries).toContain(id);
+    }
+  });
 });

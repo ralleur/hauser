@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
    Der Layer ist reines CSS über einem fertigen Serverasset — es gibt keine
    Laufzeitlogik zu testen. Geprüft wird deshalb der Vertrag im Quelltext:
    genau ein Layer, Asset ausschließlich aus dem Client-State, exakte
-   Token-Deckkraft, Tiefnacht ohne Karte und ohne Attribution, und die
+   Token-Deckkraft, Tiefnacht ohne Karte, und die
    unveränderte Semantik der bestehenden Ambient-Bereiche. */
 
 const layer = readFileSync(new URL('./AmbientLayer.svelte', import.meta.url), 'utf8');
@@ -30,11 +30,21 @@ describe('Ambient-Kartenlayer — Markup', () => {
     expect(layer).not.toMatch(/data:image\/svg/);
   });
 
-  it('zeigt Layer und Attribution nur bei Schalter an, Asset vorhanden und außerhalb Deep Night', () => {
+  it('zeigt den Layer nur bei Schalter an, Asset vorhanden und außerhalb Deep Night', () => {
     expect(layer).toMatch(
-      /const mapVisible = \$derived\(\s*settingsValues\.ambientCityMap && !deepNight && ambientMap\.assetUrl !== null,\s*\);/,
+      /const mapVisible = \$derived\(\s*\(settingsValues\.ambientCityMap \|\| settingsPreview\)\s*&& !deepNight && ambientMap\.assetUrl !== null,\s*\);/,
     );
-    expect(layer.match(/\{#if mapVisible\}/g)).toHaveLength(2);
+    // Genau ein bedingter Block: die Namensnennung ist aus dem Bild gewandert.
+    expect(layer.match(/\{#if mapVisible\}/g)).toHaveLength(1);
+  });
+
+  /* Eine Vorschau, die den Stadtplan nicht zeigt, kuendigt nichts an — und sie
+     gehoert dorthin zurueck, von wo sie gestartet wurde, nicht auf den
+     Homescreen. Beide Vorschauen wecken deshalb an Ort und Stelle. */
+  it('zeigt die Karte auch in der Einstellungsvorschau und weckt an Ort und Stelle', () => {
+    expect(layer).toMatch(/let settingsPreview = \$state\(false\);/);
+    expect(layer).toMatch(/if \(deepNightPreview \|\| settingsPreview\) \{\s*wakeAmbient\(\);/);
+    expect(layer).toMatch(/ambientRequest\.mode === 'preview'/);
   });
 
   it('holt den Status idle bzw. beim Standby-Eintritt sofort und wartet nie', () => {
@@ -43,8 +53,22 @@ describe('Ambient-Kartenlayer — Markup', () => {
     expect(layer).not.toMatch(/await .*ambientMap/);
   });
 
-  it('zeigt die OSM-Attribution aus dem Katalog', () => {
-    expect(layer).toMatch(/<p class="ambient-map-credit">\{m\.sys_map_attribution\(\)\}<\/p>/);
+  /* Owner-Entscheidung: Die OSM-Namensnennung steht NICHT im Bild, sondern
+     sichtbar in den Einstellungen und im NOTICE. Der Standby ist eine rein
+     dekorative Flaeche ohne Bedienung; OpenStreetMaps Richtlinie erlaubt fuer
+     solche nicht-interaktiven Werke die Nennung dort, wo Credits ueblich sind.
+     Der Test haelt beide Haelften fest — im Bild nicht, in den Einstellungen
+     schon —, damit die Pflichtangabe nicht unbemerkt ganz verschwindet. */
+  it('führt die OSM-Namensnennung in den Einstellungen statt im Standby', () => {
+    expect(layer).not.toMatch(/ambient-map-credit/);
+    expect(layer).not.toMatch(/sys_map_attribution/);
+    const section = readFileSync(
+      new URL('./settings/AmbientSection.svelte', import.meta.url),
+      'utf8',
+    );
+    expect(section).toMatch(/settings-note-license/);
+    expect(section).toMatch(/m\.sys_map_license\(\)/);
+    expect(section).toMatch(/openstreetmap\.org\/copyright/);
   });
 });
 
@@ -74,24 +98,13 @@ describe('Ambient-Kartenlayer — CSS-Vertrag', () => {
     expect(rule).not.toMatch(/filter|backdrop-filter|animation|transition/);
   });
 
-  it('blendet Karte und Attribution in Deep Night vollständig aus', () => {
+  it('blendet die Karte in Deep Night vollständig aus', () => {
     expect(appCss).toMatch(
-      /\.ambient\.deep-night \.ambient-map,\s*\.ambient\.deep-night \.ambient-map-credit \{ display: none; \}/,
+      /\.ambient\.deep-night \.ambient-map \{ display: none; \}/,
     );
   });
 
-  it('hält die Attribution lesbar, aber außerhalb der Maskenopacity und ohne Tap-Ziel', () => {
-    const credit = appCss.match(/^\.ambient-map-credit \{[\s\S]*?\}/m)?.[0] ?? '';
-    expect(credit).toMatch(/pointer-events:\s*none;/);
-    /* S6/B2: `--color-text-tertiary` ist in docs/01-design-system.md ausdrücklich
-       auf nicht-essenzielle Labels ab 14px begrenzt. Die ODbL-Attribution ist
-       rechtlich verpflichtend, also bedeutungstragend — sie nutzt daher das dort
-       belegte Mikro-Label-Paar aus `--text-2xs` und `--color-text-secondary`. */
-    expect(credit).toMatch(/font-size:\s*var\(--text-2xs\);/);
-    expect(credit).toMatch(/color:\s*var\(--color-text-secondary\);/);
-    expect(credit).not.toMatch(/--color-text-tertiary/);
-    expect(credit).not.toMatch(/opacity:/);
-  });
+
 });
 
 describe('Ambient-Kartenlayer — bestehende Semantik unverändert', () => {

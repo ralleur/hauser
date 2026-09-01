@@ -23,6 +23,7 @@ import {
   AMBIENT_MAP_CONFIG_PATH,
   createAmbientMapService,
 } from './server/ambient-map-service.mjs';
+import { createAmbientMapGeocoder } from './server/ambient-map-geocode.mjs';
 
 const SERVER_CONTRACT_COMPILED = process.env.HMI_SERVER_CONTRACT === 'compiled';
 const serverContractBase = SERVER_CONTRACT_COMPILED ? './server-contract' : './src/lib/config';
@@ -11035,6 +11036,7 @@ export function createHmiServer(
     /* AMBIENT-MAP S3: vollständig injizierbare Kartenfähigkeit — Service,
        Pfade und der HA-`fetch` des direkten Modus sind Testgrenzen. */
     ambientMapService = null,
+    ambientMapGeocode = null,
     ambientMapConfigPath = AMBIENT_MAP_SERVER_CONFIG_PATH,
     ambientMapAssetDirectory = AMBIENT_MAP_SERVER_ASSET_DIRECTORY,
     ambientMapHaFetchImpl = undefined,
@@ -11217,6 +11219,7 @@ export function createHmiServer(
      Setup-Recovery hält sie wie Raumbilder und Wäsche fail-closed. */
   const ambientMapDirectoriesReady = existsSync(dirname(ambientMapConfigPath))
     && existsSync(dirname(ambientMapAssetDirectory));
+  const ambientMapGeocoder = ambientMapGeocode ?? createAmbientMapGeocoder();
   const ambientMap = !setupRecoveryResult.ok ? null : (ambientMapService ?? (ambientMapDirectoriesReady
     ? createAmbientMapService({
       configPath: ambientMapConfigPath,
@@ -11236,6 +11239,11 @@ export function createHmiServer(
         supervisorClientFactory: haSupervisorClientFactory,
         ...(ambientMapHaFetchImpl ? { fetchImpl: ambientMapHaFetchImpl } : {}),
       }),
+      /* Ortssuche über Nominatim, serverseitig: so haengt sie nicht an der IP
+         des Endgeraets und der geforderte Kontakt-Header sitzt zuverlaessig.
+         Genau eine Instanz, damit der Mindestabstand zwischen zwei Anfragen
+         prozessweit gilt. */
+      geocode: ambientMapGeocoder,
     })
     : null));
   /* Der Store initialisiert asynchron; ein nicht beschreibbarer Pfad darf

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
 import { Buffer } from 'node:buffer';
 // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
@@ -620,6 +620,60 @@ describe('ambient map routes', () => {
     const regenerate = await invoke(service, '/api/admin/ambient-map/regenerate', 'POST', {});
     expect(regenerate.status).toBe(202);
     release?.();
+    await service.close();
+  });
+});
+
+/* Ortssuche: der bequemste Weg zu einem Standort. Sie darf keinen Upstreamtext
+   nach aussen geben, ohne Geokodierer sauber abgeschaltet bleiben, und die
+   Ratengrenze des Dienstes eigenstaendig melden — sonst tippt ein Benutzer
+   weiter, waehrend Nominatim ihn laengst abweist. */
+describe('Ortssuche über die Route', () => {
+  it('liefert geprüfte Treffer und reicht den Suchbegriff nicht zurück', async () => {
+    const geocode = vi.fn(async () => [
+      { label: 'Dortmund, Nordrhein-Westfalen, Deutschland', latitude: 51.5142, longitude: 7.4653 },
+    ]);
+    const service = createAmbientMapService({ ...tempPaths(), geocode });
+
+    const result = await invoke(service, '/api/admin/ambient-map/search?q=Dortmund');
+
+    expect(result.status).toBe(200);
+    expect(result.json).toEqual({
+      results: [{ label: 'Dortmund, Nordrhein-Westfalen, Deutschland', latitude: 51.5142, longitude: 7.4653 }],
+    });
+    expect(geocode).toHaveBeenCalledWith('Dortmund');
+    await service.close();
+  });
+
+  it('bleibt ohne injizierten Geokodierer abgeschaltet statt halb zu funktionieren', async () => {
+    const service = createAmbientMapService({ ...tempPaths() });
+
+    const result = await invoke(service, '/api/admin/ambient-map/search?q=Dortmund');
+
+    expect(result.status).toBe(503);
+    expect(result.json).toEqual({ code: 'GEOCODE_UNAVAILABLE' });
+    await service.close();
+  });
+
+  it('bildet Eingabe-, Raten- und Dienstfehler auf eigene Codes ab', async () => {
+    const fail = (code: string) => async () => { throw Object.assign(new Error(code), { code }); };
+    for (const [code, status] of [
+      ['GEOCODE_INVALID_QUERY', 400],
+      ['GEOCODE_RATE_LIMITED', 429],
+      ['GEOCODE_UPSTREAM_FAILED', 502],
+    ] as const) {
+      const service = createAmbientMapService({ ...tempPaths(), geocode: fail(code) });
+      const result = await invoke(service, '/api/admin/ambient-map/search?q=Dortmund');
+      expect(result.status).toBe(status);
+      expect(result.json).toEqual({ code });
+      await service.close();
+    }
+  });
+
+  it('lässt nur GET zu', async () => {
+    const service = createAmbientMapService({ ...tempPaths(), geocode: async () => [] });
+    const result = await invoke(service, '/api/admin/ambient-map/search?q=Dortmund', 'POST');
+    expect(result.status).toBe(405);
     await service.close();
   });
 });

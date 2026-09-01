@@ -15,6 +15,7 @@ import {
   createAmbientMapClient,
   initialAmbientMapState,
   type AmbientMapClientState,
+  type AmbientMapPlace,
 } from './ambient-map-client.ts';
 
 export const ambientMap = $state<AmbientMapClientState>(initialAmbientMapState());
@@ -63,6 +64,14 @@ export function locateAmbientMapDevice(): void {
 
 export function submitManualMapLocation(latitude: string, longitude: string): void {
   void client.submitManual(latitude, longitude);
+}
+
+export function searchAmbientMapPlaces(term: string): void {
+  client.search(term);
+}
+
+export function selectAmbientMapPlace(place: AmbientMapPlace): void {
+  void client.selectPlace(place);
 }
 
 export function regenerateAmbientMap(): void {

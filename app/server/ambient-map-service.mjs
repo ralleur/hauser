@@ -19,6 +19,7 @@ const PUBLIC_ROUTE = '/api/ambient-map';
 const ADMIN_ROUTE = '/api/admin/ambient-map';
 const LOCATION_ROUTE = '/api/admin/ambient-map/location';
 const REGENERATE_ROUTE = '/api/admin/ambient-map/regenerate';
+const SEARCH_ROUTE = '/api/admin/ambient-map/search';
 
 export class AmbientMapInputError extends Error {}
 export class AmbientMapHomeAssistantUnavailableError extends Error {}
@@ -168,7 +169,14 @@ function runWorker(workerFactory, location, signal) {
     worker.once('message', (result) => {
       void worker.terminate();
       if (!isRecord(result) || Object.hasOwn(result, 'errorCode')) {
-        finish(reject, new Error('render_failed'));
+        /* Den Code des Workers durchreichen statt verwerfen: „Erzeugung
+           fehlgeschlagen" ist fuer den Benutzer wertlos, „Kartendienst nicht
+           erreichbar" dagegen einzuordnen — und genau das ist der haeufigste
+           Fall, weil Overpass ein von Freiwilligen betriebener Dienst ist. */
+        const code = typeof result?.errorCode === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(result.errorCode)
+          ? result.errorCode
+          : null;
+        finish(reject, Object.assign(new Error('render_failed'), code ? { code } : {}));
         return;
       }
       finish(resolve, result);
@@ -264,6 +272,9 @@ export function createAmbientMapService({
      Server pro Anfrage neu — die Ersteinrichtung schreibt ihn ohne Neustart.
      Ohne Prädikat gilt allein das Vorhandensein des Resolvers. */
   homeAssistantConfigured = () => true,
+  /* Ortssuche. Ohne injizierten Geokodierer bleibt die Route schlicht
+     abgeschaltet — kein halb funktionierendes Suchfeld. */
+  geocode = null,
   now = () => new Date(),
   bodyLimitBytes = AMBIENT_MAP_BODY_LIMIT_BYTES,
   makeId = randomUUID,
@@ -272,6 +283,11 @@ export function createAmbientMapService({
   const render = jobRunner ?? ((location, { signal }) => runWorker(workerFactory, location, signal));
   let activeConfig = null;
   let jobState = 'empty';
+  /* Warum der letzte Auftrag scheiterte — nur im Adminstatus, nie öffentlich.
+     Ohne diese Angabe steht in der Oberfläche „Erzeugung fehlgeschlagen" ohne
+     jeden Hinweis darauf, dass etwa Home Assistant nicht erreichbar ist. Es ist
+     ein Fehlercode, kein Standortdatum. */
+  let jobErrorCode = null;
   let generation = 0;
   let activeJob = null;
   let closed = false;
@@ -399,9 +415,18 @@ export function createAmbientMapService({
         const result = await render(location, { signal: controller.signal, generation: nextGeneration });
         if (closed || controller.signal.aborted || nextGeneration !== generation) return;
         await publish(location, result, nextGeneration);
-        if (!closed && nextGeneration === generation) jobState = 'ready';
-      } catch {
-        if (!closed && nextGeneration === generation) jobState = 'error';
+        if (!closed && nextGeneration === generation) { jobState = 'ready'; jobErrorCode = null; }
+      } catch (error) {
+        if (!closed && nextGeneration === generation) {
+          jobState = 'error';
+          /* Ausschließlich eigene Codes: die Fehler dieses Features tragen sie
+             als `message`, alles Fremde bleibt anonym. */
+          const code = typeof error?.code === 'string' ? error.code
+            : typeof error?.message === 'string' && /^[A-Z][A-Z0-9_]*$/.test(error.message)
+              ? error.message
+              : null;
+          jobErrorCode = code;
+        }
       } finally {
         if (activeJob?.generation === nextGeneration) activeJob = null;
       }
@@ -423,6 +448,7 @@ export function createAmbientMapService({
     if (storedConfig && await readCompleteAsset(storedConfig)) {
       activeConfig = storedConfig;
       jobState = 'ready';
+      jobErrorCode = null;
       await cleanupAssets(storedConfig.asset.id);
       return;
     }
@@ -448,9 +474,12 @@ export function createAmbientMapService({
 
   function adminStatus() {
     const result = publicStatus();
-    if (!activeConfig) return result;
+    const withError = jobState === 'error' && jobErrorCode
+      ? { ...result, errorCode: jobErrorCode }
+      : result;
+    if (!activeConfig) return withError;
     return {
-      ...result,
+      ...withError,
       source: activeConfig.location.source,
       ...(activeConfig.location.label ? { label: activeConfig.location.label } : {}),
     };
@@ -564,6 +593,34 @@ export function createAmbientMapService({
             ? 'HOME_ASSISTANT_UNAVAILABLE'
             : 'INVALID_REQUEST',
         });
+      }
+      return true;
+    }
+    if (pathname === SEARCH_ROUTE) {
+      if (request.method !== 'GET') {
+        emptyResponse(response, 405, { Allow: 'GET' });
+        return true;
+      }
+      if (typeof geocode !== 'function') {
+        jsonResponse(response, 503, { code: 'GEOCODE_UNAVAILABLE' });
+        return true;
+      }
+      let query;
+      try {
+        query = new URL(request.url, 'http://ambient-map.invalid').searchParams.get('q');
+      } catch {
+        query = null;
+      }
+      try {
+        jsonResponse(response, 200, { results: await geocode(query) });
+      } catch (error) {
+        /* Eigene Codes, kein Upstreamtext. Der Suchbegriff selbst taucht in
+           keiner Antwort wieder auf. */
+        const code = typeof error?.code === 'string' ? error.code : 'GEOCODE_UPSTREAM_FAILED';
+        const status = code === 'GEOCODE_INVALID_QUERY' ? 400
+          : code === 'GEOCODE_RATE_LIMITED' ? 429
+          : 502;
+        jsonResponse(response, status, { code });
       }
       return true;
     }

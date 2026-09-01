@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.6.1 - 2026-09-01
+
+### Added
+
+- A subtle city map on the standby screen, off or on by your choice during
+  setup. The place comes from Home Assistant, from a place search, from the
+  device's location or from coordinates. Rendered once on the server; Deep Night
+  shows no map.
+
+### Changed
+
+- Faster start: the real interface is mounted from a known-good configuration
+  instead of a placeholder that is replaced moments later.
+- Room pictures on phones are about a fifth of their previous size, and the
+  offline cache shrank from roughly 17 MB to 3.5 MB. Existing image libraries
+  migrate automatically on the first start after the update.
+- Updates are offered with a quiet hint instead of reloading the app while it is
+  in use. Idle wall panels still update on their own.
+- Settings: "Appearance" and "Layout & controls" merged into "Interface &
+  controls"; Hotel Mode and guest access moved to a new "Experimental" group.
+
+### Note
+
+Room image storage gains a new on-disk format in this version. The migration
+runs automatically and is forward-only — downgrading to 0.6.0 after the update
+leaves the image library unreadable.
+
 ## 0.6.0 - 2026-08-31
 
 ### Changed

@@ -69,6 +69,9 @@ brand_roots = (
 )
 third_party_roots = (
     Path('app/public/mdi-icons'),
+    # Beispielkarte des Einrichtungsassistenten: aus OpenStreetMap-Daten
+    # abgeleitet und damit ODbL, nicht unser eigenes CC-BY-Material.
+    Path('app/public/assets/ambient-maps'),
 )
 brand_files = {Path('website/favicon.png'), Path('website/apple-touch-icon.png')}
 third_party_files = {
@@ -106,8 +109,15 @@ for path in brand_roots:
 for path in brand_files:
     if f'`{path}`' not in trademark_text:
         raise SystemExit(f'TRADEMARKS.md does not declare reserved brand file: {path}')
+for path in third_party_roots:
+    if f'`{path}/`' not in notice_text:
+        raise SystemExit(f'NOTICE does not declare third-party path: {path}/')
 
-required_notices = ('SIL Open Font License 1.1', 'Material Design Icons', 'Apache License 2.0')
+required_notices = (
+    'SIL Open Font License 1.1', 'Material Design Icons', 'Apache License 2.0',
+    # Die Beispielkarte und der Standby-Stadtplan stammen aus OpenStreetMap.
+    'Open Database License',
+)
 for phrase in required_notices:
     if phrase not in notice_text:
         raise SystemExit(f'NOTICE is missing third-party license text: {phrase}')

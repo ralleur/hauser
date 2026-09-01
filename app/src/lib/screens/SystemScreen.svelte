@@ -25,8 +25,7 @@
   import HotelModeSection from '../components/settings/HotelModeSection.svelte';
   import HotelAllowlistSection from '../components/settings/HotelAllowlistSection.svelte';
   import ServicesSection from '../components/settings/ServicesSection.svelte';
-  import AppearanceSection from '../components/settings/AppearanceSection.svelte';
-  import LayoutSection from '../components/settings/LayoutSection.svelte';
+  import InterfaceSection from '../components/settings/InterfaceSection.svelte';
   import AmbientSection from '../components/settings/AmbientSection.svelte';
   import CalendarSection from '../components/settings/CalendarSection.svelte';
   import ShoppingSection from '../components/settings/ShoppingSection.svelte';
@@ -61,8 +60,7 @@
     'laundry': LaundrySection,
     'hotel-mode': HotelModeSection,
     'hotel-guest-access': HotelAllowlistSection,
-    'appearance': AppearanceSection,
-    'layout': LayoutSection,
+    'appearance': InterfaceSection,
     'ambient': AmbientSection,
     'calendar': CalendarSection,
     'shopping': ShoppingSection,

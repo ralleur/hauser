@@ -15,6 +15,7 @@ import { enqueue } from './command-queue.ts';
 import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate } from './types.ts';
 import { markOperable, markResumeOperable } from '../state/startup-marks.svelte.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
+import { themeFromLocalTime } from '../state/appearance-mode.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
 import { FAKE_DISCOVERY_CATALOG } from '../state/device-config.ts';
@@ -248,7 +249,13 @@ export const seed = new Map<string, unknown>([
   // Read-only-Ambient: sun.sun-Fallback (Nacht) bis zum ersten echten Push —
   // deckt sich mit dem Default-Theme 'dark'. Energie-Sensoren haben keinen
   // Seed (installationsspezifisch, null bis konfiguriert).
-  ...(SUN_ENTITY ? [[SUN_ENTITY, { day: false } satisfies SunValue] as const] : []),
+  /* Startwert aus der Ortszeit statt fest „Nacht": bis echte HA-Daten
+     eintreffen, ist die Uhr der beste Anhaltspunkt. Ein hart auf Nacht
+     gesetzter Seed liess die Auto-Automatik nachmittags dunkel bleiben —
+     und dauerhaft, wenn Home Assistant gar nicht erreichbar war. */
+  ...(SUN_ENTITY
+    ? [[SUN_ENTITY, { day: themeFromLocalTime() === 'light' } satisfies SunValue] as const]
+    : []),
   // Laundry remains empty until Home Assistant sends a fresh raw state.
   // Demo-Build: Energie-Sensoren bekommen Startwerte, sonst zeigt der Screen
   // nur „—" (leer außerhalb der Demo).

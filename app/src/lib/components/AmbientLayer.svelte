@@ -46,17 +46,21 @@
 
   let active = $state(false);
   let deepNightPreview = $state(false);
+  /* Vorschau aus den Einstellungen: zeigt den Stadtplan auch bei ausgeschaltetem
+     Schalter und weckt an Ort und Stelle zurück, statt nach Home zu navigieren. */
+  let settingsPreview = $state(false);
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let shiftTimer: ReturnType<typeof setInterval> | undefined;
   let contentEl: HTMLElement;
   let clockEl = $state<HTMLElement>();
 
-  function showAmbient(previewDeepNight = false) {
+  function showAmbient(previewDeepNight = false, fromSettings = false) {
     if (active) return;
     // Laufende Wiedergabe hemmt den Idle-Timeout — Film schauen ist kein
     // Leerlauf (Phase 4 übernimmt das die Player-Aktivität)
-    if (!previewDeepNight && appState.playback?.playing) { armIdleTimer(); return; }
+    if (!previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
     deepNightPreview = previewDeepNight;
+    settingsPreview = fromSettings;
     active = true;
     setAmbientActive(true);
     void refreshFamilyCalendar();
@@ -78,6 +82,7 @@
     active = false;
     setAmbientActive(false);
     deepNightPreview = false;
+    settingsPreview = false;
     clearInterval(shiftTimer);
     contentEl.style.transform = '';
   }
@@ -88,7 +93,10 @@
      mit dem Wohnzimmer als Default-Raum. ── */
   function wakeTo(e: PointerEvent) {
     if (!active) return;
-    if (deepNightPreview) {
+    /* Beide Vorschauen wecken an Ort und Stelle: sie wurden aus den
+       Einstellungen gestartet, dorthin gehört der Benutzer zurück. Nur der
+       echte Standby führt in die getippte Zone. */
+    if (deepNightPreview || settingsPreview) {
       wakeAmbient();
       return;
     }
@@ -122,7 +130,10 @@
   $effect(() => {
     if (ambientRequest.seq <= seenStandbySeq) return;
     seenStandbySeq = ambientRequest.seq;
-    showAmbient(ambientRequest.mode === 'deep-night-preview');
+    showAmbient(
+      ambientRequest.mode === 'deep-night-preview',
+      ambientRequest.mode === 'preview',
+    );
   });
 
   /* Minutenwechsel ist der einzige Motion-Moment (Fade --duration-normal) —
@@ -167,7 +178,8 @@
      ausschließlich die gedämpfte rote Uhr — dort entfällt der Layer samt
      Attribution ersatzlos. ── */
   const mapVisible = $derived(
-    settingsValues.ambientCityMap && !deepNight && ambientMap.assetUrl !== null,
+    (settingsValues.ambientCityMap || settingsPreview)
+    && !deepNight && ambientMap.assetUrl !== null,
   );
 
   /* Statusabruf nur bei eingeschaltetem Schalter: nach First Paint in einer
@@ -357,11 +369,9 @@
     </aside>
   {/if}
 
-  <!-- OSM-Attribution: sichtbar, solange die Karte sichtbar ist, aber bewusst
-       kein Pointer-Ziel — der Tap fällt auf den Ambient-Layer durch, damit die
-       bestehenden Weckzonen (Wochenband, Zettel, Mitte) unverändert greifen.
-       Sie liegt außerhalb der 10-Prozent-Maskenopacity (docs/18 §8, §9). -->
-  {#if mapVisible}
-    <p class="ambient-map-credit">{m.sys_map_attribution()}</p>
-  {/if}
+  <!-- B-27/AMBIENT-MAP: Die OSM-Namensnennung steht bewusst NICHT im Bild.
+       Der Standby ist eine dekorative Flaeche ohne jede Bedienung; OpenStreetMaps
+       Richtlinie erlaubt fuer solche nicht-interaktiven Werke, die Nennung dort
+       zu fuehren, wo Credits ueblicherweise stehen. Sie steht deshalb sichtbar
+       in den Einstellungen unter Ambient & Standby und im NOTICE. -->
 </div>

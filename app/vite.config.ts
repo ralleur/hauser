@@ -1,4 +1,10 @@
 // @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { existsSync } from 'node:fs';
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { resolve } from 'node:path';
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { fileURLToPath } from 'node:url';
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
 import { execFileSync } from 'node:child_process';
 // @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
 import { readFileSync } from 'node:fs';
@@ -121,6 +127,9 @@ export const START_SCREEN_PRECACHE_ASSETS = [
    unbrauchbarem Snapshot nachgeladen — sie gehört damit nicht mehr in den
    Graphen, den das Gate vor dem ersten Paint misst. Das Limit selbst bleibt
    unverändert (docs/03). */
+/* Port, auf dem `server.mjs` im Werkstattbetrieb antwortet (HMI_PORT-Default). */
+const DEV_API_PORT = 4173;
+
 export const REQUIRED_PRE_MOUNT_MODULE_SUFFIXES = [
   '/src/lib/config/household-config-runtime.ts',
   '/src/lib/state/standalone.svelte.ts',
@@ -287,6 +296,37 @@ export default defineConfig({
       // wird importiert, nicht kopiert)
       allow: ['..'],
     },
+    /* Im LAN erreichbar, damit dieselbe Werkstattfassung auch auf Telefon und
+       Wandpanel geprüft werden kann — nicht nur im Browser dieses Rechners. */
+    host: true,
+    /* ── Werkstatt: Frontend mit HMR, Daten vom echten Server ──
+       `vite` allein liefert nur die Hülle: alle Datenpfade gehören
+       `server.mjs`, und ohne Weiterleitung laufen sie ins Leere — keine Räume,
+       keine Geräte, keine Raumbilder, keine Karte. Mit der Weiterleitung
+       arbeitet die Entwicklungsansicht auf demselben echten Haushalt wie der
+       Produktionsbuild, aber ohne Bauen und Deployen zwischen zwei Blicken.
+
+       Voraussetzung: `node server.mjs` läuft daneben (npm run preview) oder der
+       launchd-Dienst bedient 4173. Antwortet dort nichts, schlagen nur die
+       Datenpfade fehl — die Oberfläche selbst lädt weiter. */
+    proxy: Object.fromEntries(
+      ['/api', '/assets', '/hermes', '/ambient-llm', '/shopping-llm',
+        '/notion-bridge', '/notion-shopping']
+        .map((path) => [path, {
+          target: `http://127.0.0.1:${DEV_API_PORT}`,
+          changeOrigin: false,
+          ws: true,
+          /* Eingecheckte Dateien unter `public/` gewinnen gegen die
+             Weiterleitung. Ohne das verschluckt `/assets` auch das
+             Beispielasset des Assistenten, das dort als echte Datei liegt —
+             der Server kennt es nicht und antwortet 404. */
+          bypass(req: { url?: string }) {
+            const url = (req.url ?? '').split('?', 1)[0];
+            const candidate = resolve(fileURLToPath(new URL('./public', import.meta.url)), `.${url}`);
+            return url && existsSync(candidate) ? req.url : undefined;
+          },
+        }]),
+    ),
   },
   test: {
     include: ['src/**/*.test.ts'],

@@ -6,7 +6,8 @@
      die ihn erzeugt. */
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
-  import { requestAmbient, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
+  import { requestAmbient, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
+  import { parseAmbientMapCoordinate, type AmbientMapPlace } from '../../state/ambient-map-client.ts';
   import {
     settingsValues,
     setAmbientCityMap,
@@ -16,13 +17,15 @@
   import { aiHealth } from '../../state/ai-health.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
   import {
-    ambientMap,
-    ensureAmbientMapStatus,
-    locateAmbientMapDevice,
-    regenerateAmbientMap,
-    submitManualMapLocation,
-    useHomeAssistantMapLocation,
-  } from '../../state/ambient-map.svelte.ts';
+  ambientMap,
+  ensureAmbientMapStatus,
+  locateAmbientMapDevice,
+  regenerateAmbientMap,
+  searchAmbientMapPlaces,
+  selectAmbientMapPlace,
+  submitManualMapLocation,
+  useHomeAssistantMapLocation,
+} from '../../state/ambient-map.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
   /* „offline“ und „unauthorized“ heißen beide: der Schalter unten läuft ins
@@ -70,6 +73,23 @@
   });
 
   const mapProblem = $derived.by(() => {
+    /* Ein gescheiterter Auftrag ist kein `problem` der Anfrage, sondern ein
+       Ergebnis des Jobs. Ohne die Ursache stünde hier nur „Erzeugung
+       fehlgeschlagen" — der häufigste Fall ist aber ein nicht erreichbares
+       Home Assistant, und das ist behebbar, wenn man es weiß. */
+    if (!ambientMap.problem && ambientMap.state === 'error') {
+      if (ambientMap.errorCode?.startsWith('AMBIENT_MAP_HA_')) {
+        return m.sys_map_error_home_assistant();
+      }
+      /* Overpass ist ein von Freiwilligen betriebener Dienst und faellt
+         regelmaessig aus. Das ist kein Fehler der Eingabe und schon gar keiner
+         der Anlage — der Hinweis sagt das und raet zum spaeteren Versuch. */
+      if (ambientMap.errorCode === 'UPSTREAMS_FAILED'
+          || ambientMap.errorCode === 'RESPONSE_TOO_LARGE'
+          || ambientMap.errorCode === 'INVALID_JSON') {
+        return m.sys_map_error_upstream();
+      }
+    }
     switch (ambientMap.problem) {
       case 'status_unavailable': return m.sys_map_error_status();
       case 'unavailable': return m.sys_map_error_unavailable();
@@ -77,6 +97,8 @@
       case 'admin_required': return m.sys_map_error_admin();
       case 'home_assistant_unavailable': return m.sys_map_error_home_assistant();
       case 'invalid_coordinates': return m.sys_map_error_coordinates();
+      case 'search_failed': return m.sys_map_error_search();
+      case 'search_rate_limited': return m.sys_map_error_search_rate();
       case 'geolocation_denied': return m.sys_map_error_geo_denied();
       case 'geolocation_unavailable': return m.sys_map_error_geo_unavailable();
       case 'geolocation_timeout': return m.sys_map_error_geo_timeout();
@@ -85,8 +107,34 @@
     }
   });
 
+  /* Was das Formular verstanden hat — geraetelokal und fluechtig, nie zum
+     Server und nie in den Status. Ohne diese Rueckmeldung sieht man einer
+     verrutschten Eingabe nicht an, dass sie verrutscht ist: der Status nennt
+     bewusst nur „Quelle: manuell", die Koordinaten bleiben privat. */
+  let acceptedCoords = $state<string | null>(null);
+  let searchTerm = $state('');
+
+  /* Entprellt im Client: gesucht wird erst, wenn die Eingabe ruht. Echtes
+     Autocomplete bei jedem Tastendruck wuerde Nominatims Nutzungsrichtlinie
+     verletzen — ein von Freiwilligen betriebener Dienst vertraegt das nicht. */
+  function onSearchInput(event: Event): void {
+    searchTerm = (event.currentTarget as HTMLInputElement).value;
+    searchAmbientMapPlaces(searchTerm);
+  }
+
+  function onPlacePick(place: AmbientMapPlace): void {
+    searchTerm = place.label;
+    acceptedCoords = `${place.latitude.toFixed(4)}, ${place.longitude.toFixed(4)}`;
+    selectAmbientMapPlace(place);
+  }
+
   function onManualSubmit(event: SubmitEvent): void {
     event.preventDefault();
+    const lat = parseAmbientMapCoordinate(manualLatitude);
+    const lon = parseAmbientMapCoordinate(manualLongitude);
+    acceptedCoords = lat === null || lon === null
+      ? null
+      : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     submitManualMapLocation(manualLatitude, manualLongitude);
   }
 </script>
@@ -155,7 +203,7 @@
     </div>
     <div class="settings-row-actions">
       <button class="secondary-btn pressable" type="button"
-              onclick={() => requestAmbient()}>{m.sys_preview()}</button>
+              onclick={() => requestAmbientPreview()}>{m.sys_preview()}</button>
       <button class="settings-switch pressable" type="button" role="switch"
               aria-checked={settingsValues.ambientCityMap}
               aria-label={m.sys_map_toggle()}
@@ -202,6 +250,42 @@
     </button>
   </div>
 
+  <!-- Ortssuche: der bequemste Weg zu einem Standort. Koordinaten bleiben als
+       Rueckfall darunter, falls die Suche nichts findet oder ausfaellt. -->
+  <div class="settings-row is-stacked" data-setting-id="ambient-city-map-search">
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_search()}</span>
+      <span class="settings-row-sub">{m.sys_map_search_hint()}</span>
+    </div>
+    <input
+      class="settings-input"
+      type="search"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder={m.sys_map_search_placeholder()}
+      aria-label={m.sys_map_search()}
+      value={searchTerm}
+      oninput={onSearchInput}
+      disabled={mapBusy}
+    />
+    {#if ambientMap.searching}
+      <p class="settings-row-sub" role="status">{m.sys_map_searching()}</p>
+    {:else if ambientMap.searchResults.length > 0}
+      <ul class="map-search-results">
+        {#each ambientMap.searchResults as place (place.label)}
+          <li>
+            <button class="secondary-btn pressable" type="button"
+                    disabled={mapBusy} onclick={() => onPlacePick(place)}>
+              {place.label}
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {:else if searchTerm.trim().length >= 3}
+      <p class="settings-row-sub" role="status">{m.sys_map_search_empty()}</p>
+    {/if}
+  </div>
+
   <div class="settings-row">
     <span class="settings-row-icon"><Icon name="i-map-marker" cls="icon icon-md" /></span>
     <div class="settings-row-text">
@@ -231,6 +315,11 @@
           {m.sys_apply()}
         </button>
       </div>
+      {#if acceptedCoords}
+        <p class="settings-row-sub" role="status">
+          {m.sys_map_coords_accepted({ coords: acceptedCoords })}
+        </p>
+      {/if}
     </form>
   {/if}
 
@@ -247,7 +336,14 @@
   {/if}
 </div>
 
-<p class="settings-note">
-  {m.sys_map_privacy()}
-  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{m.sys_map_attribution()}</a>
+<p class="settings-note">{m.sys_map_privacy()}</p>
+
+<!-- Die Namensnennung steht hier und nicht im Standby: der ist eine dekorative
+     Flaeche ohne Bedienung, und OpenStreetMaps Richtlinie erlaubt fuer solche
+     nicht-interaktiven Werke die Nennung an der Stelle, wo Credits ueblich sind.
+     Deshalb bewusst als eigener, sichtbarer Absatz mit Link auf die
+     Copyright-Seite — nicht als beilaeufige Fussnote. -->
+<p class="settings-note settings-note-license">
+  {m.sys_map_license()}
+  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">openstreetmap.org/copyright</a>
 </p>

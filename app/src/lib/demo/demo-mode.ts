@@ -165,6 +165,59 @@ export function demoResponse(path: string, method: string): Response | null {
       ? json({ mode: 'active' }, 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
       : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' });
   }
+  /* Betriebsart: im Add-on entfaellt die Zugangsdatenfrage. Genau diesen Weg
+     zeigt die Demo, weil ihn die meisten Nutzer gehen werden. */
+  if (path === '/api/ha/connection') {
+    return json({
+      ok: true, mode: 'supervisor', credentialsRequired: false,
+      available: true, gatewayPath: '/api/websocket',
+    }, 200, { 'cache-control': 'no-store' });
+  }
+  if (path === '/api/setup/discovery') {
+    return json(demoDiscoverySnapshot(), 200, { 'cache-control': 'no-store' });
+  }
+  /* Der Abschluss bestaetigt, schreibt aber nichts: die Demo hat keinen
+     Server, und ein vorgetaeuschter Erfolg mit echtem Schreibversuch waere
+     schlimmer als gar keiner. */
+  if (path === '/api/setup/activate') {
+    return method === 'POST'
+      ? json({ ok: true }, 200, { 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'POST', 'cache-control': 'no-store' });
+  }
+  /* Ortssuche mit festen Treffern: die Demo hat keinen Server und darf
+     Nominatim nicht belasten. Gezeigt wird, wie die Auswahl sich anfuehlt. */
+  if (path === '/api/admin/ambient-map/search') {
+    return json({
+      results: [
+        { label: 'Dortmund, Nordrhein-Westfalen, Deutschland', latitude: 51.5142, longitude: 7.4653 },
+        { label: 'Marseille, Bouches-du-Rhône, France', latitude: 43.2965, longitude: 5.3698 },
+        { label: 'Köln, Nordrhein-Westfalen, Deutschland', latitude: 50.9375, longitude: 6.9603 },
+      ],
+    }, 200, { 'cache-control': 'no-store' });
+  }
+  if (path === '/api/admin/ambient-map/location' || path === '/api/admin/ambient-map/regenerate') {
+    return method === 'POST'
+      ? json({ state: 'queued' }, 202, { 'cache-control': 'no-store' })
+      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'POST', 'cache-control': 'no-store' });
+  }
+  /* Der Stadtplan der Demo ist genau das Beispielbild aus dem Assistenten —
+     dasselbe, das der Schritt ankuendigt. */
+  if (path === '/api/ambient-map' || path === '/api/admin/ambient-map') {
+    return json({
+      version: 1, state: 'ready', radiusMetres: 5000,
+      asset: {
+        /* Dieselbe Datei, die der Assistent als Beispiel zeigt — unter ihrem
+           echten Inhalts-Hash, damit sie die Allowlist des Clients passiert.
+           Ein Beispiel unter einem Fantasiepfad wuerde stillschweigend
+           verworfen und die Vorschau bliebe leer. */
+        url: '/assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg',
+        etag: '"a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a"',
+        byteLength: 128091,
+      },
+      ...(path === '/api/admin/ambient-map' ? { source: 'home_assistant' } : {}),
+    }, 200, { 'cache-control': 'no-store' });
+  }
+
   if (path === '/api/household-config') {
     return method === 'GET'
       ? json(publicDemoHouseholdConfig(), 200, { 'x-hmi-household-config-mode': 'active', 'cache-control': 'no-store' })
@@ -250,6 +303,43 @@ export function applyDemoDeepLink(setScreen: (screen: string) => void): void {
 }
 
 /** Installiert den Demo-Shim. No-op außerhalb des Demo-Builds. */
+
+/* ── Einrichtungsassistent in der Demo ──
+   Der Assistent ist die erste Minute, die ein Nutzer mit Hauser verbringt —
+   und bisher liess er sich nirgends ansehen, ohne eine echte Anlage
+   umzukonfigurieren. Hier antwortet die Demo auf genau die Aufrufe des
+   Assistenten, sodass der Weg vollstaendig begehbar ist, ohne dass ein Byte
+   den Browser verlaesst.
+
+   Die Momentaufnahme wird NICHT erfunden, sondern aus derselben
+   Haushaltskonfiguration abgeleitet, die die Demo ohnehin zeigt: jeder Raum
+   wird ein Bereich, jede sichtbare Entitaet ein Registrierungseintrag samt
+   Zustand. Der Scan findet damit genau das wieder, was die Demo danach
+   darstellt — kein Auseinanderlaufen zwischen Versprechen und Ergebnis.
+
+   Bewusst `supervisor`: so sehen Nutzer des Home-Assistant-Add-ons den
+   Assistenten, also ohne Zugangsdatenfrage. */
+function demoDiscoverySnapshot() {
+  const config = publicDemoHouseholdConfig();
+  const areas = config.rooms.map((room) => ({ area_id: room.id, name: room.name }));
+  const entities: Array<Record<string, unknown>> = [];
+  const states: Array<Record<string, unknown>> = [];
+  for (const room of config.rooms) {
+    for (const entity of room.visibleEntities) {
+      entities.push({
+        entity_id: entity.entityId,
+        area_id: room.id,
+        device_id: null,
+        original_name: entity.name,
+        disabled_by: null,
+        hidden_by: null,
+      });
+      states.push({ entity_id: entity.entityId, attributes: { friendly_name: entity.name } });
+    }
+  }
+  return { areas, devices: [], entities, states };
+}
+
 export function installDemoApi(): void {
   if (!IS_DEMO || typeof globalThis.fetch !== 'function') return;
 

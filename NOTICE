@@ -28,7 +28,8 @@ Icons
 Material Design Icons (@mdi/svg) — Apache License 2.0
   https://github.com/Templarian/MaterialDesign
   Icons are generated into a local registry at build time; see
-  app/scripts/generate-icon-registry.mjs.
+  app/scripts/generate-icon-registry.mjs. Generated into:
+    `app/public/mdi-icons/`
 
 
 Runtime dependencies
@@ -62,14 +63,21 @@ Map data (standby city map)
 OpenStreetMap — Open Database License (ODbL) 1.0
   https://www.openstreetmap.org/copyright
   The optional standby city map is generated on the Hauser server from
-  OpenStreetMap road geometry. Nothing from OpenStreetMap is bundled with this
-  repository: when a location is configured, the server queries a public
-  Overpass API endpoint once and renders a monochrome SVG of road lines into
-  its own data directory. Map data is © OpenStreetMap contributors and is
-  available under the ODbL; the produced SVG is a derived database extract, so
-  the same terms apply to it. Hauser shows the required attribution on the
-  standby screen whenever the map is visible, and links to the OpenStreetMap
-  copyright page from the settings.
+  OpenStreetMap road geometry. When a location is configured, the server queries
+  a public Overpass API endpoint once and renders a monochrome SVG of road lines
+  into its own data directory. Map data is © OpenStreetMap contributors and is
+  available under the ODbL; a produced SVG is a derived database extract, so the
+  same terms apply to it.
+
+  One such extract IS bundled with this repository:
+    `app/public/assets/ambient-maps/`
+  It holds a single pre-rendered example map shown in the setup wizard, so that
+  the feature can be previewed before any location is sent anywhere. It is
+  derived from OpenStreetMap data and carries the ODbL like any other extract.
+  No OpenStreetMap code is included or depended upon.
+
+  Place search uses OpenStreetMap's Nominatim geocoder. What leaves the server
+  is a search term, never a stored address.
 
 Overpass API — the public query service
   https://overpass-api.de/ and https://overpass.kumi.systems/
@@ -84,3 +92,14 @@ Images
 
 Room illustrations and background artwork are AI-generated and are licensed
 separately from the code. See ASSETS-LICENSE.md.
+
+Attribution placement
+---------------------
+The OpenStreetMap credit is shown in Hauser's settings (Appearance > Ambient &
+Standby) and in this file, not on the standby screen itself. The standby screen
+is a purely decorative surface with no controls, and the map is rendered as a
+low-opacity mask behind the clock. OpenStreetMap's attribution guidelines allow
+a produced work that is not a browsable map to carry its credit where credits
+are customarily found rather than inside the image. The credit is therefore
+placed where it stays legible and reachable instead of being reduced to an
+unreadable line on a wall panel.
