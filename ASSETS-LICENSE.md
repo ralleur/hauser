@@ -18,6 +18,7 @@ The following paths are licensed under
 | `app/public/notes/` | Notes background artwork |
 | `website/media/` | Public screenshots and presentation images |
 | `app/public/wizard/` | Before/after example pair and the icons of the room-image wizard and its library |
+| `app/public/demo-posters/` | Posters of the sixteen fictional films and series in the demo library |
 
 You may use, adapt and redistribute these assets, including commercially, as
 long as you give appropriate credit, link to the license and indicate whether
@@ -32,6 +33,12 @@ photographs and are not stock imagery.
 
 The files in `website/media/` are screenshots or presentation images derived
 from the Hauser interface. Some of them contain the AI-generated artwork above.
+
+The posters in `app/public/demo-posters/` are simple vector compositions
+(geometric shapes, gradients and type set in Inter) drawn in HTML/SVG templates
+written for this project with AI assistance and rendered to WebP in a browser.
+They depict no real film, person or product; the titles are inventions of the
+demo. No photographs, stock imagery or third-party artwork were used.
 
 The `before` file in `app/public/wizard/` is an actual photograph of a private
 home, contributed by the project author for this purpose; the `after` file next
