@@ -97,6 +97,7 @@ deliberately omits superseded plans and rejected alternatives.
 | **Everyday** | Calendar, notes, reminders, shopping list, laundry notifications |
 | **Documents** | PIN-gated Paperless-ngx search, preview, download and import through the optional companion server |
 | **Devices** | Add, hide, rename, assign to a room and reorder entities from inside the UI |
+| **Standby** | A calm lockscreen with clock, week strip, notes and shopping list; optionally a faint street map of your own town, rendered once on the server from OpenStreetMap data ([details](docs/07-configuration.md#standby-city-map)) |
 | **Two shells** | A landscape wall panel and a one-handed phone layout, sharing one design system |
 | **Hotel mode** | Optional, off by default: turns a dedicated panel into a guest surface for one holiday apartment — stays from a Home Assistant calendar, a default-deny device release, a PIN-gated admin session and a guest checkout ([details](docs/07-configuration.md#hotel-mode-holiday-apartment)) |
 
@@ -113,6 +114,7 @@ configured live service are not the same thing:
 | **Reminders** | Implemented by the optional companion server as central household data. Selected HA `todo.*` lists can additionally be merged through WebSocket. | Curated simulated data. |
 | **Shopping** | A local server-side bridge keeps the HMI and a shared Notion shopping page in sync without exposing the Notion token to the browser. | Curated simulated data; no Notion connection. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
+| **OpenStreetMap / Overpass** | Optional and off by default. When a location is configured, the server queries a public Overpass endpoint once and renders a monochrome road SVG for the standby background. Map data © OpenStreetMap contributors, ODbL. | Not connected; the demo ships no generated map. |
 | **Notion** | Optional private integration for the shared shopping list only. Reminders do not depend on Notion. | Not connected; shopping uses fixtures. |
 
 ## Screenshots

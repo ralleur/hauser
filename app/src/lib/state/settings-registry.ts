@@ -216,6 +216,9 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['nacht', 'nachts', 'uhr', 'rot', 'dunkel', 'standby', 'lockscreen', '22', '06', 'iphone'] },
   { id: 'ambient-hero-text', section: 'ambient', get label() { return m.settings_entry_ambient_hero_text_label(); },
     keywords: ['llm', 'ki', 'ai', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
+  { id: 'ambient-city-map', section: 'ambient', get label() { return m.settings_entry_ambient_city_map_label(); },
+    keywords: ['stadtplan', 'karte', 'map', 'straßen', 'strassen', 'hintergrund', 'standort',
+      'ort', 'koordinaten', 'lockscreen', 'standby', 'openstreetmap', 'osm'] },
 
   /* ── Inhalte ── */
   { id: 'calendar-selection', section: 'calendar', get label() { return m.settings_entry_calendar_selection_label(); },

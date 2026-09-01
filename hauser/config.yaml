@@ -32,7 +32,9 @@
     "HMI_ROOM_IMAGE_ASSET_ROOT": "/data/assets",
     "HMI_ROOM_IMAGE_CREDENTIAL_PATH": "/data/room-image-auth.json",
     "HMI_SONG_LIBRARY_DIR": "/data/songs",
-    "HMI_REQUIRED_WRITABLE_DIRS": "/data,/data/assets,/data/songs"
+    "HMI_AMBIENT_MAP_CONFIG_PATH": "/data/ambient-map.json",
+    "HMI_AMBIENT_MAP_ASSET_ROOT": "/data/assets/ambient-maps",
+    "HMI_REQUIRED_WRITABLE_DIRS": "/data,/data/assets,/data/assets/ambient-maps,/data/songs"
   },
   "image": "ghcr.io/ralleur/hauser"
 }

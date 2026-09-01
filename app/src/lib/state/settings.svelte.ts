@@ -79,6 +79,7 @@ export const settingsValues = $state({
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
   roomOnboardHidden: lsGet('hmi:room-onboard') === 'off',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
+  ambientCityMap: lsGet('hmi:ambient-map') === 'on',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
     ? null
     : (lsGet('hmi:off-confirm-before') ?? '22:00'),
@@ -113,6 +114,15 @@ export function setRoomOnboardHidden(hidden: boolean): void {
 export function setAmbientDeepNight(on: boolean): void {
   settingsValues.ambientDeepNight = on;
   lsSet('hmi:ambient-deep-night', on ? null : 'off');
+}
+
+/* Stadtplan-Hintergrund im Standby (docs/18 §3.2). Standort und Asset sind
+   zentral, die Sichtbarkeit ist gerätelokal: `hmi:ambient-map` steht nicht in
+   SHARED_CONFIG_KEYS und wandert deshalb nicht in die Household Config. Default
+   aus — ein vorhandenes Asset wird nie ungefragt sichtbar. */
+export function setAmbientCityMap(on: boolean): void {
+  settingsValues.ambientCityMap = on;
+  lsSet('hmi:ambient-map', on ? 'on' : null);
 }
 
 /* Sicherheitsabfrage für den mobilen „Aus“-Button. null deaktiviert sie;

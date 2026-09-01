@@ -80,6 +80,34 @@ describe('setAmbientHeroText', () => {
   });
 });
 
+describe('setAmbientCityMap', () => {
+  it('ist standardmäßig aus und persistiert nur das Einschalten', async () => {
+    const { settingsValues, setAmbientCityMap } = await freshSettings();
+    expect(settingsValues.ambientCityMap).toBe(false);
+
+    setAmbientCityMap(true);
+    expect(settingsValues.ambientCityMap).toBe(true);
+    expect(localStorage.getItem('hmi:ambient-map')).toBe('on');
+
+    setAmbientCityMap(false);
+    expect(settingsValues.ambientCityMap).toBe(false);
+    expect(localStorage.getItem('hmi:ambient-map')).toBeNull();
+  });
+
+  it('übernimmt einen gespeicherten eingeschalteten Zustand', async () => {
+    localStorage.setItem('hmi:ambient-map', 'on');
+    const { settingsValues } = await freshSettings();
+    expect(settingsValues.ambientCityMap).toBe(true);
+  });
+
+  /* docs/18 §3.2: Standort und Asset sind zentral, die Sichtbarkeit ist
+     gerätelokal — der Schlüssel darf nicht in die Household Config wandern. */
+  it('bleibt gerätelokal und steht nicht in SHARED_CONFIG_KEYS', async () => {
+    const { SHARED_CONFIG_KEYS } = await import('./shared-config-bootstrap.ts');
+    expect([...SHARED_CONFIG_KEYS]).not.toContain('hmi:ambient-map');
+  });
+});
+
 describe('setAmbientDeepNight', () => {
   it('ist standardmäßig aktiv und persistiert nur das Ausschalten', async () => {
     const { settingsValues, setAmbientDeepNight } = await freshSettings();

@@ -53,6 +53,12 @@
   --color-ambient-deep-night-background: #000000;
   --color-ambient-deep-night-clock: #8f1820;
 
+  /* ── Deckkraft ──
+     Der Ambient-Stadtplan liegt als Maske über der primären Schriftfarbe.
+     Genau ein Wert für Light und Dark — ein einziges Asset, keine
+     Theme-Varianten (docs/18 §3.1). Theme-unabhängig, deshalb nur hier. */
+  --opacity-ambient-map: 0.1;
+
   /* ── Borders (Ghost-Buttons, outlined Cards) ── */
   --color-border: #2c353f;
 

@@ -47,9 +47,29 @@ Home Assistant's persistent App directory `/data` is the only persistent path us
 - `/data/family-data.json` — reminder and shopping data used by the built-in server;
 - `/data/room-image-auth.json` — optional ChatGPT or OpenAI API authorization for the room-image wizard;
 - `/data/assets/` — room-image sets published by the wizard;
+- `/data/assets/ambient-maps/` — rendered standby city-map SVGs;
+- `/data/ambient-map.json` — location and render metadata for the standby city map;
 - `/data/songs/` — generated song library data.
 
 Recreating or updating the App container therefore retains configuration as long as App data is preserved.
+
+## Standby city map
+
+The standby screen can show a faint street map of your town. It is off by
+default and is switched on per device under **Settings → Appearance → Ambient &
+standby**. In App mode the location is read from Home Assistant itself over the
+internal Supervisor endpoints, so no token is involved.
+
+Switching the location on, or pressing **Regenerate**, makes the Hauser server
+send **one** request to a public Overpass API endpoint with a bounding box
+around that location and a list of road types. Nothing else leaves the house,
+and nothing is sent on start, reload or when a panel enters standby. The result
+is rendered into `/data/assets/ambient-maps/` and reused by every panel.
+
+Map data is © OpenStreetMap contributors, available under the ODbL. Hauser
+shows that attribution on the standby screen whenever the map is visible. See
+[`NOTICE`](../NOTICE) and
+[`docs/07-configuration.md`](../docs/07-configuration.md#standby-city-map).
 
 ## Backup and restore
 

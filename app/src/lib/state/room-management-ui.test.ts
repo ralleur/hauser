@@ -49,7 +49,28 @@ describe('room management UI contracts', () => {
 
   it('refreshes the active household cache before leaving after a room save', () => {
     expect(setupWizard).toContain("import { refreshHouseholdConfigRuntimeCache } from '../config/household-config-runtime.ts'");
-    expect(setupWizard).toMatch(/await refreshHouseholdConfigRuntimeCache\(\);\s+if \(reconfigure\) returnToDashboard\(\);/);
+    /* Der Cache muss vor dem Verlassen aktualisiert sein. Das Verlassen raeumt
+       zusaetzlich den Entwurfszwischenstand ab — die Reihenfolge bleibt
+       verbindlich, der Block dazwischen nicht mehr einzeilig. */
+    expect(setupWizard).toMatch(
+      /await refreshHouseholdConfigRuntimeCache\(\);\s+if \(reconfigure\) \{[^}]*returnToDashboard\(\);/,
+    );
+  });
+
+  /* Ein Sektionswechsel darf unfertige Raumaenderungen nicht still verwerfen —
+     aber ein wiederhergestellter Entwurf darf den Serverstand auch nicht
+     stillschweigend verdecken. Deshalb Hinweis und Verwerfen-Weg. */
+  it('keeps an unfinished room draft across a section remount and offers a way out', () => {
+    expect(setupWizard).toMatch(/let reconfigureDraft: ReconfigureDraft \| null = null;/);
+    expect(setupWizard).toMatch(/if \(reconfigureDraft\) \{/);
+    expect(setupWizard).toMatch(/draftRestored = true;/);
+    expect(setupWizard).toMatch(/\{#if draftRestored\}/);
+    expect(setupWizard).toMatch(/m\.setup_draft_restored\(\)/);
+    expect(setupWizard).toMatch(/onclick=\{\(\) => void discardDraft\(\)\}/);
+    // Verwerfen laedt den Serverstand neu, statt nur das Flag zu loeschen.
+    expect(setupWizard).toMatch(/async function discardDraft[\s\S]*?reconfigureDraft = null;[\s\S]*?await loadCurrentSetup\(\);/);
+    // Erfolgreiches Speichern raeumt Entwurf und Hinweis ab.
+    expect(setupWizard).toMatch(/reconfigureDraft = null;\s+draftRestored = false;/);
   });
 
   it('shows every room with its current image, device count and drag handle', () => {

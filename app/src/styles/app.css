@@ -2653,6 +2653,50 @@ body.theme-fade * {
   transition: opacity var(--duration-enter) var(--ease-out);
 }
 
+/* ── Stadtplan-Hintergrund (docs/18 §3.1, §8): genau ein dekorativer Layer,
+   absolut auf die Ambient-Fläche begrenzt. Das Asset ist eine Maske; gefärbt
+   wird mit der primären Schriftfarbe, gedämpft mit genau einem Token. Ein
+   negativer z-index legt ihn hinter den Inhalt, aber über die Ambient-Fläche —
+   ohne dass Uhr, Wochenband oder Zettel eine eigene Ebene brauchen.
+   Keine Filter, kein Blur, keine Per-Frame-Arbeit, kein Pointer-Ziel. ── */
+.ambient-map {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--color-text-primary);
+  opacity: var(--opacity-ambient-map);
+  -webkit-mask-image: var(--ambient-map-src);
+  mask-image: var(--ambient-map-src);
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+/* Tiefnacht zeigt ausschließlich die gedämpfte rote Uhr — die Markup-Bedingung
+   entfernt beide Knoten bereits, die Regel hält den Vertrag auch dann. */
+.ambient.deep-night .ambient-map,
+.ambient.deep-night .ambient-map-credit { display: none; }
+
+/* Attribution: lesbar, aber sekundär — und bewusst außerhalb der
+   Maskenopacity. `pointer-events: none` hält die bestehenden Weckzonen frei.
+   Farbe und Größe folgen `docs/01-design-system.md`: `--color-text-tertiary`
+   ist dort ausdrücklich auf nicht-essenzielle Labels ab 14px begrenzt, die
+   ODbL-Attribution ist aber rechtlich verpflichtend und damit
+   bedeutungstragend. Verwendet wird deshalb das dort belegte Mikro-Label-Paar
+   `--text-2xs` + `--color-text-secondary`. */
+.ambient-map-credit {
+  position: absolute;
+  right: clamp(var(--space-3), 2vw, var(--space-6));
+  bottom: var(--space-2);
+  pointer-events: none;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-secondary);
+}
+
 .ambient-content {
   display: flex;
   flex-direction: column;

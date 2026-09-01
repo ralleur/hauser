@@ -18,6 +18,11 @@ import {
   redactSupervisorToken,
 } from './server/ha-supervisor.mjs';
 import { HA_GATEWAY_PATH, createHaWebSocketGateway } from './server/ha-gateway.mjs';
+import {
+  AMBIENT_MAP_ASSET_DIRECTORY,
+  AMBIENT_MAP_CONFIG_PATH,
+  createAmbientMapService,
+} from './server/ambient-map-service.mjs';
 
 const SERVER_CONTRACT_COMPILED = process.env.HMI_SERVER_CONTRACT === 'compiled';
 const serverContractBase = SERVER_CONTRACT_COMPILED ? './server-contract' : './src/lib/config';
@@ -173,6 +178,14 @@ const LAUNDRY_BLUEPRINT_PATH = 'hauser/laundry-power-cycle-v1.yaml';
 const LAUNDRY_BLUEPRINT_FILE = fileURLToPath(new URL('./public/blueprints/automation/laundry-power-cycle-v1.yaml', import.meta.url));
 const REQUIRED_WRITABLE_DIRS = (process.env.HMI_REQUIRED_WRITABLE_DIRS || '')
   .split(',').map((path) => path.trim()).filter(Boolean);
+/* AMBIENT-MAP S3: Standortkonfiguration und Kartenasset gehören dem Server.
+   Die Defaults sind exakt die Produktionspfade aus Plan §5.3; die
+   Environmentwerte existieren nur für Deployments, die `/data` und `/assets`
+   an anderer Stelle einhängen. Aus dem Browser ist kein Pfad wählbar. */
+const AMBIENT_MAP_SERVER_CONFIG_PATH = process.env.HMI_AMBIENT_MAP_CONFIG_PATH || AMBIENT_MAP_CONFIG_PATH;
+const AMBIENT_MAP_SERVER_ASSET_DIRECTORY = process.env.HMI_AMBIENT_MAP_ASSET_ROOT || AMBIENT_MAP_ASSET_DIRECTORY;
+const AMBIENT_MAP_HA_TIMEOUT_MS = 5_000;
+const AMBIENT_MAP_HA_BODY_MAX = 256 * 1024;
 const ROOM_IMAGE_WIZARD_ENABLED = true;
 const ROOM_IMAGE_UPLOAD_MAX_BYTES = 12_582_912;
 const ROOM_IMAGE_UPLOAD_TTL_MS = 30 * 60 * 1000;
@@ -5244,6 +5257,10 @@ const HOTEL_ADMIN_ONLY_PREFIXES = [
   '/hermes',
   '/ambient-llm',
   '/shopping-llm',
+  /* AMBIENT-MAP S3: Standortwahl und Kartenerzeugung sind Adminsache. Der
+     öffentliche Lesepfad `/api/ambient-map` und das Asset bleiben bewusst
+     ungelistet — der Gast sieht den Ambient-Screen, aber keine Koordinaten. */
+  '/api/admin/ambient-map',
 ];
 
 export function hotelAdminOnlyRoute(url) {
@@ -10760,6 +10777,177 @@ function serveStatic(req, res, staticRoot = DIST) {
   else createReadStream(path).pipe(res);
 }
 
+/* ── AMBIENT-MAP S3: Verdrahtung des Stadtplan-Hintergrunds ─────────────── */
+
+function ambientMapPathname(url) {
+  try {
+    return new URL(url || '/', 'http://hmi.local').pathname;
+  } catch {
+    return null;
+  }
+}
+
+/** Öffentlicher Lesepfad und Assetpfad — vor dem Hotel-Admin-Gate. */
+export function ambientMapPublicRoute(url) {
+  const pathname = ambientMapPathname(url);
+  if (pathname === null) return false;
+  return pathname === '/api/ambient-map'
+    || pathname === '/assets/ambient-maps'
+    || pathname.startsWith('/assets/ambient-maps/');
+}
+
+/** Standortwahl, Neuerzeugung und Adminstatus — hinter dem Hotel-Admin-Gate. */
+export function ambientMapAdminRoute(url) {
+  const pathname = ambientMapPathname(url);
+  if (pathname === null) return false;
+  return pathname === '/api/admin/ambient-map' || pathname.startsWith('/api/admin/ambient-map/');
+}
+
+/**
+ * Genau die drei Felder aus `GET /api/config`, die der Kartenstandort braucht.
+ * Alles andere aus der Home-Assistant-Antwort wird verworfen. Ein unbrauchbares
+ * `location_name` lässt den Standort gültig, aber ohne Label — ein Ortsname ist
+ * per Plan §3.3 optional und darf keinen gültigen Standort scheitern lassen.
+ */
+function ambientMapLocationFromHaConfig(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('AMBIENT_MAP_HA_INVALID_RESPONSE');
+  }
+  const { latitude, longitude } = payload;
+  if (typeof latitude !== 'number' || !Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || typeof longitude !== 'number' || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    throw new Error('AMBIENT_MAP_HA_INVALID_RESPONSE');
+  }
+  const name = typeof payload.location_name === 'string' ? payload.location_name.trim() : '';
+  const usable = Boolean(name) && name.length <= 120 && !/[\u0000-\u001f\u007f]/u.test(name);
+  return { latitude, longitude, ...(usable ? { location_name: name } : {}) };
+}
+
+/**
+ * Ob überhaupt ein Home-Assistant-Zugang existiert, entscheidet jede Anfrage
+ * neu: die Ersteinrichtung schreibt den Zugang ohne Serverneustart. Nur so
+ * bleibt der `503`-Zweig aus Plan §6.2 in Produktion erreichbar und wird
+ * gleichzeitig nach der Einrichtung wieder frei.
+ */
+function ambientMapHomeAssistantConfigured({ configStore, connectionMode, supervisorClientFactory }) {
+  if (connectionMode === 'supervisor') {
+    const client = supervisorClientFactory();
+    try { return client.available === true; } finally { client.close?.(); }
+  }
+  return resolveServerHaAccess(configStore, connectionMode) !== null;
+}
+
+/**
+ * Der einzige Home-Assistant-Aufruf des Kartenfeatures: `GET /api/config` über
+ * genau die bestehenden serverseitigen Zugänge — Shared Config im direkten
+ * Modus, interner Client im App-Modus. Es entsteht kein allgemeiner Proxy, kein
+ * Credential verlässt den Server, und kein Upstreamtext wird weitergereicht.
+ */
+async function readAmbientMapHomeAssistantLocation({
+  configStore,
+  connectionMode,
+  supervisorClientFactory,
+  fetchImpl = fetch,
+  timeoutMs = AMBIENT_MAP_HA_TIMEOUT_MS,
+}) {
+  if (connectionMode === 'supervisor') {
+    let result;
+    try {
+      result = await withSupervisorClient(
+        supervisorClientFactory, (client) => client.rest('GET', '/api/config'),
+      );
+    } catch {
+      throw new Error('AMBIENT_MAP_HA_UNREACHABLE');
+    }
+    if (result?.status !== 200) throw new Error('AMBIENT_MAP_HA_HTTP_ERROR');
+    return ambientMapLocationFromHaConfig(result.body);
+  }
+  const access = resolveServerHaAccess(configStore, connectionMode);
+  if (!access) throw new Error('AMBIENT_MAP_HA_NOT_CONFIGURED');
+  let response;
+  try {
+    response = await fetchImpl(haRestUrl(access.baseUrl, 'api/config'), {
+      headers: { accept: 'application/json', authorization: `Bearer ${access.token}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    throw new Error('AMBIENT_MAP_HA_UNREACHABLE');
+  }
+  if (response.status !== 200) throw new Error('AMBIENT_MAP_HA_HTTP_ERROR');
+  let text;
+  try { text = await response.text(); } catch { throw new Error('AMBIENT_MAP_HA_UNREACHABLE'); }
+  if (Buffer.byteLength(text) > AMBIENT_MAP_HA_BODY_MAX) throw new Error('AMBIENT_MAP_HA_INVALID_RESPONSE');
+  let payload;
+  try { payload = JSON.parse(text); } catch { throw new Error('AMBIENT_MAP_HA_INVALID_RESPONSE'); }
+  return ambientMapLocationFromHaConfig(payload);
+}
+
+/**
+ * Setup-Required und der Recovery-Latch bleiben auch für den Kartenpfad
+ * fail-closed. Der öffentliche Zweig liegt vor dem Migrations-/Setup-Gate der
+ * übrigen `/api`-Routen und muss diese Zusage deshalb selbst einlösen.
+ */
+function ambientMapNotReady(migrationResult, readiness, setupIsRequired) {
+  if (!migrationResult.ok) {
+    return {
+      status: 503,
+      payload: {
+        ok: false, status: 'not_ready', code: readiness.payload.code, message: readiness.payload.message,
+      },
+    };
+  }
+  if (setupIsRequired) {
+    return {
+      status: 503,
+      payload: {
+        ok: false,
+        code: 'SETUP_REQUIRED',
+        message: 'Die Ersteinrichtung muss zuerst abgeschlossen werden.',
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Gemeinsame Grenze beider Kartenzweige: Origin, Bereitschaft und
+ * Verfügbarkeit werden hier geprüft, erst danach antwortet der S2-Router. Eine
+ * nicht bediente Assetanfrage endet als `404` und nie im SPA-Fallback.
+ */
+function serveAmbientMap(req, res, { service, allowedOrigins, notReady }) {
+  const assetRequest = (ambientMapPathname(req.url || '/') || '').startsWith('/assets/');
+  const deny = (status, payload) => {
+    if (assetRequest) {
+      res.writeHead(status);
+      res.end();
+    } else {
+      jsonResponse(res, status, payload);
+    }
+  };
+  const unavailable = () => deny(503, {
+    ok: false, code: 'AMBIENT_MAP_UNAVAILABLE', message: 'Der Kartenspeicher ist nicht verfügbar.',
+  });
+  if (!requestOriginAllowed(req, allowedOrigins)) {
+    deny(403, { code: 'AMBIENT_MAP_FORBIDDEN', message: 'Kartenroute nicht freigegeben.' });
+    return;
+  }
+  if (notReady) {
+    deny(notReady.status, notReady.payload);
+    return;
+  }
+  if (!service) {
+    unavailable();
+    return;
+  }
+  void Promise.resolve(service.route(req, res)).then((handled) => {
+    if (handled || res.headersSent || res.writableEnded) return;
+    deny(404, { code: 'AMBIENT_MAP_ROUTE_NOT_FOUND', message: 'Die Kartenroute wurde nicht gefunden.' });
+  }).catch(() => {
+    if (res.headersSent || res.writableEnded) return;
+    unavailable();
+  });
+}
+
 export function createHmiServer(
   key = readHermesKey(),
   {
@@ -10844,6 +11032,13 @@ export function createHmiServer(
     hotelActivationPreflightService = null,
     hotelCheckoutService = null,
     hotelEventClientFactory = createHotelEventClient,
+    /* AMBIENT-MAP S3: vollständig injizierbare Kartenfähigkeit — Service,
+       Pfade und der HA-`fetch` des direkten Modus sind Testgrenzen. */
+    ambientMapService = null,
+    ambientMapConfigPath = AMBIENT_MAP_SERVER_CONFIG_PATH,
+    ambientMapAssetDirectory = AMBIENT_MAP_SERVER_ASSET_DIRECTORY,
+    ambientMapHaFetchImpl = undefined,
+    ambientMapJobRunner = null,
   } = {},
 ) {
   const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
@@ -11016,6 +11211,38 @@ export function createHmiServer(
     connectionMode: haConnectionMode,
     originAllowed: (req) => requestOriginAllowed(req, allowedOrigins),
   });
+  /* AMBIENT-MAP S3: Standort und Asset gehören dem Server. Fehlen die
+     Laufzeitverzeichnisse (`/data`, `/assets`), bleibt die Fähigkeit
+     unverfügbar, statt an unerwarteten Orten zu schreiben; eine gerissene
+     Setup-Recovery hält sie wie Raumbilder und Wäsche fail-closed. */
+  const ambientMapDirectoriesReady = existsSync(dirname(ambientMapConfigPath))
+    && existsSync(dirname(ambientMapAssetDirectory));
+  const ambientMap = !setupRecoveryResult.ok ? null : (ambientMapService ?? (ambientMapDirectoriesReady
+    ? createAmbientMapService({
+      configPath: ambientMapConfigPath,
+      assetDirectory: ambientMapAssetDirectory,
+      ...(ambientMapJobRunner ? { jobRunner: ambientMapJobRunner } : {}),
+      /* Auflage aus dem S2-Review: der Resolver wird ausschließlich wirksam,
+         wenn wirklich ein HA-Zugang konfiguriert ist — sonst antwortet die
+         Standortroute mit `503` statt einen aussichtslosen Job zu starten. */
+      homeAssistantConfigured: () => ambientMapHomeAssistantConfigured({
+        configStore,
+        connectionMode: haConnectionMode,
+        supervisorClientFactory: haSupervisorClientFactory,
+      }),
+      resolveHomeAssistantLocation: () => readAmbientMapHomeAssistantLocation({
+        configStore,
+        connectionMode: haConnectionMode,
+        supervisorClientFactory: haSupervisorClientFactory,
+        ...(ambientMapHaFetchImpl ? { fetchImpl: ambientMapHaFetchImpl } : {}),
+      }),
+    })
+    : null));
+  /* Der Store initialisiert asynchron; ein nicht beschreibbarer Pfad darf
+     weder eine Unhandled Rejection erzeugen noch den Serverstart verhindern. */
+  ambientMap?.ready?.catch?.((error) => {
+    console.warn('[hauser] Ambient-Map-Speicher nicht verfügbar:', error?.code ?? 'AMBIENT_MAP_STORE_UNAVAILABLE');
+  });
   const httpServer = http.createServer((req, res) => {
     const effectiveMigrationResult = setupRecoveryFailureLatched
       ? setupRecoveryFailure()
@@ -11056,6 +11283,15 @@ export function createHmiServer(
         connectionMode: haConnectionMode,
         supervisorAvailable: haConnectionMode !== 'supervisor'
           || haSupervisorClientFactory().available,
+      });
+    } else if (ambientMapPublicRoute(req.url || '/')) {
+      /* Plan §6.1/§6.3: Status und Asset des Ambient-Screens liest auch ein
+         Hotelgast — deshalb vor dem Admin-Gate, aber ausschließlich in der
+         sanitisierten S2-Projektion ohne Koordinaten und Ortslabel. */
+      serveAmbientMap(req, res, {
+        service: ambientMap,
+        allowedOrigins,
+        notReady: ambientMapNotReady(effectiveMigrationResult, readiness, setupIsRequired),
       });
     } else if (hotelAdminGate.blocked(req)) {
       // Vor jeder anderen Auswertung: bei eingerichtetem Hotel Mode verlangen
@@ -11158,6 +11394,14 @@ export function createHmiServer(
         ok: false,
         code: 'SETUP_REQUIRED',
         message: 'Die Ersteinrichtung muss zuerst abgeschlossen werden.',
+      });
+    } else if (ambientMapAdminRoute(req.url || '/')) {
+      /* Hinter Hotel-Admin-Gate, Migrations- und Setup-Schranke: hier bleibt
+         nur noch die bestehende Origin-Grenze für die Mutationen. */
+      serveAmbientMap(req, res, {
+        service: ambientMap,
+        allowedOrigins,
+        notReady: ambientMapNotReady(effectiveMigrationResult, readiness, setupIsRequired),
       });
     } else if ((req.url || '').startsWith('/api/laundry')) {
       const origin = String(req.headers.origin || '');
@@ -11270,7 +11514,11 @@ export function createHmiServer(
     }
     haGateway.handleUpgrade(req, socket, head);
   });
-  httpServer.on('close', () => haGateway.close());
+  httpServer.on('close', () => {
+    haGateway.close();
+    /* Kartenjob und sein kurzlebiger Worker enden mit dem Server. */
+    void Promise.resolve(ambientMap?.close?.()).catch(() => {});
+  });
   return httpServer;
 }
 

@@ -7,15 +7,88 @@
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
   import { requestAmbient, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
-  import { settingsValues, setAmbientDeepNight, setAmbientHeroText } from '../../state/settings.svelte.ts';
+  import {
+    settingsValues,
+    setAmbientCityMap,
+    setAmbientDeepNight,
+    setAmbientHeroText,
+  } from '../../state/settings.svelte.ts';
   import { aiHealth } from '../../state/ai-health.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
+  import {
+    ambientMap,
+    ensureAmbientMapStatus,
+    locateAmbientMapDevice,
+    regenerateAmbientMap,
+    submitManualMapLocation,
+    useHomeAssistantMapLocation,
+  } from '../../state/ambient-map.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
   /* „offline“ und „unauthorized“ heißen beide: der Schalter unten läuft ins
      Leere. Das wird an der Zeile ausgewiesen, statt es den Nutzer an einem
      stillen Fehlschlag merken zu lassen. */
   const accessMissing = $derived(aiHealth.status === 'offline' || aiHealth.status === 'unauthorized');
+
+  /* ── Stadtplan-Hintergrund (docs/18 §7.2) ──
+     Die Einstellungen sind die einzige Stelle, die Quelle und Label kennt;
+     deshalb der Adminstatus. Der Abruf startet sofort, blockiert aber nichts —
+     die Sektion ist ohne ihn vollständig bedienbar. */
+  $effect(() => { ensureAmbientMapStatus({ immediate: true, admin: true }); });
+
+  let manualOpen = $state(false);
+  let manualLatitude = $state('');
+  let manualLongitude = $state('');
+
+  const mapBusy = $derived(ambientMap.busy || ambientMap.locating);
+  const hasMap = $derived(ambientMap.assetUrl !== null);
+
+  const mapStateText = $derived(
+    ambientMap.state === 'ready' ? m.sys_map_state_ready()
+      : ambientMap.state === 'error' ? m.sys_map_state_error()
+        : ambientMap.state === 'queued' || ambientMap.state === 'running' ? m.sys_map_state_pending()
+          : m.sys_map_state_empty(),
+  );
+
+  const mapStateIcon = $derived(
+    ambientMap.state === 'ready' ? 'i-map-check'
+      : ambientMap.state === 'error' ? 'i-alert-circle-outline'
+        : ambientMap.state === 'queued' || ambientMap.state === 'running' ? 'i-refresh'
+          : 'i-information-outline',
+  );
+
+  /* Quelle und automatisch gewählter Radius — beides erst, wenn ein Asset
+     wirklich existiert. Koordinaten liefert der Server bewusst nie. */
+  const mapDetail = $derived.by(() => {
+    const parts: string[] = [];
+    if (ambientMap.source === 'home_assistant') parts.push(m.sys_map_source_home_assistant());
+    else if (ambientMap.source === 'browser') parts.push(m.sys_map_source_browser());
+    else if (ambientMap.source === 'manual') parts.push(m.sys_map_source_manual());
+    if (ambientMap.label) parts.push(ambientMap.label);
+    if (ambientMap.radiusMetres !== null) parts.push(m.sys_map_radius({ radius: ambientMap.radiusMetres }));
+    return parts.join(' · ');
+  });
+
+  const mapProblem = $derived.by(() => {
+    switch (ambientMap.problem) {
+      case 'status_unavailable': return m.sys_map_error_status();
+      case 'unavailable': return m.sys_map_error_unavailable();
+      case 'request_failed': return m.sys_map_error_request();
+      case 'admin_required': return m.sys_map_error_admin();
+      case 'home_assistant_unavailable': return m.sys_map_error_home_assistant();
+      case 'invalid_coordinates': return m.sys_map_error_coordinates();
+      case 'geolocation_denied': return m.sys_map_error_geo_denied();
+      case 'geolocation_unavailable': return m.sys_map_error_geo_unavailable();
+      case 'geolocation_timeout': return m.sys_map_error_geo_timeout();
+      case 'geolocation_insecure': return m.sys_map_error_geo_insecure();
+      default: return '';
+    }
+  });
+
+  function onManualSubmit(event: SubmitEvent): void {
+    event.preventDefault();
+    submitManualMapLocation(manualLatitude, manualLongitude);
+  }
 </script>
 
 <div class="settings-group">
@@ -65,3 +138,116 @@
     </button>
   </div>
 </div>
+
+<!-- ── Stadtplan-Hintergrund ──
+     Der Schalter ist gerätelokal, Standort und Asset sind zentral. Kein
+     Schritt blockiert: der Server nimmt einen Auftrag an und antwortet sofort;
+     die Statuszeile folgt, ohne dass hier irgendetwas wartet. -->
+<div class="settings-group">
+  <SettingsCardHead icon="i-map" tint="cool"
+                    title={m.sys_map_card()} sub={m.sys_map_card_hint()} />
+
+  <div class="settings-row" data-setting-id="ambient-city-map">
+    <span class="settings-row-icon"><Icon name="i-map" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_toggle()}</span>
+      <span class="settings-row-sub">{m.sys_map_toggle_hint()}</span>
+    </div>
+    <div class="settings-row-actions">
+      <button class="secondary-btn pressable" type="button"
+              onclick={() => requestAmbient()}>{m.sys_preview()}</button>
+      <button class="settings-switch pressable" type="button" role="switch"
+              aria-checked={settingsValues.ambientCityMap}
+              aria-label={m.sys_map_toggle()}
+              onclick={() => setAmbientCityMap(!settingsValues.ambientCityMap)}>
+        <span class="settings-switch-knob"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="settings-row">
+    <span class="settings-row-icon"><Icon name={mapStateIcon} cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{mapStateText}</span>
+      {#if mapDetail}<span class="settings-row-sub">{mapDetail}</span>{/if}
+    </div>
+  </div>
+
+  {#if mapProblem}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-alert-circle-outline" cls="icon icon-md" /></span>
+      <p class="settings-form-msg is-error" role="status">{mapProblem}</p>
+    </div>
+  {/if}
+
+  <div class="settings-row">
+    <span class="settings-row-icon"><Icon name="i-home-assistant" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_use_home_assistant()}</span>
+      <span class="settings-row-sub">{m.sys_map_use_home_assistant_hint()}</span>
+    </div>
+    <button class="secondary-btn pressable" type="button" disabled={mapBusy}
+            onclick={useHomeAssistantMapLocation}>{m.sys_apply()}</button>
+  </div>
+
+  <div class="settings-row">
+    <span class="settings-row-icon"><Icon name="i-crosshairs-gps" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_locate_device()}</span>
+      <span class="settings-row-sub">{m.sys_map_locate_device_hint()}</span>
+    </div>
+    <button class="secondary-btn pressable" type="button" disabled={mapBusy}
+            onclick={locateAmbientMapDevice}>
+      {ambientMap.locating ? m.sys_map_locating() : m.sys_apply()}
+    </button>
+  </div>
+
+  <div class="settings-row">
+    <span class="settings-row-icon"><Icon name="i-map-marker" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_manual()}</span>
+      <span class="settings-row-sub">{m.sys_map_manual_hint()}</span>
+    </div>
+    <button class="secondary-btn pressable" type="button"
+            aria-expanded={manualOpen} aria-label={m.sys_map_manual()}
+            onclick={() => { manualOpen = !manualOpen; }}>
+      <Icon name={manualOpen ? 'i-chevron-up' : 'i-chevron-down'} cls="icon icon-md" />
+    </button>
+  </div>
+
+  {#if manualOpen}
+    <form class="settings-row is-stacked" onsubmit={onManualSubmit}>
+      <div class="settings-form-grid">
+        <input class="settings-input" type="text" inputmode="decimal"
+               placeholder="49.6069" aria-label={m.sys_map_latitude()}
+               autocomplete="off" spellcheck="false"
+               bind:value={manualLatitude} disabled={mapBusy} />
+        <input class="settings-input" type="text" inputmode="decimal"
+               placeholder="6.5508" aria-label={m.sys_map_longitude()}
+               autocomplete="off" spellcheck="false"
+               bind:value={manualLongitude} disabled={mapBusy} />
+        <button class="secondary-btn pressable" type="submit"
+                disabled={mapBusy || !manualLatitude.trim() || !manualLongitude.trim()}>
+          {m.sys_apply()}
+        </button>
+      </div>
+    </form>
+  {/if}
+
+  {#if hasMap}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-refresh" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.sys_map_regenerate()}</span>
+        <span class="settings-row-sub">{m.sys_map_regenerate_hint()}</span>
+      </div>
+      <button class="secondary-btn pressable" type="button" disabled={mapBusy}
+              onclick={regenerateAmbientMap}>{m.sys_start_now()}</button>
+    </div>
+  {/if}
+</div>
+
+<p class="settings-note">
+  {m.sys_map_privacy()}
+  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{m.sys_map_attribution()}</a>
+</p>

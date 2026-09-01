@@ -82,8 +82,8 @@ describe('fachliche Gliederung', () => {
     }
   });
 
-  it('hält alle drei Standby-Einstellungen zusammen unter Ambient & Standby', () => {
-    for (const id of ['standby-now', 'ambient-deep-night', 'ambient-hero-text']) {
+  it('hält alle Standby-Einstellungen zusammen unter Ambient & Standby', () => {
+    for (const id of ['standby-now', 'ambient-deep-night', 'ambient-hero-text', 'ambient-city-map']) {
       expect(settingsEntry(id)?.section).toBe('ambient');
     }
     expect(settingsSection('ambient').group).toBe('appearance');
@@ -151,6 +151,15 @@ describe('searchSettings', () => {
     const [first] = searchSettings('tageskommentar');
     expect(first.entry.id).toBe('ambient-hero-text');
     expect(first.section.id).toBe('ambient');
+  });
+
+  /* docs/18 §7.2: der Stadtplan wird unter deutschen Alltagsbegriffen gesucht,
+     nicht unter „Overpass" oder „Renderer". */
+  it('findet den Stadtplan-Hintergrund über seine Alltagsbegriffe', () => {
+    for (const query of ['stadtplan', 'karte', 'standort', 'openstreetmap', 'hintergrund standby']) {
+      expect(searchSettings(query).map((match) => match.entry.id)).toContain('ambient-city-map');
+    }
+    expect(searchSettings('stadtplan')[0]?.section.id).toBe('ambient');
   });
 
   /* Ein Modellname führt zuerst zur Dienstkarte, wo das Modell steht. */

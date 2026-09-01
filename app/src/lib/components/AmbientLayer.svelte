@@ -21,6 +21,7 @@
   import { ambientCopy, refreshAmbientCopy } from '../state/ambient-copy.svelte.ts';
   import { outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
+  import { ambientMap, ensureAmbientMapStatus } from '../state/ambient-map.svelte.ts';
   import { localeState } from '../state/locale.svelte.ts';
   import { isDeepNightHour } from '../state/ambient-deep-night.ts';
   import type { TempTrend } from '../state/weather.ts';
@@ -161,6 +162,22 @@
       || (settingsValues.ambientDeepNight && (forceDeepNight || isDeepNightHour(clock.hours))),
   );
 
+  /* ── Stadtplan-Hintergrund (docs/18 §8): rein dekorativ, gerätelokal
+     eingeschaltet und nur mit fertigem Serverasset. Deep Night zeigt weiter
+     ausschließlich die gedämpfte rote Uhr — dort entfällt der Layer samt
+     Attribution ersatzlos. ── */
+  const mapVisible = $derived(
+    settingsValues.ambientCityMap && !deepNight && ambientMap.assetUrl !== null,
+  );
+
+  /* Statusabruf nur bei eingeschaltetem Schalter: nach First Paint in einer
+     Idle-Phase, beim Standby-Eintritt sofort. Gewartet wird nie — fehlt oder
+     lädt das Asset, bleibt der Ambient-Screen exakt der bisherige (docs/18 §7.1). */
+  $effect(() => {
+    if (!settingsValues.ambientCityMap) return;
+    ensureAmbientMapStatus({ immediate: active });
+  });
+
   /* iPadOS malt die Fläche außerhalb seines dynamischen Viewports aus dem
      Dokument-Hintergrund. Während Deep Night muss deshalb auch diese Unterlage
      schwarz sein, nicht nur der fixed Ambient-Layer. */
@@ -219,6 +236,14 @@
      class:has-side-notes={shoppingSections.length > 0 || postits.items.length > 0}
      class:deep-night={deepNight}
      onpointerdown={wakeTo}>
+  <!-- Genau ein dekorativer Kartenlayer, ganz hinten: das fertige Serverasset
+       dient als Maske über der primären Schriftfarbe. Kein Inline-SVG, keine
+       Geometrie im Browser, kein Pointer-Ziel — Light und Dark teilen sich
+       dasselbe Asset und ändern nur die CSS-Farbe (docs/18 §3.1, §8). -->
+  {#if mapVisible}
+    <div class="ambient-map" aria-hidden="true"
+         style="--ambient-map-src: url('{ambientMap.assetUrl}')"></div>
+  {/if}
   <div class="ambient-content" class:without-hero={!settingsValues.ambientHeroText && !deepNight}
        class:deep-night-content={deepNight} bind:this={contentEl}>
     {#if deepNight}
@@ -330,5 +355,13 @@
         {/each}
       </div>
     </aside>
+  {/if}
+
+  <!-- OSM-Attribution: sichtbar, solange die Karte sichtbar ist, aber bewusst
+       kein Pointer-Ziel — der Tap fällt auf den Ambient-Layer durch, damit die
+       bestehenden Weckzonen (Wochenband, Zettel, Mitte) unverändert greifen.
+       Sie liegt außerhalb der 10-Prozent-Maskenopacity (docs/18 §8, §9). -->
+  {#if mapVisible}
+    <p class="ambient-map-credit">{m.sys_map_attribution()}</p>
   {/if}
 </div>

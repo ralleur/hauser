@@ -248,6 +248,53 @@ automation. An explicitly configured scene runs afterwards on a best-effort
 basis; without one Hauser changes no device. A guest cannot undo a checkout —
 an admin can reset the marker.
 
+## Standby city map
+
+The standby screen can show a faint street map of your own town behind the
+clock. It is off by default and has to be switched on per device under
+**Settings → Appearance → Ambient & standby**.
+
+How it works:
+
+- The location belongs to the server and is shared by the whole household. It
+  comes from Home Assistant (`GET /api/config` read server-side, so no token
+  reaches the browser), from a one-off browser geolocation request that only
+  runs after an explicit tap, or from coordinates typed in by hand.
+- When the location is set or the map is regenerated, the server sends **one**
+  request to a public Overpass API endpoint. It transmits a bounding box around
+  the location and a list of road types — nothing else, and never on app start,
+  reload, theme change or when the panel enters standby.
+- From the response the server renders a monochrome SVG of road lines and
+  stores it under a content hash. The browser uses that file as a CSS mask, so
+  light and dark share one asset and the road colour follows the theme.
+- The visibility switch is device-local (`hmi:ambient-map` in the browser's
+  local storage) and is deliberately not part of the shared configuration. A
+  second panel can show the same map without querying Overpass again.
+- The public read endpoint `/api/ambient-map` returns the asset URL, the chosen
+  radius and the byte length. It never returns coordinates or a place name, and
+  the coordinates never appear in the asset file name, in the SVG or in logs.
+
+Attribution is mandatory: map data is © OpenStreetMap contributors, available
+under the ODbL. Hauser renders that line on the standby screen whenever the map
+is visible and links to the OpenStreetMap copyright page from the settings. See
+[`NOTICE`](../NOTICE).
+
+Storage paths:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `HMI_AMBIENT_MAP_CONFIG_PATH` | `/data/ambient-map.json` | Location, chosen radius and the active asset reference. Written with mode `0600`. |
+| `HMI_AMBIENT_MAP_ASSET_ROOT` | `/assets/ambient-maps` | Directory holding the rendered SVG files. |
+
+The feature only becomes available when the parent directories of both paths
+exist and are writable; otherwise the server keeps the map endpoints closed and
+the standby screen stays exactly as before. The Compose and Dockerfile defaults
+already mount `/data` and `/assets`. The Home Assistant App has only `/data`,
+so its manifest points `HMI_AMBIENT_MAP_ASSET_ROOT` at
+`/data/assets/ambient-maps` and lists that directory in
+`HMI_REQUIRED_WRITABLE_DIRS`, which is what makes the container entrypoint
+create it.
+
 ## Current beta boundary
 
 The configuration core, source-built container, Compose file, persistent

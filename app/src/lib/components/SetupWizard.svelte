@@ -1,3 +1,22 @@
+<script module lang="ts">
+  import type { SetupHouseholdSuggestion } from '../config/setup-household.ts';
+
+  interface ReconfigureDraft {
+    suggestion: SetupHouseholdSuggestion;
+    householdEtag: string | null;
+    sharedEtag: string | null;
+    haUrl: string;
+    token: string;
+  }
+
+  /* Überlebt einen Remount der eingebetteten Räume-&-Geräte-Sektion (Wechsel
+     der System-Settings-Sektion, Verlassen von System): sonst verwirft jede
+     Navigation weg von hier unbemerkt den unfertigen Entwurf (Umbenennen,
+     Reihenfolge, Hinzufügen/Löschen), noch bevor „Änderungen speichern"
+     gedrückt wurde — der Raum scheint dann seine Änderung verloren zu haben. */
+  let reconfigureDraft: ReconfigureDraft | null = null;
+</script>
+
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { discoverHomeAssistant } from '../config/setup-discovery.ts';
@@ -22,7 +41,6 @@
     preserveSetupRoomHeroes,
     removeSetupRoom,
     renameSetupRoom,
-    type SetupHouseholdSuggestion,
   } from '../config/setup-household.ts';
   import {
     AVAILABLE_LOCALES,
@@ -59,6 +77,7 @@
   let supervisorAvailable = $state(true);
   const supervisor = $derived(connectionMode === 'supervisor');
   let status = $state<'idle' | 'loading' | 'connecting' | 'ready' | 'activating' | 'done' | 'error'>('idle');
+  let draftRestored = $state(false);
   let message = $state('');
   let suggestion = $state<SetupHouseholdSuggestion | null>(null);
   let omittedCount = $state(0);
@@ -202,15 +221,48 @@
     void (async () => {
       await loadConnectionMode();
       if (reconfigure) {
-        status = 'loading';
-        message = m.setup_loading();
-        await loadCurrentSetup();
+        if (reconfigureDraft) {
+          // Ein unfertiger Entwurf aus einem vorherigen Mount dieser Sektion
+          // (Navigation weg und zurück) hat Vorrang vor dem Server-Stand.
+          // Der Vorrang wird sichtbar gemacht: sonst zeigt die Sektion nach
+          // langer Zeit stillschweigend etwas anderes als den Serverstand,
+          // mit veralteten ETags, an denen erst das Speichern scheitert.
+          suggestion = reconfigureDraft.suggestion;
+          householdEtag = reconfigureDraft.householdEtag;
+          sharedEtag = reconfigureDraft.sharedEtag;
+          haUrl = reconfigureDraft.haUrl;
+          token = reconfigureDraft.token;
+          draftRestored = true;
+          status = 'ready';
+        } else {
+          status = 'loading';
+          message = m.setup_loading();
+          await loadCurrentSetup();
+        }
       } else if (supervisor && supervisorAvailable) {
         /* Ohne Credentialfrage gibt es nichts einzugeben: die App scannt sofort. */
         await connectAndScan();
       }
     })();
   });
+
+  // Spiegelt den Entwurf in den Modul-Cache, solange reconfigure läuft —
+  // Grundlage für den Wiedereinstieg oben nach einem Remount.
+  $effect(() => {
+    if (!reconfigure || !suggestion) return;
+    reconfigureDraft = { suggestion, householdEtag, sharedEtag, haUrl, token };
+  });
+
+  /* Der einzige Weg aus einem wiederhergestellten Entwurf heraus, der nicht
+     Speichern heißt. Ohne ihn bliebe ein vergessener Entwurf bis zum Neuladen
+     der Seite bestehen und verdeckte den Serverstand. */
+  async function discardDraft(): Promise<void> {
+    reconfigureDraft = null;
+    draftRestored = false;
+    status = 'loading';
+    message = m.setup_loading();
+    await loadCurrentSetup();
+  }
 
   async function connectAndScan(): Promise<void> {
     if (!supervisor && (!haUrl.trim() || !token.trim())) {
@@ -407,7 +459,11 @@
       jellyfinPassword = '';
       jellyfinSession = null;
       await refreshHouseholdConfigRuntimeCache();
-      if (reconfigure) returnToDashboard();
+      if (reconfigure) {
+        reconfigureDraft = null;
+        draftRestored = false;
+        returnToDashboard();
+      }
       /* Erstlauf: erst die Adresse zeigen, unter der die Endgeräte Hauser
          öffnen — danach übernimmt der normale Start. */
       else if (!embedded) { status = 'done'; message = ''; }
@@ -684,6 +740,22 @@
         </section>
         {/if}
 
+        <!-- Sichtbarer Vorrang des Entwurfs: ohne diesen Hinweis zeigte die
+             Sektion nach langer Abwesenheit stillschweigend etwas anderes als
+             den Serverstand. Verwerfen ist der einzige Ausweg, der nicht
+             Speichern heißt. -->
+        {#if draftRestored}
+          <div class="draft-notice" role="status">
+            <span>{m.setup_draft_restored()}</span>
+            <button
+              class="secondary-btn pressable"
+              type="button"
+              onclick={() => void discardDraft()}
+              disabled={status === 'activating'}
+            >{m.setup_draft_discard()}</button>
+          </div>
+        {/if}
+
         <div class:save-bar={embedded}>
           <button
             class="primary"
@@ -787,6 +859,20 @@
   .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .message.success { color: var(--color-success); }
   .save-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-6); }
+  .draft-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid color-mix(in srgb, var(--color-accent-warm) 35%, var(--color-border));
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-accent-warm) 7%, var(--color-surface-1));
+    color: var(--color-text-primary);
+  }
+  .draft-notice button { min-height: var(--touch-min); flex: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   @media (max-width: 900px) { .entity-editor { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; padding: var(--space-2) 0; } .entity-editor small { grid-column: 1 / -1; grid-row: 2; } }
   @media (max-width: 640px) { .setup-shell { padding: var(--space-3); align-items: start; } .setup-card { padding: var(--space-5); border-radius: var(--radius-lg); } .language-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-heading, .preview-heading { align-items: flex-start; flex-direction: column; } .room-heading { grid-template-columns: var(--touch-min) minmax(0, 1fr) auto; } .room-count { display: none; } .room-actions { grid-column: 2 / -1; flex-wrap: wrap; } .room-details { padding-left: var(--space-4); } .entity-editor, .credential-grid { grid-template-columns: 1fr; } .entity-editor small { grid-column: 1; grid-row: auto; } }

@@ -56,6 +56,29 @@ Build tooling (Svelte, Vite, TypeScript, Vitest) is MIT licensed; see the
 respective packages in app/package.json.
 
 
+Map data (standby city map)
+---------------------------
+
+OpenStreetMap — Open Database License (ODbL) 1.0
+  https://www.openstreetmap.org/copyright
+  The optional standby city map is generated on the Hauser server from
+  OpenStreetMap road geometry. Nothing from OpenStreetMap is bundled with this
+  repository: when a location is configured, the server queries a public
+  Overpass API endpoint once and renders a monochrome SVG of road lines into
+  its own data directory. Map data is © OpenStreetMap contributors and is
+  available under the ODbL; the produced SVG is a derived database extract, so
+  the same terms apply to it. Hauser shows the required attribution on the
+  standby screen whenever the map is visible, and links to the OpenStreetMap
+  copyright page from the settings.
+
+Overpass API — the public query service
+  https://overpass-api.de/ and https://overpass.kumi.systems/
+  Hauser sends only a bounding box and a road-type filter, and only when
+  someone sets or regenerates the location. No Overpass or OpenStreetMap code
+  is included or depended upon; the query is a plain HTTPS request made by the
+  server.
+
+
 Images
 ------
 
