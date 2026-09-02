@@ -902,10 +902,10 @@
   display: block;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* Muss die volle .phone-bottom-nav freihalten (touch-min + space-1 + Safe
+  /* Muss die volle .phone-bottom-nav freihalten (touch-min + space-4 + Safe
      Area), sonst endet die letzte Karte unter der Leiste. Plus space-5, damit
      sie nicht bündig an der Kante klebt. */
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-1) + var(--space-5));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4) + var(--space-5));
 }
 .settings.is-phone .settings-sidebar,
 .settings.is-phone .settings-pane {

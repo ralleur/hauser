@@ -7,7 +7,7 @@ export type LibraryCategory = 'continue' | 'latest' | 'series' | 'movies';
 export function categoryFromLabel(label: string): LibraryCategory {
   if (label.startsWith(m.library_continue())) return 'continue';
   if (label.startsWith(m.library_recent())) return 'latest';
-  if (label.startsWith(m.library_shelf_series({ count: 0 }).replace(/\s*·.*$/u, ''))) return 'series';
+  if (label.startsWith('Serien')) return 'series';
   return 'movies';
 }
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { m } from '../../paraglide/messages.js';
   /* MediaCard (docs/08): echtes Jellyfin-Poster (Primary-Image mit tag+maxWidth)
      sobald ein `primaryTag` vorliegt, sonst der Farbton-Platzhalter (Fake-Daten
      bzw. Serien/Filme ohne Artwork). Resume-Fortschrittsbalken unten im Poster. */
@@ -10,11 +9,9 @@
 
   let imgFailed = $state(false);
   const posterUrl = $derived(
-    imgFailed
-      ? null
-      : item.primaryTag
-        ? jellyfin.imageUrl(item.id, { type: 'Primary', tag: item.primaryTag, maxWidth: 300 })
-        : item.poster ?? null,
+    item.primaryTag && !imgFailed
+      ? jellyfin.imageUrl(item.id, { type: 'Primary', tag: item.primaryTag, maxWidth: 300 })
+      : null,
   );
 
   const cw = $derived(continueInfo(item));
@@ -23,7 +20,7 @@
       ? cw.meta
       : item.type === 'series'
         ? item.seasons!.length
-          ? `${item.year} · ${item.seasons!.length} ${item.seasons!.length === 1 ? m.library_season() : m.library_seasons()}`
+          ? `${item.year} · ${item.seasons!.length} ${item.seasons!.length === 1 ? 'Staffel' : 'Staffeln'}`
           : `${item.year} · Serie`
         : String(item.year),
   );

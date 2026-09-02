@@ -67,15 +67,23 @@
   use:longpress={{ onLongPress: () => openRoomEdit(summary.id) }}
   onclick={(event) => onopen(summary, event.currentTarget)}
 >
-  <strong class="phone-room-card-name" title={summary.name}>{summary.name}</strong>
-  {#if summary.lightsOn > 0 || summary.windowOpen}
-    <span class="phone-room-facts">
-      {#if summary.lightsOn > 0}
-        <span><span aria-hidden="true">◉</span> {m.phone_room_lights_on({ count: summary.lightsOn })}</span>
-      {/if}
-      {#if summary.windowOpen}
-        <span class="is-warning"><span aria-hidden="true">□</span> {m.phone_room_window_open()}</span>
-      {/if}
-    </span>
-  {/if}
+  <span class="phone-room-card-info">
+    <!-- Status steht über dem Namen: der Raumname bleibt so in jeder Kachel auf
+         derselben Höhe, egal ob es etwas zu melden gibt. -->
+    {#if summary.lightsOn > 0 || summary.windowOpen}
+      <span class="phone-room-facts">
+        {#if summary.lightsOn > 0}
+          <span class="phone-room-fact">
+            <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_lights_on({ count: summary.lightsOn })}
+          </span>
+        {/if}
+        {#if summary.windowOpen}
+          <span class="phone-room-fact is-warning">
+            <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_window_open()}
+          </span>
+        {/if}
+      </span>
+    {/if}
+    <strong class="phone-room-card-name" title={summary.name}>{summary.name}</strong>
+  </span>
 </button>

@@ -207,12 +207,10 @@ export function demoResponse(path: string, method: string): Response | null {
       version: 1, state: 'ready', radiusMetres: 5000,
       asset: {
         /* Dieselbe Datei, die der Assistent als Beispiel zeigt — unter ihrem
-           echten Inhalts-Hash und unter dem Basispfad des Builds, damit sie die
-           Allowlist des Clients passiert. Ein Beispiel unter einem
-           Fantasiepfad wuerde stillschweigend verworfen und die Vorschau
-           bliebe leer; ein root-relativer Pfad liefe auf GitHub Pages neben
-           `/hauser/demo/` ins Leere. */
-        url: `${import.meta.env.BASE_URL}assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg`,
+           echten Inhalts-Hash, damit sie die Allowlist des Clients passiert.
+           Ein Beispiel unter einem Fantasiepfad wuerde stillschweigend
+           verworfen und die Vorschau bliebe leer. */
+        url: '/assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg',
         etag: '"a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a"',
         byteLength: 128091,
       },

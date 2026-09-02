@@ -26,15 +26,8 @@ export const AMBIENT_MAP_LOCATION_URL = '/api/admin/ambient-map/location';
 export const AMBIENT_MAP_REGENERATE_URL = '/api/admin/ambient-map/regenerate';
 
 /* Nur das feste Hauser-Format wird als Asset akzeptiert — nie ein beliebiger
-   Pfad aus einer Serverantwort (docs/18 §7.1). Der Pfad ist an den Basispfad
-   des Builds gebunden: im Produkt ist das `/`, in der Pages-Demo
-   `/hauser/demo/`. Ohne diese Bindung zeigte die Demo auf
-   `/assets/ambient-maps/…` neben ihrem Basispfad und der Stadtplan blieb dort
-   still ein 404. */
-const ASSET_BASE_PATH = import.meta.env.BASE_URL ?? '/';
-export const AMBIENT_MAP_ASSET_URL_PATTERN = new RegExp(
-  `^${ASSET_BASE_PATH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}assets/ambient-maps/[0-9a-f]{64}\\.svg$`,
-);
+   Pfad aus einer Serverantwort (docs/18 §7.1). */
+export const AMBIENT_MAP_ASSET_URL_PATTERN = /^\/assets\/ambient-maps\/[0-9a-f]{64}\.svg$/;
 
 export const AMBIENT_MAP_POLL_INTERVAL_MS = 1_500;
 /* Nominatim erlaubt hoechstens eine Anfrage pro Sekunde. Echtes

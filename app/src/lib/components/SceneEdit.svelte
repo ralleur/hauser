@@ -253,12 +253,12 @@
 
           <section class="ld-section">
             <div class="se-section-head">
-              <span class="caps-label">{m.scene_edit_included({ count: members.length })}</span>
+              <span class="caps-label">Enthalten · {members.length}</span>
               {#if customized}
                 <button class="se-reset pressable" type="button"
                         onclick={() => resetScene(room.id, sceneEdit.sceneId)}>{m.scene_reset()}</button>
               {:else}
-                <span class="se-standard">{m.scene_edit_default_hint()}</span>
+                <span class="se-standard">Standard: alle Lichter des Raums</span>
               {/if}
             </div>
             {#if members.length === 0}

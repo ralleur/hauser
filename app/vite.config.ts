@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 // @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
 import { execFileSync } from 'node:child_process';
 // @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
+import { env } from 'node:process';
+// @ts-expect-error Build tooling runs in Node; production app types intentionally exclude Node modules.
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -127,8 +129,13 @@ export const START_SCREEN_PRECACHE_ASSETS = [
    unbrauchbarem Snapshot nachgeladen — sie gehört damit nicht mehr in den
    Graphen, den das Gate vor dem ersten Paint misst. Das Limit selbst bleibt
    unverändert (docs/03). */
-/* Port, auf dem `server.mjs` im Werkstattbetrieb antwortet (HMI_PORT-Default). */
-const DEV_API_PORT = 4173;
+/* Port, auf dem `server.mjs` im Werkstattbetrieb antwortet (HMI_PORT-Default).
+   Mehrere Worktrees parallel: jeder bekommt sein eigenes Paar aus Backend- und
+   Werkstatt-Port. Der Backend-Port wird hier gesetzt (derselbe Wert, den
+   `server.mjs` als HMI_PORT bekommt); den Werkstatt-Port sucht Vite sich selbst,
+   solange keiner erzwungen wird. Ohne die Variable bleibt es beim bisherigen
+   4173, damit der Alleinbetrieb unveraendert startet. */
+const DEV_API_PORT = Number(env.HMI_DEV_API_PORT || env.HMI_PORT || 4173);
 
 export const REQUIRED_PRE_MOUNT_MODULE_SUFFIXES = [
   '/src/lib/config/household-config-runtime.ts',

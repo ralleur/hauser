@@ -155,7 +155,7 @@
   <header class="library-header">
     {#if category}
       <button class="library-view-title pressable" type="button" onclick={closeExpanded}
-              aria-label={m.library_shelf_close({ shelf: activeShelf?.label ?? m.library_category() })}>
+              aria-label={`${activeShelf?.label ?? m.library_category()} schließen`}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
         <span>{activeShelf?.label}</span>
       </button>
@@ -211,7 +211,7 @@
             {#if shelf.list.length}
               <section class="shelf library-shelf" data-category={categoryFromLabel(shelf.label)}>
                 <button class="caps-label shelf-label shelf-button pressable" type="button"
-                        onclick={() => openCategory(shelf.label)} aria-label={m.library_shelf_show_all({ shelf: shelf.label })}>
+                        onclick={() => openCategory(shelf.label)} aria-label={`${shelf.label} vollständig anzeigen`}>
                   <span>{shelf.label}</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
                 </button>
@@ -227,7 +227,7 @@
 
   {:else if status === 'loading'}
     <div class="lib-skeleton" aria-busy="true" aria-label={m.library_loading()}>
-      {#each [m.library_continue(), m.library_recent()] as label (label)}
+      {#each ['Weiterschauen', m.library_recent()] as label (label)}
         <section class="shelf">
           <h2 class="caps-label shelf-label">{label}</h2>
           <div class="shelf-row">

@@ -15,7 +15,6 @@
       damit continueInfo/resumeTarget (state/app) unverändert greifen.
    ============================================ */
 
-import { m } from '../../paraglide/messages.js';
 import type { LibraryItem, Season } from '../state/app.svelte.ts';
 import {
   mapMovie,
@@ -85,10 +84,10 @@ export function buildLiveLibrary(input: ShelfInput): LiveLibrary {
   return {
     items: dedupeById([...byId.values()]),
     shelves: [
-      { label: m.library_continue(), list: dedupeById(continueList) },
-      { label: m.library_recent(), list: latestItems },
-      { label: m.library_shelf_series({ count: seriesItems.length }), list: seriesItems },
-      { label: m.library_shelf_movies({ count: movieItems.length }), list: movieItems },
+      { label: 'Weiterschauen', list: dedupeById(continueList) },
+      { label: 'Zuletzt hinzugefügt', list: latestItems },
+      { label: `Serien · ${seriesItems.length}`, list: seriesItems },
+      { label: `Filme · ${movieItems.length}`, list: movieItems },
     ],
   };
 }
