@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.7.0 - 2026-09-02
+
+Includes the work that shipped with 0.6.3 but was missing from its notes.
+
+### Added
+
+- Notifications you configure yourself: eight categories, each holding rules
+  with an entity, its states, a delay and thresholds. Home Assistant does the
+  waiting and the triggering through three Hauser blueprints; Hauser keeps the
+  automations in step, shows the tiles and the history, and gives every
+  category its own colour. A test send shows what a rule will look like.
+- Window contacts and motion detectors are connected: the status strip shows
+  the real state and opens a list with one line per sensor and room. Which
+  sensors count is selectable per room under Home.
+- The energy page lists every power sensor Home Assistant reports; pick one
+  source for generation and any number of consumers.
+- An operate mode locks the configuration routes while devices stay fully
+  operable, with an optional PIN and an idle return.
+- Central climate control opens with a long press on the all-rooms pill, on the
+  panel and on the phone.
+- Paperless is set up in the interface instead of environment variables; the
+  server picks up address and token without a restart.
+- Sheets on the phone close by swiping their header down.
+- Home and Energy keep separate widths for their control areas.
+
+### Changed
+
+- The bottom navigation on phones floats as a rounded pill above the content
+  instead of sitting as a full-width bar.
+- Panel and phone share one climate pill; on the phone it stands in a single
+  row with the off and holiday actions.
+- Room tiles read as calm cards: a weaker gradient that carries only the lower
+  area, clearer titles and a crop rendered at its target size.
+- The media area is off by default and marked experimental; the services page
+  is arranged by module.
+- Long device names shrink to fit instead of being cut off.
+- The song workshop was removed. Installations that still list it start
+  normally.
+
+### Fixed
+
+- A switched-off module now leaves the navigation immediately instead of on the
+  next restart.
+- The camera tile stayed empty in the add-on because the browser loaded the
+  image from an address it could not reach. It is passed through the add-on's
+  own server now, and generic cameras reload the still picture when their
+  stream delivers no frame.
+- A repeated test notification kept the old colour.
+- The climate card broke out of a narrow sidebar.
+
 ## 0.6.3 - 2026-09-02
 
 ### Added

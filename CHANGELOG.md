@@ -5,6 +5,124 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-02
+
+This release documents the work that shipped alongside 0.6.3 but was left out of
+its notes, together with the changes made since.
+
+### Added
+
+- **Notifications you configure yourself, as categories with rules.** A new
+  **Notifications** section under **Home** replaces the fixed set of messages
+  with eight categories you fill yourself. A rule names an entity, the states
+  that should trigger it, a delay before it counts and, where it fits, a
+  threshold to stay above or below. Hauser is the configurator and the display,
+  Home Assistant does the waiting and the triggering: every active rule becomes
+  an automation built from one of three Hauser blueprints, and Hauser keeps that
+  set in step when you save. Each category carries a colour for the border of
+  its tiles, chosen from the palette so light and dark both hold up. A test
+  send shows what a rule will look like, and the history comes from the Home
+  Assistant logbook.
+- **Window contacts and motion detectors are really connected now.** The status
+  strip said "All quiet" no matter what the house was doing, because the values
+  behind it were never filled. Windows and presence are read live from Home
+  Assistant on every screen, and the strip has become a button that opens a
+  list with one line per sensor, its room and its state. Rooms without an
+  assigned sensor keep the strip as a display rather than offering a button
+  with nowhere to go.
+- **Choose which sensors count.** Detection no longer has the last word. A new
+  section under **Home** shows one card per room and one switch per sensor.
+  Everything found is on to begin with, so deselecting is the exception. A
+  button returns a room to automatic assignment.
+- **Choose what the energy page measures.** The energy card in
+  **Connections · Services** now lists every power sensor Home Assistant
+  reports: one source for generation, as many consumers as you want to tick,
+  plus "Take all". Without a saved selection Hauser uses everything it found.
+- **An operate mode that locks configuration away.** A button in the middle of
+  the header switches between **Edit** and **Operate**. In operate mode the
+  long-press routes into layout, the room device editor, the scene editor and
+  the central climate control are closed, while every device stays fully
+  operable, including a long press on a light. Someone who only wants to
+  operate the panel cannot break anything. Under **Interface & operation** you
+  can set how long the panel waits before falling back to operate mode on its
+  own, and a PIN that protects leaving it. If a locked long-press is tried
+  twice within thirty seconds, a line under the button explains the way back.
+- **Central climate control from anywhere.** A long press on the reading area
+  of the all-rooms pill opens the settings that decide what it controls, on the
+  panel and on the phone, from any screen. The step buttons keep switching, so
+  a longer press there does not open configuration.
+- **Paperless is set up in the interface.** Address and API token used to live
+  in environment variables and the keychain only. Both are now fields in
+  **Connections · Services**, and the server picks them up on the next request
+  instead of on the next restart. The PIN that locks the documents screen stays
+  in the keychain, because it is not a service credential.
+- **Sheets on the phone close by swiping down.** The room sheet and the more
+  sheet arrive from the bottom and now leave the same way. Dragging the sheet
+  header pulls the surface with your finger. Past a quarter of its height it
+  closes, below that it springs back. The gesture sits on the header so it
+  disturbs neither scrolling nor the sliders inside.
+- **Home and Energy keep separate widths for their control areas.** The layout
+  dialog now adjusts the area it was opened from and names it on the slider
+  row. Existing installations inherit the energy width from the previous
+  setting, so nothing shifts when you update.
+
+### Changed
+
+- **The bottom navigation on phones is a floating pill.** The full-width bar
+  read as a foreign object below the room grid. It now floats above the
+  content as a rounded, translucent pill that follows the rounded corners of
+  the phone, and the active entry is marked by a soft highlight that glides
+  along instead of a line under the label.
+- **One climate pill for the panel and the phone.** The all-rooms control is
+  the same component on both: two symmetric round buttons, one dominant target
+  value, a quieter range label and the measured current value behind a fine
+  divider. Blue and red now mark only the two directions. On the phone it
+  shares a single row with the off and holiday actions, which became round
+  buttons to fit.
+- **Room tiles read as calm product cards.** The veil used to lie flat across
+  the whole tile and dulled the picture without forming a clear zone. It now
+  carries only the lower information area and is gone by about two thirds of
+  the height. Both themes share the same, much weaker gradient, so the
+  illustration keeps its depth in light mode too. Room name and status have
+  their own hierarchy and a halo that keeps them legible on changing pictures.
+  The crop is rendered at its target size, so the fine lines of the
+  illustrations no longer step at high pixel density.
+- **The media area is off by default.** It stays in the catalogue and is
+  switched on under **Connections · Services**, where it is marked as
+  experimental. Playback targets that were found during setup remain in the
+  configuration, so they are there the moment you enable it.
+- **The services page is arranged by module.** Home Assistant sits on top as
+  the foundation, and below it one block per module: Home, Energy, Calendar,
+  Notes, Media, Library and Documents. Each block carries the switch for its
+  module and the setup of the service that fills it.
+- **Long device names shrink instead of being cut off.** In the control panel a
+  name that did not fit was truncated. It is now reduced in size until it fits
+  the space the tile already grants it, which turns two clipped lines into
+  three smaller complete ones without making the tile taller.
+- **The song workshop was removed.** It did not come up in everyday use. The
+  screen, its tab and its search entry are gone. Existing installations that
+  still list it in their configuration start normally.
+
+### Fixed
+
+- **A switched-off module stayed in the bar until the next restart.** The
+  switch wrote the configuration and the message asked you to restart.
+  The module now disappears from the tab bar and the phone navigation
+  immediately, and comes back complete when you switch it on again. The saved
+  order of the phone entries is left untouched.
+- **The camera tile stayed empty in the Home Assistant add-on.** The browser
+  loaded the live image directly from the built-in Home Assistant address,
+  which wall panels and phones without mDNS cannot reach. The image is passed
+  through Hauser's own server now. For generic cameras, whose stream Home
+  Assistant serves through ffmpeg, the stream ends without delivering a single
+  frame; those tiles reload the still picture instead and retry after an error
+  rather than staying blank.
+- **A second test notification kept the old colour.** Without a Home Assistant
+  connection the test tile is created locally, and an existing tile with the
+  same id was ignored. It is replaced now, as Home Assistant does it.
+- **The climate card broke out of a narrow sidebar.** The card now scales with
+  the width of the sidebar, and the current-value line no longer wraps.
+
 ## [0.6.3] - 2026-09-02
 
 ### Added

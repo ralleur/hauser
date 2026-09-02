@@ -6,10 +6,14 @@
 > Home Assistant OS 18.2 test system running Home Assistant 2026.8.3: fresh
 > install, start, credential-free setup discovery, activation, the internal
 > Home Assistant connection, and opening the displayed address from a real
-> phone. `0.6.3` adds importing a scene from Home Assistant and creates rooms
-> for areas that only carry scenes; both are covered by tests, and the scene
-> import was not exercised against a live Home Assistant. The install path
-> itself was not re-run on that version.
+> phone. `0.7.0` adds notifications you configure as categories with rules that
+> Home Assistant triggers, connected window and motion detectors, an operate
+> mode and a reworked phone navigation. It also repairs the camera tile in the
+> App, which used to load its picture from an address wall panels and phones
+> could not reach; that path was measured against a live Home Assistant. The
+> notification rules, the scene import added in `0.6.3` and the sensor
+> selection are covered by tests and were not exercised against a live Home
+> Assistant. The install path itself was not re-run on that version.
 > Real device commands with state echo, reconnect after a Home Assistant or App
 > restart, and backup/restore were **not** re-verified on this version; they
 > last passed on `0.4.0-beta.4`. This is not a broad compatibility or support promise.
@@ -102,7 +106,7 @@ migration remains fail-closed and makes the internal health probe fail.
   uses the Supervisor token to reach Home Assistant Core internally. No host
   networking, privileged mode, hardware access or Home Assistant configuration
   mount is requested, and no further Supervisor role is claimed.
-- `0.6.3` is the current published App and Docker/Compose beta. Versions below
+- `0.7.0` is the current published App and Docker/Compose beta. Versions below
   `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
   that it is a beta. Hauser is licensed under the GNU Affero General Public
   License instead of MIT; everything up to and including `0.4.0-beta.6` stays

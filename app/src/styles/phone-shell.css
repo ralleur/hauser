@@ -7,9 +7,13 @@
   --phone-safe-bottom: env(safe-area-inset-bottom, 0px);
   --phone-safe-left: env(safe-area-inset-left, 0px);
   --phone-conn-banner-height: calc(env(safe-area-inset-top, 0px) + var(--touch-min));
-  /* Muss der Höhe von .phone-bottom-nav entsprechen: die Home-Ansicht scrollt
-     nicht, ihre Schnellaktionen lägen sonst hinter der Leiste. */
-  --phone-nav-height: calc(var(--touch-min) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+  /* Die Bottom-Navigation ist eine schwebende Pille: Höhe der Pille plus ihr
+     Abstand zur Unterkante. Inhalte halten mit --phone-nav-height genau diese
+     Zone frei — die Home-Ansicht scrollt nicht, ihre Schnellaktionen lägen
+     sonst hinter der Leiste. */
+  --phone-nav-pill-height: calc(var(--touch-min) + var(--space-4));
+  --phone-nav-bottom-offset: max(calc(env(safe-area-inset-bottom, 0px) - var(--space-2)), var(--space-3));
+  --phone-nav-height: calc(var(--phone-nav-pill-height) + var(--phone-nav-bottom-offset));
   height: var(--phone-viewport-height);
   position: relative;
   isolation: isolate;
@@ -86,7 +90,7 @@
   display: grid;
   place-items: center;
   overflow-y: auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-5)) calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-5));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-5)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-5));
 }
 
 .phone-skeleton section {
@@ -126,7 +130,7 @@
   height: 100%;
   max-width: none;
   overflow-y: auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
   overscroll-behavior: contain;
 }
 
@@ -219,7 +223,7 @@
 .phone-calendar {
   height: 100%;
   overflow-y: auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
 }
 
 .phone-calendar-header {
@@ -1089,20 +1093,25 @@
   padding-top: calc(var(--phone-conn-banner-height) + var(--space-4));
 }
 
+/* Schwebende Pille statt Vollbreiten-Leiste: schmiegt sich an die gerundeten
+   Ecken des Telefons, der Inhalt läuft dahinter weiter und schimmert durch. */
 .phone-bottom-nav {
   position: absolute;
   z-index: 1;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  min-height: var(--phone-nav-height);
+  right: calc(env(safe-area-inset-right, 0px) + var(--space-4));
+  bottom: var(--phone-nav-bottom-offset);
+  left: calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  min-height: var(--phone-nav-pill-height);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  /* Unten eine eigene Spur für den Seitenindikator, sonst liegt er im Label. */
-  padding: var(--space-1) env(safe-area-inset-right, 0px) calc(env(safe-area-inset-bottom, 0px) + var(--space-3)) env(safe-area-inset-left, 0px);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--overlay-panel-background);
+  box-shadow: var(--elevation-overlay-shadow);
+  -webkit-backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
+  backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
 }
 
 .phone-nav-target {
@@ -1114,8 +1123,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
+  z-index: 1;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   color: var(--color-text-secondary);
   background: transparent;
   font: inherit;
@@ -1126,7 +1136,7 @@
 
 .phone-nav-indicator-track {
   position: relative;
-  z-index: 1;
+  z-index: 0;
   grid-row: 1;
   grid-column: 1;
   align-self: stretch;
@@ -1135,15 +1145,12 @@
   transition: transform var(--duration-normal) var(--ease-out);
 }
 
+/* Weiche Hervorhebung hinter dem aktiven Ziel, gleitet mit der Spur mit. */
 .phone-nav-indicator {
   position: absolute;
-  bottom: calc(var(--space-2) * -1);
-  left: 50%;
-  width: var(--space-8);
-  height: calc(var(--space-1) - 1px);
+  inset: var(--space-1) var(--space-1);
   border-radius: var(--radius-full);
-  background: var(--color-accent-warm);
-  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--color-accent-warm) 16%, transparent);
 }
 
 .phone-nav-target svg {
@@ -1157,7 +1164,7 @@
 }
 
 .phone-nav-target.is-active {
-  color: var(--color-text-primary);
+  color: var(--color-accent-warm);
 }
 
 .phone-nav-target:hover {
@@ -1376,7 +1383,7 @@
 .phone-notes-page {
   height: 100%;
   overflow-y: auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
 }
 
 .phone-notes-head {
@@ -1418,7 +1425,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(env(safe-area-inset-bottom, 0px) + var(--touch-min) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
 }
 
 .phone-energy-header,
@@ -1575,7 +1582,7 @@
   position: absolute;
   z-index: 3;
   left: 50%;
-  bottom: calc(var(--touch-min) + env(safe-area-inset-bottom, 0px) + var(--space-3));
+  bottom: calc(var(--phone-nav-height) + var(--space-3));
   display: flex;
   align-items: center;
   gap: var(--space-3);

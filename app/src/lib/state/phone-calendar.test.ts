@@ -224,7 +224,7 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneShellCss).toMatch(/data-standalone='true'[\s\S]*\.room-sheet\s*\{[^}]*height:\s*100%;[^}]*max-height:\s*100%/);
     expect(phoneShellCss).toMatch(/\.phone-content-frame\s*\{[^}]*height:\s*100%/s);
     expect(phoneShellCss).toMatch(/\.phone-calendar\s*\{[^}]*height:\s*100%/s);
-    expect(phoneShellCss).toMatch(/\.phone-bottom-nav\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*0;/s);
+    expect(phoneShellCss).toMatch(/\.phone-bottom-nav\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*var\(--phone-nav-bottom-offset\);/s);
     expect(phoneShellCss).toMatch(/\.phone-shell\.has-connection-banner[\s\S]*padding-top:\s*calc\(var\(--phone-conn-banner-height\) \+ var\(--space-4\)\)/);
     expect(phoneShellCss).toMatch(/\.room-sheet-scrim\s*\{[^}]*top:\s*var\(--phone-safe-top\);[^}]*right:\s*var\(--phone-safe-right\);[^}]*bottom:\s*var\(--phone-safe-bottom\);[^}]*left:\s*var\(--phone-safe-left\);[^}]*padding:\s*0;/);
     expect(phoneShellCss).toMatch(/\.room-sheet-scroll\s*\{[^}]*overflow-anchor:\s*none/);
