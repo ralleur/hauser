@@ -27,7 +27,6 @@ function tabLabel(id: RuntimeTab['id']): string {
     case 'calendar': return m.nav_calendar();
     case 'notes': return m.nav_notes();
     case 'media': return m.nav_media();
-    case 'songs': return m.nav_songs();
     case 'library': return m.nav_library();
     case 'ablage': return m.nav_files();
     case 'system': return m.nav_system();
@@ -35,7 +34,7 @@ function tabLabel(id: RuntimeTab['id']): string {
 }
 
 /* Deutsche Legacy-Namen und englische Setup-Namen sind UI-Texte. */
-const DEFAULT_TAB_NAMES = '|Home|Energie|Kalender|Notizen|Media|Songs|Bibliothek|Ablage|System|Calendar|Notes|';
+const DEFAULT_TAB_NAMES = '|Home|Energie|Kalender|Notizen|Media|Bibliothek|Ablage|System|Calendar|Notes|';
 
 export function isDefaultTabName(id: RuntimeTab['id'], name: string): boolean {
   const value = name.trim();
@@ -64,7 +63,7 @@ export const nav = $state({
 export type PhoneTarget =
   | { area: 'home' | 'calendar' }
   | { area: 'media'; subtarget: 'audio' | 'library' }
-  | { area: 'more'; subtarget: 'energy' | 'shopping' | 'reminders' | 'songs' | 'ablage' | 'system' };
+  | { area: 'more'; subtarget: 'energy' | 'shopping' | 'reminders' | 'ablage' | 'system' };
 
 export function normalizeScreen(value: unknown): ScreenId {
   return SCREENS.some(({ id }) => id === value) ? value as ScreenId : 'home';
@@ -76,7 +75,7 @@ export function projectPhoneTarget(value: unknown): PhoneTarget {
   if (screen === 'calendar') return { area: 'calendar' };
   if (screen === 'media') return { area: 'media', subtarget: 'audio' };
   if (screen === 'library' || screen === 'library-detail') return { area: 'media', subtarget: 'library' };
-  if (screen === 'energy' || screen === 'system' || screen === 'shopping' || screen === 'reminders' || screen === 'songs' || screen === 'ablage') {
+  if (screen === 'energy' || screen === 'system' || screen === 'shopping' || screen === 'reminders' || screen === 'ablage') {
     return { area: 'more', subtarget: screen };
   }
   // Die Tablet-Notizen-Seite existiert auf dem Phone als zwei Einzelseiten;

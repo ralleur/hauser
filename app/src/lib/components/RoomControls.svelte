@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../../styles/room-controls.css';
+  import { whenEditable } from '../state/edit-mode.svelte.ts';
   /* ── RoomControls (B-13): Steuer-Details des gewählten Raums im linken Panel.
      Reihenfolge Szenen → Licht → Klima. ── */
   import Icon from './Icon.svelte';
@@ -60,7 +61,7 @@
           {@const active = isSceneActive(room.id, s.id)}
           <button class="scene-btn pressable" type="button" class:is-active={active}
                   aria-pressed={active}
-                  use:longpress={{ onLongPress: () => openSceneEdit(room.id, s.id) }}
+                  use:longpress={{ onLongPress: whenEditable(() => openSceneEdit(room.id, s.id)) }}
                   onclick={(e) => onSceneTap(s.id, e)}>
             {s.label}<span class="scene-check"><Icon name="i-check" cls="icon icon-md" /></span>
           </button>

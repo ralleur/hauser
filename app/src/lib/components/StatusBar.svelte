@@ -8,6 +8,7 @@
   import { connection } from '../state/connection.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { nav } from '../state/nav.svelte.ts';
+  import ModeToggle from './ModeToggle.svelte';
   import { m } from '../../paraglide/messages.js';
 
   const conn = $derived(connection());
@@ -42,7 +43,11 @@
     <span class="status-clock num" onpointerdown={hudClockTap}>{clock.time}</span>
     <span class="status-date">{clock.date}</span>
   </div>
-  <div class="status-group">
+  <!-- Mitte: Bearbeiten ⇄ Bedienen. „Bedienen" sperrt die Konfigurations-
+       Zugänge; Geräte bleiben voll bedienbar. -->
+  <ModeToggle />
+
+  <div class="status-group status-group-end">
     <button class="theme-toggle pressable" type="button"
             aria-label={m.appearance_cycle_label({ mode: modeLabel })}
             title={m.appearance_cycle_label({ mode: modeLabel })}

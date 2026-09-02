@@ -2,6 +2,9 @@
   import Icon from './Icon.svelte';
   import { TABS, activeTab, showScreen, type ScreenId } from '../state/nav.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
+  import { editMode, noteBlockedConfigAttempt } from '../state/edit-mode.svelte.ts';
+  import { moduleVisible } from '../state/module-config.svelte.ts';
+  import ClimatePill from './ClimatePill.svelte';
   import { centralClimate } from '../state/climate-central.svelte.ts';
   import { appState } from '../state/app.svelte.ts';
   import { deviceManager } from '../state/device-manager.svelte.ts';
@@ -15,6 +18,8 @@
   const visibleTabs = $derived(TABS.filter((tab) => {
     // Ablage bleibt aus der öffentlichen Demo heraus (docs/12).
     if (tab.id === 'ablage' && IS_DEMO) return false;
+    // Abgeschaltete Module verschwinden sofort, nicht erst beim Neustart.
+    if (!moduleVisible(tab.id)) return false;
     return tab.id !== 'calendar' || familyCalendar.sources.length > 0;
   }));
 
@@ -68,6 +73,13 @@
   );
 
   function go(target: string) {
+    // Der System-Bereich ist Konfiguration: im Bedienen-Modus führt der Tap
+    // nicht dorthin, sondern erklärt sofort den Weg über den Knopf oben — und
+    // lässt den aufrufenden Screen unangetastet.
+    if (target === 'system' && !editMode.active) {
+      noteBlockedConfigAttempt(true);
+      return;
+    }
     detailOpen = false;       // die Sensor-Liste gehört zum aufrufenden Screen
     closeDeviceDetail(true);  // Detail gehört zum aufrufenden Tab
 
@@ -82,22 +94,16 @@
 <nav class="tab-bar" aria-label={m.nav_main()}>
   <div class="tab-edge tab-edge-start">
     {#if centralClimate.hasClimate}
-      <div class="climate-dock" aria-label={m.status_climate_central()}>
-        <button class="cd-key cd-key-down pressable" type="button" aria-label={m.status_all_rooms_cooler()}
-                onclick={() => centralClimate.step(-0.5)}><Icon name="i-minus" cls="icon cd-step-icon" /></button>
-        <div class="cd-readout">
-          <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
-          <span class="cd-sub">{m.status_all_rooms()}</span>
-        </div>
-        <button class="cd-key cd-key-up pressable" type="button" aria-label={m.status_all_rooms_warmer()}
-                onclick={() => centralClimate.step(0.5)}><Icon name="i-plus" cls="icon cd-step-icon" /></button>
-      </div>
+      <ClimatePill label={m.status_climate_central()}
+                   coolerLabel={m.status_all_rooms_cooler()}
+                   warmerLabel={m.status_all_rooms_warmer()} />
     {/if}
   </div>
 
   <div class="tab-nav">
     {#each visibleTabs as tab (tab.id)}
       <button class="tab pressable" class:is-active={activeTab() === tab.id}
+              class:is-locked={tab.id === 'system' && !editMode.active}
               type="button" data-nav={tab.id} aria-label={tab.label}
               onclick={() => go(tab.id)}>
         <Icon name={tab.icon} cls="icon tab-icon" /><span class="tab-label">{tab.label}</span><span class="tab-indicator"></span>

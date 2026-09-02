@@ -16,8 +16,6 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9 9h6m-6 4h6" /></svg>
 {:else if id === 'energy'}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z" /></svg>
-{:else if id === 'songs'}
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12M9 18a3 2 0 1 1-6 0 3 2 0 0 1 6 0Zm10-2a3 2 0 1 1-6 0 3 2 0 0 1 6 0Z" /><path d="M4 5h4M6 3v4" /></svg>
 {:else if id === 'ablage'}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM3 4h18v3H3zm6 7h6" /></svg>
 {:else if id === 'system'}

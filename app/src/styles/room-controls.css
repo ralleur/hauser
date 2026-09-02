@@ -128,6 +128,16 @@
   background: var(--color-surface-1);
 }
 
+/* Unter 500 px bleibt für zwei Spalten nichts übrig: die Zelle des Sollwerts
+   fiele auf wenige Pixel zusammen, der Wert liefe hinter die Tasten, und in
+   der linken Spalte bräche „Aktuelle Temperatur" um. Dann stehen Istwert und
+   Bedienebene untereinander — die Zeile bekommt so die volle Breite. */
+@container (max-width: 500px) {
+  .panel-controls .climate-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .room-controls .climate-warning {
   grid-column: 1 / -1;
   margin-bottom: 0;
@@ -146,8 +156,49 @@
   display: none;
 }
 
-.room-controls .climate-temp {
-  font-size: var(--text-4xl);
+/* Fluide Typografie in der Klima-Karte der Seitenleiste: Werte und
+   Beschriftungen skalieren mit der Breite der Sektion (container-type oben),
+   damit sie beim Schmalerziehen nicht über ihre Zellen laufen — der Sollwert
+   lief sonst unter die Plus-Taste, die Modus-Wörter stießen aneinander. Die
+   Token-Stufen bleiben die Grenzen: cqi bewegt sich nur zwischen ihnen.
+   Auf `.panel-controls` eingegrenzt, weil das Raum-Sheet des Phones seine
+   eigene, engere Fassung mitbringt. */
+.panel-controls .climate-temp {
+  font-size: clamp(var(--text-xl), 14cqi, var(--text-4xl));
+}
+
+/* Die Einheit hängt am Wert, nicht an einer eigenen Stufe. */
+.panel-controls .climate-temp .unit {
+  font-size: 0.34em;
+}
+
+/* Die Ist-Wert-Zeile skaliert komplett mit — Zeichen, Abstand und Text.
+   Blieb das Zeichen bei 32 px, brach „Aktuelle Temperatur" in der schmalen
+   Spalte um, obwohl die Zahl darüber längst kleiner war. */
+.panel-controls .climate-current-meta {
+  gap: clamp(var(--space-2), 1.5cqi, var(--space-3));
+}
+
+.panel-controls .climate-current-meta .icon {
+  width: clamp(var(--icon-sm), 6cqi, var(--icon-xl));
+  height: clamp(var(--icon-sm), 6cqi, var(--icon-xl));
+}
+
+.panel-controls .climate-current-meta strong {
+  font-size: clamp(var(--text-3xs), 2.9cqi, var(--text-sm));
+  line-height: var(--leading-tight);
+}
+
+.panel-controls .climate-controller-label {
+  font-size: clamp(var(--text-3xs), 2.6cqi, var(--text-xs));
+}
+
+.panel-controls .climate-target-value {
+  font-size: clamp(var(--text-lg), 6.5cqi, var(--text-2xl));
+}
+
+.panel-controls .climate-mode {
+  font-size: clamp(var(--text-3xs), 2.8cqi, var(--text-xs));
 }
 
 .room-controls .climate-temp.is-unavailable {

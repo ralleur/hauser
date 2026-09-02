@@ -215,6 +215,26 @@ export function createHaSupervisorClient({
     return { status: response.status, body: responseBody };
   }
 
+  /* Roh-Durchleitung ohne Body-Grenze und ohne Zeitlimit — für Kamera-Bilder
+     und MJPEG-Streams, die der Server an den Browser weiterreicht. Der
+     Aufrufer beendet den Strom über `signal`. */
+  async function stream(path, { signal } = {}) {
+    const accessToken = requireToken();
+    let response;
+    try {
+      response = await fetchImpl(new URL(path.replace(/^\//, ''), coreBaseUrl), {
+        method: 'GET',
+        headers: { authorization: `Bearer ${accessToken}` },
+        signal,
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      throw error?.name === 'TimeoutError' ? timeoutError() : unreachableError();
+    }
+    if (response.status === 401 || response.status === 403) throw authFailedError();
+    return response;
+  }
+
   async function ws(type, payload = {}) {
     const connection = await connect();
     const id = nextId;
@@ -240,6 +260,7 @@ export function createHaSupervisorClient({
     get available() { return token !== null; },
     close,
     rest,
+    stream,
     ws,
     /* Diagnose und Logging sehen den Zugang, aber nie den Token. */
     toJSON() {

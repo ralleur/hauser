@@ -2,8 +2,10 @@
   import { onMount } from 'svelte';
   import type { ScreenId } from '../../state/nav.svelte.ts';
   import { PHONE_NAV_REORDERABLE, moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
+  import { phoneTargetVisible } from '../../state/module-config.svelte.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
+  import { swipedown } from '../../actions/swipedown.ts';
   import { m } from '../../../paraglide/messages.js';
 
   let {
@@ -17,6 +19,10 @@
     onselect: (target: PhoneNavTarget) => void;
     onouteroutroend: () => void;
   } = $props();
+
+  /* Abgeschaltete Module fallen sofort heraus; die gespeicherte Reihenfolge
+     bleibt bestehen. */
+  const visibleOrder = $derived(phoneNavOrder.order.filter((id) => phoneTargetVisible(id)));
 
   let dialog: HTMLElement;
   let firstTarget = $state<HTMLButtonElement>();
@@ -106,7 +112,8 @@
 
 <div class="more-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
   <div class="more-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="more-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
-    <header>
+    <!-- Wie im Raum-Sheet: Wischen am Kopf zieht das Sheet nach unten zu. -->
+    <header use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog }}>
       <h2 id="more-sheet-title">{m.nav_more()}</h2>
       <div class="more-sheet-header-actions">
         {#if PHONE_NAV_REORDERABLE}
@@ -123,7 +130,7 @@
     </header>
     {#if !arranging}
       <div class="more-sheet-list">
-        {#each phoneNavOrder.order.slice(3) as id (id)}
+        {#each visibleOrder.slice(3) as id (id)}
           <button use:rememberFirstTarget class="more-sheet-target pressable" type="button" aria-current={navTargetForScreen(current) === id ? 'page' : undefined} onclick={() => onselect(id)}>
             <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
             <span>{navTargetLabel(id)}</span>
@@ -133,7 +140,7 @@
       </div>
     {:else}
       <div class="more-sheet-list" aria-label={m.phone_nav_order()}>
-        {#each phoneNavOrder.order as id, index (id)}
+        {#each visibleOrder as id, index (id)}
           <div class="more-arrange-row">
             <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
             <span>{navTargetLabel(id)}</span>
@@ -141,7 +148,7 @@
               <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach oben" disabled={index === 0} onclick={() => moveNavTarget(id, -1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6" /></svg>
               </button>
-              <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach unten" disabled={index === phoneNavOrder.order.length - 1} onclick={() => moveNavTarget(id, 1)}>
+              <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach unten" disabled={index === visibleOrder.length - 1} onclick={() => moveNavTarget(id, 1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6" /></svg>
               </button>
             </span>

@@ -129,6 +129,47 @@ export interface Backend {
   getReminders?(entityId: string): Promise<import('../state/reminders.ts').Reminder[]>;
   /** Echte, von Home Assistant gemeldete `update.*`-Entitäten im Zustand on. */
   listSystemUpdates?(): Promise<SystemUpdate[]>;
+  /** Benachrichtigungen (B-04B): Persistent Notifications von HA sind die
+      Zustellung in-app; die Regeln dahinter laufen als HA-Automationen. */
+  subscribePersistentNotifications?(cb: (items: PersistentNotification[]) => void): void;
+  createPersistentNotification?(id: string, title: string, message: string): Promise<void>;
+  dismissPersistentNotification?(id: string): Promise<void>;
+  /** Verlauf: Auslösungen der Hauser-Automationen aus dem HA-Logbuch. */
+  getNotificationHistory?(sinceMs: number): Promise<NotificationHistoryEntry[]>;
+  /* ── Szenen-Import: bestehende `scene.*`-Entitäten als Vorlage ──
+     Hauser-Szenen sind lokale Presets (scene-config.ts), keine HA-Szenen. Wer
+     in HA schon Szenen gepflegt hat, soll sie nicht nachbauen müssen: die
+     Mitglieder stehen im Attribut `entity_id`, die Zielzustände nur in der
+     Szenendefinition, an die der WebSocket-Vertrag nicht herankommt. Deshalb
+     wird die Szene einmal gefahren und der erreichte Zustand ausgelesen. */
+  listScenes?(): Promise<HaScene[]>;
+  activateScene?(entityId: string): Promise<void>;
+  /** Einmaliger Zustandsabruf beliebiger Entitäten (nicht das laufende Abo). */
+  readStates?(entityIds: readonly string[]): Promise<Record<string, unknown>>;
+}
+
+/** Eine `scene.*`-Entität aus Home Assistant als Importvorlage. */
+export interface HaScene {
+  entityId: string;
+  name: string;
+  /** Bereichsname aus der HA-Registry, sofern gesetzt. */
+  area: string | null;
+  /** Mitglieder laut Attribut `entity_id` (Lichter/Schalter). */
+  members: string[];
+}
+
+export interface PersistentNotification {
+  id: string;
+  title: string;
+  message: string;
+  createdAt: number;
+}
+
+export interface NotificationHistoryEntry {
+  when: number;
+  name: string;
+  message: string;
+  entityId: string;
 }
 
 /* ── Entity-Value-Shapes der steuerbaren Domänen (ADR-017) ──

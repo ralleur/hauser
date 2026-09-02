@@ -339,83 +339,63 @@
   min-height: 0;
 }
 
+/* Eine Zeile: Aus-Taste, Klima-Pille, Urlaubs-Taste. Die beiden Aktionen sind
+   runde Knöpfe in derselben Fassung wie die Schritt-Tasten der Pille — mit
+   Beschriftung passte die Zeile nicht ohne Umbruch, den Text tragen
+   aria-label und title. */
+/* Eine Zeile: Aus, Klima-Pille, Urlaub im Verhältnis 1:2:1. Die Spuren
+   respektieren die Mindestbreite der Pille — auf schmalen Geräten wird sie
+   deshalb etwas breiter als die Hälfte, statt ihren Inhalt zu quetschen. */
 .phone-quick-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: stretch;
   gap: var(--space-2);
   flex: none;
-  justify-content: space-between;
   margin-top: var(--space-3);
 }
 
-.phone-climate-dock {
-  display: flex;
-  min-width: 0;
-  justify-content: space-between;
-  padding-inline: var(--space-1);
-}
+/* Auf dem Phone bleibt der Ist-Wert bei Zeichen und Zahl: das Wort „Aktuell"
+   würde die Pille um ~40 px verbreitern, die den Schnellaktionen fehlen. */
+.phone-quick-actions .cd-current-label { display: none; }
 
-.phone-climate-readout {
-  flex: 1;
-  flex-direction: row;
-  justify-content: center;
-  gap: var(--space-1);
-  min-width: 0;
-  padding: 0;
-}
-
-.phone-climate-reading {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.phone-climate-reading .cd-value {
-  font-size: var(--text-base);
-}
-
-.phone-climate-label {
-  overflow: hidden;
-  max-width: 100%;
-  color: var(--color-text-secondary);
-  font-size: var(--text-3xs);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--leading-tight);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.phone-climate-current-value {
-  color: var(--color-text-secondary);
-  font-size: var(--text-base);
-  font-weight: var(--font-weight-normal);
-  font-variant-numeric: tabular-nums;
-  line-height: var(--leading-tight);
-}
-
-.phone-climate-separator {
-  align-self: stretch;
-  border-inline-start: thin solid var(--color-border);
-}
-
+/* Dieselbe Fassung wie die Pille: Vollradius, gehobene Fläche, Lichtkante,
+   kein Außenschatten. Farbe tragen allein Zeichen und Beschriftung. */
 .phone-quick-action {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
+  container-type: inline-size;
   min-width: 0;
-  border: 1px solid var(--color-border);
+  min-height: var(--touch-preferred);
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid var(--pill-border);
   border-radius: var(--radius-full);
-  background: var(--color-surface-2);
+  background: var(--pill-face);
+  box-shadow: var(--pill-edge);
   color: var(--color-text-secondary);
   font-size: var(--text-3xs);
   font-weight: var(--font-weight-medium);
-  letter-spacing: var(--tracking-caps);
+  /* Enger als das übliche Caps-Tracking: die Beschriftung muss in eine
+     Viertel-Zeile passen. */
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
+}
+
+.phone-quick-action > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Wird der Knopf zu schmal für sein Wort (schmale Geräte, lange Sprachen),
+   steht dort lieber nur das Zeichen als ein abgeschnittenes Wort. Den Text
+   trägt weiterhin das aria-label. */
+@container (max-width: 51px) {
+  .phone-quick-action > span { display: none; }
 }
 
 .phone-quick-action.is-off { color: var(--color-error); }

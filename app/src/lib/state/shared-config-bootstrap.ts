@@ -25,6 +25,8 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:immersion-light:v1',
   'hmi:calendar-selected',
   'hmi:reminders-selected',
+  'hmi:paperless-url',
+  'hmi:paperless-token',
   'hmi:shopping-config:v1',
   'hmi:reminder-persons:v1',
 ] as const;
@@ -49,6 +51,10 @@ const sharedConfigOutbox: SharedConfigOutbox = {
   record: recordSharedConfigUpdate,
 };
 const keys = new Set<string>(SHARED_CONFIG_KEYS);
+/* Der Server verlangt zu jedem Schreibzugriff den ETag des gelesenen Standes
+   (428 ohne, 412 bei veraltetem). Er kommt aus dem Bootstrap-GET und wird nach
+   jeder Antwort nachgeführt; fehlt er, holt der Flush ihn einmal nach. */
+let sharedConfigEtag: string | null = null;
 let bootstrapGeneration = 0;
 let activeFlush: Promise<void> | null = null;
 let activeFlushGeneration = 0;
@@ -115,6 +121,15 @@ function parseJournal(raw: string): PendingUpdates | null {
  * erhalten und bilden den nächsten coalesced Snapshot. Nach einem Fehler endet
  * der Lauf; ein Retry beginnt erst beim nächsten Bootstrap oder Write.
  */
+async function refreshSharedConfigEtag(fetcher: FetchLike, signal?: AbortSignal): Promise<void> {
+  try {
+    const response = await fetcher('/api/config', { headers: { Accept: 'application/json' }, signal });
+    if (response.ok) sharedConfigEtag = response.headers.get('etag');
+  } catch {
+    // Ohne ETag bleibt der Snapshot in der Outbox und wird später erneut versucht.
+  }
+}
+
 async function flushPendingUpdates(
   fetcher: FetchLike,
   generation: number,
@@ -122,6 +137,7 @@ async function flushPendingUpdates(
   outbox: SharedConfigOutbox,
   signal?: AbortSignal,
 ): Promise<void> {
+  let retriedStale = false;
   while (generation === bootstrapGeneration && !signal?.aborted) {
     const snapshot = outbox.read(storage);
     if (snapshot === null || !snapshot) return;
@@ -139,17 +155,29 @@ async function flushPendingUpdates(
     try {
       response = await fetcher('/api/config', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sharedConfigEtag ? { 'If-Match': sharedConfigEtag } : {}),
+        },
         body: JSON.stringify({ updates: Object.fromEntries(pending) }),
         signal,
       });
     } catch {
       return;
     }
+    if ((response.status === 412 || response.status === 428) && !retriedStale) {
+      // Fremder Schreibzugriff dazwischen: Stand einmal neu holen und denselben
+      // Snapshot erneut senden.
+      retriedStale = true;
+      await refreshSharedConfigEtag(fetcher, signal);
+      continue;
+    }
     if (!response.ok
       || generation !== bootstrapGeneration
       || outbox.read(storage) === null
       || signal?.aborted) return;
+    retriedStale = false;
+    sharedConfigEtag = response.headers.get('etag') ?? sharedConfigEtag;
     outbox.acknowledge(storage, snapshot);
     // Ein weiterer Durchlauf folgt nur auf eine bestätigte Serverantwort.
   }
@@ -199,6 +227,7 @@ export async function bootstrapSharedConfig(
       signal,
     });
     if (!response.ok) return;
+    sharedConfigEtag = response.headers.get('etag');
     const payload = await response.json() as { values?: Record<string, unknown> };
     if (signal?.aborted
       || generation !== bootstrapGeneration

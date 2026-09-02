@@ -210,7 +210,6 @@ export type LegacyScreenId =
   | 'shopping'
   | 'reminders'
   | 'media'
-  | 'songs'
   | 'library'
   | 'library-detail'
   | 'ablage'
@@ -230,7 +229,6 @@ export const LEGACY_SCREENS: readonly LegacyScreenEntry[] = [
   { id: 'shopping', tab: 'notes', phoneOnly: true },
   { id: 'reminders', tab: 'notes', phoneOnly: true },
   { id: 'media', tab: 'media' },
-  { id: 'songs', tab: 'songs' },
   { id: 'library', tab: 'library' },
   { id: 'library-detail', tab: 'library' },
   { id: 'ablage', tab: 'ablage' },
@@ -243,12 +241,14 @@ export const LEGACY_TABS = [
   { id: 'calendar', configName: 'Kalender', icon: 'i-calendar' },
   { id: 'notes', configName: 'Notizen', icon: 'i-note-text-outline' },
   { id: 'media', configName: 'Media', icon: 'i-media' },
-  { id: 'songs', configName: 'Songs', icon: 'i-music-note-plus' },
   { id: 'library', configName: 'Bibliothek', icon: 'i-library' },
   { id: 'ablage', configName: 'Ablage', icon: 'i-archive-outline' },
   { id: 'system', configName: 'System', icon: 'i-system' },
 ] as const;
 
+/* Media ist als experimenteller Bereich standardmaessig aus; die Kachel steht
+   in "Verbindungen - Dienste" bereit. Der Tab bleibt im Katalog (LEGACY_TABS),
+   damit er sich dort dazuschalten laesst. */
 export const LEGACY_ENABLED_MODULES = [
   'home',
   'energy',
@@ -256,8 +256,6 @@ export const LEGACY_ENABLED_MODULES = [
   'notes',
   'shopping',
   'reminders',
-  'media',
-  'songs',
   'library',
   'ablage',
   'system',

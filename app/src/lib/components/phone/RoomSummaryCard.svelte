@@ -1,5 +1,6 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import { whenEditable } from '../../state/edit-mode.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
@@ -64,7 +65,7 @@
   style:--phone-room-focus={shownHero?.position}
   aria-label={accessibleRoomSummary(summary)}
   aria-pressed={active}
-  use:longpress={{ onLongPress: () => openRoomEdit(summary.id) }}
+  use:longpress={{ onLongPress: whenEditable(() => openRoomEdit(summary.id)) }}
   onclick={(event) => onopen(summary, event.currentTarget)}
 >
   <span class="phone-room-card-info">

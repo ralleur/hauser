@@ -1,6 +1,7 @@
 import { m } from '../../paraglide/messages.js';
 
 import {
+  isRemoteNotification,
   sortNotifications,
   type HmiNotification,
   type NormalizedLaundryState,
@@ -26,6 +27,8 @@ class NotificationCenter {
   #dismissed = new Set<string>();
   #previous = new Map<LaundryKind, NormalizedLaundryState>();
   #initialized = false;
+  /** Quittierung eines gespiegelten Eintrags in Home Assistant. */
+  onDismissRemote: ((id: string) => void) | null = null;
 
   init(): void {
     if (this.#initialized) return;
@@ -75,9 +78,26 @@ class NotificationCenter {
   }
 
   dismiss(dedupeKey: string): void {
-    this.#dismissed.add(dedupeKey);
-    this.items = this.items.filter((item) => item.dedupeKey !== dedupeKey);
+    const item = this.items.find((entry) => entry.dedupeKey === dedupeKey);
+    if (item && isRemoteNotification(item)) this.onDismissRemote?.(item.id);
+    else this.#dismissed.add(dedupeKey);
+    this.items = this.items.filter((entry) => entry.dedupeKey !== dedupeKey);
     this.#save();
+  }
+
+  /** Gespiegelte HA-Einträge ersetzen ihresgleichen; lokale bleiben. */
+  syncRemote(remote: readonly HmiNotification[]): void {
+    const local = this.items.filter((item) => !isRemoteNotification(item));
+    this.items = sortNotifications([...local, ...remote]);
+  }
+
+  /** Lokale Einmal-Kachel, etwa der Test ohne Home Assistant. Eine vorhandene
+   * Kachel derselben Id wird ersetzt, nicht ignoriert — genau wie Home
+   * Assistant es bei gleicher `notification_id` tut. Sonst zeigte ein zweiter
+   * Testversand nach einem Farbwechsel weiter die alte Farbe. */
+  pushLocal(notification: HmiNotification): void {
+    const others = this.items.filter((item) => item.dedupeKey !== notification.dedupeKey);
+    this.items = sortNotifications([...others, notification]);
   }
 
   #showLaundry(kind: LaundryKind, value: NormalizedLaundryState): void {
@@ -110,7 +130,7 @@ class NotificationCenter {
   #save(): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        active: this.items,
+        active: this.items.filter((item) => !isRemoteNotification(item)),
         dismissed: [...this.#dismissed],
       } satisfies StoredNotifications));
     } catch { /* Best-effort-Persistenz. */ }

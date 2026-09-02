@@ -7,7 +7,9 @@
    Später ersetzt HaBackend genau diese Klasse; das Interface bleibt.
    ============================================ */
 
-import type { Backend, ConnectionStatus, LightValue, ClimateValue, MediaValue, SwitchValue } from './types.ts';
+import type {
+  Backend, ConnectionStatus, LightValue, ClimateValue, MediaValue, PersistentNotification, SwitchValue,
+} from './types.ts';
 import {
   FAKE_DISCOVERY_CATALOG,
   type EntityCatalogItem,
@@ -36,6 +38,8 @@ export class FakeBackend implements Backend {
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
   #catalog: EntityCatalogItem[];
+  #persistent = new Map<string, PersistentNotification>();
+  #persistentCb: ((items: PersistentNotification[]) => void) | null = null;
 
   constructor(
     seed: Map<string, unknown>,
@@ -57,6 +61,24 @@ export class FakeBackend implements Backend {
   subscribeCatalog(cb: (items: EntityCatalogItem[]) => void): void {
     this.#catalogCb = cb;
     cb(cloneCatalog(this.#catalog));
+  }
+
+  /* Persistent Notifications wie in Home Assistant: der Server hält sie, der
+     Client spiegelt sie. Ohne diesen Seam liefe der Testversand in der Demo
+     über einen Ersatzpfad und wiche vom echten Verhalten ab. */
+  subscribePersistentNotifications(cb: (items: PersistentNotification[]) => void): void {
+    this.#persistentCb = cb;
+    cb([...this.#persistent.values()]);
+  }
+
+  async createPersistentNotification(id: string, title: string, message: string): Promise<void> {
+    this.#persistent.set(id, { id, title, message, createdAt: Date.now() });
+    this.#persistentCb?.([...this.#persistent.values()]);
+  }
+
+  async dismissPersistentNotification(id: string): Promise<void> {
+    this.#persistent.delete(id);
+    this.#persistentCb?.([...this.#persistent.values()]);
   }
 
   async renameEntity(entityId: string, name: string): Promise<void> {

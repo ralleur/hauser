@@ -74,6 +74,8 @@ export const settingsValues = $state({
   demoMode: lsGet('hmi:backend') === 'fake',
   haUrl: lsGet('hmi:ha-url') ?? '',
   jellyfinUrl: lsGet('hmi:jf-url') ?? '',
+  paperlessUrl: lsGet('hmi:paperless-url') ?? '',
+  paperlessTokenSet: (lsGet('hmi:paperless-token') ?? '').length > 0,
   libraryMode: (lsGet('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake',
   classicLockButton: lsGet('hmi:lock-button') !== 'large',
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
@@ -84,6 +86,22 @@ export const settingsValues = $state({
     ? null
     : (lsGet('hmi:off-confirm-before') ?? '22:00'),
 });
+
+/* Ablage · Paperless: Adresse und API-Token liegen wie die übrigen
+   Dienst-Zugänge in der geteilten Konfiguration — der Server liest beides für
+   den Ablage-Proxy, ein Neustart ist nicht nötig. Der Token selbst wird nie
+   wieder angezeigt, nur sein Vorhandensein. */
+export function setPaperlessUrl(url: string): void {
+  const value = url.trim();
+  settingsValues.paperlessUrl = value;
+  lsSet('hmi:paperless-url', value || null);
+}
+
+export function setPaperlessToken(token: string): void {
+  const value = token.trim();
+  settingsValues.paperlessTokenSet = value.length > 0;
+  lsSet('hmi:paperless-token', value || null);
+}
 
 /* Lock-Button-Schema: Default ist der Button oben in der Status-Bar;
    „large" blendet stattdessen den großen Standby-FAB unten rechts ein.

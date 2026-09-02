@@ -12,7 +12,10 @@ import { demoEnergySeed } from '../demo/demo-mode.ts';
 import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
-import type { Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate } from './types.ts';
+import type {
+  Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate,
+  HaScene, NotificationHistoryEntry, PersistentNotification,
+} from './types.ts';
 import { markOperable, markResumeOperable } from '../state/startup-marks.svelte.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
 import { themeFromLocalTime } from '../state/appearance-mode.ts';
@@ -133,6 +136,50 @@ export class AdapterRuntime {
 
   async listSystemUpdates(): Promise<SystemUpdate[]> {
     return this.#backend.listSystemUpdates?.() ?? [];
+  }
+
+  /* ── Szenen-Import ── Nur mit einem Backend, das HA-Szenen kennt, und nur
+     verbunden: der Import fährt die Szene und liest den erreichten Zustand. */
+  get canImportScenes(): boolean {
+    return !!this.#backend.listScenes && this.#connection === 'connected';
+  }
+
+  async listScenes(): Promise<HaScene[]> {
+    return this.#backend.listScenes?.() ?? [];
+  }
+
+  async activateScene(entityId: string): Promise<void> {
+    await this.#backend.activateScene?.(entityId);
+  }
+
+  async readStates(entityIds: readonly string[]): Promise<Record<string, unknown>> {
+    return this.#backend.readStates?.(entityIds) ?? {};
+  }
+
+  /* ── Benachrichtigungen (B-04B): Persistent Notifications als In-App-Kanal ── */
+  subscribePersistentNotifications(cb: (items: PersistentNotification[]) => void): void {
+    this.#backend.subscribePersistentNotifications?.(cb);
+  }
+
+  /** true = an Home Assistant übergeben; false = Backend ohne Kanal (Demo/offline). */
+  async createPersistentNotification(id: string, title: string, message: string): Promise<boolean> {
+    if (!this.#backend.createPersistentNotification || this.#connection !== 'connected') return false;
+    try {
+      await this.#backend.createPersistentNotification(id, title, message);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async dismissPersistentNotification(id: string): Promise<void> {
+    await this.#backend.dismissPersistentNotification?.(id).catch(() => {});
+  }
+
+  /** null = ohne Home Assistant nicht verfügbar. */
+  async getNotificationHistory(sinceMs: number): Promise<NotificationHistoryEntry[] | null> {
+    if (!this.#backend.getNotificationHistory || this.#connection !== 'connected') return null;
+    return this.#backend.getNotificationHistory(sinceMs);
   }
 
   /* ── Gemergte Sicht (Schicht 4): das Einzige, was die UI liest ──

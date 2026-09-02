@@ -1,7 +1,7 @@
 <script lang="ts">
   import { m } from '../../paraglide/messages.js';
   import { onMount } from 'svelte';
-  import { runtime, configuredHaUrl } from '../adapter/runtime.svelte.ts';
+  import { runtime, configuredHaUrl, configuredHaTransport } from '../adapter/runtime.svelte.ts';
   import type { CameraValue } from '../adapter/types.ts';
   import { doubletap } from '../actions/doubletap.ts';
   import { longpress } from '../actions/longpress.ts';
@@ -34,6 +34,7 @@
     onsizechange?: ((size: number) => void) | null;
   } = $props();
   let failed = $state(false);
+  let source = $state<string | null>(null);
   let frame = $state<HTMLDivElement>();
   let root = $state<HTMLElement>();
   let fullscreen = $state(false);
@@ -41,17 +42,54 @@
   let resizeOpen = $state(false);
   const menuAvailable = $derived(onpopout !== null && ontoggletitlebar !== null);
 
+  /* Fortlaufend nachgeladene Standbilder statt MJPEG: Für Kameras, die HA
+     per ffmpeg aus einem Stream bedient, beendet `camera_proxy_stream` die
+     Antwort ohne ein einziges Bild, das Standbild kommt dagegen zuverlässig.
+     Das nächste Bild wird verdeckt geladen und erst fertig eingetauscht. */
+  const CAMERA_REFRESH_MS = 1000;
+  const CAMERA_RETRY_MS = 5000;
+
   const camera = $derived(runtime.merged(entityId) as CameraValue | undefined);
-  const source = $derived.by(() => {
+  const snapshotUrl = $derived.by(() => {
     const picture = camera?.entityPicture;
     if (!camera?.available || !picture) return null;
-    const streamPath = picture.replace('/api/camera_proxy/', '/api/camera_proxy_stream/');
-    return new URL(streamPath, `${configuredHaUrl()}/`).toString();
+    /* Im App-Modus reicht der eigene Server das Bild durch — der Browser
+       kennt dort weder eine HA-Adresse noch einen Token. */
+    const base = configuredHaTransport() === 'gateway' ? location.href : `${configuredHaUrl()}/`;
+    return new URL(picture, base).toString();
   });
+  const live = $derived(snapshotUrl !== null && !failed);
 
   $effect(() => {
-    void source;
+    const url = snapshotUrl;
+    source = null;
     failed = false;
+    if (!url) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let loader: HTMLImageElement | null = null;
+    const loadFrame = () => {
+      const next = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      loader = new Image();
+      loader.onload = () => {
+        if (stopped) return;
+        source = next;
+        failed = false;
+        timer = setTimeout(loadFrame, CAMERA_REFRESH_MS);
+      };
+      loader.onerror = () => {
+        if (stopped) return;
+        failed = true;
+        timer = setTimeout(loadFrame, CAMERA_RETRY_MS);
+      };
+      loader.src = next;
+    };
+    loadFrame();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      if (loader) { loader.onload = null; loader.onerror = null; loader.src = ''; }
+    };
   });
 
   onMount(() => {
@@ -61,7 +99,7 @@
   });
 
   function openFullscreen(): void {
-    if (disableFullscreen || !frame || fullscreen || !source || failed) return;
+    if (disableFullscreen || !frame || fullscreen || !live) return;
     void frame.requestFullscreen().catch(() => {});
   }
 
@@ -128,8 +166,8 @@
   {#if titlebarVisible}
     <figcaption class="camera-feed-caption">
       <span>{label}</span>
-      <span class="camera-feed-status" class:is-live={source && !failed}>
-        {source && !failed ? m.camera_status_live() : m.camera_status_unavailable()}
+      <span class="camera-feed-status" class:is-live={live}>
+        {live ? m.camera_status_live() : m.camera_status_unavailable()}
       </span>
     </figcaption>
   {/if}
@@ -138,14 +176,14 @@
     class:is-fullscreen={fullscreen}
     bind:this={frame}
     role="button"
-    tabindex={source && !failed ? 0 : -1}
+    tabindex={live ? 0 : -1}
     aria-haspopup={menuAvailable ? 'menu' : undefined}
     aria-expanded={menuAvailable ? menuOpen : undefined}
-    aria-disabled={!source || failed}
-    aria-label={source && !failed ? (fullscreen
+    aria-disabled={!live}
+    aria-label={live ? (fullscreen
       ? m.camera_fullscreen_close({ label })
       : m.camera_fullscreen_open({ label })) : undefined}
-    aria-pressed={source && !failed ? fullscreen : undefined}
+    aria-pressed={live ? fullscreen : undefined}
     onclick={openFullscreen}
     onkeydown={onKeydown}
     oncontextmenu={openContextMenu}
@@ -154,8 +192,8 @@
     onkeydowncapture={onMenuKeydown}
   >
     {#if source && !failed}
-      <img src={source} alt={m.camera_live_alt({ label })} onerror={() => { failed = true; }} />
-    {:else}
+      <img src={source} alt={m.camera_live_alt({ label })} />
+    {:else if !live}
       <p>{m.camera_unavailable()}</p>
     {/if}
   </div>

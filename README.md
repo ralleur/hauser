@@ -43,7 +43,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.6.2` is current. The first installation by
+normal installation path; `v0.6.3` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -199,7 +199,7 @@ separate login and no device pairing: every device that reaches it on the
 trusted network can operate Hauser. Keep it on a trusted network and do not
 publish it to the internet.
 
-The manifest declares `stage: experimental`. On `v0.6.2` a fresh install,
+The manifest declares `stage: experimental`. On `v0.6.1` a fresh install,
 start, credential-free setup discovery, activation, the internal Home Assistant
 connection and opening the displayed address from a real phone were verified on
 an isolated Home Assistant OS test system; real device commands with state echo,
@@ -225,9 +225,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.6.2` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.6.3` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.6.2` tag, which the Home Assistant Supervisor
+publish the plain `0.6.3` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

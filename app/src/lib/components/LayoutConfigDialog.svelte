@@ -2,18 +2,17 @@
   import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { DEFAULT_LAYOUT_CONFIG, widthPreset } from '../state/layout-config.ts';
+  import { DEFAULT_LAYOUT_CONFIG, panelSizeOf, widthPreset } from '../state/layout-config.ts';
   import { slider } from '../actions/slider.ts';
   import { tick } from 'svelte';
 
   let dialog = $state<HTMLElement>();
   let previouslyFocused: HTMLElement | null = null;
   let wasOpen = false;
-  const layoutMetrics = $derived(widthPreset(layoutManager.draft));
-  const panelWidth = $derived(layoutMetrics.totalPercent);
-  const dialogStyle = $derived(
-    `--layout-total:${layoutMetrics.totalPercent}%;--slot-min:${layoutMetrics.slotMinPx}px;--hero-min:${layoutMetrics.heroMinPx}px`,
-  );
+  /* Der Dialog behält seine Breite, während der Regler die Seitenleiste
+     verstellt: die Vorschau läuft links im Panel, nicht im Dialog selbst. */
+  const panelWidth = $derived(widthPreset(layoutManager.draft, layoutManager.scope).totalPercent);
+  const scopeLabel = $derived(layoutManager.scope === 'energy' ? m.nav_energy() : m.nav_home());
   const roomsSliderValue = $derived((layoutManager.draft.roomsPerRow - 1) / 3 * 100);
 
   function setRoomsFromSlider(value: number): void {
@@ -67,7 +66,7 @@
 
 {#if layoutManager.open}
   <div class="layout-dialog-scrim" class:has-two-slots={layoutManager.draft.slots.length === 2}
-       style={dialogStyle} role="presentation" onclick={closeOnScrim}>
+       role="presentation" onclick={closeOnScrim}>
     <div class="layout-dialog" role="dialog" aria-modal="true" aria-labelledby="layout-dialog-title"
          tabindex="-1" bind:this={dialog}>
       <header class="layout-dialog-head">
@@ -89,14 +88,14 @@
       <div class="layout-config-section layout-slider-settings">
           <div class="layout-slider-setting">
             <div class="layout-slider-head">
-              <span>{m.layout_size_adjust()}</span>
+              <span>{m.layout_size_adjust()} · {scopeLabel}</span>
               <button class="text-btn pressable" type="button"
                       onclick={() => layoutManager.setPanelSize(DEFAULT_LAYOUT_CONFIG.panelSize)}>{m.layout_default()}</button>
             </div>
             <div class="slider" role="slider" tabindex="0" aria-label={m.layout_size_aria()}
                  aria-valuemin="28" aria-valuemax="68" aria-valuenow={Math.round(panelWidth)}
                  use:slider={{
-                   value: layoutManager.draft.panelSize,
+                   value: panelSizeOf(layoutManager.draft, layoutManager.scope),
                    onChange: (value) => layoutManager.setPanelSize(value),
                    format: (value) => `${Math.round(28 + value * 0.4)}%`,
                  }}>

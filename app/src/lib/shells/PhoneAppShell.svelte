@@ -24,6 +24,7 @@
   import { endTransition, nav, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
   import { navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
   import { closeRoomEdit, roomEdit } from '../state/overlay.svelte.ts';
+  import { centralClimateEdit, closeCentralClimateEdit } from '../state/central-climate-overlay.svelte.ts';
   import {
     createPhoneModalLifecycle,
     createPhoneLayerController,
@@ -47,7 +48,7 @@
     target.area === 'media'
       ? `Medien · ${target.subtarget === 'audio' ? 'Raum-Audio' : 'Bibliothek'}`
       : target.area === 'more'
-        ? `Mehr · ${{ energy: 'Energie', shopping: 'Einkaufsliste', reminders: 'Erinnerungen', songs: 'Songs', ablage: 'Ablage', system: 'System' }[target.subtarget]}`
+        ? `Mehr · ${{ energy: 'Energie', shopping: 'Einkaufsliste', reminders: 'Erinnerungen', ablage: 'Ablage', system: 'System' }[target.subtarget]}`
         : target.area === 'calendar' ? 'Kalender' : 'Home',
   );
   const roomSummaries = $derived(projectPhoneRooms(appState.rooms, {
@@ -58,8 +59,8 @@
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
   type PhoneFeatureId = 'calendar' | 'media' | 'library-detail' | 'library' | 'energy'
-    | 'shopping' | 'reminders' | 'songs' | 'ablage' | 'room' | 'room-edit';
-  type PhoneScreenFeatureId = Exclude<PhoneFeatureId, 'room' | 'room-edit'>;
+    | 'shopping' | 'reminders' | 'ablage' | 'room' | 'room-edit' | 'central-climate';
+  type PhoneScreenFeatureId = Exclude<PhoneFeatureId, 'room' | 'room-edit' | 'central-climate'>;
   type PhoneFeatureModule = { default: Component<any> };
   const PHONE_SCREEN_LOADERS: Record<PhoneScreenFeatureId, () => Promise<PhoneFeatureModule>> = {
     calendar: () => import('../components/phone/PhoneCalendar.svelte'),
@@ -69,13 +70,13 @@
     energy: () => import('../components/phone/PhoneEnergy.svelte'),
     shopping: () => import('../components/phone/PhoneShopping.svelte'),
     reminders: () => import('../components/phone/PhoneReminders.svelte'),
-    songs: () => import('../screens/SongsScreen.svelte'),
     ablage: () => import('../components/AblageScreen.svelte'),
   };
   const phoneScreenLoader = createLatestPhoneLoader(PHONE_SCREEN_LOADERS);
-  const phoneFeatureLoader = createLatestPhoneLoader<'room' | 'room-edit', PhoneFeatureModule>({
+  const phoneFeatureLoader = createLatestPhoneLoader<'room' | 'room-edit' | 'central-climate', PhoneFeatureModule>({
     room: () => import('../components/phone/RoomControlSheet.svelte'),
     'room-edit': () => import('../components/RoomEdit.svelte'),
+    'central-climate': () => import('../components/CentralClimateEdit.svelte'),
   });
   const featureStyleLoader = createLatestPhoneLoader({
     styles: () => import('../../styles/app.css'),
@@ -118,7 +119,7 @@
   }
 
   function loadPhoneFeature(
-    id: 'room' | 'room-edit',
+    id: 'room' | 'room-edit' | 'central-climate',
     _retryVersion: number,
   ): Promise<PhoneFeatureModule> {
     return phoneFeatureLoader.loadValue(id);
@@ -258,7 +259,8 @@
   });
 
   $effect(() => {
-    if (target.area !== 'home' || activeLayer !== null || roomEdit.mode !== 'hidden') {
+    if (target.area !== 'home' || activeLayer !== null
+      || roomEdit.mode !== 'hidden' || centralClimateEdit.mode !== 'hidden') {
       ensureFeatureStyles();
     }
   });
@@ -562,6 +564,24 @@
         {@render phoneLayerError('room', 'Raum bearbeiten', retryFeatureStyles, () => closeRoomEdit(true))}
       {:else}
         {@render phoneLayerLoading('room', 'Raum bearbeiten')}
+      {/if}
+    {/if}
+  {/if}
+  {#if centralClimateEdit.mode !== 'hidden'}
+    {#if featureStylesReady}
+      {#await loadPhoneFeature('central-climate', phoneFeatureRetries['central-climate'] ?? 0)}
+        {@render phoneLayerLoading('room', 'Zentrale Klimasteuerung')}
+      {:then loaded}
+        {@const CentralClimateEdit = loaded.default}
+        <CentralClimateEdit />
+      {:catch}
+        {@render phoneLayerError('room', 'Zentrale Klimasteuerung', () => retryPhoneFeature('central-climate'), () => closeCentralClimateEdit(true))}
+      {/await}
+    {:else}
+      {#if featureStylesFailed}
+        {@render phoneLayerError('room', 'Zentrale Klimasteuerung', retryFeatureStyles, () => closeCentralClimateEdit(true))}
+      {:else}
+        {@render phoneLayerLoading('room', 'Zentrale Klimasteuerung')}
       {/if}
     {/if}
   {/if}

@@ -18,6 +18,7 @@
   import { authState } from '../state/auth.svelte.ts';
   import { closeDeviceDetail, closeRoomEdit, deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../state/scene-edit-overlay.svelte.ts';
+  import { centralClimateEdit, closeCentralClimateEdit } from '../state/central-climate-overlay.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { hud } from '../state/hud.svelte.ts';
   import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
@@ -26,7 +27,7 @@
 
   type ScreenModule = { default: Component };
   type LazyScreenId = Exclude<ScreenId, 'home'>;
-  type LayerId = 'device' | 'room' | 'scene' | 'layout' | 'ambient' | 'hud';
+  type LayerId = 'device' | 'room' | 'scene' | 'central-climate' | 'layout' | 'ambient' | 'hud';
   type VisibleLayerId = Exclude<LayerId, 'ambient'>;
 
   const SCREEN_LOADERS: Record<LazyScreenId, () => Promise<ScreenModule>> = {
@@ -36,7 +37,6 @@
     shopping: () => import('../screens/NotesScreen.svelte'),
     reminders: () => import('../screens/NotesScreen.svelte'),
     media: () => import('../screens/MediaScreen.svelte'),
-    songs: () => import('../screens/SongsScreen.svelte'),
     library: () => import('../screens/LibraryScreen.svelte'),
     'library-detail': () => import('../screens/LibraryDetailScreen.svelte'),
     ablage: () => import('../components/AblageScreen.svelte'),
@@ -46,6 +46,7 @@
     device: () => import('../components/DeviceDetail.svelte'),
     room: () => import('../components/RoomEdit.svelte'),
     scene: () => import('../components/SceneEdit.svelte'),
+    'central-climate': () => import('../components/CentralClimateEdit.svelte'),
     layout: () => import('../components/LayoutConfigDialog.svelte'),
     ambient: () => import('../components/AmbientLayer.svelte'),
     hud: () => import('../components/Hud.svelte'),
@@ -75,6 +76,7 @@
     if (id === 'device') closeDeviceDetail(true);
     else if (id === 'room') closeRoomEdit(true);
     else if (id === 'scene') closeSceneEdit(true);
+    else if (id === 'central-climate') closeCentralClimateEdit(true);
     else if (id === 'layout') layoutManager.cancel();
     else hud.active = false;
   }
@@ -100,6 +102,7 @@
     closeDeviceDetail(true);
     closeRoomEdit(true);
     closeSceneEdit(true);
+    closeCentralClimateEdit(true);
     if (layoutManager.open) layoutManager.cancel();
     hud.active = false;
   }));
@@ -126,17 +129,21 @@
 </script>
 
 {#snippet layerLoadState(id: VisibleLayerId, failed: boolean)}
-  <div class="layout-dialog-scrim" role="presentation">
-    <div class="layout-dialog" role="dialog" aria-modal="true" aria-label="Bereich laden">
-      {#if failed}
+  {#if failed}
+    <div class="layout-dialog-scrim" role="presentation">
+      <div class="layout-dialog" role="dialog" aria-modal="true" aria-label="Bereich laden">
         <p role="alert">{m.shell_load_failed()}</p>
         <button class="secondary-btn pressable" type="button" onclick={() => retryLayer(id)}>Erneut versuchen</button>
         <button class="secondary-btn pressable" type="button" onclick={() => closeLayer(id)}>Schließen</button>
-      {:else}
-        <p role="status" aria-live="polite">{m.shell_loading()}</p>
-      {/if}
+      </div>
     </div>
-  </div>
+  {:else}
+    <!-- Kein sichtbarer Platzhalter: das Chunk-Laden dauert meist wenige
+         Millisekunden, und die Dialog-Optik blitzte dabei rechts als eigenes
+         Panel auf, bevor das eigentliche Overlay kam. Die Statusmeldung bleibt
+         für Screenreader erhalten. -->
+    <p class="layer-load-status" role="status" aria-live="polite">{m.shell_loading()}</p>
+  {/if}
 {/snippet}
 
 <div class="status-scrim" aria-hidden="true"></div>
@@ -197,6 +204,12 @@
     {@render layerLoadState('scene', false)}
   {:then loaded}{@const Layer = loaded.default}<Layer />
   {:catch}{@render layerLoadState('scene', true)}{/await}
+{/if}
+{#if centralClimateEdit.mode !== 'hidden'}
+  {#await loadLayer('central-climate', layerRetryVersions['central-climate'] ?? 0)}
+    {@render layerLoadState('central-climate', false)}
+  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:catch}{@render layerLoadState('central-climate', true)}{/await}
 {/if}
 {#if layoutManager.open}
   {#await loadLayer('layout', layerRetryVersions.layout ?? 0)}

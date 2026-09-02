@@ -30,14 +30,6 @@ export interface PhoneRoomSummary {
 
 export type PhoneHeroVariant = SharedPhoneHeroVariant;
 
-export function currentClimateTemperature(rooms: readonly PhoneRoomSummary[]): number | null {
-  const temperatures = rooms.flatMap((room) => (
-    room.climateAvailable && room.temperature !== null ? [room.temperature] : []
-  ));
-  if (temperatures.length === 0) return null;
-  return temperatures.reduce((sum, temperature) => sum + temperature, 0) / temperatures.length;
-}
-
 /** Phone Home keeps its sun-driven light/dark input while delegating all URL,
  * focus and fallback policy to the shared resolver. */
 export async function resolvePhoneHero(

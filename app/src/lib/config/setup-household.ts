@@ -376,6 +376,32 @@ export function buildSetupHouseholdSuggestion(
 
   for (const area of snapshot.areas) if (!grouped.has(area.area_id)) grouped.set(area.area_id, []);
 
+  /* Räume, die in Home Assistant Szenen tragen, gibt es auch dann, wenn dort
+     kein produktives Gerät hängt: die Szene selbst ist der Beleg, dass der
+     Raum benutzt wird. Der Bereich einer Szene steht in der Registry; ist er
+     dort nicht gesetzt, zählt der Bereich ihrer Mitglieder (Attribut
+     `entity_id`). Ohne Bereiche in HA (inferredRooms) entsteht der Raum aus
+     demselben Namensschema wie bei den Geräten. */
+  const registryByEntityId = new Map(snapshot.entities.map((entry) => [entry.entity_id, entry] as const));
+  for (const state of snapshot.states) {
+    if (!state.entity_id.startsWith('scene.')) continue;
+    const entry = registryByEntityId.get(state.entity_id);
+    // Der Szenenname selbst taugt nicht als Raumname — für die Szene zählt nur
+    // ein ausdrücklich gesetzter Bereich, nie die Namens-Heuristik.
+    const ownAreaId = entry?.area_id ?? (entry?.device_id ? deviceArea.get(entry.device_id) ?? null : null);
+    const own = ownAreaId && areaById.has(ownAreaId) ? ownAreaId : null;
+    const members = Array.isArray(state.attributes?.entity_id)
+      ? state.attributes.entity_id.filter((id): id is string => typeof id === 'string')
+      : [];
+    const memberKeys = members.map((entityId) => {
+      const memberEntry = registryByEntityId.get(entityId);
+      return resolveAreaKey(entityId, memberEntry?.area_id ?? null, memberEntry?.device_id ?? null);
+    });
+    for (const areaKey of [own, ...memberKeys]) {
+      if (areaKey && !grouped.has(areaKey)) grouped.set(areaKey, []);
+    }
+  }
+
   const usedRoomIds = new Set<string>();
   const roomIdByAreaKey = new Map<string, string>();
   const rooms: RoomConfig[] = [...grouped.entries()]
@@ -422,17 +448,15 @@ export function buildSetupHouseholdSuggestion(
     .filter((entityId) => entityId.startsWith('sun.'))
     .sort()[0] ?? null;
 
+  /* Media bleibt beim Einrichten aus, auch wenn Abspielgeraete gefunden wurden:
+     der Bereich ist als experimentell gekennzeichnet und laesst sich in
+     "Verbindungen - Dienste" mit einem Schalter dazunehmen. Die gefundenen
+     Ziele stehen dafuer bereit (`mediaTargets`). */
   const navigation: NavigationItemConfig[] = [
     { id: 'home', name: 'Home', order: 0, target: { type: 'module', id: 'home' } },
     { id: 'calendar', name: 'Calendar', order: 1, target: { type: 'module', id: 'calendar' } },
     { id: 'notes', name: 'Notes', order: 2, target: { type: 'module', id: 'notes' } },
-    ...(mediaTargets.length > 0
-      ? [{ id: 'media', name: 'Media', order: 3, target: { type: 'module' as const, id: 'media' as const } }]
-      : []),
-    {
-      id: 'system', name: 'System', order: mediaTargets.length > 0 ? 4 : 3,
-      target: { type: 'module', id: 'system' },
-    },
+    { id: 'system', name: 'System', order: 3, target: { type: 'module', id: 'system' } },
   ];
 
   return {
@@ -440,9 +464,7 @@ export function buildSetupHouseholdSuggestion(
       schemaVersion: HOUSEHOLD_SCHEMA_VERSION,
       rooms,
       navigation,
-      enabledModules: mediaTargets.length > 0
-        ? ['home', 'calendar', 'notes', 'media', 'system']
-        : ['home', 'calendar', 'notes', 'system'],
+      enabledModules: ['home', 'calendar', 'notes', 'system'],
       energy: null,
       mediaTargets,
       globalEntities: {

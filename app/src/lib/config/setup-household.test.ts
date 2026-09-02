@@ -81,6 +81,27 @@ describe('deterministic setup household suggestion', () => {
     expect(() => projectActiveHouseholdData(compileHouseholdConfig(parsed.value))).not.toThrow();
   });
 
+  it('creates rooms for areas that Home Assistant only carries scenes for', () => {
+    const withScenes = snapshot();
+    withScenes.areas.push({ area_id: 'cinema-area', name: 'Cinema' });
+    withScenes.entities.push(
+      { entity_id: 'scene.movie_night', area_id: 'cinema-area', device_id: null },
+      { entity_id: 'scene.good_night', area_id: null, device_id: null },
+    );
+    withScenes.states.push(
+      { entity_id: 'scene.movie_night', attributes: { friendly_name: 'Movie night', entity_id: ['light.living_ceiling'] } },
+      { entity_id: 'scene.good_night', attributes: { friendly_name: 'Good night', entity_id: ['light.living_ceiling'] } },
+    );
+
+    const suggestion = buildSetupHouseholdSuggestion(withScenes);
+    // Der Bereich der Szene wird zum Raum, obwohl dort kein Geraet haengt.
+    expect(suggestion.config.rooms.map(({ name }) => name)).toEqual(['Cinema', 'Hall', 'Living Room']);
+    expect(suggestion.config.rooms.find(({ name }) => name === 'Cinema')?.visibleEntities).toEqual([]);
+    // Szenen selbst sind keine Raumgeraete — sie tauchen in keinem Raum auf.
+    expect(suggestion.config.rooms.flatMap(({ visibleEntities }) => visibleEntities)
+      .some(({ entityId }) => entityId.startsWith('scene.'))).toBe(false);
+  });
+
   it('exposes switches (plural per room), a vacuum and media players discovered alongside areas', () => {
     const withDevices = snapshot();
     withDevices.entities.push(
@@ -106,10 +127,13 @@ describe('deterministic setup household suggestion', () => {
     expect(suggestion.config.mediaTargets).toEqual([
       expect.objectContaining({ entityId: 'media_player.living_sonos', roomId: 'living_room' }),
     ]);
+    /* Media bleibt beim Einrichten aus, auch mit gefundenen Abspielgeraeten:
+       der Bereich ist experimentell und wird in den Diensten dazugeschaltet.
+       Die gefundenen Ziele stehen dafuer bereit. */
     expect(suggestion.config.navigation.map(({ target }) => target.id)).toEqual([
-      'home', 'calendar', 'notes', 'media', 'system',
+      'home', 'calendar', 'notes', 'system',
     ]);
-    expect(suggestion.config.enabledModules).toEqual(['home', 'calendar', 'notes', 'media', 'system']);
+    expect(suggestion.config.enabledModules).toEqual(['home', 'calendar', 'notes', 'system']);
     expect(suggestion.ignoredEntityIds).not.toEqual(expect.arrayContaining([
       'switch.living_lamp',
       'switch.living_fountain',

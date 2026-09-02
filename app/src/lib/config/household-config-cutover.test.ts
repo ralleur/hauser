@@ -663,7 +663,9 @@ describe('productive household bootstrap cutover', () => {
       startProductiveApp: start,
     });
     expect(start).toHaveBeenCalledOnce();
-    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'mismatch' });
+    // Seit die Songwerkstatt geparkt ist, deckt sich die Demo-Konfiguration
+    // mit dem Legacy-Modell — vorher unterschied sie sich genau um dieses Modul.
+    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'match' });
     const mode = demoResponse('/api/household-config-mode', 'GET');
     expect(mode?.headers.get('cache-control')).toBe('no-store');
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');
@@ -706,7 +708,7 @@ describe('productive household bootstrap cutover', () => {
     expect(phoneSource).not.toContain("if (source === 'active') return configured");
     expect(phoneSource).toContain('PHONE_NAV_REORDERABLE = configuredOrder().length > 1');
     expect(moreSource).toContain('{#if PHONE_NAV_REORDERABLE}');
-    expect(bottomSource).toContain('{#if phoneNavOrder.order.length > 3}');
+    expect(bottomSource).toContain('{#if visibleOrder.length > 3}');
   });
 
   it('publishes concise runtime and shadow diagnostics without blocking an active mismatch', async () => {
@@ -797,7 +799,6 @@ describe('productive household bootstrap cutover', () => {
       '../state/app.svelte.ts',
       '../state/entities.ts',
       '../state/nav.svelte.ts',
-      '../state/songs.ts',
     ]) {
       const source = readFileSync(new URL(relativePath, import.meta.url), 'utf8');
       expect(source).toContain("from '../config/household-runtime-data.ts'");

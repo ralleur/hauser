@@ -22,7 +22,16 @@ import {
   ERR_INVALID_AUTH,
   type Connection,
 } from 'home-assistant-js-websocket';
-import type { AuthRequiredReason, Backend, ConnectionStatus, SystemUpdate } from './types.ts';
+import type {
+  AuthRequiredReason,
+  Backend,
+  ConnectionStatus,
+  HaScene,
+  NotificationHistoryEntry,
+  PersistentNotification,
+  SystemUpdate,
+} from './types.ts';
+import { AUTOMATION_ID_PREFIX } from '../state/notification-rules.ts';
 import {
   applyEntitiesDiff,
   haToLaundryState,
@@ -101,6 +110,11 @@ export function entityRegistryRenameMessage(entityId: string, name: string) {
   return { type: 'config/entity_registry/update' as const, entity_id: entityId, name };
 }
 
+type PersistentNotificationEvent = {
+  type: 'current' | 'added' | 'updated' | 'removed';
+  notifications?: Record<string, { notification_id?: string; title?: unknown; message?: unknown; created_at?: unknown } | null>;
+};
+
 type CaldavFlowResult = {
   type: string;
   errors?: Record<string, string> | null;
@@ -134,6 +148,9 @@ export class HaBackend implements Backend {
   #onAuth: ((reason: AuthRequiredReason) => void) | null = null;
   #onCmdErr: ((entityId: string) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
+  #persistentCb: ((items: PersistentNotification[]) => void) | null = null;
+  #persistent = new Map<string, PersistentNotification>();
+  #persistentUnsub: Unsub | null = null;
 
   #status: ConnectionStatus = 'connecting';
   #conn: Connection | null = null;
@@ -273,6 +290,126 @@ export class HaBackend implements Backend {
         latestVersion: String(state.attributes.latest_version ?? '—'),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /* ── Szenen-Import ──
+     Die Mitglieder stehen im Attribut `entity_id` der Szene; der Bereich kommt
+     aus derselben Registry-Auflösung wie beim Katalog. Zielzustände liefert
+     Home Assistant über den WebSocket nicht mit — die holt der Import, indem er
+     die Szene fährt und danach `readStates` liest. */
+  async listScenes(): Promise<HaScene[]> {
+    if (!this.#conn || this.#status !== 'connected') return [];
+    const [states, areas] = await Promise.all([getStates(this.#conn), this.#entityAreas()]);
+    return states
+      .filter((state) => state.entity_id.startsWith('scene.'))
+      .map((state) => ({
+        entityId: state.entity_id,
+        name: String(state.attributes.friendly_name ?? state.entity_id),
+        area: areas.get(state.entity_id) ?? null,
+        members: (Array.isArray(state.attributes.entity_id) ? state.attributes.entity_id : [])
+          .filter((id): id is string => typeof id === 'string'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async activateScene(entityId: string): Promise<void> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    await callService(this.#conn, 'scene', 'turn_on', {}, { entity_id: entityId });
+  }
+
+  async readStates(entityIds: readonly string[]): Promise<Record<string, unknown>> {
+    if (!this.#conn || this.#status !== 'connected') return {};
+    const wanted = new Set(entityIds);
+    const states = await getStates(this.#conn);
+    const result: Record<string, unknown> = {};
+    for (const state of states) {
+      if (!wanted.has(state.entity_id)) continue;
+      const value = haToValue(state.entity_id, {
+        state: state.state,
+        attributes: state.attributes as Record<string, unknown>,
+      });
+      if (value !== undefined) result[state.entity_id] = value;
+    }
+    return result;
+  }
+
+  /* ── Benachrichtigungen (B-04B) ──
+     HA hält die Persistent Notifications; die App spiegelt nur die mit
+     Hauser-Präfix als Kacheln. Das Abo überlebt Reconnects über die Library. */
+  subscribePersistentNotifications(cb: (items: PersistentNotification[]) => void): void {
+    this.#persistentCb = cb;
+    void this.#subscribePersistent();
+  }
+
+  async #subscribePersistent(): Promise<void> {
+    if (!this.#conn || !this.#persistentCb || this.#persistentUnsub) return;
+    const conn = this.#conn;
+    try {
+      const unsub = await conn.subscribeMessage<PersistentNotificationEvent>(
+        (event) => this.#onPersistent(event),
+        { type: 'persistent_notification/subscribe' },
+        { resubscribe: true },
+      );
+      if (this.#conn !== conn) { await unsub().catch(() => {}); return; }
+      this.#persistentUnsub = unsub;
+    } catch (err) {
+      console.warn('[HaBackend] Persistent Notifications nicht abonnierbar:', err);
+    }
+  }
+
+  #onPersistent(event: PersistentNotificationEvent): void {
+    if (event.type === 'current') this.#persistent.clear();
+    for (const raw of Object.values(event.notifications ?? {})) {
+      if (!raw || typeof raw.notification_id !== 'string') continue;
+      if (event.type === 'removed') {
+        this.#persistent.delete(raw.notification_id);
+        continue;
+      }
+      const createdAt = typeof raw.created_at === 'string' ? Date.parse(raw.created_at) : NaN;
+      this.#persistent.set(raw.notification_id, {
+        id: raw.notification_id,
+        title: String(raw.title ?? ''),
+        message: String(raw.message ?? ''),
+        createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+      });
+    }
+    this.#persistentCb?.([...this.#persistent.values()]);
+  }
+
+  async createPersistentNotification(id: string, title: string, message: string): Promise<void> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    await callService(this.#conn, 'persistent_notification', 'create', { notification_id: id, title, message });
+  }
+
+  async dismissPersistentNotification(id: string): Promise<void> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    await callService(this.#conn, 'persistent_notification', 'dismiss', { notification_id: id });
+  }
+
+  async getNotificationHistory(sinceMs: number): Promise<NotificationHistoryEntry[]> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    const registry = await this.#conn.sendMessagePromise<Array<{ entity_id: string; platform?: string; unique_id?: unknown }>>({
+      type: 'config/entity_registry/list',
+    });
+    const entityIds = registry
+      .filter((entry) => entry.platform === 'automation'
+        && typeof entry.unique_id === 'string' && entry.unique_id.startsWith(AUTOMATION_ID_PREFIX))
+      .map((entry) => entry.entity_id);
+    if (!entityIds.length) return [];
+    const events = await this.#conn.sendMessagePromise<Array<{ when: number; name?: string; message?: string; entity_id?: string }>>({
+      type: 'logbook/get_events',
+      start_time: new Date(sinceMs).toISOString(),
+      entity_ids: entityIds,
+    });
+    return events
+      .filter((event) => typeof event.message === 'string' && typeof event.when === 'number')
+      .map((event) => ({
+        when: Math.round(event.when * 1000),
+        name: event.name ?? event.entity_id ?? '',
+        message: event.message ?? '',
+        entityId: event.entity_id ?? '',
+      }))
+      .sort((a, b) => b.when - a.when);
   }
 
   /* ── iCloud-Kalender einrichten (Einstellungen → Kalender) ──
@@ -494,6 +631,9 @@ export class HaBackend implements Backend {
       });
 
       await this.#resubscribe();
+      /* Neue Verbindung: das Persistent-Notification-Abo hängt an der alten. */
+      this.#persistentUnsub = null;
+      await this.#subscribePersistent();
       this.#setStatus('connected');
       this.#resetRetry();
       void this.#refreshCatalog();

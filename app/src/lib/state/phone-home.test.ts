@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import phoneHome from '../components/phone/PhoneHomeFeed.svelte?raw';
 import phoneQuickActions from '../components/phone/PhoneQuickActions.svelte?raw';
+import climatePill from '../components/ClimatePill.svelte?raw';
 import roomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomSheet from '../components/phone/RoomControlSheet.svelte?raw';
 import roomControls from '../components/RoomControls.svelte?raw';
@@ -9,7 +10,6 @@ import phoneHomeState from './phone-home.ts?raw';
 import type { Room } from './app.svelte.ts';
 import {
   accessibleRoomSummary,
-  currentClimateTemperature,
   phoneHeroUrl,
   projectPhoneRooms,
   reconcilePhoneRoomLayer,
@@ -60,14 +60,10 @@ describe('phone home room projection', () => {
     ]);
   });
 
-  it('derives the central current temperature only from rooms with climate data', () => {
-    const projected = projectPhoneRooms(rooms, readers({
-      climate: (roomId) => roomId === 'living' ? { current: 21, target: 20, hvac: 'heat' } : null,
-    }));
-    expect(currentClimateTemperature(projected)).toBe(21.4);
-    expect(currentClimateTemperature(projected.map((room) => ({ ...room, climateAvailable: false })))).toBeNull();
-    expect(phoneQuickActions).toContain('m.climate_current()');
-    expect(phoneQuickActions).toContain('m.climate_target()');
+  it('shows target and measured temperature in the shared climate pill', () => {
+    expect(phoneQuickActions).toContain('<ClimatePill');
+    expect(climatePill).toContain('m.climate_current()');
+    expect(climatePill).toContain('centralClimate.currentValue');
   });
 
   it('tolerates missing readers and values without inventing room state', () => {
@@ -132,8 +128,11 @@ describe('phone home source, command and modal boundaries', () => {
     expect(roomSheet).toMatch(/import\('\.\.\/SceneEdit\.svelte'\)[\s\S]*<SceneEdit\s*\/>/);
     expect(phoneShell).toMatch(/<RoomEdit\s*\/>/);
     // Long-Press auf der Raum-Kachel öffnet denselben Raum-Geräte-Editor
-    // wie der Long-Press auf die Raum-Kachel der Tablet-Ansicht.
-    expect(roomCard).toMatch(/use:longpress=\{\{ onLongPress: \(\) => openRoomEdit\(summary\.id\) \}\}/);
+    // wie der Long-Press auf die Raum-Kachel der Tablet-Ansicht — und ist wie
+    // dort im Bedienen-Modus gesperrt.
+    expect(roomCard).toMatch(
+      /use:longpress=\{\{ onLongPress: whenEditable\(\(\) => openRoomEdit\(summary\.id\)\) \}\}/,
+    );
   });
 
   it('keeps the mobile vacation action enabled as a bidirectional toggle', () => {

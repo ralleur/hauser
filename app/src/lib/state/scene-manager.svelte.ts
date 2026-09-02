@@ -10,6 +10,7 @@
    ganze Szenen-Logik laden. */
 
 import { runtime } from '../adapter/runtime.svelte.ts';
+import type { HaScene } from '../adapter/types.ts';
 import { setSceneEditLeaveHook } from './scene-edit-overlay.svelte.ts';
 import { appState, type Room } from './app.svelte.ts';
 import { deviceManager } from './device-manager.svelte.ts';
@@ -29,10 +30,12 @@ import {
   sceneDefIn,
   sceneList,
   sceneMemberState,
+  sceneMemberStateFromValue,
   sceneMemberTarget,
   sceneOverride,
   setSceneMemberState,
   setSceneName,
+  isSceneCapableEntity,
   isSceneCustomized,
   type SceneConfig,
   type SceneDef,
@@ -254,6 +257,62 @@ export function previewMember(roomId: string, sceneId: SceneId, entityId: string
 export function previewScene(roomId: string, sceneId: SceneId): void {
   for (const entityId of sceneMembers(roomId, sceneId)) rememberPreview(entityId);
   applyScene(roomId, sceneId);
+}
+
+/* ── Szenen aus Home Assistant übernehmen ──
+   Wer in HA schon Szenen gepflegt hat, soll sie nicht nachbauen müssen. Die
+   Mitglieder stehen in der Szene selbst; die Zielzustände gibt Home Assistant
+   über den WebSocket nicht heraus, deshalb wird die Szene EINMAL gefahren und
+   der erreichte Zustand der Mitglieder übernommen. Das ist im Editor kein
+   Fremdkörper: er fährt ohnehin jede Änderung live auf die Geräte, und beim
+   Schließen stellt restoreScenePreview() den Zustand von vorher wieder her. */
+
+/** Wartezeit zwischen `scene.turn_on` und dem Auslesen — Lampen brauchen einen
+    Moment, bis der neue Zustand in Home Assistant steht. */
+const IMPORT_SETTLE_MS = 1200;
+
+/** Ist eine der HA-Szenen bereits nach Hauser übernommen? Verglichen wird über
+    den Namen, den der Import vergibt — mehr Bindung gibt es nicht: die Hauser-
+    Szene ist danach eine eigene, unabhängige Szene. */
+export function sceneImportCandidates(roomId: string, haScenes: readonly HaScene[]): HaScene[] {
+  const room = roomById(roomId);
+  const roomEntities = new Set(room?.lights.map((l) => l.entityId) ?? []);
+  // Szenen des eigenen Raums zuerst: gleicher Bereichsname oder Mitglieder,
+  // die im Raum liegen. Der Rest bleibt wählbar, nur weiter unten.
+  return [...haScenes]
+    .map((scene) => ({
+      scene,
+      rank: (room && scene.area === room.name ? 2 : 0)
+        + (scene.members.some((id) => roomEntities.has(id)) ? 1 : 0),
+    }))
+    .sort((a, b) => b.rank - a.rank || a.scene.name.localeCompare(b.scene.name, 'de'))
+    .map((entry) => entry.scene);
+}
+
+/** HA-Szene als neue Hauser-Szene des Raums anlegen. Liefert die Id der neuen
+    Szene; `null`, wenn die Szene kein steuerbares Mitglied hat. */
+export async function importHaScene(roomId: string, scene: HaScene): Promise<SceneId | null> {
+  const members = scene.members.filter(isSceneCapableEntity);
+  if (members.length === 0) return null;
+  const sceneId = createScene(roomId, scene.name);
+
+  // Mitgliedschaft: exakt die der HA-Szene — Raum-Lichter, die sie nicht kennt,
+  // fliegen aus der Default-Menge heraus.
+  for (const entityId of sceneDefaults(roomId)) {
+    if (!members.includes(entityId)) removeFromScene(roomId, sceneId, entityId);
+  }
+  for (const entityId of members) addToScene(roomId, sceneId, entityId);
+
+  // Vor dem Fahren merken, damit das Schließen des Editors zurücknimmt.
+  for (const entityId of members) rememberPreview(entityId);
+  await runtime.activateScene(scene.entityId);
+  await new Promise((resolve) => setTimeout(resolve, IMPORT_SETTLE_MS));
+  const values = await runtime.readStates(members);
+  for (const entityId of members) {
+    const state = sceneMemberStateFromValue(values[entityId]);
+    if (state) updateConfig(setSceneMemberState(sceneManager.config, roomId, sceneId, entityId, state));
+  }
+  return sceneId;
 }
 
 /** Zustand von vor dem Öffnen des Editors wiederherstellen. */

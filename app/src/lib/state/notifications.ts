@@ -51,6 +51,8 @@ export function normalizeLaundryState(
 export interface HmiNotification {
   id: string;
   source: string;
+  /** Anzeigename der Quelle; fehlt er, wird er aus `source` abgeleitet. */
+  sourceLabel?: string;
   type: NotificationType;
   title: string;
   message?: string;
@@ -60,6 +62,12 @@ export interface HmiNotification {
   expiresAt?: number;
   dedupeKey: string;
   state?: string;
+}
+
+/** Aus Home Assistant gespiegelte Einträge (Persistent Notifications mit
+ * Hauser-Präfix) werden nicht lokal persistiert und dort quittiert. */
+export function isRemoteNotification(item: Pick<HmiNotification, 'id'>): boolean {
+  return item.id.startsWith('hauser_');
 }
 
 export function sortNotifications(items: readonly HmiNotification[]): HmiNotification[] {

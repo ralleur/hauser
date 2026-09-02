@@ -1325,13 +1325,10 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
   } else if (!energyEnabled && energy !== null) {
     validator.issue('INCONSISTENT_MODULE', '$.energy', 'Energy configuration is present but the energy module is disabled.');
   }
-  if (!moduleIds.has('media') && mediaTargets.length > 0) {
-    validator.issue(
-      'INCONSISTENT_MODULE',
-      '$.mediaTargets',
-      'Media targets are configured but the media module is disabled.',
-    );
-  }
+  /* Gefundene Media-Ziele duerfen bestehen bleiben, wenn das Modul aus ist:
+     sie sind reine Erkennungsdaten. Wer Media in den Diensten dazuschaltet,
+     hat sie damit sofort zur Hand, ohne die Einrichtung neu zu durchlaufen.
+     Andersherum bleibt es streng — Media ohne Ziele hat nichts zu zeigen. */
 
   if (validator.issues.length > 0) return { ok: false, issues: validator.issues };
   return {

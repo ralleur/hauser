@@ -84,13 +84,175 @@ button {
 
 /* ── Status-Bar ── */
 .status-bar {
-  display: flex;
+  /* Drei Spuren statt space-between: der Modus-Knopf steht damit wirklich in
+     der Mitte der Leiste und nicht zwischen zwei ungleich breiten Gruppen. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 0 var(--space-6);
   background: var(--color-surface-0);
   border-bottom: 1px solid var(--color-border);
 }
+.status-group-end { justify-self: end; }
+
+/* ── Modus-Umschalter (Bearbeiten ⇄ Bedienen) ──
+   Zeichen statt Beschriftung: Ring mit Kern, im Bearbeiten-Modus zusätzlich
+   Strahlen. Ring in der kühlen Akzentfarbe, Kern in der Textfarbe — dieselbe
+   Paarung wie in der Vorlage. */
+.mode-toggle-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.mode-toggle {
+  display: grid;
+  place-items: center;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border-radius: var(--radius-full);
+  background: none;
+}
+.mode-toggle-mark {
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+}
+.mode-toggle-ring {
+  fill: none;
+  stroke: var(--color-accent-warm);
+  stroke-width: 2.6;
+}
+.mode-toggle-core { fill: var(--color-text-primary); }
+.mode-toggle-rays path {
+  fill: none;
+  stroke: var(--color-accent-warm);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  animation: mode-rays-in var(--duration-normal) var(--ease-out) both;
+}
+@keyframes mode-rays-in {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+.mode-toggle-rays { transform-origin: 50% 50%; }
+
+/* Kreiswelle vom Knopf aus — reiner Compositor-Job (docs/03): nur Transform
+   und Opacity, keine Layout-Arbeit. */
+.mode-ripple {
+  position: fixed;
+  z-index: 90;
+  top: var(--ripple-y);
+  left: var(--ripple-x);
+  width: 2400px;
+  height: 2400px;
+  margin: -1200px 0 0 -1200px;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--color-accent-warm) 42%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-warm) 20%, transparent) 42%,
+    transparent 68%);
+  pointer-events: none;
+  animation: mode-ripple var(--duration-enter) var(--ease-in-out) forwards;
+}
+@keyframes mode-ripple {
+  0% { opacity: 0.6; transform: scale(0.04); }
+  55% { opacity: 0.42; }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* Meldung unter dem Knopf: was jetzt gilt — oder der Weg zurück ins
+   Bearbeiten, wenn jemand im Bedienen-Modus konfigurieren wollte. */
+.mode-notice {
+  position: absolute;
+  z-index: 91;
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+  color: var(--color-text-primary);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+  animation: mode-notice-in var(--duration-normal) var(--ease-out) both;
+}
+.mode-notice.is-warning {
+  border-color: color-mix(in srgb, var(--color-warning) 55%, transparent);
+  color: var(--color-warning);
+}
+@keyframes mode-notice-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* PIN-Eingabe: kleiner Block unter dem Knopf, gleiche Fassung wie Overlays. */
+.mode-pin-scrim {
+  position: fixed;
+  z-index: 95;
+  inset: 0;
+  background: var(--overlay-scrim);
+}
+.mode-pin {
+  position: fixed;
+  z-index: 96;
+  top: calc(var(--touch-preferred) + var(--space-4));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100% - var(--space-8)));
+  padding: var(--space-5);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-2xl);
+  background: var(--overlay-panel-background);
+  box-shadow: var(--elevation-overlay-shadow);
+  text-align: center;
+}
+.mode-pin-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.mode-pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.mode-pin-dot {
+  width: var(--space-3);
+  height: var(--space-3);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+}
+.mode-pin-dot.is-filled { background: var(--color-text-primary); }
+.mode-pin-wrong {
+  margin: 0 0 var(--space-3);
+  color: var(--color-error);
+  font-size: var(--text-2xs);
+}
+.mode-pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.mode-pin-key {
+  min-height: var(--touch-preferred);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-lg);
+  background: var(--overlay-control-background);
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+.mode-pin-key.is-text {
+  border-color: transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+}
+
 .status-group {
   display: flex;
   align-items: center;
@@ -396,6 +558,9 @@ body.theme-fade * {
               transform var(--duration-normal) var(--ease-out);
 }
 .tab.is-active .tab-indicator { opacity: 1; transform: scaleX(1); }
+/* Gesperrter System-Tab (Bedienen-Modus): sichtbar, aber zurückgenommen — er
+   führt nicht weiter, sondern erklärt den Weg über den Knopf oben. */
+.tab.is-locked { opacity: 0.45; }
 
 /* ── Caps-Mikro-Label (Hauser „MISSION/GOALS"-Pattern) ── */
 .caps-label {
@@ -3733,6 +3898,15 @@ button.security-bar {
   border-color: var(--color-accent-warm);
   color: var(--color-accent-warm);
 }
+/* Import aus Home Assistant: liegt direkt unter den Szenen-Tabs und benutzt
+   dieselbe Vorschlagsliste wie die Gerätesuche. */
+.se-import { margin-bottom: var(--space-5); }
+.se-import-hint {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+.se-import .re-suggest-btn:disabled { opacity: 0.5; }
 .se-section-head {
   display: flex;
   align-items: center;

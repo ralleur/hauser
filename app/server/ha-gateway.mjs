@@ -41,6 +41,10 @@ export const HA_GATEWAY_CLIENT_MESSAGE_TYPES = Object.freeze([
   'config/entity_registry/update',
   /* Erinnerungslisten derselben CalDAV-Quelle. */
   'todo/item/list',
+  /* Benachrichtigungen (B-04B): Persistent Notifications spiegeln, Verlauf
+     der Hauser-Automationen aus dem Logbuch. */
+  'persistent_notification/subscribe',
+  'logbook/get_events',
 ]);
 
 /* Was Home Assistant an den Browser zurückgeben darf. Auth-Frames stehen

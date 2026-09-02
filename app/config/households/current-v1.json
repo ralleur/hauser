@@ -170,27 +170,9 @@
       }
     },
     {
-      "id": "media",
-      "name": "Media",
-      "order": 4,
-      "target": {
-        "type": "module",
-        "id": "media"
-      }
-    },
-    {
-      "id": "songs",
-      "name": "Songs",
-      "order": 5,
-      "target": {
-        "type": "module",
-        "id": "songs"
-      }
-    },
-    {
       "id": "library",
       "name": "Bibliothek",
-      "order": 6,
+      "order": 4,
       "target": {
         "type": "module",
         "id": "library"
@@ -199,7 +181,7 @@
     {
       "id": "ablage",
       "name": "Ablage",
-      "order": 7,
+      "order": 5,
       "target": {
         "type": "module",
         "id": "ablage"
@@ -208,7 +190,7 @@
     {
       "id": "system",
       "name": "System",
-      "order": 8,
+      "order": 6,
       "target": {
         "type": "module",
         "id": "system"
@@ -222,8 +204,6 @@
     "notes",
     "shopping",
     "reminders",
-    "media",
-    "songs",
     "library",
     "ablage",
     "system",

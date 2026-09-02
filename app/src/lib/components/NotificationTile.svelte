@@ -12,9 +12,9 @@
   let dismissing = $state(false);
   const confettiPieces = Array.from({ length: 12 }, (_, index) => index + 1);
   const elapsed = $derived(relativeDuration(item.createdAt, now));
-  const sourceLabel = $derived(item.source.endsWith('washer')
+  const sourceLabel = $derived(item.sourceLabel ?? (item.source.endsWith('washer')
     ? m.notif_washer()
-    : item.source.endsWith('dryer') ? m.notif_dryer() : item.source);
+    : item.source.endsWith('dryer') ? m.notif_dryer() : item.source));
   const celebratesDismissal = $derived(item.source === 'laundry:washer' || item.source === 'laundry:dryer');
 
   function dismiss(): void {
@@ -31,6 +31,10 @@
   }
 
   function pointerdown(event: PointerEvent): void {
+    /* Ohne diese Ausnahme fängt die Hülle den Zeiger ein, und der Browser
+       stellt den folgenden Klick ihr statt dem Quittieren-Knopf zu — mit der
+       Maus war der Knopf dadurch tot und nur die Wischgeste blieb. */
+    if (event.target instanceof Element && event.target.closest('.notification-dismiss')) return;
     startX = event.clientX;
     startedAt = performance.now();
     dragging = true;
@@ -66,6 +70,7 @@
     <div class="notification-copy">
       <span class="notification-source"><span class="notification-dot"></span>{sourceLabel}</span>
       <strong>{item.title}</strong>
+      {#if item.message}<span class="notification-message">{item.message}</span>{/if}
       <span class="notification-time num">{item.state === 'done' ? m.notif_ago() : m.notif_since()} {elapsed}</span>
     </div>
     <button class="notification-dismiss pressable" type="button" aria-label={`${item.title} bestätigen`}

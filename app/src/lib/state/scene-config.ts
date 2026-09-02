@@ -553,6 +553,22 @@ function browserStorage(): SceneStorage | undefined {
   return candidate as SceneStorage;
 }
 
+/* ── Import aus einer HA-Szene ──
+   Der Zielzustand eines Mitglieds wird aus dem Zustand gelesen, den das Gerät
+   zeigt, nachdem die HA-Szene gefahren wurde. Nur Felder, die das Gerät
+   wirklich meldet, werden festgeschrieben — was fehlt, bleibt offen und folgt
+   weiter dem Szenen-Default. */
+export function sceneMemberStateFromValue(value: unknown): SceneMemberState | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const current = value as { on?: unknown; brightness?: unknown; colorTemp?: unknown };
+  if (typeof current.on !== 'boolean') return null;
+  if (!current.on) return { on: false };
+  const state: SceneMemberState = { on: true };
+  if (typeof current.brightness === 'number') state.brightness = Math.round(current.brightness);
+  if (typeof current.colorTemp === 'number') state.colorTemp = Math.round(current.colorTemp);
+  return state;
+}
+
 /* ── Anwenden: Szene → ein Command pro Mitglied ──
    light.*: turn_on mit brightness_pct (dimmbar) bzw. plain turn_on / turn_off.
    Alles andere (switch.*): turn_on/turn_off in der eigenen Domäne. Optimistische

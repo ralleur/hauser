@@ -84,6 +84,7 @@ const SNAPSHOT = {
 
 function fakeSupervisorClient({ available = true, fail = null as string | null } = {}) {
   const closed: boolean[] = [];
+  const streamed: string[] = [];
   const factory = () => ({
     available,
     close: () => closed.push(true),
@@ -98,8 +99,13 @@ function fakeSupervisorClient({ available = true, fail = null as string | null }
       if (type === 'config/device_registry/list') return SNAPSHOT.devices;
       return SNAPSHOT.entities;
     },
+    stream: async (path: string) => {
+      if (fail) throw Object.assign(new Error('internal access rejected'), { code: fail, status: 502 });
+      streamed.push(path);
+      return new Response('jpeg-bytes', { status: 200, headers: { 'content-type': 'image/jpeg' } });
+    },
   });
-  return Object.assign(factory, { closed });
+  return Object.assign(factory, { closed, streamed });
 }
 
 async function serve(overrides: Record<string, unknown> = {}) {
@@ -238,5 +244,28 @@ describe('Aktivierung im App-Modus', () => {
     expect(response.status).toBe(502);
     expect(await response.json()).toMatchObject({ code: 'HA_SUPERVISOR_AUTH_FAILED' });
     expect(existsSync(householdConfigPath)).toBe(false);
+  });
+});
+
+describe('Kamera-Durchleitung im App-Modus', () => {
+  it('reicht Standbild und Strom über den internen Zugang durch', async () => {
+    const factory = fakeSupervisorClient();
+    const { base } = await serve({ haConnectionMode: 'supervisor', haSupervisorClientFactory: factory });
+    const response = await fetch(`${base}/api/camera_proxy_stream/camera.front?token=abc`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/jpeg');
+    expect(await response.text()).toBe('jpeg-bytes');
+    expect(factory.streamed).toEqual(['/api/camera_proxy_stream/camera.front?token=abc']);
+    expect(factory.closed).toEqual([true]);
+  });
+
+  it('lehnt fremde Pfade und den direkten Modus ab', async () => {
+    const factory = fakeSupervisorClient();
+    const supervisor = await serve({ haConnectionMode: 'supervisor', haSupervisorClientFactory: factory });
+    expect((await fetch(`${supervisor.base}/api/camera_proxy/light.kitchen`)).status).not.toBe(200);
+    expect((await fetch(`${supervisor.base}/api/camera_proxy/camera.front/../states`)).status).not.toBe(200);
+    expect(factory.streamed).toEqual([]);
+    const direct = await serve({ haConnectionMode: 'direct' });
+    expect((await fetch(`${direct.base}/api/camera_proxy/camera.front`)).status).toBe(404);
   });
 });

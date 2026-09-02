@@ -259,18 +259,39 @@
 /* ── Globales Klima-Dock in der Bottom-Leiste (B-13, Vorbild Hauser) ──
    Zentrale Synchron-Steuerung links in der TabBar → aus JEDEM Screen erreichbar.
    Die Tabs bleiben mittig, weil beide Rand-Zonen (.tab-edge) gleich breit sind. */
+.app {
+  /* Die Bottom-Leiste trägt links die Klima-Pille (Wert, Bereich, Ist-Wert)
+     und braucht dafür mehr Höhe als die reine Tab-Zeile. */
+  grid-template-rows: 48px 1fr 76px;
+}
 .tab-bar {
   justify-content: space-between;
   align-items: stretch;
   padding: 0 var(--space-4);
 }
 .tab-edge {
-  flex: 0 0 240px;
+  flex: 0 0 296px;
   display: flex;
   align-items: center;
 }
 .tab-edge-start { justify-content: flex-start; }
 .tab-edge-end { justify-content: flex-end; }
+
+/* In der Bottom-Leiste gilt das Maß ihrer Nachbarn (.security-bar, Tabs):
+   eine Fläche, eine Haarlinie, kein Relief. Die gehobene Fassung
+   (--pill-face/--pill-edge) bleibt der Phone-Zeile vorbehalten, wo die Pille
+   frei auf dem Screen-Grund liegt statt in einer eigenen Leiste. */
+.tab-edge .climate-dock {
+  border-color: var(--color-border);
+  background: var(--color-surface-1);
+  box-shadow: none;
+}
+
+.tab-edge .climate-dock .cd-key {
+  border-color: var(--color-border);
+  background: var(--color-surface-2);
+  box-shadow: none;
+}
 .tab-nav {
   flex: 1;
   display: flex;
@@ -280,25 +301,31 @@
 }
 
 /* ── Layout-Konfiguration ── */
+/* Ladehinweis der Overlay-Ebenen: nur für Screenreader, ohne sichtbares Panel. */
+.layer-load-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .layout-dialog-scrim { position: fixed; inset: 0; z-index: 120; background: transparent; }
 .layout-dialog {
   position: absolute;
   inset: calc(var(--touch-preferred) + var(--space-4)) var(--space-4)
     calc(var(--space-7) + var(--space-5) + var(--space-4)) auto;
   box-sizing: border-box;
-  width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  /* Feste Breite: der Regler verstellt die Seitenleiste, nicht den Dialog —
+     sonst wandert die Bedienung unter dem Finger weg. */
+  width: min(520px, calc(100% - var(--space-8)));
   overflow-y: auto;
   padding: var(--space-6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2xl);
   background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
   box-shadow: var(--elevation-overlay-shadow);
-}
-.layout-dialog-scrim.has-two-slots .layout-dialog {
-  width: calc((max(
-    calc(var(--slot-min) + var(--slot-min) + var(--space-3)),
-    min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8)))
-  ) - var(--space-3)) / 2);
 }
 .layout-dialog-head, .layout-dialog-actions, .system-layout-settings { display: flex; align-items: center; gap: var(--space-3); }
 .layout-dialog-head { justify-content: space-between; }

@@ -561,18 +561,24 @@ describe('phone source and accessibility boundaries', () => {
   });
 
   it('renders three ordered targets plus fixed More and puts every remaining target in the sheet', () => {
-    expect(bottomNav).toMatch(/phoneNavOrder\.order\.slice\(0, 3\)/);
+    // Abgeschaltete Module fallen vorher heraus; die gespeicherte Reihenfolge
+    // bleibt die Quelle der ersten drei Ziele.
+    expect(bottomNav).toMatch(/phoneNavOrder\.order\.filter\(\(id\) => phoneTargetVisible\(id\)\)/);
+    expect(bottomNav).toMatch(/visibleOrder\.slice\(0, 3\)/);
     expect(bottomNav).toMatch(/bind:this=\{moreButton\}/);
     expect(bottomNav).toContain('<span>{m.nav_more()}</span>');
     expect(moreSheet).toMatch(/role="dialog"/);
     expect(moreSheet).toMatch(/aria-modal="true"/);
     expect(moreSheet).toMatch(/event\.target\s*!==\s*event\.currentTarget/);
-    expect(moreSheet).toMatch(/phoneNavOrder\.order\.slice\(3\)/);
-    expect(moreSheet).toMatch(/\{#each phoneNavOrder\.order as id, index \(id\)\}/);
+    // Auch hier zählt die sichtbare Reihenfolge: abgeschaltete Module fallen
+    // heraus, die gespeicherte Reihenfolge bleibt bestehen.
+    expect(moreSheet).toMatch(/visibleOrder\.slice\(3\)/);
+    expect(moreSheet).toMatch(/\{#each visibleOrder as id, index \(id\)\}/);
+    expect(moreSheet).toMatch(/phoneNavOrder\.order\.filter\(\(id\) => phoneTargetVisible\(id\)\)/);
     expect(moreSheet).toContain('m.phone_arrange_end() : m.phone_arrange_start()');
     expect(bottomNav).toContain('<PhoneNavIcon {id} />');
     expect(moreSheet).toContain('<PhoneNavIcon {id} />');
-    expect(moreSheet).toMatch(/<header>[\s\S]*more-arrange-toggle[\s\S]*more-sheet-close[\s\S]*<\/header>/);
+    expect(moreSheet).toMatch(/<header[^>]*>[\s\S]*more-arrange-toggle[\s\S]*more-sheet-close[\s\S]*<\/header>/);
     expect(moreSheet).not.toContain('more-sheet-target more-arrange-toggle');
     expect(moreSheet).toMatch(/moveNavTarget\(id, -1\)/);
     expect(moreSheet).toMatch(/moveNavTarget\(id, 1\)/);

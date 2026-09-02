@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2026 Hauser contributors
+# Version: 1
+blueprint:
+  name: Hauser numeric notification (above) v1
+  description: >-
+    Creates a Hauser persistent notification when a numeric entity rises above
+    a threshold, optionally only after it stayed there for a while. The timer
+    runs in Home Assistant while Hauser is closed.
+  domain: automation
+  input:
+    source_entity:
+      name: Source entity
+      selector:
+        entity: {}
+    threshold:
+      name: Threshold
+      selector:
+        number:
+          mode: box
+    hold_minutes:
+      name: Hold time in minutes
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 1440
+          mode: box
+    notification_id:
+      name: Notification id
+      selector:
+        text: {}
+    title:
+      name: Title
+      selector:
+        text: {}
+    message:
+      name: Message
+      selector:
+        text: {}
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input source_entity
+    above: !input threshold
+    for:
+      minutes: !input hold_minutes
+
+actions:
+  - action: persistent_notification.create
+    data:
+      notification_id: !input notification_id
+      title: !input title
+      message: !input message
+mode: restart

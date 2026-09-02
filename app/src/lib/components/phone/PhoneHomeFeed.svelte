@@ -2,12 +2,12 @@
   import { onMount, type Component } from 'svelte';
   import RoomSummaryCard from './RoomSummaryCard.svelte';
   import { appState } from '../../state/app.svelte.ts';
-  import { currentClimateTemperature, type PhoneHeroVariant, type PhoneRoomSummary } from '../../state/phone-home.ts';
+  import type { PhoneHeroVariant, PhoneRoomSummary } from '../../state/phone-home.ts';
 
   import { m } from '../../../paraglide/messages.js';
   import { pluralCategory } from '../../state/locale.svelte.ts';
 
-  type QuickActionsProps = { online: boolean; currentTemperature: number | null };
+  type QuickActionsProps = { online: boolean };
 
   /* Plusamorm je Sprache — dieselben Katalogfassungen wie in der Tab-Leiste. */
   const WINDOWS_OPEN = {
@@ -31,7 +31,6 @@
   } = $props();
 
   const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
-  const currentTemperature = $derived(currentClimateTemperature(rooms));
   const heroVariant = $derived<PhoneHeroVariant>(
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
   );
@@ -69,6 +68,6 @@
   <!-- Post-Paint geladen: hält Klima-Konfiguration und Schnellaktionslogik aus
        dem kritischen Phone-Startup-Pfad, ohne Verhalten oder Daten zu ändern. -->
   {#if QuickActionsComponent}
-    <QuickActionsComponent {online} {currentTemperature} />
+    <QuickActionsComponent {online} />
   {/if}
 </main>

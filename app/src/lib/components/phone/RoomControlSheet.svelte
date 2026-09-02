@@ -2,6 +2,7 @@
   import { m } from '../../../paraglide/messages.js';
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
+  import { swipedown } from '../../actions/swipedown.ts';
   import type { Room } from '../../state/app.svelte.ts';
   import { closeDeviceDetail, deviceDetail } from '../../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../../state/scene-edit-overlay.svelte.ts';
@@ -138,7 +139,9 @@
 
 <div class="room-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
   <div class="room-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="room-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
-    <header class="room-sheet-header">
+    <!-- Wischen am Kopf zieht das Sheet nach unten und schließt es ab einem
+         Viertel seiner Höhe — dieselbe Geste wie zum Öffnen, nur zurück. -->
+    <header class="room-sheet-header" use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog }}>
       <div>
         <p class="phone-home-kicker">{m.phone_room_control()}</p>
         <h2 bind:this={title} id="room-sheet-title" tabindex="-1">{room.name}</h2>

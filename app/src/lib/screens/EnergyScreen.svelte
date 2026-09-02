@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
+  import { whenEditable } from '../state/edit-mode.svelte.ts';
   import { energyAssetUrl } from '../components/energy-hero-assets.ts';
   import { ENERGY_CURVE, SUN_ENTITY, appState } from '../state/app.svelte.ts';
   import { runtime } from '../adapter/runtime.svelte.ts';
@@ -60,9 +61,9 @@
     return `${Math.max(1.2, 3.4 - (kw ?? 0) * 0.55).toFixed(2)}s`;
   }
 
-  /* Geteiltes Breiten-Preset mit dem Home-Screen (Kontrollflächen anpassen):
-     dieselben CSS-Variablen steuern hier die Breite des Energie-Panels. */
-  const layoutPreset = $derived(widthPreset(layoutManager.preview));
+  /* Eigene Breite: dieselben CSS-Variablen wie auf Home, aber aus dem
+     Energie-Wert der Layout-Konfiguration. */
+  const layoutPreset = $derived(widthPreset(layoutManager.preview, 'energy'));
   const layoutStyle = $derived(
     `--layout-total:${layoutPreset.totalPercent}%;--slot-min:${layoutPreset.slotMinPx}px;--hero-min:${layoutPreset.heroMinPx}px`,
   );
@@ -85,7 +86,7 @@
   <!-- Long-Press auf der freien Hero-Fläche öffnet — wie auf Home — den
        Layout-Dialog; das Panel liegt darüber (z-index) und bleibt unberührt. -->
   <div class="hero-config-hitarea" aria-label="Freie Hero-Fläche"
-       use:longpress={{ onLongPress: () => layoutManager.show() }}></div>
+       use:longpress={{ onLongPress: whenEditable(() => layoutManager.show('energy')) }}></div>
 
   <aside class="energy-panel">
     <div class="energy-panel-top">

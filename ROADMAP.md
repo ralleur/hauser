@@ -30,7 +30,7 @@ release independently ([#7](https://github.com/ralleur/hauser/issues/7), Docker
 Compose on Linux x86_64, roughly 370 entities across 8 areas).
 
 No alpha was published; `v0.4.0-beta.1` was the first public release, and the
-beta line ran through `v0.4.0-beta.10`. From `v0.6.2` on the `-beta.N` suffix is
+beta line ran through `v0.4.0-beta.10`. From `v0.5.0` on the `-beta.N` suffix is
 gone: every release below `v1.0.0` is a beta, so the version number says it on
 its own.
 
@@ -149,7 +149,7 @@ light and two dark modes remain distinguishable.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits; project illustrations remain the defaults and users can upload local room backgrounds |
-| Beta stabilisation | `v0.6.2` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
+| Beta stabilisation | `v0.6.3` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
 | Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 

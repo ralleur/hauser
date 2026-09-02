@@ -586,6 +586,9 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-warm) 25%, transparent);
 }
 .settings-time-input { width: 8rem; flex: none; }
+.settings-minutes-input { width: 5rem; flex: none; text-align: right; }
+.settings-pin-input { width: 7rem; flex: none; }
+.settings-row-unit { flex: none; color: var(--color-text-secondary); font-size: var(--text-xs); }
 
 .settings-row .secondary-btn { flex: none; }
 .settings-row .secondary-btn:disabled { opacity: 0.4; cursor: default; }

@@ -22,7 +22,7 @@
 
   import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
   import SecuritySensorsSection from '../components/settings/SecuritySensorsSection.svelte';
-  import LaundrySection from '../components/settings/LaundrySection.svelte';
+  import NotificationsSection from '../components/settings/NotificationsSection.svelte';
   import HotelModeSection from '../components/settings/HotelModeSection.svelte';
   import HotelAllowlistSection from '../components/settings/HotelAllowlistSection.svelte';
   import ServicesSection from '../components/settings/ServicesSection.svelte';
@@ -59,7 +59,7 @@
   const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
     'rooms-devices': RoomsDevicesSection,
     'security-sensors': SecuritySensorsSection,
-    'laundry': LaundrySection,
+    'notifications': NotificationsSection,
     'hotel-mode': HotelModeSection,
     'hotel-guest-access': HotelAllowlistSection,
     'appearance': InterfaceSection,

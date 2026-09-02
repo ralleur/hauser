@@ -14,7 +14,6 @@ export const serviceProbes = $state({
   /* Ablage: konfiguriert = PIN + Token liegen im Schlüsselbund des Servers.
      unlocked spiegelt die aktive PIN-Session dieses Browsers. */
   ablage: { state: 'unknown' as ProbeState, configured: false, unlocked: false },
-  songs: { state: 'unknown' as ProbeState },
 });
 
 const TIMEOUT_MS = 4000;
@@ -38,19 +37,6 @@ export async function probeAblage(): Promise<void> {
   }
 }
 
-export async function probeSongs(): Promise<void> {
-  serviceProbes.songs.state = 'checking';
-  try {
-    const response = await fetch('/api/songs/health', {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    serviceProbes.songs.state = response.ok ? 'ok' : 'error';
-  } catch {
-    serviceProbes.songs.state = 'error';
-  }
-}
-
 export async function probeLocalServices(): Promise<void> {
-  await Promise.all([probeAblage(), probeSongs()]);
+  await probeAblage();
 }

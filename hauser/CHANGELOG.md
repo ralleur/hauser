@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.3 - 2026-09-02
+
+### Added
+
+- Import a scene from Home Assistant: the scene editor lists your existing
+  scenes and takes over their devices and states, so you do not have to rebuild
+  them. The scene is applied once in the room to read its states back.
+- Setup creates a room for a Home Assistant area that only carries a scene.
+
+### Fixed
+
+- A long press no longer flashes an empty panel on the right before the overlay
+  opens.
+
 ## 0.6.2 - 2026-09-01
 
 ### Fixed

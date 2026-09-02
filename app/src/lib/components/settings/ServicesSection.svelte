@@ -1,13 +1,14 @@
 <script lang="ts">
   /* ── Verbindungen · Dienste ──
-     Eine Integrationskarte je angebundenem System. Alle Karten folgen
-     demselben Aufbau: Status-Punkt, Adresse, Anmeldezustand, Aktionen.
+     Gegliedert nach Modulen: Home Assistant als Grundlage, darunter je ein
+     Block pro Screen — mit dem Schalter, der ihn an- und abschaltet, und der
+     Konfiguration des Dienstes, der ihn füllt (Jellyfin für die Bibliothek,
+     Paperless für die Ablage, iCloud/HA für den Kalender).
 
-     Vorher lagen diese Angaben über vier Sektionen verstreut (Home Assistant
-     in „Verbindungen“ + „Status“, Jellyfin in „Bibliothek“, iCloud in
-     „Kalender“); Ablage und Songwerkstatt fehlten ganz. Hier ist die eine
-     Stelle, an der die Frage „was hängt dran und läuft es?“ beantwortet wird.
-     Was aus einem Dienst *angezeigt* wird, bleibt bewusst in „Inhalte“. */
+     Vorher lagen diese Angaben über vier Sektionen verstreut und die Frage
+     „welche Bereiche hat mein Haus überhaupt?" ließ sich gar nicht
+     beantworten. Was aus einem Dienst *angezeigt* wird, bleibt bewusst in
+     „Inhalte". */
   import Icon from '../Icon.svelte';
   import { connection } from '../../state/connection.svelte.ts';
   import { authState, requestToken } from '../../state/auth.svelte.ts';
@@ -22,11 +23,29 @@
   import { m } from '../../../paraglide/messages.js';
   import { aiHealth, checkAiHealth } from '../../state/ai-health.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
-  import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
   import SettingsCardHead from './SettingsCardHead.svelte';
+  import PaperlessConfig from './PaperlessConfig.svelte';
+  import EnergyModuleConfig from './EnergyModuleConfig.svelte';
+  import {
+    moduleConfig, moduleEnabled, setModuleEnabled, type ToggleableModuleId,
+  } from '../../state/module-config.svelte.ts';
   import DeviceAddress from '../DeviceAddress.svelte';
 
   const conn = $derived(connection());
+
+  /* Name für einen neu angelegten Navigationseintrag — die Oberfläche zeigt
+     ohnehin die übersetzte Beschriftung, hier zählt nur ein sinnvoller
+     Startwert in der Konfiguration. */
+  function moduleLabel(id: ToggleableModuleId): string {
+    switch (id) {
+      case 'energy': return m.nav_energy();
+      case 'calendar': return m.nav_calendar();
+      case 'notes': return m.nav_notes();
+      case 'media': return m.nav_media();
+      case 'library': return m.nav_library();
+      case 'ablage': return m.nav_files();
+    }
+  }
   /* B-08E11: Im Home-Assistant-App-Modus gibt es keine editierbare HA-Adresse
      und keinen Token — der Hauser-Server verbindet intern. */
   const managedByApp = configuredHaTransport() === 'gateway';
@@ -85,18 +104,6 @@
       : !serviceProbes.ablage.configured ? m.sys_service_not_configured()
       : serviceProbes.ablage.unlocked ? m.sys_service_unlocked()
       : m.sys_service_locked(),
-  );
-
-  const songsDot = $derived(
-    serviceProbes.songs.state === 'ok' ? 'dot-online'
-      : serviceProbes.songs.state === 'error' ? 'dot-offline'
-      : 'dot-degraded',
-  );
-
-  const songsLabel = $derived(
-    serviceProbes.songs.state === 'ok' ? m.sys_service_reachable()
-      : serviceProbes.songs.state === 'error' ? m.sys_service_unreachable()
-      : m.sys_service_checking(),
   );
 
   const dot = $derived(
@@ -160,8 +167,90 @@
 
 </div>
 
+{#snippet moduleToggle(id: ToggleableModuleId)}
+  <div class="settings-row" data-setting-id={`module-${id}`}>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_module_toggle()}</span>
+      <span class="settings-row-sub">
+        {moduleConfig.error && moduleConfig.busy === null
+          ? m.sys_module_failed()
+          : moduleConfig.saved ? m.sys_module_saved() : ''}
+      </span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={moduleEnabled(id)} aria-label={m.sys_module_toggle()}
+            disabled={moduleConfig.busy !== null || IS_DEMO}
+            onclick={() => void setModuleEnabled(id, !moduleEnabled(id), moduleLabel(id))}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+{/snippet}
+
+<!-- ── Module: ein Block je Screen ── -->
+<div class="settings-group" data-setting-id="module-home">
+  <SettingsCardHead icon="i-home" tint="warm" title={m.nav_home()} sub={m.sys_module_home_hint()} />
+  <div class="settings-row">
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_module_required()}</span>
+    </div>
+  </div>
+</div>
+
 <div class="settings-group">
-  <SettingsCardHead icon="i-play-network" tint="cool" title={m.sys_group_services_media()} />
+  <SettingsCardHead icon="i-flash" tint="warm" title={m.nav_energy()} sub={m.sys_module_energy_hint()} />
+  {@render moduleToggle('energy')}
+  <EnergyModuleConfig />
+</div>
+
+<div class="settings-group">
+  <SettingsCardHead icon="i-calendar" tint="cool" title={m.nav_calendar()} sub={m.sys_module_calendar_hint()} />
+  {@render moduleToggle('calendar')}
+  <form class="settings-row is-stacked" data-setting-id="icloud-setup" onsubmit={onICloudSubmit}>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_icloud_connect()}</span>
+      <span class="settings-row-sub">{m.sys_icloud_hint()}</span>
+    </div>
+    <div class="settings-form-grid">
+      <input class="settings-input" type="email" placeholder={m.sys_apple_id_label()}
+             aria-label={m.sys_apple_id()} autocomplete="off" spellcheck="false"
+             bind:value={icloudUser} disabled={icloudSetup.running} />
+      <input class="settings-input" type="password" placeholder={m.sys_app_password()}
+             aria-label={m.sys_app_password()} autocomplete="off"
+             bind:value={icloudPassword} disabled={icloudSetup.running} />
+      <button class="secondary-btn pressable" type="submit"
+              disabled={icloudSetup.running || !icloudUser.trim() || !icloudPassword || settingsValues.demoMode}>
+        {icloudSetup.running ? m.sys_setting_up() : m.sys_setup()}
+      </button>
+    </div>
+    {#if settingsValues.demoMode}
+      <p class="settings-form-msg">{m.sys_demo_no_function_ha()}</p>
+    {:else if icloudSetup.result}
+      <p class="settings-form-msg" class:is-ok={icloudSetup.result.ok} class:is-error={!icloudSetup.result.ok} role="status">
+        {icloudSetup.result.message}
+      </p>
+    {/if}
+  </form>
+</div>
+
+<div class="settings-group">
+  <SettingsCardHead icon="i-note-text" tint="neutral" title={m.nav_notes()} sub={m.sys_module_notes_hint()} />
+  {@render moduleToggle('notes')}
+</div>
+
+<div class="settings-group">
+  <SettingsCardHead icon="i-music-note" tint="cool" title={m.nav_media()} sub={m.sys_module_media_hint()} />
+  <div class="settings-row" data-setting-id="module-media-experimental">
+    <span class="settings-row-icon"><Icon name="i-flask" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_module_experimental()}</span>
+    </div>
+  </div>
+  {@render moduleToggle('media')}
+</div>
+
+<div class="settings-group">
+  <SettingsCardHead icon="i-play-network" tint="cool" title={m.nav_library()} sub={m.sys_module_library_hint()} />
+  {@render moduleToggle('library')}
   <div class="settings-row is-stacked" data-setting-id="jf-url">
     <div class="settings-row-text">
       <span class="settings-row-label">Jellyfin-Adresse</span>
@@ -217,35 +306,11 @@
     <span class="settings-row-value num">{jellyfin.deviceId}</span>
   </div>
 
-  <form class="settings-row is-stacked" data-setting-id="icloud-setup" onsubmit={onICloudSubmit}>
-    <div class="settings-row-text">
-      <span class="settings-row-label">{m.sys_icloud_connect()}</span>
-      <span class="settings-row-sub">{m.sys_icloud_hint()}</span>
-    </div>
-    <div class="settings-form-grid">
-      <input class="settings-input" type="email" placeholder={m.sys_apple_id_label()}
-             aria-label={m.sys_apple_id()} autocomplete="off" spellcheck="false"
-             bind:value={icloudUser} disabled={icloudSetup.running} />
-      <input class="settings-input" type="password" placeholder={m.sys_app_password()}
-             aria-label={m.sys_app_password()} autocomplete="off"
-             bind:value={icloudPassword} disabled={icloudSetup.running} />
-      <button class="secondary-btn pressable" type="submit"
-              disabled={icloudSetup.running || !icloudUser.trim() || !icloudPassword || settingsValues.demoMode}>
-        {icloudSetup.running ? m.sys_setting_up() : m.sys_setup()}
-      </button>
-    </div>
-    {#if settingsValues.demoMode}
-      <p class="settings-form-msg">{m.sys_demo_no_function_ha()}</p>
-    {:else if icloudSetup.result}
-      <p class="settings-form-msg" class:is-ok={icloudSetup.result.ok} class:is-error={!icloudSetup.result.ok} role="status">
-        {icloudSetup.result.message}
-      </p>
-    {/if}
-  </form>
 </div>
 
 <div class="settings-group">
-  <SettingsCardHead icon="i-shield-lock" tint="neutral" title={m.sys_group_services_private()} />
+  <SettingsCardHead icon="i-shield-lock" tint="neutral" title={m.nav_files()} sub={m.sys_module_ablage_hint()} />
+  {@render moduleToggle('ablage')}
   <div class="settings-row" data-setting-id="ablage-status">
     <span class="dot {ablageDot}"></span>
     <div class="settings-row-text">
@@ -254,17 +319,7 @@
     </div>
     <span class="settings-row-value">{ablageLabel}</span>
   </div>
-
-  {#if !IS_DEMO}
-    <div class="settings-row" data-setting-id="songs-status">
-      <span class="dot {songsDot}"></span>
-      <div class="settings-row-text">
-        <span class="settings-row-label">{m.settings_entry_songs_status_label()}</span>
-        <span class="settings-row-sub">{m.sys_songs_hint()}</span>
-      </div>
-      <span class="settings-row-value">{songsLabel}</span>
-    </div>
-  {/if}
+  <PaperlessConfig />
 </div>
 
 <div class="settings-group">
@@ -295,14 +350,4 @@
     </div>
     <span class="settings-row-value num">{AMBIENT_LLM_DEFAULT_MODEL}</span>
   </div>
-  {#if !IS_DEMO}
-    <div class="settings-row">
-      <span class="settings-row-icon"><Icon name="i-music-note" cls="icon icon-md" /></span>
-      <div class="settings-row-text">
-        <span class="settings-row-label">{m.sys_ai_model_lyrics()}</span>
-        <span class="settings-row-sub">{m.sys_ai_song_lyrics_hint()}</span>
-      </div>
-      <span class="settings-row-value num">{SONG_LYRICS_MODEL}</span>
-    </div>
-  {/if}
 </div>

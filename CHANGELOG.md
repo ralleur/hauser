@@ -5,6 +5,31 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-09-02
+
+### Added
+
+- **Import a scene from Home Assistant.** If you already keep scenes in Home
+  Assistant, you no longer have to rebuild them by hand. The scene editor now
+  offers "From Home Assistant" next to "Add new scene": it lists your existing
+  scenes, those belonging to the room first, and turns the one you pick into a
+  Hauser scene with its devices and their brightness and colour temperature.
+  Home Assistant does not hand out a scene's stored target states, so the scene
+  is applied in the room once to read them back — the editor restores the
+  previous state when you close it, as it does for any other change you preview
+  there.
+- **Rooms that only carry scenes are set up as rooms.** During setup, a Home
+  Assistant area now becomes a Hauser room even when no device is assigned to
+  it and only a scene points there — via the scene's own area or the areas of
+  the devices it controls.
+
+### Fixed
+
+- **A panel flashed on the right before an overlay opened.** Long-pressing a
+  room, a light or a scene briefly showed an empty dialog on the right edge
+  while the overlay was still loading. The placeholder no longer draws
+  anything.
+
 ## [0.6.2] - 2026-09-01
 
 ### Fixed

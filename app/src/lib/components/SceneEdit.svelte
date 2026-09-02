@@ -10,6 +10,8 @@
   import { dragreorder } from '../actions/dragreorder.ts';
   import TickScale from './TickScale.svelte';
   import { appState, COLOR_TEMP_MIN, COLOR_TEMP_MAX } from '../state/app.svelte.ts';
+  import { runtime } from '../adapter/runtime.svelte.ts';
+  import type { HaScene } from '../adapter/types.ts';
   import { deviceManager } from '../state/device-manager.svelte.ts';
   import { tempTint } from '../state/light-presets.ts';
   import {
@@ -19,6 +21,7 @@
     memberCapabilities, memberState, memberTarget, setMemberState,
     previewMember, previewScene,
     scenes, sceneDefOf, createScene, renameScene, removeScene, reorderMember,
+    importHaScene, sceneImportCandidates,
     type SceneMemberCapabilities,
   } from '../state/scene-manager.svelte.ts';
   import { isSceneCapableEntity, isLightEntity, type SceneMemberState } from '../state/scene-config.ts';
@@ -39,6 +42,49 @@
 
   function addScene() {
     sceneEdit.sceneId = createScene(sceneEdit.roomId, m.scene_new_default());
+  }
+
+  /* ── Szenen aus Home Assistant übernehmen ──
+     Die Liste wird erst beim Öffnen geholt (ein getStates), nicht bei jedem
+     Overlay. Der Import fährt die HA-Szene einmal und übernimmt den erreichten
+     Zustand — deshalb der Hinweis über der Liste. */
+  let importOpen = $state(false);
+  let importScenes = $state<HaScene[] | null>(null);
+  let importBusy = $state('');
+  let importFailed = $state(false);
+  const importCandidates = $derived(
+    importScenes ? sceneImportCandidates(sceneEdit.roomId, importScenes) : [],
+  );
+
+  async function toggleImport() {
+    importOpen = !importOpen;
+    if (!importOpen || importScenes) return;
+    importFailed = false;
+    try {
+      importScenes = await runtime.listScenes();
+    } catch {
+      importScenes = [];
+      importFailed = true;
+    }
+  }
+
+  async function runImport(haScene: HaScene) {
+    if (importBusy) return;
+    importBusy = haScene.entityId;
+    importFailed = false;
+    try {
+      const created = await importHaScene(sceneEdit.roomId, haScene);
+      if (created) {
+        sceneEdit.sceneId = created;
+        importOpen = false;
+      } else {
+        importFailed = true;
+      }
+    } catch {
+      importFailed = true;
+    } finally {
+      importBusy = '';
+    }
   }
 
   function onNameInput(value: string) {
@@ -165,6 +211,8 @@
     dragBri = null;
     dragTemp = null;
     confirmDelete = false;
+    importOpen = false;
+    importFailed = false;
     // untrack: der Name ändert sich beim Tippen — sonst liefe der Effect mit.
     untrack(() => { nameDraft = scenes(sceneEdit.roomId).length ? sceneDefOf(sceneEdit.roomId, sceneId).label : ''; });
   });
@@ -228,7 +276,48 @@
             <button class="se-tab se-tab-add cfg-add pressable" type="button" onclick={addScene}>
               {m.scene_add_new()}
             </button>
+            {#if runtime.canImportScenes}
+              <button class="se-tab se-tab-add cfg-add pressable" type="button"
+                      aria-expanded={importOpen} onclick={toggleImport}>
+                {m.scene_import_ha()}
+              </button>
+            {/if}
           </div>
+
+          {#if importOpen}
+            <section class="ld-section se-import">
+              <span class="caps-label">{m.scene_import_title()}</span>
+              <p class="se-import-hint">{m.scene_import_hint()}</p>
+              {#if importScenes === null}
+                <p class="re-empty" role="status" aria-live="polite">{m.scene_import_loading()}</p>
+              {:else if importCandidates.length === 0}
+                <p class="re-empty">{m.scene_import_empty()}</p>
+              {:else}
+                <ul class="re-list re-suggest">
+                  {#each importCandidates as haScene (haScene.entityId)}
+                    <li>
+                      <button class="re-row re-suggest-btn pressable" type="button"
+                              disabled={!!importBusy} onclick={() => runImport(haScene)}>
+                        <span class="re-icon re-icon-add" aria-hidden="true">
+                          <Icon name={importBusy === haScene.entityId ? 'i-refresh' : 'i-plus'} cls="icon icon-md" />
+                        </span>
+                        <span class="re-label">
+                          <span class="re-name">{haScene.name}</span>
+                          <small class="re-meta">
+                            {haScene.members.length === 1
+                              ? m.scene_import_members_one({ count: haScene.members.length })
+                              : m.scene_import_members_other({ count: haScene.members.length })}
+                          </small>
+                        </span>
+                        {#if haScene.area}<span class="re-tag">{haScene.area}</span>{/if}
+                      </button>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+              {#if importFailed}<p class="re-empty" role="alert">{m.scene_import_failed()}</p>{/if}
+            </section>
+          {/if}
 
           {#if scene}
           <div class="se-name">

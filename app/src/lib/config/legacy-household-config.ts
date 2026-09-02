@@ -97,12 +97,16 @@ export function projectLegacyHouseholdConfig(): HouseholdConfigV4 {
       }
       return { id: room.id, name: room.name, visibleEntities, hero: null };
     }),
-    navigation: LEGACY_TABS.map((tab, order) => ({
-      id: tab.id,
-      name: tab.configName,
-      order,
-      target: { type: 'module' as const, id: tab.id },
-    })),
+    /* Nur aktive Module tragen einen Navigationseintrag — sonst weist die
+       Pruefung das Dokument zurueck (INCONSISTENT_MODULE). */
+    navigation: LEGACY_TABS
+      .filter((tab) => (LEGACY_ENABLED_MODULES as readonly string[]).includes(tab.id))
+      .map((tab, order) => ({
+        id: tab.id,
+        name: tab.configName,
+        order,
+        target: { type: 'module' as const, id: tab.id },
+      })),
     enabledModules: [...LEGACY_ENABLED_MODULES],
     energy: projectEnergy(),
     mediaTargets: MEDIA_SEED.map((player) => ({

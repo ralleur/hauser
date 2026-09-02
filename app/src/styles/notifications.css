@@ -90,6 +90,7 @@
   background: var(--notification-accent);
 }
 .notification-time { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.notification-message { color: var(--color-text-secondary); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .notification-dismiss {
   display: grid;
   place-items: center;

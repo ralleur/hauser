@@ -1,59 +1,146 @@
 /* Gemeinsame Klima-Regler für Phone- und Panel-Shell. Diese Styles liegen im
-   initialen App-Pfad, damit der Phone-Regler nicht von Panel-/Hero-CSS abhängt. */
+   initialen App-Pfad, damit der Phone-Regler nicht von Panel-/Hero-CSS abhängt.
+
+   Form: eine Pille mit zwei symmetrischen Rundtasten. Genau ein dominanter
+   Wert; Bereichsname und Ist-Wert sind über Größe und Kontrast zurückgenommen.
+   Blau und Rot markieren ausschließlich die beiden Richtungen. */
+/* ── Fassung der gehobenen Flächen (docs/01: Dark = Surface-Level, Light =
+   weiche Schatten) — die Pille und die Schnellaktionen daneben teilen sie
+   sich, damit die Zeile eine Formsprache spricht: eine Fläche eine Stufe
+   über ihrem Grund, oben eine Lichtkante, kein Außenschatten. */
+:root {
+  --pill-face:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--color-surface-3) 70%, var(--color-surface-2)),
+      var(--color-surface-2));
+  /* Lichtkante oben: im Dark-Theme trägt sie die Wölbung, im Light-Theme
+     verschwindet sie fast auf der weißen Fläche. */
+  --pill-edge: inset 0 1px 0 rgb(255 255 255 / 8%);
+  /* Im Dark-Theme trägt die Fläche allein die Kante nicht — dort braucht es
+     die Haarlinie. Im Light-Theme genügt der Helligkeitsunterschied; eine
+     graue Kontur würde die Fläche nur billiger aussehen lassen. */
+  --pill-border: color-mix(in srgb, var(--color-border) 45%, transparent);
+}
+
+:root[data-theme='light'] {
+  --pill-face:
+    linear-gradient(180deg,
+      var(--color-surface-3),
+      color-mix(in srgb, var(--color-surface-2) 85%, var(--color-surface-1)));
+  --pill-edge: inset 0 1px 0 rgb(255 255 255 / 90%);
+  --pill-border: transparent;
+}
+
 .climate-dock {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
   padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--pill-border);
   border-radius: var(--radius-full);
-  background: var(--color-surface-2);
+  background: var(--pill-face);
+  box-shadow: var(--pill-edge);
 }
 
-.cd-key {
+/* Dieselbe Fassung wie die Zieltemperatur-Tasten der Raumsteuerung
+   (`.climate-step`, room-controls.css) — ein Schrittknopf sieht überall
+   gleich aus. Qualifiziert wie die Richtungsfarben, sonst räumt der
+   Button-Reset der Phone-Shell (`background: none`) die Fläche wieder ab. */
+.climate-dock .cd-key {
   display: grid;
+  flex: none;
   place-items: center;
-  width: 40px;
-  height: 44px;
-  background: none;
+  width: var(--touch-preferred);
+  height: var(--touch-preferred);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--overlay-control-background);
+  box-shadow: var(--elevation-overlay-shadow);
 }
 
-.cd-step-icon {
-  width: 26px;
-  height: 26px;
+/* Wie oben qualifiziert: sonst gewinnt `.icon` (24 px) aus der Panel-Fassung,
+   weil sie später geladen wird — die Zeichen wären dort größer als gedacht. */
+.climate-dock .cd-step-icon {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   stroke-width: 2.4;
 }
 
-.cd-key-down { color: var(--color-accent-cool); }
-.cd-key-up { color: var(--color-error); }
+/* Die Richtungsfarben tragen die einzige Farbigkeit der Pille — deshalb
+   qualifiziert, damit der Button-Reset der Phone-Shell sie nicht erbt. */
+.climate-dock .cd-key-down { color: var(--color-accent-cool); }
+.climate-dock .cd-key-up { color: var(--color-error); }
 
 .cd-readout {
   display: flex;
+  /* Nicht dehnen: die Lesezone bleibt so breit wie ihr Inhalt und wird von
+     `space-between` mittig gehalten — sonst wächst die Trennlinie auf dem
+     Phone über die ganze Pille. */
+  flex: 0 1 auto;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  min-width: 4ch;
-  padding: 0 var(--space-1);
+  gap: var(--space-1);
+  min-width: 0;
 }
 
+/* Die eine dominante Größe. Alles darunter ist über Größe UND Kontrast
+   zurückgenommen — der Sollwert bleibt in jedem Zustand der dunkelste Text. */
 .cd-value {
-  font-size: var(--text-md);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
-  line-height: 1.05;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-hero);
   color: var(--color-text-primary);
   transition: color var(--duration-normal) var(--ease-out);
 }
 
-.cd-value.is-mixed { color: var(--color-text-tertiary); }
+/* Gemischter Zustand: eine Stufe zurück, nicht bis ins Tertiäre — sonst
+   verliert die Pille ihre Hierarchie, weil der Sollwert fast immer
+   von mindestens einem Raum abweicht. */
+.cd-value.is-mixed { color: var(--color-text-secondary); }
 
-.cd-sub {
+/* Eigener kleiner Informationsbereich: feine Linie statt zweiter Kachel. Die
+   Linie nimmt die Breite der Lesezone, damit sie nicht mit der Textlänge
+   springt (Ist-Wert kann fehlen). */
+.cd-current {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
+  padding-inline: var(--space-2);
+  justify-content: center;
+  gap: var(--space-2);
+  padding-top: 5px;
+  font-size: var(--text-2xs);
+  line-height: var(--leading-tight);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  white-space: nowrap;
+}
+
+.climate-dock .cd-current-icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.cd-current-label {
   font-size: var(--text-3xs);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  max-inline-size: 12ch;
+  font-weight: var(--font-weight-normal);
+  line-height: var(--leading-tight);
+  color: var(--color-text-tertiary);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.cd-current-value {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  color: var(--color-text-secondary);
 }

@@ -35,10 +35,11 @@ export type SettingsGroupId =
   | 'experimental';
 
 export type SettingsSectionId =
-  /* Zuhause */
+  /* Zuhause — die Wäsche-Einrichtung wohnt in der Kategorie „Wäsche & Geräte"
+     der Benachrichtigungen; eine eigene Sektion wäre dieselbe Sache zweimal. */
   | 'rooms-devices'
   | 'security-sensors'
-  | 'laundry'
+  | 'notifications'
   /* Darstellung — `appearance` fasst Erscheinungsbild und Bedienung zusammen:
      getrennt waren es zwei sehr kurze Abschnitte, zwischen denen niemand
      zuverlässig raten konnte, wo eine Einstellung wohnt. */
@@ -103,9 +104,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_security_desc(); },
   },
   {
-    id: 'laundry', group: 'home',
-    get label() { return m.settings_section_laundry_label(); }, icon: 'i-washing-machine', tint: 'warm',
-    get description() { return m.settings_section_laundry_desc(); },
+    id: 'notifications', group: 'home',
+    get label() { return m.settings_section_notifications_label(); }, icon: 'i-bell', tint: 'warm',
+    get description() { return m.settings_section_notifications_desc(); },
   },
   {
     id: 'appearance', group: 'appearance',
@@ -186,8 +187,15 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     get label() { return m.settings_entry_security_sensors_label(); },
     keywords: ['fenster', 'tür', 'kontakt', 'bewegung', 'melder', 'sensor', 'sicherheit', 'alles ruhig', 'status'] },
 
-  /* ── Zuhause · Wäsche ── */
-  { id: 'laundry', section: 'laundry', get label() { return m.settings_laundry_title(); },
+  /* ── Zuhause · Benachrichtigungen ── */
+  { id: 'notifications', section: 'notifications', get label() { return m.settings_section_notifications_label(); },
+    keywords: ['benachrichtigung', 'benachrichtigungen', 'notification', 'regel', 'alarm', 'tür', 'fenster',
+      'bewegung', 'rauch', 'energie', 'wäsche', 'gerätezustand'] },
+  { id: 'notifications-history', section: 'notifications', get label() { return m.settings_notifications_history(); },
+    keywords: ['verlauf', 'history', 'logbuch', 'benachrichtigung'] },
+  /* Die Wäsche-Einrichtung ist in die Benachrichtigungen gezogen; die Id bleibt,
+     damit „Wäsche" und „Blueprint" weiterhin ans Ziel führen. */
+  { id: 'laundry', section: 'notifications', get label() { return m.settings_laundry_title(); },
     keywords: ['wäsche', 'waschmaschine', 'trockner', 'laundry', 'helper', 'blueprint', 'leistungssensor'] },
 
   /* ── Zuhause · Hotel Mode ── */
@@ -221,6 +229,10 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['standard', 'default', 'reset', 'werkseinstellung'] },
   { id: 'off-confirm-before', section: 'appearance', get label() { return m.settings_entry_off_confirm_before_label(); },
     keywords: ['mobile', 'lichter', 'fernseher', 'tv', 'uhrzeit', 'bestätigung', 'nachfrage', 'deaktivieren'] },
+  { id: 'edit-mode-auto-lock', section: 'appearance', get label() { return m.settings_entry_edit_auto_label(); },
+    keywords: ['bedienen', 'sperren', 'kindersicherung', 'automatisch', 'timeout', 'minuten', 'edit', 'lock'] },
+  { id: 'edit-mode-pin', section: 'appearance', get label() { return m.settings_entry_edit_pin_label(); },
+    keywords: ['pin', 'code', 'sperre', 'schutz', 'bearbeiten', 'edit', 'lock'] },
   { id: 'standby-now', section: 'ambient', get label() { return m.settings_entry_standby_now_label(); },
     keywords: ['ruhezustand', 'idle', 'bildschirmschoner', 'screensaver', 'schlafen', 'aus'] },
   { id: 'ambient-deep-night', section: 'ambient', get label() { return m.settings_entry_ambient_deep_night_label(); },
@@ -262,8 +274,6 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['apple', 'apple-id', 'caldav', 'app-passwort', 'account', 'einrichten', 'anmelden', 'icloud', 'kalender'] },
   { id: 'ablage-status', section: 'services', get label() { return m.settings_entry_ablage_status_label(); },
     keywords: ['paperless', 'ablage', 'dokumente', 'pin', 'privat', 'archiv', 'scan'] },
-  ...(!IS_DEMO ? [{ id: 'songs-status', section: 'services' as const, get label() { return m.settings_entry_songs_status_label(); },
-    keywords: ['songwerkstatt', 'ace-step', 'acestep', 'musik', 'lieder', 'generator', 'audio'] }] : []),
   ...(AI_CUSTOMIZING_ENABLED ? [{
     id: 'ai-access-status', section: 'services' as const,
     get label() { return m.settings_entry_ai_access_status_label(); },

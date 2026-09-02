@@ -31,7 +31,7 @@ describe('shell presentation lifecycle', () => {
 
   it('keeps inactive panel screens and optional layers behind literal lazy boundaries', () => {
     for (const component of [
-      'EnergyScreen', 'CalendarScreen', 'NotesScreen', 'MediaScreen', 'SongsScreen',
+      'EnergyScreen', 'CalendarScreen', 'NotesScreen', 'MediaScreen',
       'LibraryScreen', 'LibraryDetailScreen', 'SystemScreen', 'AblageScreen',
       'DeviceDetail', 'RoomEdit', 'SceneEdit', 'LayoutConfigDialog', 'AmbientLayer', 'Hud',
     ]) {

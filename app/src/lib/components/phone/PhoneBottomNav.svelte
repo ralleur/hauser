@@ -1,5 +1,6 @@
 <script lang="ts">
   import { phoneNavOrder, navTargetLabel, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
+  import { phoneTargetVisible } from '../../state/module-config.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
 
@@ -15,7 +16,10 @@
     moreButton?: HTMLButtonElement;
   } = $props();
 
-  const mainTargets = $derived(phoneNavOrder.order.slice(0, 3));
+  /* Abgeschaltete Module fallen sofort heraus — die gespeicherte Reihenfolge
+     bleibt unangetastet, sie taugt weiter, sobald das Modul zurückkommt. */
+  const visibleOrder = $derived(phoneNavOrder.order.filter((id) => phoneTargetVisible(id)));
+  const mainTargets = $derived(visibleOrder.slice(0, 3));
   const activeIndex = $derived(active === 'more' ? 3 : Math.max(mainTargets.indexOf(active), 0));
 </script>
 
@@ -29,7 +33,7 @@
       <span>{navTargetLabel(id)}</span>
     </button>
   {/each}
-  {#if phoneNavOrder.order.length > 3}
+  {#if visibleOrder.length > 3}
     <button bind:this={moreButton} class="phone-nav-target pressable" class:is-active={active === 'more'} style:grid-column="4" style:grid-row="1" type="button" aria-current={active === 'more' ? 'page' : undefined} aria-haspopup="dialog" aria-expanded={moreOpen} onclick={(event) => onselect('more', event.currentTarget)}>
       <PhoneNavIcon id="more" />
       <span>{m.nav_more()}</span>

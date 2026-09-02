@@ -14,6 +14,7 @@ import {
   saveSceneConfig,
   sceneDef,
   sceneList,
+  sceneMemberStateFromValue,
   sceneOverride,
   SCENE_CONFIG_KEY,
   SCENES,
@@ -186,5 +187,21 @@ describe('buildSceneCommands', () => {
       ['hell', true, 100],
       ['aus', false, 0],
     ]);
+  });
+});
+
+describe('sceneMemberStateFromValue (Import aus einer HA-Szene)', () => {
+  it('übernimmt Helligkeit und Farbtemperatur eines eingeschalteten Lichts', () => {
+    expect(sceneMemberStateFromValue({ on: true, brightness: 42.4, colorTemp: 2703, color: null }))
+      .toEqual({ on: true, brightness: 42, colorTemp: 2703 });
+  });
+
+  it('ein ausgeschaltetes Gerät trägt nur den Aus-Zustand', () => {
+    expect(sceneMemberStateFromValue({ on: false, brightness: 80 })).toEqual({ on: false });
+  });
+
+  it('ohne verwertbaren Zustand bleibt der Szenen-Default stehen', () => {
+    expect(sceneMemberStateFromValue(undefined)).toBeNull();
+    expect(sceneMemberStateFromValue({ value: 21.5, unit: '°C' })).toBeNull();
   });
 });

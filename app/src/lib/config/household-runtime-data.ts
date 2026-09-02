@@ -123,6 +123,11 @@ const legacyLightsByEntityId = new Map(
 );
 const supportedTabs = new Map(LEGACY_TABS.map((tab) => [tab.id, tab] as const));
 
+/* Aus dem Produkt genommene Module (siehe parked/): bestehende Konfigurationen
+   tragen sie weiter, die Oberfläche übergeht sie. Ohne diese Liste würde die
+   Projektion die ganze Konfiguration zurückweisen und die App nicht starten. */
+const PARKED_MODULES = new Set<string>(['songs']);
+
 function legacySongTargets(): SongMediaTargets {
   return Object.fromEntries(songTargetKeys.map((id) => {
     const target = LEGACY_MEDIA_SEED.find((candidate) => candidate.id === id);
@@ -279,7 +284,8 @@ function projectNavigation(model: HouseholdRuntimeModel): {
   }
 
   const targetIds = new Set<string>();
-  const tabs = model.navigation.map((item) => {
+  const tabs = model.navigation.flatMap((item) => {
+    if (PARKED_MODULES.has(item.target.id)) return [];
     if (item.target.type !== 'module') {
       throw new HouseholdConfigProjectionError(
         'HOUSEHOLD_CONFIG_UNSUPPORTED_NAVIGATION',
@@ -300,7 +306,7 @@ function projectNavigation(model: HouseholdRuntimeModel): {
       );
     }
     targetIds.add(item.target.id);
-    return { id: legacy.id, configName: item.name, icon: legacy.icon };
+    return [{ id: legacy.id, configName: item.name, icon: legacy.icon }];
   });
   if (!targetIds.has('home')) {
     throw new HouseholdConfigProjectionError(
@@ -310,6 +316,7 @@ function projectNavigation(model: HouseholdRuntimeModel): {
   }
 
   const screens = LEGACY_SCREENS.filter((screen) => {
+    if (PARKED_MODULES.has(screen.id)) return false;
     if (screen.id === 'library-detail') return enabled.has('library');
     if (screen.id === 'shopping' || screen.id === 'reminders') return enabled.has('notes');
     return enabled.has(screen.id as ModuleId);

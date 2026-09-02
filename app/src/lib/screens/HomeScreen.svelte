@@ -1,6 +1,7 @@
 <script lang="ts">
   import RoomHero from '../components/RoomHero.svelte';
   import RoomControls from '../components/RoomControls.svelte';
+  import { whenEditable } from '../state/edit-mode.svelte.ts';
   import PanelRoomSelector from '../components/PanelRoomSelector.svelte';
   import RoomImageOnboarding from '../components/RoomImageOnboarding.svelte';
   import CameraPopout from '../components/CameraPopout.svelte';
@@ -37,7 +38,7 @@
        Kontrollflächen. Controls und Raumkacheln sind keine Nachfahren und können
        den Layout-Long-Press deshalb nicht versehentlich auslösen. -->
   <div class="hero-config-hitarea" aria-label={m.home_free_hero_area()}
-       use:longpress={{ onLongPress: () => layoutManager.show() }}></div>
+       use:longpress={{ onLongPress: whenEditable(() => layoutManager.show()) }}></div>
 
   <div class="camera-popout-layer">
     {#each cameraPopouts.items as item (item.entityId)}

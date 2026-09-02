@@ -11,6 +11,11 @@
     type LaundryUserError,
   } from '../../state/laundry-settings.ts';
 
+  /* `embedded`: die Wäsche-Einrichtung wohnt in der Kategorie „Wäsche & Geräte"
+     der Benachrichtigungen. Dort trägt die Kategorie bereits Symbol und Titel,
+     der eigene Kartenkopf wäre eine Dopplung. */
+  let { embedded = false }: { embedded?: boolean } = $props();
+
   const COMPATIBLE_DOMAINS = new Set(['input_boolean', 'binary_sensor', 'sensor', 'input_select', 'select']);
 
   let cards = $state<Record<LaundryDevice, LaundryCardState>>({} as Record<LaundryDevice, LaundryCardState>);
@@ -319,10 +324,14 @@
 {/snippet}
 
 <section data-setting-id="laundry" aria-labelledby="settings-laundry-title">
-  <div class="settings-group">
-    <SettingsCardHead icon="i-washing-machine" tint="warm"
-                      title={m.settings_laundry_title()} sub={m.settings_laundry_intro()} />
-  </div>
+  {#if embedded}
+    <p class="settings-form-msg laundry-intro">{m.settings_laundry_intro()}</p>
+  {:else}
+    <div class="settings-group">
+      <SettingsCardHead icon="i-washing-machine" tint="warm"
+                        title={m.settings_laundry_title()} sub={m.settings_laundry_intro()} />
+    </div>
+  {/if}
   <span id="settings-laundry-title" hidden>{m.settings_laundry_title()}</span>
 
   <datalist id="laundry-compatible-sources">
@@ -408,6 +417,7 @@
   .laundry-check input { accent-color: var(--color-accent-warm); }
 
   .laundry-current { margin: 0; }
+  .laundry-intro { margin: 0 0 var(--space-3); }
 
   .laundry-confirm,
   .laundry-result {

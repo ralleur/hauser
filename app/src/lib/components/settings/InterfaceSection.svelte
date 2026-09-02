@@ -10,7 +10,9 @@
      das, was man oft ändert. */
   import AppearanceSection from './AppearanceSection.svelte';
   import LayoutSection from './LayoutSection.svelte';
+  import EditModeSection from './EditModeSection.svelte';
 </script>
 
 <AppearanceSection />
 <LayoutSection />
+<EditModeSection />

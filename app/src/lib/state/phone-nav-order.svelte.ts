@@ -8,7 +8,7 @@ import { HOUSEHOLD_DATA_SOURCE, NAV_TABS } from '../config/household-runtime-dat
 
 const STORAGE_KEY = 'hmi:phone-nav-order.v2';
 
-export type PhoneNavTarget = 'home' | 'shopping' | 'reminders' | 'calendar' | 'energy' | 'media' | 'songs' | 'ablage' | 'system';
+export type PhoneNavTarget = 'home' | 'shopping' | 'reminders' | 'calendar' | 'energy' | 'media' | 'ablage' | 'system';
 
 /* `label` als Getter (ADR-021) — siehe nav.svelte.ts. */
 export const PHONE_NAV_TARGETS: readonly { id: PhoneNavTarget; readonly label: string }[] = [
@@ -18,7 +18,6 @@ export const PHONE_NAV_TARGETS: readonly { id: PhoneNavTarget; readonly label: s
   { id: 'calendar', get label() { return m.nav_calendar(); } },
   { id: 'energy', get label() { return m.nav_energy(); } },
   { id: 'media', get label() { return m.nav_media(); } },
-  { id: 'songs', get label() { return m.nav_songs(); } },
   { id: 'ablage', get label() { return m.nav_files(); } },
   { id: 'system', get label() { return m.nav_system(); } },
 ];

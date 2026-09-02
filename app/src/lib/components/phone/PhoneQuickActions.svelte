@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
   import Icon from '../Icon.svelte';
-  import { fmtTemp } from '../../format.ts';
+  import ClimatePill from '../ClimatePill.svelte';
   import { centralClimate } from '../../state/climate-central.svelte.ts';
   import {
     shouldConfirmHomeOff,
@@ -12,7 +12,7 @@
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
   import { m } from '../../../paraglide/messages.js';
 
-  let { online, currentTemperature }: { online: boolean; currentTemperature: number | null } = $props();
+  let { online }: { online: boolean } = $props();
 
   const vacationActive = $derived(vacationModeActive());
   const settingsLoader = createPhoneSettingsLoader();
@@ -39,25 +39,9 @@
       <Icon name="i-power" cls="icon icon-md" />
       <span>{m.phone_off()}</span>
     </button>
-    <div class="climate-dock phone-climate-dock" aria-label={m.phone_climate_central()}>
-      <button class="cd-key cd-key-down pressable" type="button" aria-label={m.phone_climate_colder()}
-              onclick={() => centralClimate.step(-0.5)}><Icon name="i-minus" cls="icon cd-step-icon" /></button>
-      <div class="cd-readout phone-climate-readout">
-        <div class="phone-climate-reading">
-          <span class="phone-climate-label">{m.climate_current()}</span>
-          <span class="phone-climate-current-value num">
-            {currentTemperature === null ? '–' : `${fmtTemp(currentTemperature)}°`}
-          </span>
-        </div>
-        <span class="phone-climate-separator" aria-hidden="true"></span>
-        <div class="phone-climate-reading">
-          <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
-          <span class="phone-climate-label">{m.climate_target()}</span>
-        </div>
-      </div>
-      <button class="cd-key cd-key-up pressable" type="button" aria-label={m.phone_climate_warmer()}
-              onclick={() => centralClimate.step(0.5)}><Icon name="i-plus" cls="icon cd-step-icon" /></button>
-    </div>
+    <ClimatePill label={m.phone_climate_central()}
+                 coolerLabel={m.phone_climate_colder()}
+                 warmerLabel={m.phone_climate_warmer()} />
     <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
             type="button" disabled={!online} aria-pressed={vacationActive}
             aria-label={vacationActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()}

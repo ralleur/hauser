@@ -11,7 +11,6 @@
   import SettingsCardHead from './SettingsCardHead.svelte';
   import { settingsValues, setLibraryMode } from '../../state/settings.svelte.ts';
   import { aiHealth } from '../../state/ai-health.svelte.ts';
-  import { SONG_LYRICS_MODEL } from '../../state/songs.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 
@@ -42,18 +41,4 @@
   </div>
 </div>
 
-{#if !IS_DEMO}
-  <div class="settings-group">
-    <SettingsCardHead icon="i-music-note" tint="cool"
-                      title={m.settings_entry_ai_song_lyrics_label()} sub={m.sys_ai_song_lyrics_hint()} />
-    <div class="settings-row" data-setting-id="ai-song-lyrics">
-      <span class="settings-row-icon"><Icon name="i-creation" cls="icon icon-md" /></span>
-      <div class="settings-row-text">
-        <span class="settings-row-label">{m.sys_ai_model_lyrics()}</span>
-        <span class="settings-row-sub num">{accessMissing ? m.sys_ai_needs_access() : SONG_LYRICS_MODEL}</span>
-      </div>
-      <span class="settings-row-value">{m.sys_ai_always_on()}</span>
-    </div>
-  </div>
-{/if}
 <p class="settings-note">{m.sys_media_note()}</p>

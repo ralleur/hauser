@@ -8,6 +8,7 @@ import { isIP } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { Readable } from 'node:stream';
 import {
   HA_SUPERVISOR_CORE_URL,
   HA_SUPERVISOR_WEBSOCKET_URL,
@@ -177,6 +178,22 @@ const LAUNDRY_BODY_MAX = 16 * 1024;
 const LAUNDRY_SESSION_TTL_MS = 2 * 60 * 1000;
 const LAUNDRY_BLUEPRINT_PATH = 'hauser/laundry-power-cycle-v1.yaml';
 const LAUNDRY_BLUEPRINT_FILE = fileURLToPath(new URL('./public/blueprints/automation/laundry-power-cycle-v1.yaml', import.meta.url));
+/* Benachrichtigungsregeln (B-04B): Regelliste als kleine JSON-Datei, die
+   Auslösung selbst liegt als Blueprint-Automation in Home Assistant. */
+const NOTIFICATION_RULES_PATH = process.env.HMI_NOTIFICATION_RULES_PATH
+  || resolve(homedir(), '.local', 'share', 'smart-home-hmi', 'notification-rules.json');
+const NOTIFICATION_BLUEPRINT_DIR = fileURLToPath(new URL('./public/blueprints/automation/', import.meta.url));
+const NOTIFICATION_BLUEPRINTS = Object.freeze({
+  state: { path: 'hauser/notify-state-v1.yaml', file: 'notify-state-v1.yaml' },
+  above: { path: 'hauser/notify-above-v1.yaml', file: 'notify-above-v1.yaml' },
+  below: { path: 'hauser/notify-below-v1.yaml', file: 'notify-below-v1.yaml' },
+});
+const NOTIFICATION_AUTOMATION_PREFIX = 'hauser_notif_';
+const NOTIFICATION_ID_PREFIX = 'hauser_rule_';
+const NOTIFICATION_CATEGORY_IDS = new Set([
+  'laundry', 'doors-windows', 'motion-presence', 'safety', 'climate', 'device-health', 'energy', 'custom',
+]);
+const NOTIFICATION_COLORS = new Set(['info', 'success', 'warning', 'critical', 'neutral']);
 const REQUIRED_WRITABLE_DIRS = (process.env.HMI_REQUIRED_WRITABLE_DIRS || '')
   .split(',').map((path) => path.trim()).filter(Boolean);
 /* AMBIENT-MAP S3: Standortkonfiguration und Kartenasset gehören dem Server.
@@ -238,6 +255,7 @@ const SHARED_CONFIG_KEYS = new Set([
   'hmi:device-config:v1', 'hmi:scene-config:v1', 'hmi:home-layout:v1',
   'hmi:light-icon-overrides:v1', 'hmi:calendar-selected', 'hmi:reminders-selected',
   'hmi:shopping-config:v1', 'hmi:reminder-persons:v1',
+  'hmi:paperless-url', 'hmi:paperless-token',
 ]);
 const SHARED_CONFIG_VALUE_MAX = 256 * 1024;
 
@@ -4303,11 +4321,15 @@ function readKeychainSecret(account, service, required = false) {
   return '';
 }
 
+/* `token` darf eine Funktion sein: dann wird der Wert bei jedem Zugriff neu
+   gelesen — die Ablage lässt sich so aus der Oberfläche konfigurieren, ohne
+   den Server neu zu starten. */
 export function createAblageAccess(pin = '', token = '', now = () => Date.now()) {
   const sessions = new Map();
   const attempts = new Map();
+  const readToken = typeof token === 'function' ? token : () => token;
 
-  function configured() { return Boolean(pin && token); }
+  function configured() { return Boolean(pin && readToken()); }
   function cookieToken(req) {
     const match = String(req.headers.cookie || '').match(/(?:^|;\s*)hmi_ablage=([a-f0-9]{64})(?:;|$)/);
     return match?.[1] || '';
@@ -4347,7 +4369,7 @@ export function createAblageAccess(pin = '', token = '', now = () => Date.now())
     const session = cookieToken(req);
     if (session) sessions.delete(session);
   }
-  return { authenticated, configured, lock, token, unlock };
+  return { authenticated, configured, lock, get token() { return readToken(); }, unlock };
 }
 
 /**
@@ -5251,6 +5273,7 @@ const HOTEL_ADMIN_ONLY_PREFIXES = [
   '/api/room-image-assets',
   '/api/ablage',
   '/api/laundry',
+  '/api/notifications',
   '/api/reminders',
   '/api/songs',
   '/notion-bridge',
@@ -6958,6 +6981,12 @@ function serveConfig(req, res, store, configMutations, assertSetupRecoveryHealth
   });
 }
 
+/* `/api/household-modules/:id` — schmaler Schalter für einen Screen. */
+function householdModuleMatch(req) {
+  const match = String(req.url || '').split('?')[0].match(/^\/api\/household-modules\/([a-z-]+)$/);
+  return match ? match[1] : null;
+}
+
 function setupRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   return req.method === 'POST' && requestOriginAllowed(req, allowedOrigins);
 }
@@ -7262,6 +7291,47 @@ async function serveHaCaldavFlow(req, res, { connectionMode, supervisorClientFac
 /* Same-Origin-Laufzeitauskunft: sagt Wizard und Runtime, ob dieser Server die
    Home-Assistant-Verbindung selbst vermittelt. Antwortet in beiden Betriebsarten
    und liefert nie Credentials. */
+/* Kamera-Bilder im App-Modus: Der Browser kennt dort keine HA-Adresse und
+   keinen Token; er lädt Standbild und MJPEG-Strom von diesem Ursprung, der
+   Server reicht beides über den internen Zugang durch. Der kurzlebige
+   Kamera-Token aus `entity_picture` wird als Query mitgegeben und von HA
+   selbst geprüft; die Autorisierung trägt der Supervisor-Token. */
+const HA_CAMERA_PROXY_PATTERN = /^\/api\/camera_proxy(?:_stream)?\/camera\.[a-z0-9_]+(?:\?[A-Za-z0-9_=&.-]*)?$/;
+
+function haCameraProxyRoute(url) {
+  return HA_CAMERA_PROXY_PATTERN.test(url);
+}
+
+async function serveHaCameraProxy(req, res, { connectionMode, supervisorClientFactory }) {
+  if (connectionMode !== 'supervisor') {
+    jsonResponse(res, 404, { ok: false, code: 'HA_CAMERA_PROXY_NOT_AVAILABLE' });
+    return;
+  }
+  const controller = new AbortController();
+  res.on('close', () => controller.abort());
+  const client = supervisorClientFactory();
+  try {
+    const upstream = await client.stream(req.url, { signal: controller.signal });
+    if (controller.signal.aborted) return;
+    const headers = { 'cache-control': 'no-store' };
+    for (const name of ['content-type', 'content-length']) {
+      const value = upstream.headers.get(name);
+      if (value) headers[name] = value;
+    }
+    res.writeHead(upstream.status, headers);
+    if (!upstream.body) { res.end(); return; }
+    Readable.fromWeb(upstream.body).on('error', () => res.end()).pipe(res);
+  } catch (error) {
+    if (controller.signal.aborted) return;
+    jsonResponse(res, typeof error?.status === 'number' ? error.status : 502, {
+      ok: false,
+      code: typeof error?.code === 'string' ? error.code : 'HA_SUPERVISOR_UNREACHABLE',
+    });
+  } finally {
+    client.close();
+  }
+}
+
 function serveHaConnection(res, { connectionMode, supervisorAvailable }) {
   jsonResponse(res, 200, {
     ok: true,
@@ -8730,6 +8800,250 @@ function serveLaundry(req, res, coordinator, route, origin) {
   });
 }
 
+/* ── Benachrichtigungsregeln (B-04B) ──
+   Die App ist Konfigurator und Anzeige, Home Assistant übernimmt Timer und
+   Auslösung: jede aktive Regel × Auslöser wird zu einer Automation aus einem
+   Hauser-Blueprint, die eine Persistent Notification mit der Regel-Id erzeugt.
+   Der Server hält die Regelliste als JSON-Datei und gleicht die Automationen
+   bei jedem Speichern ab: anlegen, aktualisieren, verwaiste entfernen. */
+const NOTIFICATION_RULE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const NOTIFICATION_TRIGGER_KEY = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+const NOTIFICATION_ENTITY_ID = /^[a-z][a-z0-9_]*\.[a-z0-9_]+$/;
+
+function createNotificationError(code, status, message) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  return error;
+}
+
+function notificationPublicError(error) {
+  const code = typeof error?.code === 'string' ? error.code : null;
+  if (code && typeof error.status === 'number') {
+    return {
+      status: error.status,
+      payload: { ok: false, code: code.replace(/^LAUNDRY_/, 'NOTIFICATIONS_'), message: String(error.message || '') },
+    };
+  }
+  return {
+    status: 500,
+    payload: { ok: false, code: 'NOTIFICATIONS_INTERNAL', message: 'Die Benachrichtigungsregeln konnten nicht verarbeitet werden.' },
+  };
+}
+
+function notificationObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : null;
+}
+
+function parseNotificationTrigger(value) {
+  const raw = notificationObject(value);
+  if (!raw || typeof raw.key !== 'string' || !NOTIFICATION_TRIGGER_KEY.test(raw.key)) return null;
+  if (typeof raw.label !== 'string' || !raw.label.trim() || raw.label.length > 120) return null;
+  if (typeof raw.enabled !== 'boolean') return null;
+  if (!['state', 'above', 'below'].includes(raw.kind)) return null;
+  if (!Number.isInteger(raw.delayMinutes) || raw.delayMinutes < 0 || raw.delayMinutes > 1440) return null;
+  const trigger = { key: raw.key, label: raw.label.trim(), enabled: raw.enabled, kind: raw.kind, delayMinutes: raw.delayMinutes };
+  if (raw.kind === 'state') {
+    if (!Array.isArray(raw.to) || raw.to.length < 1 || raw.to.length > 16) return null;
+    const to = raw.to.map((entry) => (typeof entry === 'string' ? entry.trim().toLowerCase() : ''));
+    if (to.some((entry) => !entry || entry.length > 64)) return null;
+    trigger.to = [...new Set(to)];
+  } else {
+    if (typeof raw.value !== 'number' || !Number.isFinite(raw.value) || Math.abs(raw.value) > 1_000_000) return null;
+    trigger.value = raw.value;
+  }
+  return trigger;
+}
+
+/** Spiegel von `src/lib/state/notification-rules.ts`: strikt, fail-closed. */
+export function parseNotificationRules(value) {
+  if (!Array.isArray(value) || value.length > 64) return null;
+  const rules = [];
+  for (const entry of value) {
+    const raw = notificationObject(entry);
+    if (!raw || typeof raw.id !== 'string' || !NOTIFICATION_RULE_ID.test(raw.id)) return null;
+    if (!NOTIFICATION_CATEGORY_IDS.has(raw.category)) return null;
+    if (typeof raw.name !== 'string' || !raw.name.trim() || raw.name.length > 80) return null;
+    if (typeof raw.entityId !== 'string' || !NOTIFICATION_ENTITY_ID.test(raw.entityId)) return null;
+    if (typeof raw.enabled !== 'boolean') return null;
+    if (!Array.isArray(raw.triggers) || raw.triggers.length < 1 || raw.triggers.length > 8) return null;
+    if (rules.some((known) => known.id === raw.id)) return null;
+    const triggers = [];
+    for (const item of raw.triggers) {
+      const trigger = parseNotificationTrigger(item);
+      if (!trigger || triggers.some((known) => known.key === trigger.key)) return null;
+      triggers.push(trigger);
+    }
+    rules.push({
+      id: raw.id, category: raw.category, name: raw.name.trim(), entityId: raw.entityId, enabled: raw.enabled, triggers,
+    });
+  }
+  return rules;
+}
+
+/** Kachelfarbe je Kategorie; Spiegel von `NOTIFICATION_COLORS` im Client. */
+export function parseNotificationColors(value) {
+  if (value === undefined || value === null) return {};
+  const raw = notificationObject(value);
+  if (!raw) return null;
+  const colors = {};
+  for (const [key, entry] of Object.entries(raw)) {
+    if (!NOTIFICATION_CATEGORY_IDS.has(key)) return null;
+    if (!NOTIFICATION_COLORS.has(entry)) return null;
+    colors[key] = entry;
+  }
+  return colors;
+}
+
+export function createNotificationRulesStore(path = NOTIFICATION_RULES_PATH) {
+  function read() {
+    try {
+      const data = JSON.parse(readFileSync(path, 'utf8'));
+      const rules = data?.version === 1 ? parseNotificationRules(data.rules) : null;
+      const colors = rules ? parseNotificationColors(data.colors) : null;
+      if (rules && colors) {
+        return { version: 1, updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null, rules, colors };
+      }
+    } catch { /* erster Start oder unlesbar: leere Liste */ }
+    return { version: 1, updatedAt: null, rules: [], colors: {} };
+  }
+
+  function write(rules, colors = {}) {
+    const data = { version: 1, updatedAt: new Date().toISOString(), rules, colors };
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    const temporary = `${path}.${process.pid}.tmp`;
+    writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+    renameSync(temporary, path);
+    chmodSync(path, 0o600);
+    return data;
+  }
+
+  return { read, write };
+}
+
+function notificationHaSafe(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+}
+
+/** Welche Automationen die Regelliste in Home Assistant verlangt. */
+export function notificationAutomationSpecs(rules) {
+  const specs = [];
+  for (const rule of rules) {
+    if (!rule.enabled) continue;
+    for (const trigger of rule.triggers) {
+      if (!trigger.enabled) continue;
+      const blueprint = NOTIFICATION_BLUEPRINTS[trigger.kind];
+      const input = {
+        source_entity: rule.entityId,
+        hold_minutes: trigger.delayMinutes,
+        notification_id: `${NOTIFICATION_ID_PREFIX}${notificationHaSafe(rule.id)}`,
+        title: rule.name,
+        message: trigger.label,
+        ...(trigger.kind === 'state' ? { to_states: trigger.to } : { threshold: trigger.value }),
+      };
+      specs.push({
+        id: `${NOTIFICATION_AUTOMATION_PREFIX}${notificationHaSafe(rule.id)}__${notificationHaSafe(trigger.key)}`,
+        config: {
+          alias: `Hauser · ${rule.name} · ${trigger.label}`,
+          description: `Hauser notification rule ${rule.id} / ${trigger.key}`,
+          use_blueprint: { path: blueprint.path, input },
+          mode: 'restart',
+        },
+      });
+    }
+  }
+  return specs;
+}
+
+function sameNotificationAutomation(body, expected) {
+  return Boolean(body && typeof body === 'object'
+    && body.alias === expected.alias
+    && body.description === expected.description
+    && body.mode === expected.mode
+    && body.use_blueprint?.path === expected.use_blueprint.path
+    && laundryFingerprint(body.use_blueprint.input) === laundryFingerprint(expected.use_blueprint.input));
+}
+
+export async function syncNotificationAutomations(client, rules, blueprintDir = NOTIFICATION_BLUEPRINT_DIR) {
+  const specs = notificationAutomationSpecs(rules);
+  const summary = { created: 0, updated: 0, deleted: 0, unchanged: 0 };
+
+  const neededBlueprints = new Set(specs.map((spec) => spec.config.use_blueprint.path));
+  if (neededBlueprints.size) {
+    const blueprints = await client.ws('blueprint/list', { domain: 'automation' });
+    for (const blueprint of Object.values(NOTIFICATION_BLUEPRINTS)) {
+      if (!neededBlueprints.has(blueprint.path) || blueprintExists(blueprints, blueprint.path)) continue;
+      let yaml;
+      try { yaml = readFileSync(join(blueprintDir, blueprint.file), 'utf8'); } catch {
+        throw createNotificationError('NOTIFICATIONS_BLUEPRINT_MISSING', 500, `Der mitgelieferte Blueprint ${blueprint.file} fehlt.`);
+      }
+      await client.ws('blueprint/save', { domain: 'automation', path: blueprint.path, yaml, allow_override: false });
+    }
+  }
+
+  for (const spec of specs) {
+    const current = await laundryRest(client, 'GET', `/api/config/automation/config/${spec.id}`, undefined, [200, 404]);
+    if (current.status === 200 && sameNotificationAutomation(current.body, spec.config)) {
+      summary.unchanged += 1;
+      continue;
+    }
+    await laundryRest(client, 'POST', `/api/config/automation/config/${spec.id}`, spec.config, [200, 201]);
+    if (current.status === 200) summary.updated += 1; else summary.created += 1;
+  }
+
+  const wanted = new Set(specs.map((spec) => spec.id));
+  const registry = await client.ws('config/entity_registry/list');
+  const stale = (Array.isArray(registry) ? registry : []).filter((entry) => entry?.platform === 'automation'
+    && typeof entry.unique_id === 'string'
+    && entry.unique_id.startsWith(NOTIFICATION_AUTOMATION_PREFIX)
+    && !wanted.has(entry.unique_id));
+  for (const entry of stale) {
+    await laundryRest(client, 'DELETE', `/api/config/automation/config/${entry.unique_id}`, undefined, [200, 204, 404]);
+    summary.deleted += 1;
+  }
+  return summary;
+}
+
+function serveNotifications(req, res, service) {
+  const pathname = new URL(req.url || '/', 'http://hmi.local').pathname;
+  if (pathname !== '/api/notifications/rules') {
+    jsonResponse(res, 404, { ok: false, code: 'NOTIFICATIONS_ROUTE_NOT_FOUND', message: 'Die Benachrichtigungs-Route wurde nicht gefunden.' });
+    return;
+  }
+  if (req.method === 'GET') {
+    const data = service.store.read();
+    jsonResponse(res, 200, {
+      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {},
+    });
+    return;
+  }
+  if (req.method !== 'PUT') {
+    jsonResponse(res, 405, { ok: false, code: 'METHOD_NOT_ALLOWED', message: 'Die Regel-Route unterstützt GET und PUT.' }, { allow: 'GET, PUT' });
+    return;
+  }
+  readSmallJson(req, res, async (payload) => {
+    const rules = parseNotificationRules(payload?.rules);
+    const colors = parseNotificationColors(payload?.colors);
+    if (!rules || !colors) {
+      jsonResponse(res, 422, { ok: false, code: 'NOTIFICATIONS_INVALID_RULES', message: 'Die Regelliste ist ungültig.' });
+      return;
+    }
+    let data;
+    try { data = service.store.write(rules, colors); } catch {
+      jsonResponse(res, 500, { ok: false, code: 'NOTIFICATIONS_WRITE_FAILED', message: 'Die Regeln konnten nicht gespeichert werden.' });
+      return;
+    }
+    let sync = null;
+    let syncError = null;
+    try { sync = await service.sync(rules); } catch (error) {
+      syncError = notificationPublicError(error).payload;
+    }
+    jsonResponse(res, 200, {
+      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {}, sync, syncError,
+    });
+  });
+}
+
 export function staticPathFor(url, staticRoot = DIST) {
   const root = resolve(staticRoot);
   const pathname = decodeURIComponent(new URL(url, 'http://hmi.local').pathname);
@@ -9699,6 +10013,170 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }
 
+/* Ein Modul an- oder abschalten. Schmaler Schreibzugriff auf die
+   Haushalts-Konfiguration nach dem Muster der Raumbild-Zuweisung: ETag-gesichert,
+   in derselben Mutations-Serialisierung, ohne Home-Assistant-Zugangsdaten in der
+   Anfrage. `enabledModules` und `navigation` müssen zusammenpassen — die
+   Projektion weist sonst die ganze Konfiguration zurück. */
+const TOGGLEABLE_HOUSEHOLD_MODULES = new Map([
+  ['energy', ['energy']],
+  ['calendar', ['calendar']],
+  ['notes', ['notes', 'shopping', 'reminders']],
+  ['media', ['media']],
+  ['library', ['library']],
+  ['ablage', ['ablage']],
+]);
+
+async function serveHouseholdModuleToggle(req, res, moduleId, context) {
+  try {
+    context.assertSetupRecoveryHealthy();
+    const ids = TOGGLEABLE_HOUSEHOLD_MODULES.get(moduleId);
+    if (!ids) return jsonResponse(res, 404, { ok: false, code: 'MODULE_UNKNOWN', message: 'Dieses Modul lässt sich nicht schalten.' });
+    const payload = await readRoomImageJsonBody(req);
+    if (!payload || typeof payload.enabled !== 'boolean') {
+      return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Die Modul-Anfrage ist ungültig.' });
+    }
+    const name = typeof payload.name === 'string' && payload.name.trim() ? payload.name.trim().slice(0, 64) : moduleId;
+    const matches = rawHeaderValues(req, 'if-match');
+    if (matches.length !== 1) {
+      return jsonResponse(res, 428, { ok: false, code: 'CONFIG_PRECONDITION_REQUIRED', message: 'Der Household-ETag fehlt.' });
+    }
+    const result = await context.configMutations.run(() => {
+      context.assertSetupRecoveryHealthy();
+      const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
+      if (matches[0] !== snapshot.etag) return { type: 'stale' };
+      const document = snapshot.document;
+      const modules = new Set(document.enabledModules);
+      for (const id of ids) {
+        if (payload.enabled) modules.add(id);
+        else modules.delete(id);
+      }
+      document.enabledModules = [...modules];
+      /* Die Energie-Sektion haengt am Modul: ohne Modul muss sie fehlen, mit
+         Modul muss sie da sein (INCONSISTENT_MODULE). Beim Anschalten entsteht
+         eine leere Sektion, die die Dienste-Seite dann fuellt. */
+      if (moduleId === 'energy') {
+        if (!payload.enabled) document.energy = null;
+        else if (!document.energy) {
+          document.energy = {
+            sensors: { productionPower: null, consumptionPower: [] },
+            kpis: { producedToday: null, consumedToday: null, fedInToday: null, drawnToday: null },
+          };
+        }
+      }
+      const navigation = document.navigation.filter((item) => item.target.id !== moduleId);
+      if (payload.enabled) {
+        const systemIndex = navigation.findIndex((item) => item.target.id === 'system');
+        const entry = { id: `nav-${moduleId}`, name, order: 0, target: { type: 'module', id: moduleId } };
+        // Die Reihenfolge zählt ab 0 — so steht sie in der Konfiguration.
+        if (systemIndex >= 0) navigation.splice(systemIndex, 0, entry);
+        else navigation.push(entry);
+      }
+      document.navigation = navigation.map((item, index) => ({ ...item, order: index }));
+      const written = writeRoomImageHousehold(
+        context.householdConfigPath,
+        document,
+        context.publishStep,
+        context.latchSetupRecoveryFailure,
+        context.assertSetupRecoveryHealthy,
+      );
+      return { type: 'written', etag: written.etag, enabled: payload.enabled };
+    });
+    if (result.type === 'stale') {
+      return jsonResponse(res, 412, { ok: false, code: 'CONFIG_PRECONDITION_FAILED', message: 'Die Household Config wurde zwischenzeitlich geändert.' });
+    }
+    jsonResponse(res, 200, { ok: true, module: moduleId, enabled: result.enabled, etag: result.etag });
+  } catch (error) {
+    console.warn('[hauser] Modulschalter fehlgeschlagen:', error?.code ?? error);
+    jsonResponse(res, 500, { ok: false, code: 'MODULE_WRITE_FAILED', message: 'Das Modul konnte nicht geschaltet werden.' });
+  }
+}
+
+/* Energie-Entitäten setzen: eine Erzeugungsquelle, beliebig viele Verbraucher.
+   Wie der Modulschalter ein schmaler, ETag-gesicherter Schreibzugriff auf die
+   Haushalts-Konfiguration — die Oberfläche schickt die Auswahl, der Server
+   baut daraus die `energy`-Sektion. */
+function normalizeEnergySelection(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const entity = (value) => (typeof value === 'string' && /^[a-z_]+\.[a-z0-9_]+$/.test(value) ? value : null);
+  const production = payload.production === null || payload.production === undefined
+    ? null
+    : entity(payload.production);
+  if (payload.production && !production) return null;
+  if (!Array.isArray(payload.consumption) || payload.consumption.length > 64) return null;
+  const consumption = [];
+  const seen = new Set();
+  for (const item of payload.consumption) {
+    const entityId = entity(item?.entityId ?? item);
+    if (!entityId || seen.has(entityId) || entityId === production) continue;
+    seen.add(entityId);
+    const name = typeof item?.name === 'string' && item.name.trim()
+      ? item.name.trim().slice(0, 64)
+      : entityId.split('.')[1].replace(/_/g, ' ');
+    consumption.push({ id: `load_${consumption.length + 1}`, name, entityId });
+  }
+  const kpi = (value) => (value === null || value === undefined ? null : entity(value));
+  return {
+    production,
+    consumption,
+    kpis: {
+      producedToday: kpi(payload.kpis?.producedToday),
+      consumedToday: kpi(payload.kpis?.consumedToday),
+      fedInToday: kpi(payload.kpis?.fedInToday),
+      drawnToday: kpi(payload.kpis?.drawnToday),
+    },
+  };
+}
+
+async function serveHouseholdEnergy(req, res, context) {
+  try {
+    context.assertSetupRecoveryHealthy();
+    const selection = normalizeEnergySelection(await readRoomImageJsonBody(req));
+    if (!selection) {
+      return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Die Energie-Auswahl ist ungültig.' });
+    }
+    const matches = rawHeaderValues(req, 'if-match');
+    if (matches.length !== 1) {
+      return jsonResponse(res, 428, { ok: false, code: 'CONFIG_PRECONDITION_REQUIRED', message: 'Der Household-ETag fehlt.' });
+    }
+    const result = await context.configMutations.run(() => {
+      context.assertSetupRecoveryHealthy();
+      const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
+      if (matches[0] !== snapshot.etag) return { type: 'stale' };
+      const document = snapshot.document;
+      const previous = document.energy;
+      /* Die Sektion bleibt bestehen, auch wenn nichts ausgewählt ist: bei
+         aktivem Energie-Modul weist die Prüfung `energy: null` zurück
+         (INCONSISTENT_MODULE). Die Tageswerte bleiben, solange die Oberfläche
+         sie nicht selbst schickt — sie hängen an anderen Sensoren. */
+      document.energy = {
+        sensors: { productionPower: selection.production, consumptionPower: selection.consumption },
+        kpis: {
+          producedToday: selection.kpis.producedToday ?? previous?.kpis.producedToday ?? null,
+          consumedToday: selection.kpis.consumedToday ?? previous?.kpis.consumedToday ?? null,
+          fedInToday: selection.kpis.fedInToday ?? previous?.kpis.fedInToday ?? null,
+          drawnToday: selection.kpis.drawnToday ?? previous?.kpis.drawnToday ?? null,
+        },
+      };
+      const written = writeRoomImageHousehold(
+        context.householdConfigPath,
+        document,
+        context.publishStep,
+        context.latchSetupRecoveryFailure,
+        context.assertSetupRecoveryHealthy,
+      );
+      return { type: 'written', etag: written.etag, energy: document.energy };
+    });
+    if (result.type === 'stale') {
+      return jsonResponse(res, 412, { ok: false, code: 'CONFIG_PRECONDITION_FAILED', message: 'Die Household Config wurde zwischenzeitlich geändert.' });
+    }
+    jsonResponse(res, 200, { ok: true, energy: result.energy, etag: result.etag });
+  } catch (error) {
+    console.warn('[hauser] Energie-Auswahl fehlgeschlagen:', error?.code ?? error);
+    jsonResponse(res, 500, { ok: false, code: 'ENERGY_WRITE_FAILED', message: 'Die Energie-Auswahl konnte nicht gespeichert werden.' });
+  }
+}
+
 async function serveManualRoomBackground(req, res, roomId, context) {
   let variantBytes = null;
   try {
@@ -10509,6 +10987,23 @@ function ablageCookie(req, value, maxAge) {
   return `hmi_ablage=${value}; Path=/api/ablage; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }
 
+/* Adresse der Paperless-Instanz: bevorzugt die in der Oberfläche gesetzte,
+   sonst die Vorgabe aus der Umgebung. Ungültige Eingaben fallen zurück. */
+export function paperlessUpstream(url, fallbackHost, fallbackPort) {
+  if (typeof url === 'string' && url.trim()) {
+    try {
+      const parsed = new URL(url.trim());
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return {
+          host: parsed.hostname,
+          port: Number(parsed.port) || (parsed.protocol === 'https:' ? 443 : 80),
+        };
+      }
+    } catch { /* unbrauchbare Adresse: Vorgabe bleibt */ }
+  }
+  return { host: fallbackHost, port: fallbackPort };
+}
+
 export function paperlessTargetPath(url) {
   const parsed = new URL(url, 'http://hmi.local');
   if (parsed.pathname === '/api/ablage/documents/import' && !parsed.search) {
@@ -10989,6 +11484,10 @@ export function createHmiServer(
     laundryNow = () => Date.now(),
     laundrySleep = () => new Promise((resolvePromise) => setTimeout(resolvePromise, 250)),
     laundryBlueprintFile = LAUNDRY_BLUEPRINT_FILE,
+    notificationRulesPath = NOTIFICATION_RULES_PATH,
+    notificationRulesStore = null,
+    notificationSync = null,
+    notificationBlueprintDir = NOTIFICATION_BLUEPRINT_DIR,
     configMutationCoordinator = null,
     roomImageAuthConfig = createRoomImageAuthConfig(),
     roomImageUploadRoot = ROOM_IMAGE_UPLOAD_ROOT,
@@ -11067,7 +11566,10 @@ export function createHmiServer(
   }
   const householdConfigReader = createHouseholdConfigReader(householdConfigPath);
   const familyStore = familyData || createFamilyDataStore(familyDataPath);
-  const ablageAccess = createAblageAccess(paperlessPin, paperlessToken);
+  const ablageAccess = createAblageAccess(
+    paperlessPin,
+    () => configStore.read()['hmi:paperless-token'] || paperlessToken,
+  );
   const hotelStore = hotelModeStore || createHotelModeStore(hotelModeDataPath || resolveHotelModeDataPath(configPath));
   const hotelAdminAccess = createHotelModeAdminAccess(hotelStore, { now: hotelModeNow, sessionMs: hotelModeSessionMs });
   const hotelAdminGate = createHotelModeAdminGate(householdConfigPath, { access: hotelAdminAccess });
@@ -11207,6 +11709,22 @@ export function createHmiServer(
     configMutations,
     assertSetupRecoveryHealthy,
   });
+  const notificationsService = {
+    store: notificationRulesStore ?? createNotificationRulesStore(notificationRulesPath),
+    async sync(rules) {
+      if (notificationSync) return notificationSync(rules);
+      const credentials = resolveServerHaAccess(configStore, haConnectionMode);
+      if (!credentials) {
+        throw createNotificationError('NOTIFICATIONS_HOME_ASSISTANT_NOT_CONFIGURED', 503, 'Home Assistant ist serverseitig nicht konfiguriert.');
+      }
+      const client = laundryClientFactory(credentials);
+      try {
+        return await syncNotificationAutomations(client, rules, notificationBlueprintDir);
+      } finally {
+        client.close();
+      }
+    },
+  };
   /* B-08E11: Der Live-Kanal des App-Modus. Im direkten Modus existiert er
      nicht — dort spricht der Browser weiterhin selbst mit Home Assistant. */
   const haGateway = haGatewayFactory({
@@ -11292,6 +11810,14 @@ export function createHmiServer(
         supervisorAvailable: haConnectionMode !== 'supervisor'
           || haSupervisorClientFactory().available,
       });
+    } else if (haCameraProxyRoute(req.url || '/')
+        && setupReadRequestAllowed(req, allowedOrigins)) {
+      /* Kamera-Bild und -Strom kommen im App-Modus von diesem Ursprung; das
+         Wandpanel sieht sie wie den Ambient-Screen ohne Admin-Anmeldung. */
+      void serveHaCameraProxy(req, res, {
+        connectionMode: haConnectionMode,
+        supervisorClientFactory: haSupervisorClientFactory,
+      });
     } else if (ambientMapPublicRoute(req.url || '/')) {
       /* Plan §6.1/§6.3: Status und Asset des Ambient-Screens liest auch ein
          Hotelgast — deshalb vor dem Admin-Gate, aber ausschließlich in der
@@ -11317,6 +11843,30 @@ export function createHmiServer(
         code: readiness.payload.code,
         message: readiness.payload.message,
       }, { [HOUSEHOLD_CONFIG_MODE_HEADER]: normalizedHouseholdConfigMode });
+    } else if (householdModuleMatch(req) && req.method === 'PUT'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdModuleToggle(req, res, householdModuleMatch(req), {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-energy' && req.method === 'PUT'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdEnergy(req, res, {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-energy') {
+      jsonResponse(res, 403, { ok: false, code: 'ENERGY_ROUTE_FORBIDDEN', message: 'Energie-Auswahl nicht freigegeben.' });
+    } else if ((req.url || '').startsWith('/api/household-modules/')) {
+      jsonResponse(res, 403, { ok: false, code: 'MODULE_ROUTE_FORBIDDEN', message: 'Modulschalter nicht freigegeben.' });
     } else if (serveRoomImages(req, res, {
       authConfig: roomImageAuthConfig,
       allowedOrigins,
@@ -11411,6 +11961,16 @@ export function createHmiServer(
         allowedOrigins,
         notReady: ambientMapNotReady(effectiveMigrationResult, readiness, setupIsRequired),
       });
+    } else if ((req.url || '').startsWith('/api/notifications')) {
+      if (!requestOriginAllowed(req, allowedOrigins)) {
+        jsonResponse(res, 403, {
+          ok: false,
+          code: 'NOTIFICATIONS_ORIGIN_FORBIDDEN',
+          message: 'Die Benachrichtigungs-Anfrage stammt nicht von einer freigegebenen Origin.',
+        });
+      } else {
+        serveNotifications(req, res, notificationsService);
+      }
     } else if ((req.url || '').startsWith('/api/laundry')) {
       const origin = String(req.headers.origin || '');
       if (!readiness.ok || normalizedHouseholdConfigMode !== 'active') {
@@ -11456,7 +12016,10 @@ export function createHmiServer(
     } else if ((req.url || '').startsWith('/api/hotel-mode')) {
       jsonResponse(res, 403, { code: 'HOTEL_ROUTE_FORBIDDEN', message: 'Hotel-Mode-Route nicht freigegeben.' });
     } else if ((req.url || '').startsWith('/api/ablage/') && ablageRequestAllowed(req, allowedOrigins)) {
-      serveAblage(req, res, ablageAccess, paperlessHost, paperlessPort);
+      const upstream = paperlessUpstream(
+        configStore.read()['hmi:paperless-url'], paperlessHost, paperlessPort,
+      );
+      serveAblage(req, res, ablageAccess, upstream.host, upstream.port);
     } else if ((req.url || '').startsWith('/api/ablage')) {
       jsonResponse(res, 403, { error: 'Ablage-Route nicht freigegeben' });
     } else if ((req.url || '') === '/api/household-config-mode'

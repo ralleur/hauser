@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { whenEditable } from '../state/edit-mode.svelte.ts';
   import Icon from './Icon.svelte';
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
@@ -77,7 +78,7 @@
             type="button"
             data-room={room.id}
             class:is-active={selectedId === room.id}
-            use:longpress={{ onLongPress: () => openRoomEdit(room.id) }}
+            use:longpress={{ onLongPress: whenEditable(() => openRoomEdit(room.id)) }}
             onclick={() => onselect(room.id)}
           >
             <div class="room-btn-top">

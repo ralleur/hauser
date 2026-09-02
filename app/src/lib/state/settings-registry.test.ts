@@ -102,9 +102,10 @@ describe('fachliche Gliederung', () => {
     expect(SETTINGS_SECTIONS.map((s) => s.id)).not.toContain('ai-features');
   });
 
-  it('hält Wäsche unter Zuhause statt unter System', () => {
-    expect(settingsEntry('laundry')?.section).toBe('laundry');
-    expect(settingsSection('laundry').group).toBe('home');
+  it('führt Wäsche in die Benachrichtigungen statt in eine eigene Sektion', () => {
+    expect(SETTINGS_SECTIONS.map((s) => s.id)).not.toContain('laundry');
+    expect(settingsEntry('laundry')?.section).toBe('notifications');
+    expect(settingsSection('notifications').group).toBe('home');
     expect(searchSettings('wäsche')[0]?.entry.id).toBe('laundry');
   });
 
@@ -134,7 +135,6 @@ describe('searchSettings', () => {
 
   it('findet die neu sichtbaren Dienste', () => {
     expect(searchSettings('paperless').map((m) => m.entry.id)).toContain('ablage-status');
-    expect(searchSettings('ace-step').map((m) => m.entry.id)).toContain('songs-status');
   });
 
   it('mehrere Wörter sind UND-verknüpft', () => {

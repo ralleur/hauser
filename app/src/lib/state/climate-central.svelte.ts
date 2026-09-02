@@ -17,7 +17,7 @@
 import { appState } from './app.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import type { ClimateValue } from '../adapter/types.ts';
-import { mergedClimate, setClimateTarget, setTarget } from './commands.ts';
+import { mergedClimate, roomTemperature, setClimateTarget, setTarget } from './commands.ts';
 import {
   centralClimateConfig,
   centralRoomDelta,
@@ -36,6 +36,22 @@ function climateTargets(): number[] {
       return climate ? climate.target - centralRoomDelta(room.id) : null;
     })
     .filter((target): target is number => target !== null);
+}
+
+/* Gemessene Ist-Temperatur derselben Auswahl: Mittel über die zentral
+   gesteuerten Räume, bzw. der Ist-Wert der konfigurierten Einzel-Entität.
+   null, wenn kein Raum eine Messung liefert — die UI zeigt dann „–". */
+function currentTemperature(): number | null {
+  if (centralClimateConfig.customEntityId) {
+    const climate = runtime.merged(centralClimateConfig.customEntityId) as ClimateValue | undefined;
+    return typeof climate?.current === 'number' ? climate.current : null;
+  }
+  const measured = appState.rooms
+    .filter((room) => centralRoomIncluded(room.id))
+    .map((room) => roomTemperature(room.id))
+    .filter((t): t is number => t !== null);
+  if (measured.length === 0) return null;
+  return measured.reduce((a, b) => a + b, 0) / measured.length;
 }
 
 export const centralClimate = (() => {
@@ -71,6 +87,7 @@ export const centralClimate = (() => {
 
   return {
     get value() { return value; },
+    get currentValue() { return currentTemperature(); },
     get isSynced() { return synced !== null; },
     get hasClimate() { return centralClimateConfig.customEntityId !== null || climateTargets().length > 0; },
     step(delta: number) { setAll(value + delta); },

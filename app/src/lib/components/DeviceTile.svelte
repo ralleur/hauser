@@ -5,6 +5,7 @@
      öffnen das Detail direkt per Tap (Entscheidung Stufe 1). Der Zustand lebt
      im Icon-Feld; info/temp/media tragen zusätzlich eine kleine Wert-Zeile. */
   import Icon from './Icon.svelte';
+  import { fittext } from '../actions/fittext.ts';
   import { mergedDevice, devicePending, deviceReconcile, toggleDevice } from '../state/commands.ts';
   import { pulse } from '../actions/pulse.ts';
   import { longpress } from '../actions/longpress.ts';
@@ -85,7 +86,8 @@
     {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
   </span>
   <span class="light-tile-label">
-    <span class="light-tile-name">{device.name}</span>
+    <!-- Lange Gerätenamen werden kleiner statt abgeschnitten. -->
+    <span class="light-tile-name" use:fittext={{ text: device.name }}>{device.name}</span>
     {#if stateLine !== null}<span class="light-tile-state num">{stateLine}</span>{/if}
   </span>
 </button>
