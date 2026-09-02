@@ -126,6 +126,29 @@ describe('active household runtime projection', () => {
     expect(projected.runtimeModel.commandContracts).toEqual(model.commandContracts);
   });
 
+  it('projects window and presence roles per room and keeps them subscribed', () => {
+    const config = syntheticActiveConfig();
+    const studio = config.rooms.find((room) => room.id === 'studio')!;
+    studio.visibleEntities.push(
+      { id: 'north', name: 'Fenster Nord', entityId: 'binary_sensor.studio_window_north', role: 'window' },
+      { id: 'south', name: 'Fenster Süd', entityId: 'binary_sensor.studio_window_south', role: 'window' },
+      { id: 'motion', name: 'Bewegung', entityId: 'binary_sensor.studio_motion', role: 'presence' },
+    );
+    const model = compileValid(config);
+    const projected = projectActiveHouseholdData(model);
+
+    expect(projected.ROOM_SEED[0]).toMatchObject({
+      id: 'studio',
+      windowEntityIds: ['binary_sensor.studio_window_north', 'binary_sensor.studio_window_south'],
+      // Das Beispiel bringt bereits einen Melder mit — beide werden projiziert.
+      presenceEntityIds: ['binary_sensor.studio_motion', 'binary_sensor.studio_occupancy'],
+    });
+    // Räume ohne Kontakte bleiben ohne die Felder — kein leeres Array.
+    expect(projected.ROOM_SEED[1]).not.toHaveProperty('windowEntityIds');
+    expect(model.subscriptionEntityIds).toContain('binary_sensor.studio_window_north');
+    expect(model.subscriptionEntityIds).toContain('binary_sensor.studio_motion');
+  });
+
   it('never supplements a synthetic valid config with a legacy entity ID', () => {
     const model = compileValid(syntheticActiveConfig());
     const projected = projectActiveHouseholdData(model);

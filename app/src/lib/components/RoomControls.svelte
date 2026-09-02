@@ -6,7 +6,7 @@
   import DeviceTile from './DeviceTile.svelte';
   import CameraFeed from './CameraFeed.svelte';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity } from '../state/commands.ts';
+  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
   import { type SceneId } from '../state/scene-config.ts';
   import { applyScene, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
@@ -102,7 +102,7 @@
   {#if climate}
     <section class="detail-section climate-section">
       <div class="climate-card">
-        <div class="climate-warning" class:is-visible={room.windowOpen}>
+        <div class="climate-warning" class:is-visible={roomWindowOpen(room.id, room.windowOpen)}>
           <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
         </div>
         <div class="climate-current">

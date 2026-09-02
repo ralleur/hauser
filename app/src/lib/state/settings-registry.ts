@@ -37,6 +37,7 @@ export type SettingsGroupId =
 export type SettingsSectionId =
   /* Zuhause */
   | 'rooms-devices'
+  | 'security-sensors'
   | 'laundry'
   /* Darstellung — `appearance` fasst Erscheinungsbild und Bedienung zusammen:
      getrennt waren es zwei sehr kurze Abschnitte, zwischen denen niemand
@@ -95,6 +96,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'rooms-devices', group: 'home',
     get label() { return m.settings_section_rooms_devices_label(); }, icon: 'i-home', tint: 'warm',
     get description() { return m.settings_section_rooms_devices_desc(); },
+  },
+  {
+    id: 'security-sensors', group: 'home',
+    get label() { return m.settings_section_security_label(); }, icon: 'i-shield', tint: 'success',
+    get description() { return m.settings_section_security_desc(); },
   },
   {
     id: 'laundry', group: 'home',
@@ -174,6 +180,11 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['umbenennen', 'symbole', 'lampen', 'lichter', 'reset', 'standard'] },
   { id: 'reset-scenes', section: 'rooms-devices', get label() { return m.settings_entry_reset_scenes_label(); },
     keywords: ['scenes', 'presets', 'reset', 'standard'] },
+
+  /* ── Zuhause · Fenster & Bewegung ── */
+  { id: 'security-sensors', section: 'security-sensors',
+    get label() { return m.settings_entry_security_sensors_label(); },
+    keywords: ['fenster', 'tür', 'kontakt', 'bewegung', 'melder', 'sensor', 'sicherheit', 'alles ruhig', 'status'] },
 
   /* ── Zuhause · Wäsche ── */
   { id: 'laundry', section: 'laundry', get label() { return m.settings_laundry_title(); },

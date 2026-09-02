@@ -12,8 +12,10 @@ import {
   climateEntityId,
   HOME_OFF_SCRIPT_ENTITY,
   lightEntityId,
+  presenceEntityIds,
   tempSensorEntityId,
   VACATION_MODE_ENTITY,
+  windowEntityIds,
 } from './entities.ts';
 import type { LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
 import type { Light } from './app.svelte.ts';
@@ -23,6 +25,19 @@ let roomSensorResolver: ((roomId: string, metric: RoomMetric) => string) | null 
 
 export function setRoomSensorResolver(resolver: (roomId: string, metric: RoomMetric) => string): void {
   roomSensorResolver = resolver;
+}
+
+/* Kontakte/Melder eines Raums kommen aus zwei Quellen: den Rollen `window`/
+   `presence` der Haushalts-Config und der gerätelokalen Raum-Konfig. Letztere
+   liegt in room-display-config, das seinerseits hierher importiert — deshalb
+   derselbe Resolver-Trick wie beim Temperatursensor. */
+export type RoomContactKind = 'window' | 'presence';
+let roomContactResolver: ((roomId: string, kind: RoomContactKind) => readonly string[]) | null = null;
+
+export function setRoomContactResolver(
+  resolver: (roomId: string, kind: RoomContactKind) => readonly string[],
+): void {
+  roomContactResolver = resolver;
 }
 
 /* ── Lesen: gemergte Sicht (Server-State bzw. pending Intent) ──
@@ -70,6 +85,44 @@ export function roomHumidity(roomId: string): number | null {
   if (!sensorId) return null;
   const s = runtime.merged(sensorId) as SensorValue | undefined;
   return s && typeof s.value === 'number' ? s.value : null;
+}
+
+/* ── Fenster/Tür und Bewegung (docs/06 §5) ──
+   Ein Kontakt gilt als offen, wenn sein binary_sensor `on` meldet. `known`
+   bleibt false, solange kein Echo da ist — die Detail-Liste zeigt das an,
+   statt „geschlossen" zu behaupten. */
+export interface RoomContact {
+  entityId: string;
+  open: boolean;
+  known: boolean;
+}
+
+/* Der Resolver kennt die Rollen der Haushalts-Config UND die Auswahl aus den
+   Einstellungen — er entscheidet allein, damit ein abgewählter Sensor wirklich
+   verschwindet. Ohne ihn (Tests, isolierte Runtimes) zählen die Rollen. */
+function contactIds(roomId: string, kind: RoomContactKind): string[] {
+  const resolved = roomContactResolver?.(roomId, kind);
+  const configured = kind === 'window' ? windowEntityIds(roomId) : presenceEntityIds(roomId);
+  return [...new Set(resolved ?? configured)];
+}
+
+export function roomContacts(roomId: string, kind: RoomContactKind = 'window'): RoomContact[] {
+  return contactIds(roomId, kind).map((entityId) => {
+    const value = runtime.merged(entityId) as SwitchValue | undefined;
+    return { entityId, open: value?.on === true, known: value !== undefined };
+  });
+}
+
+/* `fallback` gilt, solange dem Raum kein Kontakt zugeordnet ist — dann zählt
+   weiter der Seed-Wert (Demo, Legacy-Fixtures). */
+export function roomWindowOpen(roomId: string, fallback = false): boolean {
+  const contacts = roomContacts(roomId, 'window');
+  return contacts.length === 0 ? fallback : contacts.some((contact) => contact.open);
+}
+
+export function roomPresence(roomId: string, fallback = false): boolean {
+  const contacts = roomContacts(roomId, 'presence');
+  return contacts.length === 0 ? fallback : contacts.some((contact) => contact.open);
 }
 
 export function lightPending(roomId: string, lightId: string): boolean {

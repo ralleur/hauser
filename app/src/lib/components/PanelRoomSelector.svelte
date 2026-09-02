@@ -4,7 +4,7 @@
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature, roomHumidity } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
   import { showsMetric } from '../state/room-display-config.svelte.ts';
   import {
     clampPanelRoomPage,
@@ -94,7 +94,7 @@
                 <span class="rb-humidity"><Icon name="i-water-percent" cls="icon icon-sm" />{Math.round(humidity)}%</span>
               {/if}
               <span class="rb-light" class:is-on={lightsOn > 0}><Icon name="i-bulb" cls="icon icon-sm" /></span>
-              {#if room.windowOpen}<Icon name="i-window" cls="icon icon-sm rb-window" />{/if}
+              {#if roomWindowOpen(room.id, room.windowOpen)}<Icon name="i-window" cls="icon icon-sm rb-window" />{/if}
             </div>
           </button>
         {/each}

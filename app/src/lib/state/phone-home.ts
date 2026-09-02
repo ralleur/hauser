@@ -12,6 +12,8 @@ export interface PhoneHomeReaders {
   temperature(roomId: string): number | null;
   light(roomId: string, lightId: string): LightValue | undefined;
   climate(roomId: string): ClimateValue | null | undefined;
+  /** Live-Kontakte des Raums; ohne Reader gilt der Seed-Wert. */
+  windowOpen?(roomId: string, fallback: boolean): boolean;
 }
 
 export interface PhoneRoomSummary {
@@ -79,7 +81,7 @@ export function projectPhoneRooms(
       lightsOn: values.filter((light) => light?.on).length,
       lightsKnown: values.filter((light) => light !== undefined).length,
       lightsTotal: lights.length,
-      windowOpen: room.windowOpen,
+      windowOpen: safely(() => readers.windowOpen?.(room.id, room.windowOpen) ?? room.windowOpen, room.windowOpen),
       presence: room.presence,
       climateAvailable: safely(() => readers.climate(room.id), null) != null,
     };

@@ -4,6 +4,8 @@
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
   import { centralClimate } from '../state/climate-central.svelte.ts';
   import { appState } from '../state/app.svelte.ts';
+  import { deviceManager } from '../state/device-manager.svelte.ts';
+  import { roomContacts, type RoomContact } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
   import { familyCalendar } from '../state/calendar.svelte.ts';
   import { IS_DEMO } from '../demo/demo-mode.ts';
@@ -16,7 +18,34 @@
     return tab.id !== 'calendar' || familyCalendar.sources.length > 0;
   }));
 
-  const openWindows = $derived(appState.rooms.filter((r) => r.windowOpen));
+  /* Sicherheitsstatus (docs/06 §5): jede Zeile ist ein realer Sensor. Ohne
+     zugeordnete Kontakte gilt weiter der Seed-Wert des Raums (Demo). */
+  interface ContactRow extends RoomContact {
+    roomId: string;
+    roomName: string;
+    kind: 'window' | 'presence';
+    name: string;
+  }
+
+  function catalogName(entityId: string): string {
+    return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
+  }
+
+  const contactRows = $derived<ContactRow[]>(appState.rooms.flatMap((room) =>
+    (['window', 'presence'] as const).flatMap((kind) =>
+      roomContacts(room.id, kind).map((contact) => ({
+        ...contact, kind, roomId: room.id, roomName: room.name, name: catalogName(contact.entityId),
+      })))));
+
+  const openWindows = $derived(appState.rooms.filter((room) => {
+    const contacts = contactRows.filter((row) => row.roomId === room.id && row.kind === 'window');
+    return contacts.length === 0 ? room.windowOpen : contacts.some((row) => row.open);
+  }));
+
+  let detailOpen = $state(false);
+  /* Nichts zugeordnet heißt nichts zu zeigen — dann bleibt die Leiste stumm
+     statt eine leere Liste anzubieten. */
+  const hasDetail = $derived(contactRows.length > 0);
 
   /* Plusamorm je Sprache: Deutsch hat zwei, Polnisch vier. */
   const WINDOWS_OPEN = {
@@ -34,7 +63,12 @@
       : windowsOpenLabel(openWindows.length),
   );
 
+  const securityTitle = $derived(
+    openWindows.length ? openWindows.map((room) => room.name).join(', ') : m.status_all_quiet(),
+  );
+
   function go(target: string) {
+    detailOpen = false;       // die Sensor-Liste gehört zum aufrufenden Screen
     closeDeviceDetail(true);  // Detail gehört zum aufrufenden Tab
 
     showScreen(target as ScreenId);
@@ -72,10 +106,43 @@
   </div>
 
   <div class="tab-edge tab-edge-end">
-    <div class="security-bar" class:has-warning={openWindows.length > 0}
-         title={openWindows.length ? openWindows.map((r) => r.name).join(', ') : m.status_all_quiet()}>
-      <Icon name={openWindows.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
-      <span>{securityLabel}</span>
-    </div>
+    {#if detailOpen}
+      <!-- Detail-Liste (docs/06 §5): eine Zeile je Sensor, 48px Touch-Höhe. -->
+      <div class="security-detail" role="dialog" aria-label={m.status_security_title()}>
+        <ul class="security-list">
+          {#each contactRows as row (row.entityId)}
+            <li class="security-row">
+              <span class="security-dot" class:is-open={row.open} class:is-unknown={!row.known}></span>
+              <span class="security-row-label">
+                <span class="security-row-name">{row.name}</span>
+                <small class="security-row-room">{row.roomName}</small>
+              </span>
+              <span class="security-row-state">
+                {#if !row.known}{m.status_contact_unknown()}
+                {:else if row.kind === 'presence'}{row.open ? m.status_motion_detected() : m.status_motion_idle()}
+                {:else}{row.open ? m.status_contact_open() : m.status_contact_closed()}{/if}
+              </span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+    {#if hasDetail}
+      <button class="security-bar pressable" type="button"
+              class:has-warning={openWindows.length > 0} class:is-active={detailOpen}
+              aria-expanded={detailOpen} aria-label={m.status_security_title()}
+              onclick={() => { detailOpen = !detailOpen; }}
+              title={securityTitle}>
+        <Icon name={openWindows.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
+        <span>{securityLabel}</span>
+      </button>
+    {:else}
+      <!-- Ohne zugeordnete Sensoren bleibt es reine Anzeige (docs/06 §5:
+           `disabled` = nicht anwendbar) — ein Knopf ohne Ziel wäre gelogen. -->
+      <div class="security-bar" class:has-warning={openWindows.length > 0} title={securityTitle}>
+        <Icon name={openWindows.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
+        <span>{securityLabel}</span>
+      </div>
+    {/if}
   </div>
 </nav>

@@ -4,7 +4,7 @@
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
   import { clock } from '../state/clock.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
-  import { roomTemperature } from '../state/commands.ts';
+  import { roomTemperature, roomWindowOpen } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
   import { familyCalendar, refreshFamilyCalendar } from '../state/calendar.svelte.ts';
   import { projectAmbientWeek } from '../state/calendar.ts';
@@ -150,7 +150,7 @@
      Sicherheitsstatus (docs/07). Die Sensormeldung erscheint NUR, wenn ein
      zugewiesener Sensor etwas meldet — kein „Alles ruhig" mehr im Ruhezustand. */
   const refTemp = $derived(roomTemperature('wohnzimmer'));
-  const openCount = $derived(appState.rooms.filter((r) => r.windowOpen).length);
+  const openCount = $derived(appState.rooms.filter((r) => roomWindowOpen(r.id, r.windowOpen)).length);
   const safety = $derived(
     openCount === 0 ? null : openCount === 1 ? 'Fenster offen' : `${openCount} Fenster offen`);
 

@@ -440,6 +440,55 @@ body.theme-fade * {
 .security-bar.has-warning { color: var(--color-text-primary); }
 .security-bar.has-warning .icon { color: var(--color-warning); }
 
+/* Als Knopf (nur mit zugeordneten Sensoren, sonst reine Anzeige): Button-Reset,
+   damit die Bar in beiden Varianten identisch aussieht. */
+button.security-bar {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.security-bar.is-active { background: var(--color-surface-2); }
+
+/* ── SecurityPresence: Detail-Liste (docs/06 §5) ──
+   Öffnet über der Leiste, damit die Tab-Bar nicht wächst. */
+.security-detail {
+  position: absolute;
+  inset-block-end: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: 40;
+  min-inline-size: 280px;
+  max-inline-size: 360px;
+  max-block-size: 50vh;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgb(0 0 0 / 35%));
+}
+.tab-edge-end { position: relative; }
+.security-list { list-style: none; margin: 0; padding: 0; }
+.security-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding: 0 var(--space-3);
+}
+.security-row-label { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
+.security-row-name { font-size: var(--text-sm); color: var(--color-text-primary); }
+.security-row-room { font-size: var(--text-2xs); color: var(--color-text-secondary); }
+.security-row-state { font-size: var(--text-sm); color: var(--color-text-secondary); flex: none; }
+.security-dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+}
+.security-dot.is-open { background: var(--color-warning); }
+.security-dot.is-unknown { background: var(--color-text-secondary); opacity: 0.5; }
+
 /* ── RoomTile (docs/06 §1, seit 2026-07-05 verschmolzen mit ClimateControl
    Compact): Name/Präsenz/Fenster oben, Ist→Ziel mit Richtungs-Codierung,
    Modus- und Licht-Status unten ── */
@@ -3473,6 +3522,22 @@ body.theme-fade * {
   margin-top: var(--space-3);
 }
 .re-metric-sensor .re-search { width: 100%; }
+
+/* Kontakte/Melder: Mehrfachauswahl statt Einzelwahl — ein Raum hat mehrere
+   Fenster. Zeilenhöhe auf Touch-Minimum. */
+.re-contact-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+.re-contact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  cursor: pointer;
+}
+.re-contact .re-meta { margin-inline-start: auto; }
 
 /* Schalter im Konfig-Overlay-Stil: an = Theme-Orange. */
 .re-toggle {

@@ -11,7 +11,7 @@
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
   import { appState } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomTemperature, roomWindowOpen } from '../state/commands.ts';
   import { connection } from '../state/connection.svelte.ts';
   import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
@@ -54,6 +54,7 @@
     temperature: roomTemperature,
     light: mergedLight,
     climate: mergedClimate,
+    windowOpen: roomWindowOpen,
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
   type PhoneFeatureId = 'calendar' | 'media' | 'library-detail' | 'library' | 'energy'

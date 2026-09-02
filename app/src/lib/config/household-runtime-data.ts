@@ -202,6 +202,9 @@ function projectRooms(model: HouseholdRuntimeModel): {
     const temperature = singleRole(room.id, room.visibleEntities, 'temperature');
     const camera = singleRole(room.id, room.visibleEntities, 'camera');
     if (camera) cameras[room.id] = camera.entityId;
+    // Kontakte/Melder sind mehrfach zulässig — ein Raum hat mehrere Fenster.
+    const windows = room.visibleEntities.filter(({ role }) => role === 'window');
+    const presenceSensors = room.visibleEntities.filter(({ role }) => role === 'presence');
     return {
       id: room.id,
       name: room.name,
@@ -216,6 +219,10 @@ function projectRooms(model: HouseholdRuntimeModel): {
       ...(climate ? { climateEntityId: climate.entityId, target: 20, hvac: 'off' as const } : {}),
       ...(temperature ? { tempSensorId: temperature.entityId } : {}),
       ...(camera ? { cameraEntityId: camera.entityId } : {}),
+      ...(windows.length ? { windowEntityIds: windows.map((entity) => entity.entityId) } : {}),
+      ...(presenceSensors.length
+        ? { presenceEntityIds: presenceSensors.map((entity) => entity.entityId) }
+        : {}),
     };
   });
   return { rooms, cameras };

@@ -29,13 +29,18 @@
   import RoomImageWizard from './settings/RoomImageWizard.svelte';
   import {
     autoSensorId,
+    contactIdsFor,
+    contactsAreAutomatic,
+    roomContactOptions,
     roomSensorCandidates,
     sensorIdFor,
     sensorIsAutomatic,
+    setContactIds,
     setSensorId,
     setShowsMetric,
     showsMetric,
   } from '../state/room-display-config.svelte.ts';
+  import type { RoomContactKind } from '../state/commands.ts';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
 
@@ -76,6 +81,15 @@
   // Anzeigename eines Sensors aus dem Katalog; unbekannt → die entity_id.
   function sensorName(entityId: string): string {
     return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
+  }
+
+  /* Kontakt an-/abwählen. Die erste Abweichung von der HA-Zuordnung friert die
+     aktuelle Auswahl ein — ab dann zählt nur noch die eigene Liste. */
+  function toggleContact(roomId: string, kind: RoomContactKind, entityId: string): void {
+    const current = new Set(contactIdsFor(roomId, kind));
+    if (current.has(entityId)) current.delete(entityId);
+    else current.add(entityId);
+    setContactIds(roomId, kind, [...current]);
   }
 
   function matchRank(item: EntityCatalogItem, q: string): number {
@@ -454,6 +468,55 @@
                         </select>
                       {/if}
                     </label>
+                  {/if}
+                </div>
+              {/each}
+
+              <!-- Kontakte und Melder (docs/06 §5): sie speisen die
+                   Sicherheitsleiste der Tab-Bar. Auch hier kommt die Zuordnung
+                   automatisch aus dem HA-Bereich; angehakt wird nur, wenn sie
+                   abweichen soll. -->
+              {#each ['window', 'presence'] as const as kind (kind)}
+                {@const candidates = roomContactOptions(room.id, kind)}
+                {@const chosen = contactIdsFor(room.id, kind)}
+                <div class="re-metric-box">
+                  <div class="re-row re-metric-head">
+                    <span class="re-icon" aria-hidden="true">
+                      <Icon name={kind === 'window' ? 'i-window' : 'i-motion-sensor'} />
+                    </span>
+                    <span class="re-label">
+                      <span class="re-name">
+                        {kind === 'window' ? m.room_contacts_window() : m.room_contacts_presence()}
+                      </span>
+                      <small class="re-meta">
+                        {contactsAreAutomatic(room.id, kind)
+                          ? m.room_contacts_auto()
+                          : m.room_contacts_manual()}
+                      </small>
+                    </span>
+                    {#if !contactsAreAutomatic(room.id, kind)}
+                      <button class="secondary-btn pressable" type="button"
+                              onclick={() => setContactIds(room.id, kind, undefined)}>
+                        {m.room_contacts_reset()}
+                      </button>
+                    {/if}
+                  </div>
+
+                  {#if candidates.length === 0}
+                    <p class="re-empty">{m.room_contacts_none()}</p>
+                  {:else}
+                    <ul class="re-contact-list">
+                      {#each candidates as item (item.entityId)}
+                        <li>
+                          <label class="re-contact">
+                            <input type="checkbox" checked={chosen.includes(item.entityId)}
+                                   onchange={() => toggleContact(room.id, kind, item.entityId)} />
+                            <span class="re-name">{item.name}</span>
+                            <small class="re-meta">{item.entityId}</small>
+                          </label>
+                        </li>
+                      {/each}
+                    </ul>
                   {/if}
                 </div>
               {/each}

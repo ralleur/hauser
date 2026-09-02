@@ -21,6 +21,7 @@
   } from '../state/settings.svelte.ts';
 
   import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
+  import SecuritySensorsSection from '../components/settings/SecuritySensorsSection.svelte';
   import LaundrySection from '../components/settings/LaundrySection.svelte';
   import HotelModeSection from '../components/settings/HotelModeSection.svelte';
   import HotelAllowlistSection from '../components/settings/HotelAllowlistSection.svelte';
@@ -57,6 +58,7 @@
      — eine neue Sektion ohne Komponente fällt beim Typecheck auf. */
   const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
     'rooms-devices': RoomsDevicesSection,
+    'security-sensors': SecuritySensorsSection,
     'laundry': LaundrySection,
     'hotel-mode': HotelModeSection,
     'hotel-guest-access': HotelAllowlistSection,

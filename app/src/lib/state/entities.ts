@@ -35,6 +35,8 @@ export const ROOM_CAMERA_ENTITIES: Readonly<Record<string, string>> = IS_DEMO
 /* Explizite Maps aus dem Seed (ADR-018): Domänensicht → reale entity_id. */
 const climateIds = new Map<string, string>();    // roomId → entity_id
 const tempSensorIds = new Map<string, string>(); // roomId → dedizierter sensor.*
+const windowIds = new Map<string, readonly string[]>();   // roomId → Fenster-/Tür-Kontakte
+const presenceIds = new Map<string, readonly string[]>(); // roomId → Bewegungs-/Präsenzmelder
 const mediaIds = new Map<string, string>();      // playerId → entity_id
 
 for (const p of MEDIA_SEED) mediaIds.set(p.id, p.entityId);
@@ -55,9 +57,13 @@ function currentLightIds(): Map<string, string> {
 function rebuildClimateIds(rooms: readonly RoomSeed[]): void {
   climateIds.clear();
   tempSensorIds.clear();
+  windowIds.clear();
+  presenceIds.clear();
   for (const r of rooms) {
     if (r.climateEntityId) climateIds.set(r.id, r.climateEntityId);
     if (r.tempSensorId) tempSensorIds.set(r.id, r.tempSensorId);
+    if (r.windowEntityIds?.length) windowIds.set(r.id, [...r.windowEntityIds]);
+    if (r.presenceEntityIds?.length) presenceIds.set(r.id, [...r.presenceEntityIds]);
   }
 }
 
@@ -78,6 +84,17 @@ export function roomHasClimate(roomId: string): boolean {
 /* Dedizierter Raum-Temperatursensor (leer, wenn keiner gemappt ist). */
 export function tempSensorEntityId(roomId: string): string {
   return tempSensorIds.get(roomId) ?? '';
+}
+
+/* Fenster-/Tür-Kontakte des Raums aus der Haushalts-Config (Rolle `window`).
+   Leer, wenn keiner zugeordnet ist — die Raum-Konfig kann zusätzliche wählen. */
+export function windowEntityIds(roomId: string): readonly string[] {
+  return windowIds.get(roomId) ?? [];
+}
+
+/* Bewegungs-/Präsenzmelder des Raums aus der Haushalts-Config (Rolle `presence`). */
+export function presenceEntityIds(roomId: string): readonly string[] {
+  return presenceIds.get(roomId) ?? [];
 }
 
 export function roomCameraEntityId(roomId: string): string {
@@ -142,6 +159,10 @@ export function ambientEntityIds(): string[] {
   ]
     .filter((entityId): entityId is string => entityId !== null);
   for (const ref of Object.values(ENERGY_SENSORS)) ids.push(...energyRefIds(ref));
+  // Kontakte und Melder: die Sicherheitsleiste steht in der persistenten
+  // Tab-Bar und damit auf JEDEM Screen — deshalb Dauer-Abo statt Home-Abo.
+  for (const roomIds of windowIds.values()) ids.push(...roomIds);
+  for (const roomIds of presenceIds.values()) ids.push(...roomIds);
   return ids;
 }
 

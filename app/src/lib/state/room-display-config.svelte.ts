@@ -10,8 +10,9 @@
    den Katalog passiert beim Lesen. */
 
 import { appState } from './app.svelte.ts';
-import { setRoomSensorResolver } from './commands.ts';
+import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
+import { presenceEntityIds, windowEntityIds } from './entities.ts';
 import { sharedStorage } from './shared-config.ts';
 import type { EntityCatalogItem } from './fake-discovery-catalog.ts';
 
@@ -25,6 +26,11 @@ export interface RoomDisplayEntry {
   /** abweichend gewählter Sensor; ohne Eintrag greift die HA-Zuordnung */
   temperatureSensorId?: string;
   humiditySensorId?: string;
+  /** abweichend gewählte Kontakte/Melder; ohne Eintrag greift die HA-Zuordnung.
+      Mehrzahl, weil ein Raum mehrere Fenster hat. Leeres Array heißt bewusst
+      „keine" — das ist etwas anderes als „nicht konfiguriert". */
+  windowSensorIds?: string[];
+  presenceSensorIds?: string[];
 }
 
 export interface RoomDisplayConfig {
@@ -69,6 +75,108 @@ export function roomSensorCandidates(roomId: string, metric: RoomMetric): Entity
 export function autoSensorId(roomId: string, metric: RoomMetric): string {
   return roomSensorCandidates(roomId, metric)[0]?.entityId ?? '';
 }
+
+/* ── Kontakte und Melder (docs/06 §5) ──
+   HA typisiert sie über die device_class des binary_sensors. Anders als bei
+   Temperatur zählt hier nicht der erste, sondern ALLE Sensoren des Raums:
+   drei Fenster sind drei Kontakte. */
+const CONTACT_DEVICE_CLASSES: Record<RoomContactKind, readonly string[]> = {
+  window: ['window', 'door', 'garage_door', 'opening'],
+  presence: ['motion', 'occupancy', 'presence'],
+};
+
+export function roomContactCandidates(roomId: string, kind: RoomContactKind): EntityCatalogItem[] {
+  const classes = CONTACT_DEVICE_CLASSES[kind];
+  return deviceManager.catalog.filter(
+    (item) => item.domain === 'binary_sensor'
+      && !!item.deviceClass && classes.includes(item.deviceClass)
+      && areaMatchesRoom(item.area, roomId),
+  );
+}
+
+export interface RoomContactOption {
+  entityId: string;
+  name: string;
+  /** aus der Haushalts-Config (Rolle window/presence), nicht aus dem HA-Bereich */
+  fromConfig: boolean;
+}
+
+/* Alles, was für den Raum infrage kommt: erst die Rollen der Haushalts-Config,
+   dann was der HA-Bereich zusätzlich hergibt. Diese Menge ist zugleich die
+   Voreinstellung — erkannt heißt aktiv, bis jemand abwählt. */
+export function roomContactOptions(roomId: string, kind: RoomContactKind): RoomContactOption[] {
+  const configured = kind === 'window' ? windowEntityIds(roomId) : presenceEntityIds(roomId);
+  const seen = new Set<string>();
+  const options: RoomContactOption[] = [];
+  for (const entityId of configured) {
+    if (seen.has(entityId)) continue;
+    seen.add(entityId);
+    options.push({ entityId, name: catalogName(entityId), fromConfig: true });
+  }
+  for (const item of roomContactCandidates(roomId, kind)) {
+    if (seen.has(item.entityId)) continue;
+    seen.add(item.entityId);
+    options.push({ entityId: item.entityId, name: item.name, fromConfig: false });
+  }
+  return options;
+}
+
+function catalogName(entityId: string): string {
+  return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
+}
+
+/** Automatisch zugeordnete Kontakte des Raums (alles Erkannte). */
+export function autoContactIds(roomId: string, kind: RoomContactKind): string[] {
+  return roomContactOptions(roomId, kind).map((option) => option.entityId);
+}
+
+/** Ist dieser Sensor aktiv, zählt also für den Sicherheitsstatus? */
+export function contactEnabled(roomId: string, kind: RoomContactKind, entityId: string): boolean {
+  return contactIdsFor(roomId, kind).includes(entityId);
+}
+
+/* An-/Abwählen. Die erste Abweichung friert die aktuelle Menge ein — ab dann
+   zählt die eigene Liste, ein später in HA ergänzter Sensor kommt nicht mehr
+   von selbst dazu. */
+export function setContactEnabled(
+  roomId: string,
+  kind: RoomContactKind,
+  entityId: string,
+  enabled: boolean,
+): void {
+  const current = new Set(contactIdsFor(roomId, kind));
+  if (enabled) current.add(entityId);
+  else current.delete(entityId);
+  setContactIds(roomId, kind, [...current]);
+}
+
+/** Die tatsächlich verwendeten Kontakte: eigene Wahl, sonst die HA-Zuordnung. */
+export function contactIdsFor(roomId: string, kind: RoomContactKind): readonly string[] {
+  const e = entry(roomId);
+  const chosen = kind === 'window' ? e.windowSensorIds : e.presenceSensorIds;
+  return chosen ?? autoContactIds(roomId, kind);
+}
+
+/** Sind die Kontakte automatisch zugeordnet (also nicht überschrieben)? */
+export function contactsAreAutomatic(roomId: string, kind: RoomContactKind): boolean {
+  const e = entry(roomId);
+  return (kind === 'window' ? e.windowSensorIds : e.presenceSensorIds) === undefined;
+}
+
+/** Kontakte setzen; `undefined` gibt die Wahl an die HA-Zuordnung zurück. */
+export function setContactIds(
+  roomId: string,
+  kind: RoomContactKind,
+  entityIds: readonly string[] | undefined,
+): void {
+  const next = { ...entry(roomId) };
+  const key = kind === 'window' ? 'windowSensorIds' : 'presenceSensorIds';
+  if (entityIds === undefined) delete next[key];
+  else next[key] = [...entityIds];
+  writeEntry(roomId, next);
+}
+
+setRoomContactResolver(contactIdsFor);
 
 /* ── Persistierter Teil ── */
 
@@ -140,6 +248,11 @@ export function configuredRoomSensorIds(): string[] {
       const id = sensorIdFor(room.id, metric);
       if (id) ids.add(id);
     }
+    // Kontakte hängen nicht an `showsMetric` — die Sicherheitsleiste zeigt sie
+    // global, unabhängig davon was auf der Raum-Kachel steht.
+    for (const kind of ['window', 'presence'] as const) {
+      for (const id of contactIdsFor(room.id, kind)) ids.add(id);
+    }
   }
   return [...ids];
 }
@@ -162,6 +275,12 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (typeof cand.showHumidity === 'boolean') next.showHumidity = cand.showHumidity;
       if (typeof cand.temperatureSensorId === 'string') next.temperatureSensorId = cand.temperatureSensorId;
       if (typeof cand.humiditySensorId === 'string') next.humiditySensorId = cand.humiditySensorId;
+      if (Array.isArray(cand.windowSensorIds)) {
+        next.windowSensorIds = cand.windowSensorIds.filter((id): id is string => typeof id === 'string');
+      }
+      if (Array.isArray(cand.presenceSensorIds)) {
+        next.presenceSensorIds = cand.presenceSensorIds.filter((id): id is string => typeof id === 'string');
+      }
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };

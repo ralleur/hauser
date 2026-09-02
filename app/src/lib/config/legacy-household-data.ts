@@ -60,6 +60,10 @@ export interface RoomSeed extends Room {
   tempSensorId?: string;
   current?: number;
   cameraEntityId?: string;
+  /* Kontakte und Melder des Raums (Rollen `window`/`presence`). Mehrzahl, weil
+     ein Raum mehrere Fenster hat — anders als Klima/Temperatur/Kamera. */
+  windowEntityIds?: readonly string[];
+  presenceEntityIds?: readonly string[];
 }
 
 export interface MediaPlayerMeta { id: string; name: string }
