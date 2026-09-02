@@ -19,13 +19,20 @@ Status vocabulary:
 
 ## Where the project is today
 
-Hauser is in its public technical beta. The design system, Home Assistant and
-Jellyfin integrations, deterministic setup wizard, landscape panel, compact
-phone shell and everyday household screens are implemented. The versioned
-Compose path and isolated clean-room onboarding gate are green. No alpha was
-published; `v0.4.0-beta.1` was the first public release, and the beta line ran
-through `v0.4.0-beta.10`. From `v0.6.2` on the `-beta.N` suffix is gone: every
-release below `v1.0.0` is a beta, so the version number says it on its own.
+Hauser is in its public technical beta, and it is what the author's own house
+runs on every day. The design system, Home Assistant and Jellyfin integrations,
+deterministic setup wizard, landscape panel, compact phone shell and everyday
+household screens are implemented. Two installation paths are built and
+exercised: a **Home Assistant App** that talks to Home Assistant through the
+Supervisor with no token in the browser, and Docker Compose for Container, NAS
+and plain Docker hosts. One external household has installed and run a published
+release independently ([#7](https://github.com/ralleur/hauser/issues/7), Docker
+Compose on Linux x86_64, roughly 370 entities across 8 areas).
+
+No alpha was published; `v0.4.0-beta.1` was the first public release, and the
+beta line ran through `v0.4.0-beta.10`. From `v0.6.2` on the `-beta.N` suffix is
+gone: every release below `v1.0.0` is a beta, so the version number says it on
+its own.
 
 ---
 
@@ -43,7 +50,8 @@ release below `v1.0.0` is a beta, so the version number says it on its own.
 | Device management in the UI — add, hide, assign to room, reorder | **Live** |
 | Custom room-background upload, replacement and default restore | **Live** |
 | Phone shell alongside the tablet panel shell | **Live** |
-| OpenAI-assisted, HMI-style room image wizard | **Next** |
+| Guided, OpenAI-assisted room image wizard in the HMI style | **Built** |
+| Hotel mode: a dedicated panel as a guest surface for one holiday apartment | **Built** |
 | Swipe navigation between screens | **Planned** |
 | Drag-and-drop reordering of home tiles | **Planned** |
 | Dynamic tile heights and a combined tile | **Maybe** |
@@ -65,7 +73,6 @@ release below `v1.0.0` is a beta, so the version number says it on its own.
 | Live load and daily consumption from real sensors | **Live** |
 | Graceful empty states when PV or grid sensors are absent | **Live** |
 | Weather variants for the ambient room backgrounds | **Planned** |
-| Personal HMI-style room-image generation and assignment | **Next** |
 
 ## Everyday screens
 
@@ -76,6 +83,8 @@ release below `v1.0.0` is a beta, so the version number says it on its own.
 | Guided, portable Home Assistant laundry setup | **Built** |
 | Generic notification core beyond laundry | **Planned** |
 | Document access via Paperless-ngx, PIN protected | **Built** |
+| Standby screen with clock, week strip, notes and shopping list | **Live** |
+| Optional street map of your own surroundings behind the standby screen | **Built** |
 | Aggregated daily events from multiple calendar sources | **Planned** |
 
 ### Built for the first public beta: portable laundry notifications
@@ -93,17 +102,19 @@ notification channels remain later work.
 
 ### Room images
 
-The first public beta ships the existing AI-generated project illustrations as
-its room-image defaults and fallbacks. They are licensed under the repository's
-CC BY 4.0 asset boundary. One of the source photographs is published on the
-project website to show what the room-image wizard takes as input; the remaining
-private source photographs are not included.
+Hauser ships the existing AI-generated project illustrations as its room-image
+defaults and fallbacks. They are licensed under the repository's CC BY 4.0 asset
+boundary. One of the source photographs is published on the project website to
+show what the room-image wizard takes as input; the remaining private source
+photographs are not included.
 
-Users can upload, replace and remove a local JPEG, PNG, WebP or AVIF background directly
-under room editing without changing files or JSON. The beta applies that image to
-all day/night states. A later guided AI wizard will create separate HMI-style
-variants; provider credentials, trusted-proxy authentication and paid image-edit
-verification remain post-beta and do not block `beta.1`.
+There are three ways to get your own rooms on screen. You can keep the bundled
+illustrations. You can upload, replace and remove a local JPEG, PNG, WebP or AVIF
+background under room editing without touching files or JSON. Or you can use the
+guided room-image wizard, which turns a photograph of your own room into an
+illustration in the interface's style and derives its lighting variants. The
+wizard needs your own OpenAI credentials, is entirely optional, and every other
+part of the product works without it.
 
 ### Live beta polish: five-state home appearance cycle
 
@@ -119,6 +130,17 @@ button and **Appearance** settings expose the same five-state source of truth;
 fixed-background states receive an additional non-colour indicator so the two
 light and two dark modes remain distinguishable.
 
+## Installation and operation
+
+| Item | Status |
+|---|---|
+| Home Assistant App: Supervisor-managed, no Home Assistant token in the browser | **Live** |
+| Docker Compose for Container, NAS and plain Docker hosts | **Built** |
+| Guided setup wizard for Home Assistant and optional Jellyfin | **Live** |
+| Versioned household configuration with migration and fail-closed start | **Live** |
+| Persistent config, data and asset volumes; backup, restore, manual rollback | **Built** |
+| Multi-architecture images (`amd64`, `aarch64`) | **Built** |
+
 ---
 
 ## Path from private development to v1
@@ -127,7 +149,7 @@ light and two dark modes remain distinguishable.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits; project illustrations remain the defaults and users can upload local room backgrounds |
-| Beta stabilisation | `v0.6.2` and later `v0.x` | An external real-home installation plus a release-to-release upgrade, backup/restore and rollback pass before RC |
+| Beta stabilisation | `v0.6.2` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
 | Release candidate | `v0.9.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
@@ -141,12 +163,16 @@ available inside the product, and panel/phone layouts have been exercised from
 zero to twelve rooms. The isolated development pilot has passed both
 explicit-Area and no-Area onboarding, command/state echo, reconnect and
 persistence. Beta versioning, changelog, release-note structure and tag-gated
-quality/image automation are active. Portable laundry setup and bounded personal
-room-image creation remain optional post-beta slices and do not delay
-publication. Beta stabilisation then continues
-through external installation, upgrade and rollback evidence. A real external
-household remains mandatory before RC; neither room-image generation nor broader
-AI-assisted setup becomes a separate v1 gate.
+quality/image automation are active. The Home Assistant App path is built and
+runs the author's own installation, so the browser no longer holds a Home
+Assistant token there. Portable laundry setup and the guided room-image wizard
+shipped as optional post-beta slices; neither is a v1 gate.
+
+The mandatory external household has since installed and run a published release
+independently. What beta stabilisation still owes is the harder half of that
+evidence: an upgrade from one published release to the next, plus backup,
+restore and rollback, carried out on an installation the author does not
+operate.
 
 A code-modifying AI agent that commits, pushes and redeploys the application is
 deliberately **not part of the portable product**. It remains an operator-owned
@@ -181,13 +207,13 @@ configuration, not from the interface.
 - The clean-room pilot proves the technical setup contract, not yet usability by
   an external person or compatibility with a second real device topology.
 
-- Personal room-image generation and assignment are deferred until after the
-  first public beta. `beta.1` uses the bundled project illustrations as defaults.
-- The release automation builds `linux/amd64`, but an installation on an external
-  amd64 host has not yet been reported.
-- Public installation reports and the first complete external contribution cycle
-  have not happened yet; both are goals of the beta rather than claims made at
-  launch.
+- A release-to-release upgrade, backup/restore and rollback have not yet been
+  carried out on an **external** installation. This is the main piece of evidence
+  still missing before a release candidate.
+- The first complete external contribution cycle has not happened yet; it remains
+  a goal of the beta rather than a claim made here.
+- The Home Assistant App path has been exercised by the author and by one
+  external bug report, not across a range of Home Assistant OS hardware.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional

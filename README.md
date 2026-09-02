@@ -129,15 +129,23 @@ configured live service are not the same thing:
 ## Architecture
 
 ```
-Wall panel (Android tablet, kiosk mode)
+Wall panel (kiosk tablet)            Phone (home-screen PWA)
+        └──────────── same origin ────────────┘
+                        │
+              Hauser PWA  ← this repository
+                        │
+        ┌───────────────┴────────────────┐
+        │ same-origin HTTP + WS          │ straight from the browser
+        ▼                                ▼
+  Hauser server (app/server.mjs)   Jellyfin REST + HLS
+  · household config, validated      library, playback
+  · Home Assistant gateway
+  · room-image store, map renderer
+  · Paperless / Notion bridges
         │
-   Hauser PWA  ← this repository
-        │
-   ┌────┴──────────────┬──────────────────────┐
-   ▼                   ▼                      ▼
-HA WebSocket     Jellyfin REST + HLS    Optional companion
-devices, energy,                       shared household data
-calendar.*, todo.*                     + PIN-gated Paperless
+        ▼
+  Home Assistant  ←── or straight from the browser (Compose, `direct`)
+  devices, energy, calendar.*, todo.*
 ```
 
 The app is Svelte 5 + Vite, with a four-layer adapter between the UI and the
@@ -146,12 +154,20 @@ command queue, and a swappable backend. The UI only ever reads `merged()` and
 writes `dispatch()`. That seam is what makes both the optimistic behaviour and
 the offline demo possible.
 
-An optional companion server (`app/server.mjs`) adds centrally stored reminders,
-the same-origin proxy for the local Notion shopping bridge, and the PIN-gated
+There are two transports to Home Assistant behind the same backend seam. As a
+**Home Assistant App**, only the server talks to Home Assistant, through the
+Supervisor — the browser never receives a token, and you never type a Home
+Assistant URL. With **Docker Compose**, the browser connects directly to the
+instance you configure during setup. `/api/ha/connection` reports which mode is
+active.
+
+The server (`app/server.mjs`) also holds the validated household configuration,
+the room-image store, the standby map renderer, centrally stored reminders, the
+same-origin proxy for the local Notion shopping bridge and the PIN-gated
 Paperless-ngx bridge. Integration credentials stay server-side and are never
-shipped to the browser. The core —
-rooms, lights, climate, calendar, media and energy — runs without the companion.
-The public demo has no Notion dependency.
+shipped to the browser. In Compose deployments the optional bridges can be left
+unconfigured; rooms, lights, climate, calendar, media and energy work without
+them. The public demo has no Notion dependency.
 
 ## Installation
 
