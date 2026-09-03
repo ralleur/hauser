@@ -10,6 +10,8 @@
 
 [**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation) · [Roadmap](ROADMAP.md)
 
+[![Quality and release](https://github.com/ralleur/hauser/actions/workflows/quality-and-release.yml/badge.svg?branch=main)](https://github.com/ralleur/hauser/actions/workflows/quality-and-release.yml) [![Latest tag](https://img.shields.io/github/v/tag/ralleur/hauser?sort=semver&label=version)](https://github.com/ralleur/hauser/releases) [![License AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-informational)](LICENSE)
+
 </div>
 
 Hauser is a self-hosted, room-first Home Assistant dashboard for wall panels,
@@ -17,10 +19,19 @@ tablets and phones. Home Assistant remains the operator and admin interface;
 Hauser is the calm everyday interface for family members and the rest of the
 household.
 
-![The Hauser ambient lock screen: a large clock, the date, household context, upcoming events and notes arranged for glanceable use on a wall panel.](website/media/lockscreen.webp)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/media/lockscreen-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="website/media/lockscreen.webp">
+  <img alt="The Hauser standby screen: a large clock and date in the centre, outdoor and indoor temperature below it, the week's appointments along the bottom, coloured reminder post-its on the right and the shopping list on the left, all over a faint street map of the neighbourhood." src="website/media/lockscreen.webp">
+</picture>
 
-The ambient lock screen is the default resting state: useful from across the
-room, quiet until touched, and a direct path into the relevant household view.
+Standby is the default resting state, and it is where a wall panel spends most
+of its day: readable from across the room, quiet until touched, and a direct
+path into the household view behind whatever you touched. The map behind it is
+your own neighbourhood — rendered once on the server from OpenStreetMap data
+around the location Home Assistant already knows, then used as a mask in the
+current text colour. That is why the picture above follows your own
+light or dark preference: it is the same file either way.
 
 ---
 
@@ -91,12 +102,14 @@ deliberately omits superseded plans and rejected alternatives.
 | Area | |
 |---|---|
 | **Rooms** | Climate, lights, scenes, presence and window state; each room illustrated in three lighting states that follow the actual lights |
+| **Room images** | The bundled illustrations are of the author's home, so the built-in wizard makes yours from a phone photograph: day, evening and lights-off as one reviewed set. Needs your own OpenAI access, and it is the only paid third party in the product |
 | **Home Assistant** | WebSocket via the official client, optimistic commands with reconciliation, reconnect handling, day/night theming from `sun.sun` |
 | **Media** | Jellyfin library, shelves, detail view, HLS playback with resume; room audio through HA media players |
 | **Energy** | Live load and daily consumption from real power sensors, with honest empty states for figures the house cannot measure |
 | **Everyday** | Calendar, notes, reminders, shopping list, laundry notifications |
 | **Documents** | PIN-gated Paperless-ngx search, preview, download and import through the optional companion server |
 | **Devices** | Add, hide, rename, assign to a room and reorder entities from inside the UI |
+| **Edit and use** | One switch per device separates configuring from operating: use mode closes every configuration door and leaves every control working, optionally behind a PIN and with an idle timeout |
 | **Standby** | A calm lockscreen with clock, week strip, notes and shopping list; optionally a faint street map of your own town, rendered once on the server from OpenStreetMap data ([details](docs/07-configuration.md#standby-city-map)) |
 | **Two shells** | A landscape wall panel and a one-handed phone layout, sharing one design system |
 | **Hotel mode** | Optional, off by default: turns a dedicated panel into a guest surface for one holiday apartment — stays from a Home Assistant calendar, a default-deny device release, a PIN-gated admin session and a guest checkout ([details](docs/07-configuration.md#hotel-mode-holiday-apartment)) |
@@ -115,16 +128,78 @@ configured live service are not the same thing:
 | **Shopping** | A local server-side bridge keeps the HMI and a shared Notion shopping page in sync without exposing the Notion token to the browser. | Curated simulated data; no Notion connection. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
 | **OpenStreetMap / Overpass** | Optional and off by default. When a location is configured, the server queries a public Overpass endpoint once and renders a monochrome road SVG for the standby background. Map data © OpenStreetMap contributors, ODbL. | Not connected; the demo ships no generated map. |
+| **OpenAI** | Optional and inert until you supply your own access, either an API key or a signed-in ChatGPT account. Used by the room-image wizard only: the photo you pick is sent to the images endpoint to be redrawn. No other feature calls it, and the key stays server-side. | Deliberately omitted; the demo ships the bundled illustrations and never calls a paid provider. |
 | **Notion** | Optional private integration for the shared shopping list only. Reminders do not depend on Notion. | Not connected; shopping uses fixtures. |
 
 ## Screenshots
 
+All of these are unretouched captures of the interface in the hosted demo.
+
+### The same room, morning and evening
+
 | | |
 |---|---|
-| ![Home screen in light mode with a compact control panel](website/media/hero-home.webp) | ![Notes screen in light mode](website/media/notes.webp) |
-| **Home** — compact controls leave the room illustration visible | **Everyday** — shopping and reminders without a second app |
-| ![Library screen with shelves of cover art](website/media/library.webp) | ![Energy screen with load, consumption and an hourly chart](website/media/energy.webp) |
-| **Library** — Jellyfin, in the same design system | **Energy** — real sensors, honest gaps |
+| ![The Hauser home screen by day: a compact control panel on the left with rooms, scenes, lights and the room's climate, and a sunlit illustration of the living room on the right.](website/media/hero-home-1100.webp) | ![The same home screen after dark: identical layout on dark surfaces, and the room illustration lit only by its own lamps.](website/media/home-dark-1100.webp) |
+| **Day** — controls stay narrow so the room stays visible | **Night** — same layout, same second; only the sun moved |
+
+Nobody in the household reaches for a theme setting. The interface follows
+`sun.sun`, and each room carries an illustration of itself in three lighting
+states that follow the actual lights.
+
+### Where those room illustrations come from
+
+| | |
+|---|---|
+| ![An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.](website/media/wizard-input-raw-1100.webp) | ![The same living room redrawn as a warm Hauser-style illustration, with the balcony door, the grey sofa and the wooden dining table in their original positions.](website/media/wizard-output-room-1100.webp) |
+| **Input** — evening light, a wide-angle lens, toys on the floor | **Output** — the same room, and the image that ships as the living room today |
+
+The illustrations bundled with Hauser are of the author's home, which is no use
+to yours. The room-image wizard makes yours from a photograph you take with
+your phone: you choose the crop and the focus point, the first pass may correct
+perspective, and after that the camera, geometry and object positions are
+frozen so that what comes back is still your room rather than a stock living
+room that resembles it. Day, evening and lights-off are generated as one set,
+reviewed together and published atomically.
+
+This is the one place where Hauser talks to a paid third party. It needs your
+own OpenAI access, your photograph is sent there to be redrawn, that trade is
+stated before anything is uploaded, every paid step is confirmed by hand, and a
+running count of provider calls stays on screen. The wizard is not part of the
+hosted demo.
+
+### The screens a household opens most
+
+| | |
+|---|---|
+| ![The notes screen: a shopping list on the left grouped by shop, and reminders as coloured sticky notes grouped per person on the right.](website/media/notes-1100.webp) | ![The calendar screen: a month grid with today highlighted, timed events per day and multi-day events drawn as bars across the week.](website/media/calendar-1100.webp) |
+| **Everyday** — a colour per person, a group per shop | **Calendar** — Home Assistant's calendar entities as one month |
+| ![The library screen with horizontal shelves of titles under the headings Continue watching and Recently added; each tile is a flat colour field standing in for cover art.](website/media/library-1100.webp) | ![The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.](website/media/energy-1100.webp) |
+| **Library** — Jellyfin, built in the same design system. The demo invents its titles and draws colour fields instead of real cover art | **Energy** — real sensors, and honest gaps where there is no meter |
+
+### Two shells, one design system
+
+<div align="center">
+  <img alt="The Hauser phone layout: six room cards with their illustrations in two columns, a row with the all-off switch, the central heating target and holiday mode, and a floating bottom bar with Home, Energy, Calendar and More." src="website/media/phone.webp" width="300">
+</div>
+
+The phone layout is not a squeezed panel. Navigation moves to the thumb as a
+floating bar, rooms become a drill-down instead of an overlay, and the
+destinations you use most sit in that bar in an order you choose. The tokens,
+motion and interaction rules are identical to the wall panel's.
+
+### Set it up once, then hand it to the household
+
+| | |
+|---|---|
+| ![Detail of the title bar with the edit mark: a ring with a core and rays around it, and the notice 'Edit mode on' below it.](website/media/mode-edit.webp) | ![The same title bar in use mode: the mark without rays, and the notice 'Use mode on — configuration locked' below it.](website/media/mode-use.webp) |
+| **Edit** — rays on the mark, and a long-press opens configuration | **Use** — the same mark one step calmer; every control keeps working |
+
+One mark in the middle of the title bar carries the mode, and the mode belongs
+to the device rather than to the household: the hallway panel can be locked
+while your own phone keeps configuring. A PIN can guard the way back to
+editing, and the panel can drop into use mode by itself after an idle timeout.
+Someone who tries a locked long-press twice is told where the switch is,
+because once might have been an accident.
 
 ## Architecture
 
