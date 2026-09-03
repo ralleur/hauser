@@ -89,7 +89,7 @@
            srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
            sizes="(min-width: 1360px) 1296px, 100vw"
            width="1696" height="960" fetchpriority="high"
-           alt="The Hauser home screen: a compact room-control panel on the left and a warm illustration of the living room on the right, with the room's lights, climate and scenes reachable in one touch.">
+           alt="The Hauser home screen: a compact room-control panel on the left with rooms, scenes, lights and the room's climate, and a warm illustration of the living room on the right. The title bar holds the clock, the edit switch and the standby button.">
     </div>
     <p class="device-caption">The room comes first. Controls stay to the side, where they belong.</p>
   </div>
@@ -192,6 +192,91 @@
              alt="The same home screen after dark: identical layout, dark surfaces, and the room illustration lit only by its lamps.">
       </div>
       <p class="device-caption">The same panel, the same second — only the sun moved.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Standby ───────────────────────────────────────────────────────── -->
+<section id="standby">
+  <div class="wrap">
+    <div class="showcase-head">
+      <p class="eyebrow">Standby</p>
+      <h2>Most of the day, a wall panel is a resting screen. So the resting screen got the most care.</h2>
+      <p class="body-text">
+        After a few idle minutes the panel settles into standby: a large clock,
+        the week ahead, the household's post-its, the shopping list — and behind
+        all of it, faintly, the streets of your own neighbourhood.
+      </p>
+      <p class="body-text">
+        The map is not a texture. The Hauser server renders it once from
+        OpenStreetMap data around the location Home Assistant already knows,
+        as a single monochrome SVG. On the panel it is used as a mask at ten
+        percent opacity in the current text colour, so the same file serves
+        day and night and never triggers a second render. It is generated in
+        the background and never in the way of the clock.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="theme-demo" data-mode="day">
+      <div class="theme-switch" role="group" aria-label="Show the standby screen by day or by night">
+        <button type="button" class="theme-btn" data-mode="day" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/>
+          </svg>
+          Day
+        </button>
+        <button type="button" class="theme-btn" data-mode="night" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1Z"/>
+          </svg>
+          Night
+        </button>
+      </div>
+      <div class="device theme-stack reveal">
+        <img class="theme-shot-day" src="media/lockscreen.webp"
+             srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen by day: a large clock and date in the centre, outdoor and indoor temperature beneath, the week's appointments along the bottom, coloured reminder post-its on the right and the shopping list on the left, all over a faint street map of the neighbourhood.">
+        <img class="theme-shot-night" src="media/lockscreen-dark.webp"
+             srcset="media/lockscreen-dark-700.webp 700w, media/lockscreen-dark-1100.webp 1100w, media/lockscreen-dark.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The same standby screen at night: dimmed text on a black background, the same street map now drawn in faint light grey, post-its and the shopping list muted.">
+      </div>
+      <p class="device-caption">One SVG, one mask — the map takes whatever colour the text has.</p>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="cards">
+      <div class="card reveal">
+        <h3>Your streets, not a stock texture</h3>
+        <p>
+          The location comes from Home Assistant, with browser geolocation and
+          manual coordinates as fallbacks. The radius picks itself — a city
+          centre gets a tighter cut than a village — and the result is stored
+          once for the whole household. Switching it on is a per-panel choice.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3>Everything on it is a door</h3>
+        <p>
+          Touch the shopping list and you land in the list; touch the week and
+          you land in the calendar; touch a post-it and you are with that
+          person's reminders. Nothing to unlock, nothing to swipe away first.
+        </p>
+      </div>
+      <div class="card reveal">
+        <h3>It knows when to be quiet</h3>
+        <p>
+          Deep at night the screen drops everything but a dimmed red clock, map
+          included. The hourly pixel shift that protects the LCD is a soft
+          slide, not a jump. Loading the map never delays the app start or the
+          moment the panel goes to rest.
+        </p>
+      </div>
     </div>
   </div>
 </section>
@@ -337,6 +422,59 @@
   </div>
 </section>
 
+<!-- ── Bearbeiten und Bedienen ───────────────────────────────────────── -->
+<section class="band" id="modes">
+  <div class="wrap">
+    <div class="showcase-head">
+      <p class="eyebrow">Edit and use</p>
+      <h2>Set it up once. Then hand it to the household.</h2>
+      <p class="body-text">
+        One mark in the middle of the title bar switches the panel between two
+        modes. In edit mode, a long-press opens the configuration behind
+        anything: the home layout, a room's devices, its scenes, the central
+        climate control, the system area. In use mode, exactly those doors are
+        closed. Lights, heating and media respond as before — a long-press on
+        a lamp still opens its detail — because that is use, not configuration.
+      </p>
+      <p class="body-text">
+        The mode belongs to the device, not to the household: the hallway
+        panel can be locked while your own phone keeps configuring. A PIN can
+        guard the way back, and the panel can fall back into use mode by
+        itself after a few idle minutes. Someone who tries a locked long-press
+        twice is told where the switch is — once might have been an accident.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="trio">
+      <div class="trio-item reveal">
+        <div class="device">
+          <img src="media/mode-edit.webp" width="1200" height="960" loading="lazy" decoding="async"
+               sizes="(min-width: 1360px) 410px, (min-width: 880px) 31vw, 100vw"
+               alt="Detail of the title bar with the edit mark: a ring with a core and rays around it, and the notice 'Edit mode on' beneath it.">
+        </div>
+        <p class="device-caption"><span class="shot-label shot-label-out">Edit</span> Rays on the mark: configuration is open.</p>
+      </div>
+      <div class="trio-item reveal">
+        <div class="device">
+          <img src="media/mode-use.webp" width="1200" height="960" loading="lazy" decoding="async"
+               sizes="(min-width: 1360px) 410px, (min-width: 880px) 31vw, 100vw"
+               alt="The same title bar in use mode: the mark without rays, and the notice 'Use mode on — configuration locked' beneath it.">
+        </div>
+        <p class="device-caption"><span class="shot-label">Use</span> Same mark, one step calmer. A one-line notice, not a lecture.</p>
+      </div>
+      <div class="trio-item reveal">
+        <div class="device">
+          <img src="media/mode-pin.webp" width="1200" height="960" loading="lazy" decoding="async"
+               sizes="(min-width: 1360px) 410px, (min-width: 880px) 31vw, 100vw"
+               alt="The PIN dialog under the title bar: the title 'Enter PIN', four dots with the first one filled, and a numeric keypad with Cancel and backspace.">
+        </div>
+        <p class="device-caption"><span class="shot-label">PIN</span> Optional. Guards the way back to editing, never the light switch.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── Alltag ────────────────────────────────────────────────────────── -->
 <section id="everyday">
   <div class="wrap">
@@ -346,9 +484,9 @@
       <p class="body-text">
         Lights and rooms are what a home dashboard gets sold on. What a
         household actually touches every day is smaller than that: who still has
-        to do what, and what is missing from the fridge. Those two got the same
-        care as the room screens — and they are the reason people who never open
-        Home Assistant open this.
+        to do what, what is missing from the fridge, and what is on this week.
+        Those screens got the same care as the room screens — and they are the
+        reason people who never open Home Assistant open this.
       </p>
     </div>
   </div>
@@ -366,13 +504,13 @@
       </div>
       <div class="pair-item reveal">
         <div class="device">
-          <img src="media/lockscreen.webp"
-               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+          <img src="media/calendar.webp"
+               srcset="media/calendar-700.webp 700w, media/calendar-1100.webp 1100w, media/calendar.webp 1696w"
                sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
                width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The Hauser ambient lock screen with a large clock, the date, the week's appointments, reminder post-its and the shopping list arranged for glanceable use on a wall panel.">
+               alt="The calendar screen showing a month grid with today highlighted, timed events listed per day and multi-day events such as holidays drawn as bars across the week.">
         </div>
-        <p class="device-caption">The same lists on the resting screen — touch one and you are in it.</p>
+        <p class="device-caption">The month as a wall calendar — today marked, multi-day events as bars.</p>
       </div>
     </div>
   </div>
@@ -396,11 +534,12 @@
         </p>
       </div>
       <div class="card reveal">
-        <h3>Already on the resting screen</h3>
+        <h3>The calendars you already keep</h3>
         <p>
-          The ambient screen carries the week's appointments, the post-its and
-          the shopping list without anyone unlocking anything. Touch the list
-          and you land in the list; touch the week and you land in the calendar.
+          Events come from Home Assistant's calendar entities, so whatever the
+          household already shares shows up as one month, each source in its
+          own colour. The coming week is on the standby screen too, without
+          anyone unlocking anything.
         </p>
       </div>
     </div>
@@ -468,15 +607,17 @@
         <h2>Same language, different hand.</h2>
         <p class="body-text">
           The phone layout is not a squeezed panel. Navigation moves to the
-          thumb, rooms become a drill-down instead of an overlay, and the
-          destinations you use most sit in the bottom bar in an order you
-          choose. The tokens, motion and interaction rules stay identical.
+          thumb as a floating bar, rooms become a drill-down instead of an
+          overlay, and the destinations you use most sit in that bar in an
+          order you choose. The tokens, motion and interaction rules stay
+          identical.
         </p>
       </div>
-      <div class="device reveal" style="max-width:340px;margin-inline:auto">
-        <img src="media/phone.webp" width="390" height="844" loading="lazy" decoding="async"
-             sizes="(min-width: 880px) 316px, 316px"
-             alt="The phone layout showing room cards stacked vertically with a four-item bottom navigation bar.">
+      <div class="phone reveal">
+        <div class="phone-screen">
+          <img src="media/phone.webp" width="390" height="844" loading="lazy" decoding="async"
+               alt="The phone layout: six room cards with their illustrations in two columns, a row with the all-off switch, the central heating target and the holiday mode, and a floating bottom bar with Home, Energy, Calendar and More.">
+        </div>
       </div>
     </div>
   </div>
@@ -612,12 +753,10 @@
 </footer>
 
 <script>
-  // Tag/Nacht-Vorführung. Startzustand folgt dem Farbschema des Besuchers —
-  // wer die Seite nachts dunkel öffnet, sieht das Panel zuerst nachts.
-  (function () {
-    var demo = document.querySelector('.theme-demo');
-    if (!demo) return;
-
+  // Tag/Nacht-Vorführungen (Raumpanel und Standby). Startzustand folgt dem
+  // Farbschema des Besuchers — wer die Seite nachts dunkel öffnet, sieht das
+  // Panel zuerst nachts.
+  function setupThemeDemo(demo) {
     var buttons = demo.querySelectorAll('.theme-btn');
     var shots = {
       day: demo.querySelector('.theme-shot-day'),
@@ -641,6 +780,11 @@
     }
 
     apply(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
+  }
+
+  (function () {
+    var demos = document.querySelectorAll('.theme-demo');
+    for (var i = 0; i < demos.length; i++) setupThemeDemo(demos[i]);
   })();
 </script>
 

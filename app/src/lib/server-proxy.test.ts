@@ -21,6 +21,15 @@ afterEach(async () => {
   for (const directory of tempDirs.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
+/* Der Proxy zieht die Paperless-Adresse aus der geteilten Konfiguration vor;
+   ohne eigenen Pfad läse der Test die Konfiguration der Maschine und liefe
+   gegen deren echte Instanz statt gegen den Testserver. */
+function isolatedConfigPath(): string {
+  const root = mkdtempSync(join(tmpdir(), 'hmi-ablage-config-'));
+  tempDirs.push(root);
+  return join(root, 'config.json');
+}
+
 describe('HMI-Backend-Proxy', () => {
   it('erlaubt nur die schmalen ACE-Step- und Bibliotheksrouten', () => {
     const allowed = new Set(['http://test-client.local']);
@@ -196,6 +205,7 @@ describe('HMI-Backend-Proxy', () => {
 
     const server = createHmiServer('server-secret', {
       paperlessPort, paperlessPin: '246810', paperlessToken: 'paperless-secret', allowedOrigins: allowed,
+      configPath: isolatedConfigPath(),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -258,6 +268,7 @@ describe('HMI-Backend-Proxy', () => {
     const allowed = new Set(['http://test-client.local']);
     const server = createHmiServer('server-secret', {
       paperlessPort, paperlessPin: '246810', paperlessToken: 'paperless-secret', allowedOrigins: allowed,
+      configPath: isolatedConfigPath(),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -305,6 +316,7 @@ describe('HMI-Backend-Proxy', () => {
     const allowed = new Set(['http://test-client.local']);
     const server = createHmiServer('server-secret', {
       paperlessPort, paperlessPin: '246810', paperlessToken: 'paperless-secret', allowedOrigins: allowed,
+      configPath: isolatedConfigPath(),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
