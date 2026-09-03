@@ -1279,3 +1279,36 @@ section[id] { scroll-margin-block-start: 20px; }
   background: linear-gradient(118deg, rgb(255 255 255 / 0.09) 0%, rgb(255 255 255 / 0.02) 30%, transparent 46%);
   pointer-events: none;
 }
+
+/* ── Hero: Wandpanel und Telefon nebeneinander ─────────────────────────────
+   Beide Hüllen im ersten Bild, unten bündig. Das Telefon ist dieselbe
+   CSS-Hülle wie weiter unten, nur kleiner; unter 880 px bekommt das Panel
+   die ganze Breite und das Telefon wartet auf seine eigene Sektion. */
+
+.hero-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: end;
+  gap: clamp(20px, 3vw, 36px);
+  margin-top: clamp(48px, 7vw, 88px);
+}
+
+.hero-stage .device { margin-top: 0; }
+
+.hero-phone { display: none; }
+
+@media (min-width: 880px) {
+  .hero-stage { grid-template-columns: 1fr clamp(150px, 17vw, 224px); }
+
+  .hero-phone {
+    display: block;
+    inline-size: 100%;
+    padding: 8px;
+    border-radius: 36px;
+  }
+
+  .hero-phone .phone-screen { border-radius: 28px; }
+
+  .hero-phone::before { inset-block-start: 72px; block-size: 20px; box-shadow: 0 34px 0 0 #2b3138, 0 74px 0 0 #2b3138; }
+  .hero-phone::after { inset-block-start: 112px; block-size: 56px; }
+}
