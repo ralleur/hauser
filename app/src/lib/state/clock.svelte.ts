@@ -29,6 +29,9 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') refreshClock();
   });
+  /* Sprachwechsel: Datum und Uhrzeit sofort im neuen Format, nicht erst nach
+     dem nächsten 10-s-Tick. */
+  document.addEventListener('hmi:locale-changed', refreshClock);
 }
 
 export function greetingForHour(h: number): string {

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { m } from '../../paraglide/messages.js';
   import { onMount } from 'svelte';
-  import { runtime, configuredHaUrl, configuredHaTransport } from '../adapter/runtime.svelte.ts';
+  import { backend, runtime, configuredHaUrl, configuredHaTransport } from '../adapter/runtime.svelte.ts';
+  import { attachHls } from '../state/playback.svelte.ts';
   import type { CameraValue } from '../adapter/types.ts';
   import { doubletap } from '../actions/doubletap.ts';
   import { longpress } from '../actions/longpress.ts';
   import { slider } from '../actions/slider.ts';
   import type { CameraPopoutMode } from '../state/camera-popouts.svelte.ts';
+  import { rememberCameraStill, restoreCameraStill } from '../state/camera-still.ts';
 
   let {
     entityId,
@@ -35,6 +37,12 @@
   } = $props();
   let failed = $state(false);
   let source = $state<string | null>(null);
+  /* Letztes bekanntes Standbild (Paket 5): steht sofort da und weicht dem
+     ersten frischen Bild. */
+  let cachedStill = $state<string | null>(null);
+  let streamUrl = $state<string | null>(null);
+  let videoReady = $state(false);
+  let video = $state<HTMLVideoElement>();
   let frame = $state<HTMLDivElement>();
   let root = $state<HTMLElement>();
   let fullscreen = $state(false);
@@ -42,26 +50,102 @@
   let resizeOpen = $state(false);
   const menuAvailable = $derived(onpopout !== null && ontoggletitlebar !== null);
 
-  /* Fortlaufend nachgeladene Standbilder statt MJPEG: Für Kameras, die HA
-     per ffmpeg aus einem Stream bedient, beendet `camera_proxy_stream` die
-     Antwort ohne ein einziges Bild, das Standbild kommt dagegen zuverlässig.
-     Das nächste Bild wird verdeckt geladen und erst fertig eingetauscht. */
+  /* Der Livestream ist der Normalfall — dieselbe HLS-Quelle, die auch die
+     Home-Assistant-Oberfläche spielt. Bleibt er aus (Kamera ohne Stream, HA
+     ohne die Fähigkeit, Fehler im Player), tragen die Standbilder das Bild.
+     Sie laufen nur, solange kein Video läuft: jedes Standbild kostet Home
+     Assistant einen eigenen ffmpeg-Griff. */
   const CAMERA_REFRESH_MS = 1000;
   const CAMERA_RETRY_MS = 5000;
+  const STREAM_READY_TIMEOUT_MS = 15000;
+  const STREAM_RETRY_MS = 30000;
 
   const camera = $derived(runtime.merged(entityId) as CameraValue | undefined);
+  const cameraAvailable = $derived(camera?.available === true);
+  const haBase = $derived.by(() => (
+    /* Im App-Modus reicht der eigene Server Bild und Stream durch — der
+       Browser kennt dort weder eine HA-Adresse noch einen Token. */
+    configuredHaTransport() === 'gateway' ? location.href : `${configuredHaUrl()}/`
+  ));
   const snapshotUrl = $derived.by(() => {
     const picture = camera?.entityPicture;
     if (!camera?.available || !picture) return null;
-    /* Im App-Modus reicht der eigene Server das Bild durch — der Browser
-       kennt dort weder eine HA-Adresse noch einen Token. */
-    const base = configuredHaTransport() === 'gateway' ? location.href : `${configuredHaUrl()}/`;
-    return new URL(picture, base).toString();
+    return new URL(picture, haBase).toString();
   });
-  const live = $derived(snapshotUrl !== null && !failed);
+  const live = $derived(videoReady || (snapshotUrl !== null && !failed));
+
+  /* Solange die Kamera verfügbar ist, sorgt diese Schleife dafür, dass ein
+     Streampfad vorliegt. Fällt der Player aus, setzt er `streamUrl` zurück und
+     bekommt beim nächsten Durchlauf einen frisch signierten Pfad. */
+  $effect(() => {
+    const id = entityId;
+    const base = haBase;
+    if (!cameraAvailable) {
+      streamUrl = null;
+      videoReady = false;
+      return;
+    }
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      if (stopped) return;
+      if (!streamUrl) {
+        let path: string | null = null;
+        try {
+          path = (await backend.getCameraStreamPath?.(id)) ?? null;
+        } catch {
+          path = null;
+        }
+        if (stopped) return;
+        if (path) streamUrl = new URL(path, base).toString();
+      }
+      timer = setTimeout(tick, STREAM_RETRY_MS);
+    };
+    void tick();
+    return () => { stopped = true; clearTimeout(timer); };
+  });
+
+  /* HLS an das <video> hängen. Liefert der Player nicht rechtzeitig ein Bild,
+     gilt der Pfad als verbraucht und wird verworfen. */
+  $effect(() => {
+    const url = streamUrl;
+    const element = video;
+    if (!url || !element) return;
+    let stopped = false;
+    const detach = attachHls(element, url);
+    const onReady = () => { if (!stopped) videoReady = true; };
+    const drop = () => {
+      if (stopped) return;
+      videoReady = false;
+      streamUrl = null;
+    };
+    const deadline = setTimeout(() => { if (!videoReady) drop(); }, STREAM_READY_TIMEOUT_MS);
+    element.addEventListener('loadeddata', onReady);
+    element.addEventListener('error', drop);
+    void element.play?.().catch(() => {});
+    return () => {
+      stopped = true;
+      clearTimeout(deadline);
+      element.removeEventListener('loadeddata', onReady);
+      element.removeEventListener('error', drop);
+      detach();
+    };
+  });
+
+  $effect(() => {
+    const id = entityId;
+    cachedStill = null;
+    let stopped = false;
+    void restoreCameraStill(id).then((still) => {
+      if (!stopped && still) cachedStill = still;
+    });
+    return () => { stopped = true; };
+  });
 
   $effect(() => {
     const url = snapshotUrl;
+    if (videoReady) return;
+    const id = entityId;
     source = null;
     failed = false;
     if (!url) return;
@@ -75,6 +159,7 @@
         if (stopped) return;
         source = next;
         failed = false;
+        if (loader) rememberCameraStill(id, loader);
         timer = setTimeout(loadFrame, CAMERA_REFRESH_MS);
       };
       loader.onerror = () => {
@@ -191,10 +276,26 @@
     use:doubletap={{ enabled: fullscreen, onDoubleTap: closeFullscreen }}
     onkeydowncapture={onMenuKeydown}
   >
-    {#if source && !failed}
-      <img src={source} alt={m.camera_live_alt({ label })} />
-    {:else if !live}
-      <p>{m.camera_unavailable()}</p>
+    {#if streamUrl}
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video
+        class="camera-feed-video"
+        class:is-ready={videoReady}
+        bind:this={video}
+        aria-label={m.camera_live_alt({ label })}
+        autoplay
+        muted
+        playsinline
+      ></video>
+    {/if}
+    {#if !videoReady}
+      {#if source && !failed}
+        <img src={source} alt={m.camera_live_alt({ label })} />
+      {:else if cachedStill}
+        <img src={cachedStill} alt={m.camera_live_alt({ label })} />
+      {:else if !live}
+        <p>{m.camera_unavailable()}</p>
+      {/if}
     {/if}
   </div>
 

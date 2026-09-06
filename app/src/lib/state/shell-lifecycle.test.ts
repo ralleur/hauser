@@ -44,9 +44,10 @@ describe('shell presentation lifecycle', () => {
     expect(panelShell).toContain("screen.id === 'home'");
   });
 
-  it('binds panel shell cleanup to deactivating the panel-only HUD', () => {
-    expect(panelShell).toMatch(/import\s*\{\s*hud\s*\}\s*from\s*['"]\.\.\/state\/hud\.svelte\.ts['"]/);
+  it('binds panel shell cleanup to deactivating the panel-only HUD and simulator', () => {
+    expect(panelShell).toMatch(/import\s*\{[^}]*\bhud\b[^}]*\}\s*from\s*['"]\.\.\/state\/hud\.svelte\.ts['"]/);
     expect(panelShell).toMatch(/shellLifecycle\.register\(\(\)\s*=>\s*\{[\s\S]*?hud\.active\s*=\s*false;[\s\S]*?\}\)\)/);
+    expect(panelShell).toMatch(/shellLifecycle\.register\(\(\)\s*=>\s*\{[\s\S]*?simulator\.active\s*=\s*false;[\s\S]*?\}\)\)/);
   });
 
   it('makes every panel screen and layer seam retryable without retaining rejected promises', () => {

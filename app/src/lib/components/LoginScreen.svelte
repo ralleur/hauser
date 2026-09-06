@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   /* Login-Gate (ADR-018): Token-Eingabe für das echte HA. Erscheint nur, wenn das
      HaBackend läuft und kein (gültiger) Token in localStorage liegt. Der Token
      wird an das Backend durchgereicht (localStorage) — nie ins Repo/Build. */
@@ -16,14 +17,11 @@
 
 <div class="login-gate" role="dialog" aria-modal="true" aria-labelledby="login-title">
   <form class="login-card" onsubmit={onSubmit}>
-    <h1 id="login-title" class="login-title">Home Assistant verbinden</h1>
-    <p class="login-hint">
-      Long-Lived Access Token aus deinem HA-Profil (Sicherheit → „Long-Lived
-      Access Tokens" → Token erstellen). Er bleibt lokal im Browser.
-    </p>
+    <h1 id="login-title" class="login-title">{m.login_title()}</h1>
+    <p class="login-hint">{m.login_hint()}</p>
 
     {#if auth.invalid}
-      <p class="login-error" role="alert">Token ungültig oder abgelaufen — bitte neu eingeben.</p>
+      <p class="login-error" role="alert">{m.login_error()}</p>
     {/if}
 
     <input
@@ -32,12 +30,12 @@
       autocomplete="off"
       spellcheck="false"
       placeholder="eyJhbGciOi…"
-      aria-label="Long-Lived Access Token"
+      aria-label={m.login_token_label()}
       bind:value={token}
     />
 
     <button class="login-submit pressable" type="submit" disabled={token.trim() === ''}>
-      Verbinden
+      {m.login_submit()}
     </button>
   </form>
 </div>

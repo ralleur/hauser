@@ -7,6 +7,13 @@
   --phone-safe-bottom: env(safe-area-inset-bottom, 0px);
   --phone-safe-left: env(safe-area-inset-left, 0px);
   --phone-conn-banner-height: calc(env(safe-area-inset-top, 0px) + var(--touch-min));
+  /* Benachrichtigungsstreifen (Paket 3, docs/20): Die Kachel schwebt nur auf
+     dem Panel. Auf dem Phone meldet die Ebene ihre Unterkante als
+     --notification-flow-height, und alles darunter beginnt erst dort — Inhalt,
+     Verbindungsbanner und die von unten kommenden Sheets. Ohne Meldung ist die
+     Variable nicht gesetzt und der Streifen 0. */
+  --phone-notification-band: var(--notification-flow-height, 0px);
+  --phone-sheet-top: max(var(--phone-safe-top), var(--phone-notification-band));
   /* Die Bottom-Navigation ist eine schwebende Pille: Höhe der Pille plus ihr
      Abstand zur Unterkante. Inhalte halten mit --phone-nav-height genau diese
      Zone frei — die Home-Ansicht scrollt nicht, ihre Schnellaktionen lägen
@@ -73,7 +80,8 @@
 .phone-screen-transition {
   position: absolute;
   inset: 0;
-  height: 100%;
+  top: var(--phone-notification-band);
+  height: calc(100% - var(--phone-notification-band));
   overflow: hidden;
   pointer-events: none;
 }
@@ -586,7 +594,7 @@
 .room-sheet-scrim {
   position: fixed;
   z-index: 3;
-  top: var(--phone-safe-top);
+  top: var(--phone-sheet-top);
   right: var(--phone-safe-right);
   bottom: var(--phone-safe-bottom);
   left: var(--phone-safe-left);
@@ -599,7 +607,7 @@
 
 .room-sheet {
   width: 100%;
-  max-height: calc(var(--phone-viewport-height) - var(--phone-safe-top));
+  max-height: calc(var(--phone-viewport-height) - var(--phone-sheet-top));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1064,6 +1072,7 @@
 .phone-conn-banner {
   position: absolute;
   z-index: 2;
+  top: var(--phone-notification-band);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1081,6 +1090,26 @@
 .phone-conn-banner.is-visible {
   transform: translateY(0);
   opacity: 1;
+}
+
+/* Nur der Retry-Knopf ist anfassbar; das Banner selbst bleibt durchlässig. */
+.phone-conn-retry {
+  margin-left: auto;
+  min-height: var(--touch-min);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: var(--color-surface-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  pointer-events: auto;
+}
+
+/* Getrennt: die zentrale Klimapille ist gesperrt, solange keine Verbindung
+   steht — sie schickt Commands, die niemand annimmt. Navigation bleibt frei. */
+.phone-shell.is-disconnected .climate-dock {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* Das Banner liegt für seine Ein-/Ausblend-Animation absolut. Solange es
@@ -1193,7 +1222,7 @@
 .more-sheet-scrim {
   position: fixed;
   z-index: 3;
-  top: var(--phone-safe-top);
+  top: var(--phone-sheet-top);
   right: var(--phone-safe-right);
   bottom: var(--phone-safe-bottom);
   left: var(--phone-safe-left);
@@ -1206,7 +1235,7 @@
 
 .more-sheet {
   width: 100%;
-  max-height: calc(var(--phone-viewport-height) - var(--phone-safe-top) - var(--space-5));
+  max-height: calc(var(--phone-viewport-height) - var(--phone-sheet-top) - var(--space-5));
   overflow-y: auto;
   padding: var(--space-4);
   border: 1px solid var(--overlay-border);

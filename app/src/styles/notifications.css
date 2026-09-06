@@ -46,6 +46,40 @@
   background: var(--notification-accent);
 }
 
+/* Meldungen mit Zielort führen irgendwohin — das darf man sehen und fühlen.
+   Ohne Zielort bleibt die Kachel eine Mitteilung und reagiert auf nichts. */
+.notification-tile.is-openable {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+/* Liegt über der ganzen Kachel, aber unter Text und Quittieren-Knopf: ein
+   echtes Ziel für Finger und Tastatur, ohne die Kachel selbst zum Knopf zu
+   machen (verschachtelte Knöpfe wären das Ergebnis). */
+.notification-open {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.notification-tile.is-openable > .notification-icon,
+.notification-tile.is-openable > .notification-copy,
+.notification-tile.is-openable > .notification-dismiss {
+  position: relative;
+  z-index: 1;
+}
+.notification-tile.is-openable > .notification-copy { pointer-events: none; }
+.notification-tile.is-openable:hover {
+  background: color-mix(in srgb, var(--color-surface-3) 94%, transparent);
+}
+.notification-tile.is-openable:active { transform: scale(0.99); }
+.notification-tile.is-openable:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+
 .notification-tile.is-info { --notification-accent: var(--color-info); }
 .notification-tile.is-success { --notification-accent: var(--color-success); }
 .notification-tile.is-warning { --notification-accent: var(--color-warning); }

@@ -24,6 +24,41 @@
   inset: 0;
   z-index: 0;
   background: var(--color-surface-0);
+  /* Paket 13: Die Wetterschicht liegt hier über den Bildebenen — im Standby
+     liegt dieselbe Komponente hinter dem Inhalt. */
+  --hero-weather-z: 1;
+  /* Bezugsgröße für `.hero-image-space` (siehe dort). */
+  container-type: size;
+}
+
+/* ── Bildfläche statt Bühnenfläche (Paket 13) ──
+   Die Bühne ist meist deutlich breiter als das Raumbild (106:75); `cover`
+   schneidet deshalb oben und unten ab. Fenster und erkannte Flächen liegen
+   aber in Bildkoordinaten — über der ganzen Bühne gezeichnet, sitzen sie um
+   genau diesen Anschnitt daneben. Am Wandpanel fehlte so die obere Hälfte
+   jedes Fensters.
+
+   Dieser Rahmen bildet die dargestellte Bildfläche nach: mindestens so groß
+   wie die Bühne, im Bildverhältnis, verschoben wie `background-position` es
+   tut — der Punkt (fx, fy) des Bildes landet auf (fx, fy) der Bühne. Parallax
+   und die 2 % Überzeichnung der Bildebenen macht er mit, sonst wandert das
+   Wetter beim Blättern aus dem Fenster. */
+.hero-image-space {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max(100cqw, calc(100cqh * 106 / 75));
+  height: max(100cqh, calc(100cqw * 75 / 106));
+  translate:
+    calc((100cqw - 100%) * var(--hero-focus-x, 0.5))
+    calc((100cqh - 100%) * var(--hero-focus-y, 0.5));
+  transform: translate3d(var(--hero-parallax, 0px), 0, 0) scale(1.02);
+  pointer-events: none;
+}
+/* Winziges Parallax beim Blättern der Raumauswahl: nur transform, damit der
+   Wechsel im Compositor bleibt und keine Ebene neu gezeichnet wird. */
+.room-hero > .hero-layer {
+  transform: translate3d(var(--hero-parallax, 0px), 0, 0) scale(1.02);
 }
 .hero-layer {
   position: absolute;
@@ -33,10 +68,27 @@
   background-repeat: no-repeat;
   opacity: 0;
   transition: opacity var(--duration-enter) var(--ease-out);
-  will-change: opacity;
+  will-change: opacity, transform;
 }
 .hero-layer.is-front { opacity: 1; }
 
+/* Nachdimmen: das letzte Licht im Raum geht aus, das Bild sinkt hörbar langsam
+   in den unbeleuchteten Zustand. Gilt für beide Puffer-Ebenen, weil ein- und
+   ausgehendes Bild dieselbe Bewegung machen müssen. */
+.room-hero.is-dimming .hero-layer {
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+}
+
+/* Die Dämmerungsebene folgt direkt dem Sonnenstand. Ihre Deckkraft kommt aus
+   dem Inline-Style und darf deshalb nicht zusätzlich nachlaufen. */
+.hero-layer.is-dusk { transition: none; }
+
+/* ── Immersions-Licht (Paket 4) ──
+   Die Lichtkegel gehen in beide Richtungen unterschiedlich: Anschalten ist ein
+   Schaltvorgang und kommt zügig mit sanftem Einschwingen; Ausgehen folgt dem
+   Nachdimmen des Bildes darunter und braucht dieselbe Ruhe. Technisch trägt die
+   Grundregel den Weg nach aus, die `is-on`-Regel den Weg nach an — beim
+   Entfernen der Klasse gilt wieder die Grundregel. */
 .immersion-light-layer {
   position: absolute;
   inset: 0;
@@ -44,17 +96,51 @@
   height: 100%;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
 }
-.immersion-light-layer.is-visible { opacity: 1; }
+.immersion-light-layer.is-visible {
+  opacity: 1;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
 .immersion-light-layer circle {
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
 }
-.immersion-light-layer circle.is-on { opacity: var(--light-opacity); }
+.immersion-light-layer circle.is-on {
+  opacity: var(--light-opacity);
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hero-layer, .immersion-light-layer, .immersion-light-layer circle { transition: none; }
+  /* Hartschnitt statt Bewegung: kein Nachdimmen, kein Parallax. Die
+     Dämmerungsebene bleibt, sie ist ein Zustand und keine Animation. */
+  .room-hero.is-dimming .hero-layer { transition: none; }
+  .room-hero > .hero-layer { transform: none; }
+}
+
+/* ── View Transitions: die Rahmenleisten bleiben stehen ──
+   Der Browser überblendet den gesamten Wurzel-Schnappschuss, also auch Status-
+   und Tab-Leiste, in denen sich nichts ändert — sichtbar als hartes Aussetzen
+   der Leisten. Ein eigener Name macht sie zu durchgehenden Elementen: ihre
+   Gruppe blendet alt gegen neu, beide Bilder sind gleich, man sieht nichts.
+   Gilt für jede View Transition der App (Bibliothek, künftige Screens). */
+.status-bar { view-transition-name: status-bar; }
+.tab-bar { view-transition-name: tab-bar; }
+/* Der Name macht jede Leiste zu einem eigenen Stapelkontext. Was aus ihr
+   herausragt — Modus-Hinweis, Kreiswelle und PIN-Feld unter dem Umschalter,
+   die Sensorliste über „Alles ruhig" — konnte den Screen-Inhalt deshalb nicht
+   mehr überdecken, obwohl es eigene z-Indizes trägt: sie gelten nur noch
+   innerhalb der Leiste. Also steigt die Leiste als Ganzes über die Screens
+   (1–10) und bleibt unter Player und Bannern (40), Standby (50), HUD (99)
+   und Modal (200). */
+.status-bar,
+.tab-bar { position: relative; z-index: 30; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
 }
 
 /* ── Datengetriebene Kontrollflächen links ──
@@ -350,6 +436,10 @@
 }
 
 /* ── Onboarding-Karte für Raumbilder ──
+   Kleiner Hinweis oben rechts auf der Bühne, einmal pro Gerät: Er nennt den
+   Assistenten und die zwei Wege dorthin, nichts weiter (Paket 3, docs/20).
+   Gleiche Flächensprache wie .home-panel, nur deckender — sie trägt Text. */
+/* ── Onboarding-Karte für Raumbilder ──
    Rechte Bühnenhälfte: sie erscheint nur, solange der gewählte Raum kein
    eigenes Bild hat, und erklärt in einer Karte den Weg dorthin. Gleiche
    Flächensprache wie .home-panel, nur deckender — sie trägt Fließtext. */
@@ -441,8 +531,12 @@
   flex: 1 1 0;
   min-width: 0;
   display: grid;
+  /* Die Nummer sitzt neben dem Symbol, nicht neben dem Text: sonst bleiben dem
+     Label nur 87 px, und „Schnappschuss machen" braucht in der schmalsten
+     Zeile 105 px — es schob sich in den nächsten Schritt (gemessen 2026-09-04).
+     Über die volle Spaltenbreite bricht jede Sprache sauber um. */
   grid-template-columns: auto 1fr;
-  grid-template-areas: 'icon icon' 'num label';
+  grid-template-areas: 'icon num' 'label label';
   align-items: center;
   gap: var(--space-1) var(--space-2);
   text-align: left;
@@ -486,20 +580,4 @@
 .room-onboard-actions button {
   width: 100%;
   justify-content: center;
-}
-.room-onboard-hide {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--touch-min);
-  padding: 0 var(--space-2);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-.room-onboard-hide input {
-  width: var(--space-5);
-  height: var(--space-5);
-  margin: 0;
-  accent-color: var(--color-accent-warm);
 }

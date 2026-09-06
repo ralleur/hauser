@@ -14,6 +14,7 @@
   import { appearanceMode, setAppearanceMode } from '../../state/theme.svelte.ts';
   import type { AppearanceMode } from '../../state/appearance-mode.ts';
   import { AVAILABLE_LOCALES, changeLocale, localeLabel, localeState } from '../../state/locale.svelte.ts';
+  import { setAmbientLightDim, settingsValues } from '../../state/settings.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
   const mode = $derived(appearanceMode());
@@ -84,5 +85,27 @@
         </button>
       {/each}
     </div>
+  </div>
+</div>
+
+<!-- ── Helligkeit (Paket 9) ──
+     Gerätelokal: ein Panel im dunklen Flur soll anders dürfen als das Telefon
+     in der Hand. Das Wetter steht bei Ambient & Standby, weil es dort zieht. -->
+<div class="settings-group" data-setting-id="stage">
+  <SettingsCardHead icon="i-brightness-6" tint="cool"
+                    title={m.stage_title()} sub={m.stage_hint()} />
+
+  <div class="settings-row" data-setting-id="ambient-light-dim">
+    <span class="settings-row-icon"><Icon name="i-brightness-6" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.stage_ambient_light()}</span>
+      <span class="settings-row-sub">{m.stage_ambient_light_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.ambientLightDim}
+            aria-label={m.stage_ambient_light()}
+            onclick={() => setAmbientLightDim(!settingsValues.ambientLightDim)}>
+      <span class="settings-switch-knob"></span>
+    </button>
   </div>
 </div>

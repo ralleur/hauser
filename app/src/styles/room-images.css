@@ -117,6 +117,26 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* Der Zielraum steht seit Paket 13 am Anfang, nicht mehr am Ende: Nach dem
+   Übernehmen hängt das Set sofort im Raum, ohne weiteren Bildschirm. */
+.room-image-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px dotted var(--overlay-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.room-image-target select {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
 .room-image-consent {
   display: flex;
   align-items: flex-start;

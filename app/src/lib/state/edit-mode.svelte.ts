@@ -16,11 +16,16 @@
    gesperrt sein, während das eigene Telefon weiter konfiguriert. Bewusst ein
    eigenes kleines Modul statt eines Settings-Werts — die Sperre wird im
    Startup-Pfad beider Shells gelesen, der Settings-Store gehört dort nicht
-   hinein (docs/03). */
+   hinein (docs/03).
 
-const MODE_KEY = 'hmi:edit-mode';
-const AUTO_LOCK_KEY = 'hmi:edit-auto-lock';
-const PIN_KEY = 'hmi:edit-pin';
+   Hier steht nur, was der Startpfad braucht: den Modus lesen und eine
+   Konfigurations-Aktion daran hängen. Umschalten, PIN und automatisches
+   Sperren liegen in `edit-mode-controls.ts`; die lädt erst, wer den
+   Moduswechsel-Knopf oder die Einstellungen öffnet (ADR-029). */
+
+export const MODE_KEY = 'hmi:edit-mode';
+export const AUTO_LOCK_KEY = 'hmi:edit-auto-lock';
+export const PIN_KEY = 'hmi:edit-pin';
 
 /* Zwei vergebliche Versuche innerhalb dieser Spanne gelten als „der Nutzer
    sucht die Konfiguration" — dann erklärt der Hinweis den Weg dorthin. */
@@ -28,7 +33,7 @@ const ATTEMPT_WINDOW_MS = 30_000;
 const HINT_MS = 5_000;
 const ANNOUNCE_MS = 2_600;
 
-function storage(): Storage | undefined {
+export function editModeStorage(): Storage | undefined {
   if (typeof window === 'undefined') return undefined;
   try {
     return window.localStorage;
@@ -39,20 +44,9 @@ function storage(): Storage | undefined {
 
 function read(key: string): string | null {
   try {
-    return storage()?.getItem(key) ?? null;
+    return editModeStorage()?.getItem(key) ?? null;
   } catch {
     return null;
-  }
-}
-
-function write(key: string, value: string | null): void {
-  try {
-    const store = storage();
-    if (!store) return;
-    if (value === null) store.removeItem(key);
-    else store.setItem(key, value);
-  } catch {
-    // Privatmodus o. ä.: die Wahl gilt dann nur für diese Sitzung.
   }
 }
 
@@ -82,7 +76,7 @@ export const modeNotice = $state({
 
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
-function showNotice(kind: 'edit' | 'user' | 'locked'): void {
+export function showNotice(kind: 'edit' | 'user' | 'locked'): void {
   modeNotice.kind = kind;
   modeNotice.seq += 1;
   clearTimeout(noticeTimer);
@@ -94,43 +88,20 @@ export function dismissNotice(): void {
   modeNotice.kind = null;
 }
 
-export function setEditMode(active: boolean): void {
-  if (editMode.active === active) return;
-  editMode.active = active;
-  write(MODE_KEY, active ? null : 'off');
-  blockedAttempts = 0;
-  showNotice(active ? 'edit' : 'user');
-}
-
-/** true, wenn zum Verlassen des Bedienen-Modus eine PIN nötig ist. */
-export function editModeNeedsPin(): boolean {
-  return !editMode.active && editMode.pin.length > 0;
-}
-
-export function pinMatches(candidate: string): boolean {
-  return editMode.pin.length > 0 && candidate === editMode.pin;
-}
-
-/* Die PIN liegt im Klartext im Gerätespeicher. Sie schützt vor dem
-   versehentlichen Verstellen durch Mitbewohner, nicht gegen jemanden mit
-   Zugriff auf das entsperrte Gerät — für mehr wäre ein Server-Geheimnis
-   nötig, und das Panel läuft ohne TLS (kein `crypto.subtle`). */
-export function setEditPin(pin: string): void {
-  editMode.pin = pin;
-  write(PIN_KEY, pin.length > 0 ? pin : null);
-}
-
-export function setAutoLockMinutes(minutes: number | null): void {
-  editMode.autoLockMinutes = minutes;
-  write(AUTO_LOCK_KEY, minutes === null ? null : String(minutes));
-}
-
 /* ── Vergebliche Konfigurations-Versuche ──
    Der Long-Press bleibt im Bedienen-Modus aktiv, damit wir ihn bemerken: beim
    ersten Mal passiert nichts (das kann Zufall sein), ab dem zweiten Versuch
    innerhalb der Zeitspanne erklärt der Hinweis den Weg über den Knopf oben. */
 let blockedAttempts = 0;
 let firstAttemptAt = 0;
+
+/** Laufende Summe aller vergeblichen Versuche — die Demo-Tipps lesen sie, um
+    zu erkennen, dass der Long-Press im Bedienen-Modus ausprobiert wurde. */
+export const blockedConfigAttempts = $state({ total: 0 });
+
+export function resetBlockedConfigAttempts(): void {
+  blockedAttempts = 0;
+}
 
 export function noteBlockedConfigAttempt(immediate = false): void {
   const now = Date.now();
@@ -139,6 +110,7 @@ export function noteBlockedConfigAttempt(immediate = false): void {
     firstAttemptAt = now;
   }
   blockedAttempts += 1;
+  blockedConfigAttempts.total += 1;
   if (immediate || blockedAttempts >= 2) showNotice('locked');
 }
 
@@ -148,28 +120,5 @@ export function whenEditable(action: () => void): () => void {
   return () => {
     if (editMode.active) action();
     else noteBlockedConfigAttempt();
-  };
-}
-
-/* ── Automatisches Sperren ──
-   Läuft nur, solange Bearbeiten aktiv und eine Dauer eingestellt ist. Jede
-   Berührung setzt die Frist zurück; die Shell meldet sich beim Start an. */
-let idleTimer: ReturnType<typeof setTimeout> | undefined;
-
-export function startAutoLock(): () => void {
-  if (typeof window === 'undefined') return () => {};
-  const arm = () => {
-    clearTimeout(idleTimer);
-    const minutes = editMode.autoLockMinutes;
-    if (!editMode.active || minutes === null) return;
-    idleTimer = setTimeout(() => setEditMode(false), minutes * 60_000);
-  };
-  window.addEventListener('pointerdown', arm, { passive: true });
-  window.addEventListener('keydown', arm);
-  arm();
-  return () => {
-    clearTimeout(idleTimer);
-    window.removeEventListener('pointerdown', arm);
-    window.removeEventListener('keydown', arm);
   };
 }

@@ -21,7 +21,8 @@ describe('B-08E10 B3 prompt policy v1', () => {
   });
 
   it('exposes exactly four builders with stage-specific invariants', () => {
-    expect(ROOM_IMAGE_PROMPT_POLICY_V1.phases).toEqual(['composition', 'style-light', 'dark', 'dark-off']);
+    expect(ROOM_IMAGE_PROMPT_POLICY_V1.phases)
+      .toEqual(['composition', 'style-light', 'dark', 'dark-off', 'overcast']);
     const composition = buildRoomImagePrompt('composition', validSpec);
     const style = buildRoomImagePrompt('style-light', validSpec);
     const dark = buildRoomImagePrompt('dark', validSpec);
@@ -30,6 +31,10 @@ describe('B-08E10 B3 prompt policy v1', () => {
     // oder Illustrationsvorgaben unterdrücken die Neukomposition nachweislich.
     expect(composition).toContain('Perspektive');
     expect(composition).toMatch(/Erstelle eine passende Version/);
+    /* Der Prompt darf keinen Raum beim Namen nennen: Er entstand am
+       Wohnzimmerfoto, und die Nennung übersteuerte bei anderen Räumen das
+       Bild — aus einem Schlafzimmerfoto wurde ein erfundenes Wohnzimmer. */
+    expect(composition.toLowerCase()).not.toMatch(/wohnzimmer|schlafzimmer|küche|bad|flur|kinderzimmer/);
     expect(composition.toLowerCase()).not.toContain('freeze');
     expect(composition.toLowerCase()).not.toContain('illustrat');
     expect(style).toContain('freeze camera');

@@ -2,8 +2,9 @@
   import '../../styles/settings.css';
   import { onMount, tick, type Component } from 'svelte';
   import Icon from '../components/Icon.svelte';
-  import { systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
+  import { hauserUpdates, systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
+  import { logoTap } from '../state/hidden-gestures.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   import {
@@ -32,6 +33,7 @@
   import ShoppingSection from '../components/settings/ShoppingSection.svelte';
   import MediaSection from '../components/settings/MediaSection.svelte';
   import StatusSection from '../components/settings/StatusSection.svelte';
+  import { pairingUi } from '../state/pairing.svelte.ts';
   import AiCustomizingSection from '../components/settings/AiCustomizingSection.svelte';
   import MaintenanceSection from '../components/settings/MaintenanceSection.svelte';
 
@@ -42,6 +44,7 @@
   const section = $derived(settingsSection(settingsUi.section));
   const results = $derived(searchSettings(settingsUi.query));
   const sidebar = $derived(settingsSidebar());
+  const ownUpdates = $derived(hauserUpdates(systemStatus.updates));
 
   onMount(() => {
     enterSettings();
@@ -74,6 +77,11 @@
   } as const;
 
   const SectionView = $derived(SECTION_VIEWS[settingsUi.section]);
+
+  function openPairing(): void {
+    pairingUi.autoStart = true;
+    openSection('services');
+  }
 
   function selectSection(id: Parameters<typeof openSection>[0]): void {
     openSection(id);
@@ -109,7 +117,12 @@
   <aside class="settings-sidebar" class:is-phone-hidden={phone && phoneSectionOpen} aria-label="Einstellungs-Bereiche">
     <!-- Hauser-Lockup statt Text-Überschrift: Signet folgt via currentColor dem
          Theme (dark: hell, light: dunkel), der Lichtpunkt bleibt gold. -->
-    <h1 class="settings-title settings-brand" bind:this={titleAnchor} tabindex="-1" aria-label="Hauser — System">
+    <div class="settings-brand-row">
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions — versteckte
+         Geste (Paket 10): dreimal tippen öffnet die Diagnoseansicht. Kein
+         Bedienelement, kein Menüeintrag; dokumentiert in docs/06. -->
+    <h1 class="settings-title settings-brand" bind:this={titleAnchor} tabindex="-1" aria-label="Hauser — System"
+        onpointerdown={logoTap}>
       <svg class="settings-brand-mark" viewBox="0 0 512 512" aria-hidden="true">
         <g fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round">
           <path d="M168 96 V416" />
@@ -119,6 +132,15 @@
       </svg>
       <span class="settings-brand-word">hauser</span>
     </h1>
+    <!-- Companion-App (Plan 21): der QR-Knopf rechts neben dem Lockup springt
+         zu Dienste und startet die Kopplung sofort. -->
+    <button type="button" class="settings-brand-pair pressable" aria-label={m.sys_app_pairing_open()}
+            title={m.sys_app_pairing_open()} onclick={openPairing}>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+        <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm10-2h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2zm-2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm4 0h2v2h-2v-2z" />
+      </svg>
+    </button>
+    </div>
 
     <div class="settings-search">
       <Icon name="i-magnify" cls="icon icon-sm" />
@@ -145,7 +167,7 @@
             </span>
           </button>
         {:else}
-          <p class="settings-no-results">Keine Einstellung gefunden für „{settingsUi.query.trim()}"</p>
+          <p class="settings-no-results">{m.settings_no_results({ query: settingsUi.query.trim() })}</p>
         {/each}
       </nav>
     {:else}
@@ -161,8 +183,8 @@
                         onclick={() => selectSection(s.id)}>
                   <span class="settings-icon-tile tint-{s.tint}"><Icon name={s.icon} cls="icon icon-md" /></span>
                   <span class="settings-nav-label">{s.label}</span>
-                  {#if s.id === 'status' && systemStatus.updates.length}
-                    <span class="settings-badge num">{systemStatus.updates.length}</span>
+                  {#if s.id === 'status' && ownUpdates.length}
+                    <span class="settings-badge num">{ownUpdates.length}</span>
                   {/if}
                   <Icon name="i-chevron-right" cls="icon icon-sm settings-nav-chev" />
                 </button>
@@ -178,7 +200,7 @@
     <div class="settings-pane-content">
       <header class="settings-pane-head">
         {#if phone}
-          <button class="settings-phone-back pressable" type="button" aria-label="Zurück zu System" onclick={() => (phoneSectionOpen = false)}>
+          <button class="settings-phone-back pressable" type="button" aria-label={m.settings_back_to_system()} onclick={() => (phoneSectionOpen = false)}>
             <Icon name="i-back" cls="icon icon-md" />
           </button>
         {/if}

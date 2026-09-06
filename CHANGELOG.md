@@ -5,6 +5,106 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-06
+
+### Added
+
+- **The room picture follows the weather.** Each generated image set gains an
+  overcast variant, so a room shows grey window light on a rainy day instead
+  of the same golden afternoon. The room-image assistant asks a vision model
+  once per image set for the surfaces it can see (windows, floor, seats,
+  tables and more) and keeps them in the catalogue; rain and snow are drawn
+  only inside the windows. Nothing runs in the browser at start or on a room
+  change.
+- **Weather in the standby screen.** Rain, snow and cloud pass quietly behind
+  the clock and the notes. Switchable under Ambient & Standby.
+- **Undo instead of confirm.** After "everything off", a scene or a climate
+  change, a five-second toast offers Undo; the command goes out immediately.
+  A switch that gets no echo from Home Assistant within a second pulses once.
+- **Presence and person.** A motion detector from Window & Motion can wake the
+  panel from standby; when every resident is away the standby goes dark; the
+  first person home is greeted by name with their own notes first. Residents
+  are mapped to Home Assistant persons, which are imported on first start.
+  All off by default.
+- **Ambient light.** A brightness sensor in the room or in the panel dims the
+  interface continuously between two levels.
+- **Hidden gestures.** Long-press the clock for a large date and seconds;
+  tap the logo three times for a diagnostics view with frame rate, connection
+  age, snapshot age and version.
+- **Calendar moments.** Birthdays and selected fixed days from the family
+  calendar show a quiet morning confetti and a line in the standby; the first
+  snow of the season is noticed once. Fixed days are selectable in Settings.
+- **Dusk in real time.** Around sunrise and sunset the room picture and the
+  interface tones cross-fade over the sun's elevation instead of switching.
+  Light cones come on quickly and fade out slowly; when the last lamp in a
+  room goes out the picture dims into its unlit version.
+- **New default room pictures** drawn from a real household, chosen by room
+  name in every supported language.
+- **Cameras stream live over HLS** as in Home Assistant, with still images as
+  the fallback.
+- **Shopping list sources.** Stores can be Home Assistant to-do lists (created
+  from Hauser) or a Notion page.
+- **Companion app pairing.** The System screen shows a one-time QR code; a
+  paired phone gets its own device token. The app itself is a separate
+  project and not part of this release.
+- Standby can be switched off or given its own delay; the layout dialog uses
+  the same tick scale as the light dimmer.
+
+### Changed
+
+- **The outdoor weather is your own.** The server reads the home location
+  from Home Assistant and asks Open-Meteo itself; the interface no longer
+  carries fixed city coordinates and the response contains no coordinates
+  ([#15](https://github.com/ralleur/hauser/issues/15)).
+- **The room-image assistant is quieter.** The room is chosen up front, the
+  final screen is gone, progress is one plain sentence, and the notification
+  centre tells you when drafts, the final set or the detected surfaces are
+  ready. A spinning mark in the header shows the house is working.
+- **Everything at once.** Weather, energy curves, camera stills and
+  notification rules start from a snapshot; hero images decode in a worker
+  and neighbouring rooms are preloaded on tap. Notes, reminders, shopping
+  list and the library reappear instantly after a cold start; stale snapshots
+  refresh when the app becomes visible or the network returns.
+- **Phone: notifications flow with the content**, tab names match the panel,
+  and the room-image onboarding card appears once per device.
+- **English without German leftovers**; a lint keeps it that way.
+- **Failure states explain themselves.** The minimal shell has a reload
+  button and a one-line cause; the disconnected banner appears once, names the
+  cause and offers a retry while climate and scenes stay locked.
+- **Appearance modes** separate interface tone and dusk cleanly.
+- **Every read route** of the API answers repeated requests with 304 via
+  ETag; the server pre-computes the city map, phone variants and last week's
+  energy statistics overnight and reports a self-check in its health payload.
+- Screen and sheet transitions share one motion system with durations and
+  curves from the design tokens.
+
+### Fixed
+
+- **Connecting no longer hangs forever.** A handshake that never completes,
+  for example after a resume behind a proxy, now times out after 20 s and
+  falls back to the normal reconnect cycle
+  ([#15](https://github.com/ralleur/hauser/issues/15)).
+- **The lamp-placement editor shows your own room picture** instead of the
+  bundled illustration ([#16](https://github.com/ralleur/hauser/issues/16)).
+- The unlit night picture is used as soon as no lamp in the room is on, not
+  only when placed lamps are off; a room without known lamps stays lit.
+- Room-image sets are no longer deleted when the server starts without an
+  asset catalogue; published sets are kept and reported.
+- Assigning an image set takes effect immediately; a mouse click opens a
+  notification again; the falling temperature trend points down; the deep
+  night dimming is opaque.
+
+### Internal
+
+- The server is split into modules under `app/server/` (room images, hotel
+  mode, laundry, setup, configuration core, family data, notifications,
+  ambient, songs, files). `server.mjs` keeps the request dispatcher and
+  re-exports the public surface, so existing imports keep working.
+- The HTTP API has an explicit contract (`app/server/api-contract.mjs`) with
+  84 routes. A generated TypeScript table and a typed browser client are
+  derived from it, and a test fails when a route literal in server or UI code
+  drifts away from the contract.
+
 ## [0.7.0] - 2026-09-02
 
 This release documents the work that shipped alongside 0.6.3 but was left out of

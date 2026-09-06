@@ -132,10 +132,10 @@ describe('minimal shell config status seam', () => {
     const dom = statusRoot();
     const status = publishMinimalShellConfigStatus(secret, dom.root);
 
-    expect(status).toEqual({
+    expect({ ...status }).toEqual({
       code: 'HOUSEHOLD_CONFIG_UNAVAILABLE',
       title: 'Konfiguration nicht verfügbar',
-      message: 'Die lokale Oberfläche bleibt bedienbar. Live-Daten und Geräteaktionen sind nicht verfügbar.',
+      message: 'Der Server hat die Konfiguration nicht geliefert — die lokale Oberfläche bleibt bedienbar.',
     });
     expect(JSON.stringify(status)).not.toContain(secret);
     expect(JSON.stringify(status)).not.toMatch(/very-secret|private\/config/);

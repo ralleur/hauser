@@ -62,6 +62,13 @@
   const backgroundUrl = $derived(background
     ? `/assets/room-images/${background.assetId}/light.avif`
     : `${import.meta.env.BASE_URL}hero/${room?.id}-light.avif`);
+  /* Die Lampen werden auf dem unbeleuchteten Nachtbild platziert — dort sieht
+     man, wo Licht fehlt. Es muss dasselbe Bildset sein wie auf der Bühne, sonst
+     zeigt der Editor die Projektfassung und die gesetzten Punkte passen nicht
+     zum eigenen Bild. */
+  const immersionUrl = $derived(background
+    ? `/assets/room-images/${background.assetId}/dark-off.avif`
+    : `${import.meta.env.BASE_URL}hero/${room?.id}-dark-off.avif`);
 
   // Vorschläge erst ab Eingabe: bestes Präfix-Match zuerst, dann Name-Substring,
   // dann entity_id/Domain. Geräte, die schon im Raum liegen, tauchen nicht auf.
@@ -414,7 +421,7 @@
               </aside>
               <button class="re-immersion-preview" type="button" onclick={placeSelected}
                       disabled={!selectedLightId}
-                      style:background-image={`url("${import.meta.env.BASE_URL}hero/${room.id}-dark-off.avif")`}
+                      style:background-image={`url("${immersionUrl}")`}
                       aria-label={selectedLightId ? m.room_set_position() : m.room_pick_lamp_first()}>
                 {#each Object.entries(placements) as [entityId, placement] (entityId)}
                   <span class="re-light-marker" class:is-selected={selectedLightId === entityId}
@@ -574,5 +581,5 @@
   <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}
                     onclose={() => libraryOpen = false}
                     onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
-  <RoomImageWizard open={wizardOpen} onclose={() => wizardOpen = false} />
+  <RoomImageWizard open={wizardOpen} roomId={room?.id ?? null} onclose={() => wizardOpen = false} />
 {/if}

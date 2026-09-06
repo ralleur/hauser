@@ -5,8 +5,10 @@
   import { m } from '../../paraglide/messages.js';
   import { POSTIT_COLORS, personLabel, postitStyle } from '../state/reminder-persons.ts';
   import {
-    addReminderPerson, reminderPersons, renameReminderPerson,
+    addReminderPerson, assignReminderPersonEntity, reminderPersons, renameReminderPerson,
   } from '../state/reminder-persons.svelte.ts';
+  import { runtime } from '../adapter/runtime.svelte.ts';
+  import type { PersonSource } from '../adapter/types.ts';
 
   let { personId = null, onclose }: { personId?: string | null; onclose: () => void } = $props();
 
@@ -19,12 +21,25 @@
   let error = $state<string | null>(null);
   let initialized = false;
 
+  /* Zuordnung zu Home Assistant (Paket 8): Grundlage der Begrüßung im
+     Standby. Die Liste kommt live aus HA; ohne Verbindung bleibt sie leer und
+     das Feld zeigt nur den Hinweis. */
+  let personSources = $state<PersonSource[]>([]);
+  let personEntityId = $state('');
+
+  $effect(() => {
+    void runtime.listPersonSources()
+      .then((list) => { personSources = list; })
+      .catch(() => { personSources = []; });
+  });
+
   $effect(() => {
     if (initialized) return;
     initialized = true;
     if (!existing) return;
     name = personLabel(existing);
     color = existing.color;
+    personEntityId = existing.personEntityId ?? '';
   });
 
   function colorName(id: string): string {
@@ -43,8 +58,10 @@
   function save(event: SubmitEvent) {
     event.preventDefault();
     if (!name.trim()) return;
-    if (existing) renameReminderPerson(existing.id, name, color);
-    else if (!addReminderPerson(name, color)) {
+    if (existing) {
+      renameReminderPerson(existing.id, name, color);
+      assignReminderPersonEntity(existing.id, personEntityId || null);
+    } else if (!addReminderPerson(name, color, personEntityId || null)) {
       error = m.rem_person_error();
       return;
     }
@@ -74,6 +91,16 @@
           </label>
         {/each}
       </fieldset>
+      <label>
+        <span>{m.rem_person_ha()}</span>
+        <select bind:value={personEntityId}>
+          <option value="">{m.rem_person_ha_none()}</option>
+          {#each personSources as source (source.entityId)}
+            <option value={source.entityId}>{source.name}</option>
+          {/each}
+        </select>
+        <span class="settings-row-sub">{m.rem_person_ha_hint()}</span>
+      </label>
       {#if error}<p class="notes-add-error" role="alert">{error}</p>{/if}
       <div class="rem-edit-actions">
         <button class="secondary-btn pressable" type="button" onclick={onclose}>{m.rem_edit_cancel()}</button>

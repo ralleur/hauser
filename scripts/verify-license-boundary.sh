@@ -77,6 +77,9 @@ brand_files = {Path('website/favicon.png'), Path('website/apple-touch-icon.png')
 third_party_files = {
     Path('app/public/fonts/InterVariable-subset.woff2'),
     Path('app/public/fonts/InstrumentSerif-subset.woff2'),
+    # Handschrift der Demo-Tipps, OFL, siehe NOTICE.
+    Path('app/public/fonts/Caveat-latin.woff2'),
+    Path('app/public/fonts/Caveat-latin-ext.woff2'),
     Path('website/fonts/InterVariable-subset.woff2'),
 }
 

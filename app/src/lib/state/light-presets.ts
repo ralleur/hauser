@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 /* Kuratierte Farb-Swatches für die Licht-Detail-Ebene (Hauser-Tick-Ästhetik).
    Die Hex-Werte sind DATEN — real emittierte Lichtfarben, kein Theme —, daher
    bewusst konkrete Werte (außerhalb der „keine Hex"-Token-Regel, die für
@@ -5,15 +6,15 @@
 export interface ColorSwatch { name: string; hex: string }
 
 export const LIGHT_COLOR_SWATCHES: readonly ColorSwatch[] = [
-  { name: 'Rot', hex: '#ff4d4d' },
-  { name: 'Orange', hex: '#ff8c31' },
-  { name: 'Bernstein', hex: '#ffb300' },
-  { name: 'Grün', hex: '#57d06a' },
-  { name: 'Türkis', hex: '#33c7c0' },
-  { name: 'Blau', hex: '#4a90e2' },
-  { name: 'Indigo', hex: '#6a5cff' },
-  { name: 'Violett', hex: '#b06cff' },
-  { name: 'Pink', hex: '#ff5db1' },
+  { get name() { return m.light_color_red(); }, hex: '#ff4d4d' },
+  { get name() { return m.light_color_orange(); }, hex: '#ff8c31' },
+  { get name() { return m.light_color_amber(); }, hex: '#ffb300' },
+  { get name() { return m.light_color_green(); }, hex: '#57d06a' },
+  { get name() { return m.light_color_turquoise(); }, hex: '#33c7c0' },
+  { get name() { return m.light_color_blue(); }, hex: '#4a90e2' },
+  { get name() { return m.light_color_indigo(); }, hex: '#6a5cff' },
+  { get name() { return m.light_color_violet(); }, hex: '#b06cff' },
+  { get name() { return m.light_color_pink(); }, hex: '#ff5db1' },
 ];
 
 /* Tick-Farbe der Farbtemperatur-Skala: Positionsanteil 0 (warm) → 1 (kühl).

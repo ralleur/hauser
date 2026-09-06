@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tokenDuration } from '../../motion/index.ts';
   import { onMount } from 'svelte';
   import type { ScreenId } from '../../state/nav.svelte.ts';
   import { PHONE_NAV_REORDERABLE, moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
@@ -33,17 +34,10 @@
     return { destroy: () => { if (firstTarget === node) firstTarget = undefined; } };
   }
 
-  function tokenDuration(node: HTMLElement, token: string): number {
-    const value = getComputedStyle(node).getPropertyValue(token).trim();
-    if (value.endsWith('ms')) return Number.parseFloat(value) || 0;
-    if (value.endsWith('s')) return (Number.parseFloat(value) || 0) * 1000;
-    return 0;
-  }
-
   function scrimExit(node: HTMLElement) {
     const reducedMotion = prefersReducedMotion();
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, '--duration-normal'),
+      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
       css: (t: number) => `opacity:${t}`,
     };
   }
@@ -61,7 +55,7 @@
   function sheetExit(node: HTMLElement) {
     const reducedMotion = prefersReducedMotion();
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, '--duration-normal'),
+      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
       css: reducedMotion
         ? (t: number) => `opacity:${t}`
         : (t: number) => `opacity:${t};transform:translateY(${(1 - t) * 100}%)`,

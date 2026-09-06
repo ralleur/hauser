@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { withViewTransition } from '../motion/index.ts';
 
   import MediaCard from '../components/MediaCard.svelte';
   import { appState } from '../state/app.svelte.ts';
@@ -19,10 +20,6 @@
   let query = $state('');
   let searchInput = $state<HTMLInputElement>();
 
-  type ViewTransitionDocument = Document & {
-    startViewTransition?: (update: () => void | Promise<void>) => { finished: Promise<void> };
-  };
-
   const activeShelf = $derived(category
     ? shelves.find((shelf) => categoryFromLabel(shelf.label) === category)
     : null);
@@ -41,12 +38,7 @@
   }
 
   function changeView(update: () => void | Promise<void>): Promise<void> {
-    const doc = document as ViewTransitionDocument;
-    if (!doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      update();
-      return tick();
-    }
-    return doc.startViewTransition(update).finished;
+    return withViewTransition(update);
   }
 
   function cardTransitionName(id: string): string {
@@ -155,7 +147,7 @@
   <header class="library-header">
     {#if category}
       <button class="library-view-title pressable" type="button" onclick={closeExpanded}
-              aria-label={`${activeShelf?.label ?? m.library_category()} schließen`}>
+              aria-label={m.library_close_shelf({ shelf: activeShelf?.label ?? m.library_category() })}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
         <span>{activeShelf?.label}</span>
       </button>
@@ -192,7 +184,7 @@
               {#each results as item (item.id)}<MediaCard {item} />{/each}
             </div>
           {:else}
-            <p class="library-empty">Keine Treffer für „{query.trim()}“.</p>
+            <p class="library-empty">{m.library_no_hits({ query: query.trim() })}</p>
           {/if}
         </section>
       {:else if category}
@@ -211,7 +203,7 @@
             {#if shelf.list.length}
               <section class="shelf library-shelf" data-category={categoryFromLabel(shelf.label)}>
                 <button class="caps-label shelf-label shelf-button pressable" type="button"
-                        onclick={() => openCategory(shelf.label)} aria-label={`${shelf.label} vollständig anzeigen`}>
+                        onclick={() => openCategory(shelf.label)} aria-label={m.library_show_all({ shelf: shelf.label })}>
                   <span>{shelf.label}</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
                 </button>
@@ -241,7 +233,7 @@
     <div class="lib-gate">
       <form class="login-card" onsubmit={onLogin}>
         <h2 class="login-title">{m.library_connect()}</h2>
-        <p class="login-hint">Melde dich mit deinem Jellyfin-Konto an. Die Anmeldung bleibt lokal im Browser (Token), damit Weiterschauen und Resume gerätebezogen funktionieren.</p>
+        <p class="login-hint">{m.library_login_hint()}</p>
         {#if libraryError()}<p class="login-error" role="alert">{libraryError()}</p>{/if}
         <input class="login-input" type="text" autocomplete="username" spellcheck="false"
                placeholder={m.library_username()} aria-label="Jellyfin-Benutzername" bind:value={username} />

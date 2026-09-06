@@ -3,13 +3,14 @@ import { runtime } from '../adapter/runtime.svelte.ts';
 import { reapplyDemoNames } from '../demo/demo-mode.ts';
 import { appState, ROOM_SEED } from './app.svelte.ts';
 import { syncAuthState } from './auth.svelte.ts';
+import { startQueryRevalidation } from '../data/revalidation.ts';
 import { initFamilyCalendar } from './calendar.svelte.ts';
 import { buildRuntimeRooms, loadDeviceConfig } from './device-config.ts';
 import { deviceManager } from './device-manager.svelte.ts';
 import { rehydrateLayoutManager } from './layout-manager.svelte.ts';
 import { rehydrateImmersionLight } from './immersion-light.svelte.ts';
 import { notifications } from './notifications.svelte.ts';
-import { rehydrateReminderPersons } from './reminder-persons.svelte.ts';
+import { adoptHaPersonsOnce, rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
 import { configuredRoomSensorIds } from './room-display-config.svelte.ts';
 import {
@@ -122,8 +123,14 @@ export async function startBackgroundRuntime(isCancelled: () => boolean) {
 
   initFamilyCalendar();
   initReminders();
+  /* Paket 8: Beim ersten Start ziehen die `person.*` aus Home Assistant als
+     Bewohner ein. Bewusst nebenher — der Start wartet darauf nicht. */
+  void adoptHaPersonsOnce();
   initShopping();
   notifications.init();
+  /* Datenschicht: veraltete Snapshots neu laden, sobald die App wieder
+     sichtbar ist oder das Netz zurückkommt (verpasste Intervalle). */
+  startQueryRevalidation();
 
   const [notificationLayer, playerLayer] = await Promise.all([
     import('../components/NotificationLayer.svelte'),

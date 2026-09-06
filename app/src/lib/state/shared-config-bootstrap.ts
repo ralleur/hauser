@@ -25,10 +25,13 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:immersion-light:v1',
   'hmi:calendar-selected',
   'hmi:reminders-selected',
+  'hmi:moment-holidays:v1',
   'hmi:paperless-url',
   'hmi:paperless-token',
   'hmi:shopping-config:v1',
   'hmi:reminder-persons:v1',
+  'hmi:notion-token',
+  'hmi:notion-page',
 ] as const;
 
 type FetchLike = typeof fetch;

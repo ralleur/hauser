@@ -10,7 +10,7 @@
   import TickScale from './TickScale.svelte';
   import { appState, COLOR_TEMP_MIN, COLOR_TEMP_MAX, HVAC_MODES, ROOM_SEED, type Light } from '../state/app.svelte.ts';
   import {
-    mergedDevice, devicePending, deviceReconcile,
+    mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile,
     toggleDevice, setBrightness, setColorTemp, setColor,
     setClimateTarget, setClimateHvac, toggleMediaEntity, setMediaVolume,
   } from '../state/commands.ts';
@@ -137,6 +137,15 @@
     else toggleDevice(roomId, device);
   }
 
+  /* Konfidenz (Paket 6): eine Sekunde ohne State-Echo → ein einzelner Puls. */
+  let echoWobble = $state(0);
+  let wasUnconfirmed = false;
+  $effect(() => {
+    const unconfirmed = !!device && deviceUnconfirmed(entityId);
+    if (unconfirmed && !wasUnconfirmed) echoWobble++;
+    wasUnconfirmed = unconfirmed;
+  });
+
   // Toggle-Widerspruch → Wobble (docs/02), analog Kachel.
   let toggleWobble = $state(0);
   let seenSeq = 0;
@@ -234,7 +243,7 @@
             <button class="ld-power pressable" class:is-on={isActive} type="button"
                     aria-pressed={isActive}
                     aria-label={category === 'media' ? `${device.name} Wiedergabe umschalten` : `${device.name} schalten`}
-                    use:pulse={{ seq: toggleWobble, cls: 'is-wobble', ms: 200 }}
+                    use:pulse={{ seq: toggleWobble + echoWobble, cls: 'is-wobble', ms: 200 }}
                     onclick={onPower}>
               <Icon name={category === 'media' ? (media?.playing ? 'i-pause' : 'i-play') : 'i-power'} />
               {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}

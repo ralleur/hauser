@@ -6,6 +6,8 @@
    ============================================ */
 
 import { appState, SUN_ENTITY } from './app.svelte.ts';
+import { DUSK_BAND_DEG, duskProgress, inDuskBand } from './dusk.ts';
+import { simulation } from './simulation.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import type { SunValue } from '../adapter/types.ts';
 import {
@@ -17,6 +19,26 @@ import {
   type HeroBackgroundPolicy,
   type Theme,
 } from './appearance-mode.ts';
+
+/* Spiegelt `--duration-dusk` aus design-tokens/tokens.css: nur zum Aufräumen
+   der Klasse, die Kurve selbst steht im CSS. */
+const DUSK_THEME_FADE_MS = 1300;
+
+/* Test-Override in der Art von `?idle=` und `?deepnight=1` im Standby:
+   `?dusk=0.5` friert die Überblendung auf einem festen Stand ein. Sonst wäre
+   sie nur zweimal am Tag für zwanzig Minuten zu sehen — zu wenig, um sie zu
+   beurteilen. Ohne Parameter ändert sich nichts. */
+const DUSK_OVERRIDE = readDuskOverride();
+
+function readDuskOverride(): number | null {
+  if (typeof location === 'undefined') return null;
+  try {
+    const raw = new URLSearchParams(location.search).get('dusk');
+    if (raw === null) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : null;
+  } catch { return null; }
+}
 
 const APPEARANCE_KEY = 'hmi:appearance-mode';
 const LEGACY_OVERRIDE_KEY = 'hmi:theme-override';
@@ -63,37 +85,74 @@ function saveHeroSun(sun: SunValue): void {
   catch { /* best-effort */ }
 }
 
-/* DOM-Seiteneffekte (identisch zu Phase 2): data-theme, Crossfade, Meta-Farbe. */
-function applyThemeDom(theme: Theme, animate: boolean): void {
+/* DOM-Seiteneffekte (identisch zu Phase 2): data-theme, Crossfade, Meta-Farbe.
+   Paket 4: Fällt der Wechsel in die Dämmerung, läuft er über `--duration-dusk`
+   statt über `--duration-enter` — dann kippt die Fläche im selben Tempo, in dem
+   das Hero-Bild darunter überblendet. Der Dämmerungsstand kommt als Argument
+   herein und wird bewusst nicht aus `appState` gelesen: derselbe Effekt schreibt
+   ihn, ein Lesen an dieser Stelle würde ihn endlos neu auslösen. */
+function applyThemeDom(theme: Theme, animate: boolean, dusk: boolean): void {
   if (typeof document === 'undefined') return;
   if (animate) {
     document.body.classList.add('theme-fade');
-    setTimeout(() => document.body.classList.remove('theme-fade'), 320);
+    document.body.classList.toggle('is-dusk', dusk);
+    setTimeout(
+      () => document.body.classList.remove('theme-fade', 'is-dusk'),
+      dusk ? DUSK_THEME_FADE_MS : 320,
+    );
   }
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'dark' ? '#0b0e12' : '#ececec');
 }
 
-function setTheme(theme: Theme, animate: boolean): void {
-  if (appState.theme !== theme) appState.theme = theme;
-  applyThemeDom(theme, animate);
+/* `syncInterfaceTheme` läuft in einem Effekt, der an jeder Entity-Änderung
+   hängt — ein Lichtschalter genügt. Die Fade-Klasse darf deshalb nur fallen,
+   wenn das Theme wirklich kippt: sie ersetzt für ihre Dauer die `transition`
+   sämtlicher Elemente und würgte sonst bei jedem Schaltvorgang alle laufenden
+   Überblendungen ab (Lichtkegel, Nachdimmen). */
+function setTheme(theme: Theme, animate: boolean, dusk: boolean): void {
+  const changed = appState.theme !== theme
+    || (typeof document !== 'undefined' && document.documentElement.dataset.theme !== theme);
+  if (changed) appState.theme = theme;
+  applyThemeDom(theme, animate && changed, dusk);
 }
 
 function syncInterfaceTheme(animate: boolean): void {
-  const sun = SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined;
+  const observed = SUN_ENTITY ? runtime.merged(SUN_ENTITY) as SunValue | undefined : undefined;
+  /* Simulator (fünfmal auf die Uhr) und `?dusk=` treten an die Stelle des
+     Sonnenstands, nicht an die der Moduswahl. In den fixierten Modi ändert der
+     Regler deshalb nichts — und genau das soll er auch zeigen. Beide werden
+     immer gelesen, damit dieser Effekt ihnen folgt. */
+  const forcedDusk = simulation.dusk ?? DUSK_OVERRIDE;
+  const sun: SunValue | undefined = forcedDusk === null ? observed : {
+    day: forcedDusk >= 0.5,
+    elevation: (forcedDusk * 2 - 1) * DUSK_BAND_DEG,
+  };
   const heroPolicy = appearanceHeroPolicy(appearance.mode);
+  let heroSun: SunValue | undefined;
   if (heroPolicy === 'auto') {
     /* Nur der real beobachtete Sonnenstand wird gemerkt; solange er fehlt,
        traegt der letzte bekannte Stand den ersten Paint. Ein manuell gesetzter
        Modus (heroPolicy !== 'auto') gewinnt weiterhin und wird nicht
-       persistiert — sonst ueberstimmte er spaeter das Auto-Verhalten. */
-    if (sun) saveHeroSun(sun);
-    appState.heroSun = sun ?? loadHeroSun();
+       persistiert — sonst ueberstimmte er spaeter das Auto-Verhalten. Ein
+       simulierter Stand wird ebenfalls nicht gemerkt. */
+    if (observed) saveHeroSun(observed);
+    heroSun = sun ?? loadHeroSun();
   } else {
-    appState.heroSun = { day: heroPolicy === 'day' };
+    /* Fixiert heißt fixiert: kein Dämmerungsband, weil die Sonnenhöhe fehlt.
+       Das Nachdimmen auf `dark-off` hängt am Licht und bleibt davon unberührt. */
+    heroSun = { day: heroPolicy === 'day' };
   }
-  setTheme(appearanceTheme(appearance.mode, sun?.day, appState.theme), animate);
+  const theme = appearanceTheme(appearance.mode, sun?.day, appState.theme);
+  /* Paket 4: Der Fortschritt entsteht aus derselben Quelle wie die Variante.
+     Ohne Sonnenhöhe bleibt es beim Hartschnitt aus Tag/Nacht. */
+  const dusk = heroSun
+    ? duskProgress(heroSun.elevation, heroSun.day)
+    : duskProgress(null, theme === 'light');
+  appState.heroSun = heroSun;
+  appState.heroDusk = dusk;
+  setTheme(theme, animate, inDuskBand(dusk));
 }
 
 export function cycleAppearanceMode(): void {

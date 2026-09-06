@@ -117,6 +117,11 @@ describe('Ambient-Kartenlayer — bestehende Semantik unverändert', () => {
     expect(layer).toMatch(/\{#if weekHasEvents && !deepNight\}/);
     expect(layer).toMatch(/\{#if postits\.items\.length && !deepNight\}/);
     expect(layer).toMatch(/\{#if shoppingSections\.length && !deepNight\}/);
-    expect(layer).toMatch(/\{#if settingsValues\.ambientHeroText\}/);
+    /* Der Tageskommentar hängt weiter am Schalter; die Hero-Zeile zeigt
+       zusätzlich einen Kalendermoment, der ohne Schalter auskommt. */
+    expect(layer).toMatch(/if \(!settingsValues\.ambientHeroText\) return \[\];/);
+    /* Bei eingeschaltetem Tageskommentar steht die Zeile auch leer im Layout,
+       damit die Uhr beim Eintreffen des Textes nicht springt. */
+    expect(layer).toMatch(/\{#if heroLines\.length > 0 \|\| settingsValues\.ambientHeroText\}/);
   });
 });

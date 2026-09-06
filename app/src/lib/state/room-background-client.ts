@@ -17,7 +17,7 @@ async function householdEtag(): Promise<string> {
     credentials: 'same-origin',
   });
   const etag = response.headers.get('etag');
-  if (!response.ok || !etag) throw new Error('Die Haushaltskonfiguration ist nicht verfügbar.');
+  if (!response.ok || !etag) throw new Error(m.rimg_err_config_unavailable());
   await response.arrayBuffer();
   return etag;
 }
@@ -28,9 +28,9 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): Promise<RoomHeroConfig | null> {
-  if (!/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/.test(roomId)) throw new Error('Ungültiger Raum.');
+  if (!/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/.test(roomId)) throw new Error(m.rimg_err_invalid_room());
   if (file && (!MIME_TYPES.has(file.type) || file.size === 0 || file.size > 12_582_912)) {
-    throw new Error('Bitte JPEG, PNG, WebP oder AVIF mit maximal 12 MiB wählen.');
+    throw new Error(m.rimg_err_file_type());
   }
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -48,12 +48,12 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): P
     if (!response.ok) throw new Error(await errorMessage(response));
     const payload = await response.json() as AssignmentResponse;
     if (payload.roomId !== roomId || (payload.hero !== null && typeof payload.hero?.assetId !== 'string')) {
-      throw new Error('Die Raumbild-Antwort ist ungültig.');
+      throw new Error(m.rimg_err_room_response());
     }
     setRoomHeroConfig(roomId, payload.hero);
     return payload.hero;
   }
-  throw new Error('Die Haushaltskonfiguration wurde gleichzeitig geändert. Bitte erneut versuchen.');
+  throw new Error(m.rimg_err_conflict());
 }
 
 export function uploadRoomBackground(roomId: string, file: File): Promise<RoomHeroConfig | null> {

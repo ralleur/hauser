@@ -14,20 +14,27 @@
   import StandbyFab from '../components/StandbyFab.svelte';
   import HomeScreen from '../screens/HomeScreen.svelte';
   import { SCREENS, nav, endTransition, type ScreenId } from '../state/nav.svelte.ts';
-  import { connection } from '../state/connection.svelte.ts';
+  import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { authState } from '../state/auth.svelte.ts';
-  import { closeDeviceDetail, closeRoomEdit, deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
+  import {
+    centralClimateEdit, closeCentralClimateEdit,
+    closeDeviceDetail, closeRoomEdit, deviceDetail, roomEdit,
+  } from '../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../state/scene-edit-overlay.svelte.ts';
-  import { centralClimateEdit, closeCentralClimateEdit } from '../state/central-climate-overlay.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { hud } from '../state/hud.svelte.ts';
+  import { hud, simulator } from '../state/hud.svelte.ts';
   import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
   import { shellLifecycle } from '../state/shell-lifecycle-instance.ts';
+  import { undoOffer } from '../state/undo.svelte.ts';
+  import { clockZoom, diagnostics } from '../state/hidden-gestures.svelte.ts';
+  import { appState } from '../state/app.svelte.ts';
+  import { ambientLight, watchAmbientLight } from '../state/ambient-light.svelte.ts';
+  import { settingsValues } from '../state/settings.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   type ScreenModule = { default: Component };
   type LazyScreenId = Exclude<ScreenId, 'home'>;
-  type LayerId = 'device' | 'room' | 'scene' | 'central-climate' | 'layout' | 'ambient' | 'hud';
+  type LayerId = 'device' | 'room' | 'scene' | 'central-climate' | 'layout' | 'ambient' | 'hud' | 'simulator';
   type VisibleLayerId = Exclude<LayerId, 'ambient'>;
 
   const SCREEN_LOADERS: Record<LazyScreenId, () => Promise<ScreenModule>> = {
@@ -50,6 +57,7 @@
     layout: () => import('../components/LayoutConfigDialog.svelte'),
     ambient: () => import('../components/AmbientLayer.svelte'),
     hud: () => import('../components/Hud.svelte'),
+    simulator: () => import('../components/SimulationPanel.svelte'),
   };
   const screenLoader = createRetryableLazyLoader(SCREEN_LOADERS);
   const layerLoader = createRetryableLazyLoader(LAYER_LOADERS);
@@ -89,6 +97,38 @@
   )));
   const screenEls: Partial<Record<ScreenId, HTMLElement>> = $state({});
   let AmbientLayerComponent = $state<Component | null>(null);
+  /* Rückgängig-Streifen (Paket 6): erst laden, wenn es etwas zurückzunehmen
+     gibt — der Startpfad bleibt unberührt. */
+  let UndoToastComponent = $state<Component | null>(null);
+  /* Versteckte Gesten (Paket 10): beide Ansichten kommen erst, wenn die Geste
+     sie ruft — der Startpfad kennt nur die zwei Schalter. */
+  let ClockZoomComponent = $state<Component<any> | null>(null);
+  let DiagnosticsComponent = $state<Component<any> | null>(null);
+  $effect(() => {
+    if (!clockZoom.active || ClockZoomComponent) return;
+    void import('../components/ClockZoom.svelte')
+      .then((loaded) => { ClockZoomComponent = loaded.default; })
+      .catch(() => { /* versteckte Geste: ein Fehlschlag bleibt folgenlos */ });
+  });
+  $effect(() => {
+    if (!diagnostics.active || DiagnosticsComponent) return;
+    void import('../components/DiagnosticsOverlay.svelte')
+      .then((loaded) => { DiagnosticsComponent = loaded.default; })
+      .catch(() => { /* versteckte Geste: ein Fehlschlag bleibt folgenlos */ });
+  });
+  /* Umgebungslicht (Paket 9): der Schleier folgt dem Raumlicht, sobald ein
+     Sensor etwas meldet. Reine Deckkraft über allem, ohne Pointer-Ziel. */
+  $effect(() => {
+    if (!settingsValues.ambientLightDim) return;
+    return watchAmbientLight(() => appState.currentRoom ?? '');
+  });
+
+  $effect(() => {
+    if (!undoOffer.active || UndoToastComponent) return;
+    void import('../components/UndoToast.svelte')
+      .then((loaded) => { UndoToastComponent = loaded.default; })
+      .catch(() => { /* ohne Streifen bleibt der Eingriff trotzdem gefahren */ });
+  });
 
   $effect(() => {
     if (!nav.entering) return;
@@ -105,7 +145,24 @@
     closeCentralClimateEdit(true);
     if (layoutManager.open) layoutManager.cancel();
     hud.active = false;
+    simulator.active = false;
   }));
+
+  /* Der Raumbild-Assistent meldet sich selbst, wenn etwas fertig ist (Paket
+     13). Der Wächter kommt erst nach dem ersten Bild und nur, wenn wirklich
+     ein Auftrag läuft — der Startpfad sieht ihn nie. */
+  onMount(() => {
+    let stop: (() => void) | undefined;
+    const timer = window.setTimeout(() => {
+      void import('../state/room-image-watch.svelte.ts')
+        .then((module) => { stop = module.watchRoomImageJobs(); })
+        .catch(() => { /* ohne Wächter bleibt es beim Blick in den Assistenten */ });
+    }, 4000);
+    return () => {
+      window.clearTimeout(timer);
+      stop?.();
+    };
+  });
 
   onMount(() => {
     let cancelled = false;
@@ -134,7 +191,7 @@
       <div class="layout-dialog" role="dialog" aria-modal="true" aria-label="Bereich laden">
         <p role="alert">{m.shell_load_failed()}</p>
         <button class="secondary-btn pressable" type="button" onclick={() => retryLayer(id)}>Erneut versuchen</button>
-        <button class="secondary-btn pressable" type="button" onclick={() => closeLayer(id)}>Schließen</button>
+        <button class="secondary-btn pressable" type="button" onclick={() => closeLayer(id)}>{m.common_close()}</button>
       </div>
     </div>
   {:else}
@@ -148,11 +205,16 @@
 
 <div class="status-scrim" aria-hidden="true"></div>
 
-<div class="app" data-shell="panel" class:is-disconnected={conn.disconnected}>
+<!-- Gesperrt, solange keine Verbindung steht — also genau dann, wenn das
+     Banner sichtbar ist (auch beim Reconnect, nicht erst bei harter Trennung). -->
+<div class="app" data-shell="panel" class:is-disconnected={conn.banner !== null}>
   <StatusBar />
   <main class="screens">
     <div class="conn-banner" class:is-visible={conn.banner !== null} role="status" aria-live="polite">
       <span class="dot {conn.dot}"></span>{conn.banner ?? ''}
+      {#if conn.banner !== null}
+        <button class="conn-retry" type="button" onclick={retryConnection}>{m.conn_retry()}</button>
+      {/if}
     </div>
 
     {#each visiblePanelScreens as screen (screen.id)}
@@ -218,11 +280,23 @@
   {:catch}{@render layerLoadState('layout', true)}{/await}
 {/if}
 {#if AmbientLayerComponent}<AmbientLayerComponent />{/if}
+{#if UndoToastComponent}<UndoToastComponent />{/if}
+{#if ClockZoomComponent && clockZoom.active}<ClockZoomComponent />{/if}
+{#if DiagnosticsComponent && diagnostics.active}<DiagnosticsComponent />{/if}
+{#if settingsValues.ambientLightDim && ambientLight.dim > 0}
+  <div class="ambient-dim-veil" aria-hidden="true" style:opacity={ambientLight.dim}></div>
+{/if}
 {#if hud.active}
   {#await loadLayer('hud', layerRetryVersions.hud ?? 0)}
     {@render layerLoadState('hud', false)}
   {:then loaded}{@const Layer = loaded.default}<Layer />
   {:catch}{@render layerLoadState('hud', true)}{/await}
+{/if}
+{#if simulator.active}
+  {#await loadLayer('simulator', layerRetryVersions.simulator ?? 0)}
+    {@render layerLoadState('simulator', false)}
+  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:catch}{@render layerLoadState('simulator', true)}{/await}
 {/if}
 
 {#if auth.needsToken}

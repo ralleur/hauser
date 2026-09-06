@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { prefersReducedMotion, tokenDuration } from '../../motion/index.ts';
   import { m } from '../../../paraglide/messages.js';
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
@@ -41,26 +42,9 @@
     else closeSceneEdit(true);
   }
 
-  function prefersReducedMotion(): boolean {
-    try {
-      return typeof window !== 'undefined'
-        && typeof window.matchMedia === 'function'
-        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch {
-      return false;
-    }
-  }
-
-  function tokenDuration(node: HTMLElement, token: string): number {
-    const value = getComputedStyle(node).getPropertyValue(token).trim();
-    if (value.endsWith('ms')) return Number.parseFloat(value) || 0;
-    if (value.endsWith('s')) return (Number.parseFloat(value) || 0) * 1000;
-    return 0;
-  }
-
   function scrimExit(node: HTMLElement) {
     return {
-      duration: prefersReducedMotion() ? 0 : tokenDuration(node, '--duration-normal'),
+      duration: prefersReducedMotion() ? 0 : tokenDuration(node, 'normal'),
       css: (t: number) => `opacity:${t}`,
     };
   }
@@ -68,7 +52,7 @@
   function sheetExit(node: HTMLElement) {
     const reducedMotion = prefersReducedMotion();
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, '--duration-normal'),
+      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
       css: reducedMotion
         ? (t: number) => `opacity:${t}`
         : (t: number) => `opacity:${t};transform:translateY(${(1 - t) * 100}%)`,

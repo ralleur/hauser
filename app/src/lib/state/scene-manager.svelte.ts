@@ -10,6 +10,7 @@
    ganze Szenen-Logik laden. */
 
 import { runtime } from '../adapter/runtime.svelte.ts';
+import { offerUndo } from './undo.svelte.ts';
 import type { HaScene } from '../adapter/types.ts';
 import { setSceneEditLeaveHook } from './scene-edit-overlay.svelte.ts';
 import { appState, type Room } from './app.svelte.ts';
@@ -195,6 +196,19 @@ export function applyScene(roomId: string, sceneId: SceneId): void {
   for (const { command, optimistic } of buildSceneCommands(sceneDefOf(roomId, sceneId), members)) {
     runtime.dispatch(command, optimistic);
   }
+}
+
+/* Undo statt Bestätigen (Paket 6): der Szenenwechsel aus der Szenenleiste
+   geht sofort raus und lässt fünf Sekunden lang den Weg zurück offen. Die
+   Live-Vorschau im Editor nutzt bewusst weiter applyScene ohne Streifen —
+   sie hat mit restoreScenePreview ihren eigenen Rückweg. */
+export function applySceneWithUndo(roomId: string, sceneId: SceneId): void {
+  const members = sceneMembers(roomId, sceneId);
+  offerUndo(
+    { kind: 'scene', scene: sceneDefOf(roomId, sceneId).label },
+    members,
+    () => applyScene(roomId, sceneId),
+  );
 }
 
 /* ── Aktive Szene erkennen ──

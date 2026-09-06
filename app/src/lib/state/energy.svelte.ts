@@ -12,6 +12,7 @@
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { ENERGY_SENSORS, energyRefIds, type EnergySensorRef, type LoadSource } from './app.svelte.ts';
 import { computeLoadBreakdown, type LoadBreakdown } from './energy-load.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
 import type { SensorValue } from '../adapter/types.ts';
 
 function readSensor(eid: string | null): SensorValue | null {
@@ -57,6 +58,10 @@ function configured(ref: EnergySensorRef | readonly LoadSource[]): boolean {
 export interface EnergyView {
   /** true, sobald mindestens PV oder Last konfiguriert ist (sonst Hinweis-State) */
   configured: boolean;
+  /** true, sobald es überhaupt einen Erzeugungssensor gibt. Ohne ihn hat das
+      Haus keine Solarseite — dann bleiben Solar-Knoten und -KPIs weg, statt
+      dauerhaft „—" anzuzeigen (Paket 3, docs/20). */
+  hasGeneration: boolean;
   pv: number | null;
   load: number | null;
   /** Netz: >0 Einspeisung, <0 Bezug. Abgeleitet aus (PV − Last). null = unbekannt. */
@@ -69,6 +74,62 @@ export interface EnergyView {
   };
 }
 
+/* ── Snapshot der Kurven (Paket 5, docs/20) ──
+   Die Werte hängen an den HA-Entitäten; nach einem Reload stehen sie erst da,
+   wenn die Verbindung steht. Bis dahin füllt der letzte Stand die Lücken —
+   Feld für Feld, damit ein echter Wert nie von einem alten verdeckt wird.
+   Konfiguration (`configured`, `hasGeneration`) kommt immer aus der laufenden
+   Sitzung, nie aus dem Snapshot. */
+const ENERGY_SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
+const ENERGY_SAVE_INTERVAL_MS = 30 * 1000;
+
+interface EnergyReadings {
+  pv: number | null;
+  load: number | null;
+  grid: number | null;
+  today: EnergyView['today'];
+}
+
+const energySnapshot = createSnapshotStore<EnergyReadings>({
+  key: 'hmi:energy-readings',
+  maxAgeMs: ENERGY_SNAPSHOT_MAX_AGE_MS,
+  validate: (value): value is EnergyReadings => {
+    const candidate = value as Partial<EnergyReadings> | null;
+    return !!candidate && typeof candidate === 'object' && !!candidate.today;
+  },
+});
+
+let restoredReadings: EnergyReadings | null = energySnapshot.restoreSync()?.value ?? null;
+let lastSavedAt = 0;
+
+function anyValue(readings: EnergyReadings): boolean {
+  return readings.pv !== null || readings.load !== null
+    || Object.values(readings.today).some((value) => value !== null);
+}
+
+function rememberReadings(readings: EnergyReadings, now = Date.now()): void {
+  restoredReadings = readings;
+  if (now - lastSavedAt < ENERGY_SAVE_INTERVAL_MS) return;
+  lastSavedAt = now;
+  void energySnapshot.save(readings, now);
+}
+
+function fillFromSnapshot(readings: EnergyReadings): EnergyReadings {
+  const previous = restoredReadings;
+  if (!previous) return readings;
+  return {
+    pv: readings.pv ?? previous.pv,
+    load: readings.load ?? previous.load,
+    grid: readings.grid ?? previous.grid,
+    today: {
+      produced: readings.today.produced ?? previous.today.produced,
+      consumed: readings.today.consumed ?? previous.today.consumed,
+      fedIn: readings.today.fedIn ?? previous.today.fedIn,
+      drawn: readings.today.drawn ?? previous.today.drawn,
+    },
+  };
+}
+
 export function energyView(): EnergyView {
   const pv = sumRefs(ENERGY_SENSORS.pv, kw);
   const load = sumRefs(ENERGY_SENSORS.load, kw);
@@ -76,8 +137,10 @@ export function energyView(): EnergyView {
   // beide Werte echte Sensoren haben; sonst bleibt Netz unbekannt statt geraten.
   const grid = pv !== null && load !== null ? pv - load : null;
   const hasConfig = configured(ENERGY_SENSORS.pv) || configured(ENERGY_SENSORS.load);
-  return {
-    configured: hasConfig,
+  const hasGeneration = [
+    ENERGY_SENSORS.pv, ENERGY_SENSORS.producedToday, ENERGY_SENSORS.fedInToday,
+  ].some(configured);
+  const readings: EnergyReadings = {
     pv,
     load,
     grid,
@@ -87,6 +150,12 @@ export function energyView(): EnergyView {
       fedIn: sumRefs(ENERGY_SENSORS.fedInToday, kwh),
       drawn: sumRefs(ENERGY_SENSORS.drawnToday, kwh),
     },
+  };
+  if (hasConfig && anyValue(readings)) rememberReadings(readings);
+  return {
+    configured: hasConfig,
+    hasGeneration,
+    ...(hasConfig ? fillFromSnapshot(readings) : readings),
   };
 }
 

@@ -14,6 +14,7 @@
    Die Übersetzung (Diff + State→Value) liegt rein in ha-entities.ts.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import {
   createConnection,
   createLongLivedTokenAuth,
@@ -29,6 +30,7 @@ import type {
   HaScene,
   NotificationHistoryEntry,
   PersistentNotification,
+  PersonSource,
   SystemUpdate,
 } from './types.ts';
 import { AUTOMATION_ID_PREFIX } from '../state/notification-rules.ts';
@@ -68,6 +70,14 @@ const CACHE_KEY = 'hmi:ha-cache';
    für `#start()` sieht er wie eine gültige Verbindung aus. Deshalb beim
    Sichtbarwerden ein Ping mit kurzer Frist, bevor entschieden wird. */
 const RESUME_PING_TIMEOUT_MS = 2_000;
+/* `createConnection` kennt keine eigene Frist: Der Handshake gilt erst mit
+   `auth_ok` als fertig, und bleibt diese Antwort aus — halb offener Socket nach
+   einem Resume, Gateway/Proxy hält die Verbindung, Home Assistant startet
+   gerade neu —, dann feuert der Socket weder `close` noch `error`. Das Promise
+   settlet nie, `#startInFlight` bliebe true und der Status auf `connecting`:
+   kein Retry, kein Backoff, nur ein Reload hälfe. Deshalb eine harte Grenze,
+   großzügig genug für ein langsam startendes Home Assistant. */
+const CONNECT_TIMEOUT_MS = 20_000;
 /* B-27 A3: Der initiale Daten-Burst liefert Dutzende Diffs in Folge; jeder
    davon hätte die komplette Entity-Map synchron serialisiert. */
 const CACHE_FLUSH_DEBOUNCE_MS = 500;
@@ -89,6 +99,31 @@ let createRetryController: RetryFactory | null = null;
 /** Wird vom bereits post-paint geladenen Runtime-Hintergrund installiert. */
 export function installHaRetryFactory(factory: RetryFactory): void {
   createRetryController = factory;
+}
+
+/* Verbindungsaufbau mit Frist (siehe CONNECT_TIMEOUT_MS). Nach dem Ablauf zählt
+   der Versuch als gescheitert und fällt in denselben Zweig wie ein
+   unerreichbarer Host — Status `disconnected`, Backoff, nächster Versuch. Ein
+   Nachzügler, der doch noch zustande kommt, wird geschlossen: Sonst liefe er
+   unbeaufsichtigt neben dem nächsten Versuch weiter. */
+async function connectWithTimeout(
+  auth: ReturnType<typeof createLongLivedTokenAuth>,
+): Promise<Connection> {
+  const pending = createConnection({ auth });
+  let expire: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      pending,
+      new Promise<never>((_, reject) => {
+        expire = setTimeout(() => reject(new Error('connect timeout')), CONNECT_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (err) {
+    void pending.then((conn) => conn.close(), () => {});
+    throw err;
+  } finally {
+    clearTimeout(expire);
+  }
 }
 
 export interface HaBackendOptions {
@@ -123,7 +158,7 @@ type CaldavFlowResult = {
 
 function interpretCaldavFlowResult(result: CaldavFlowResult): { ok: boolean; message: string } {
   if (result.type === 'create_entry') {
-    return { ok: true, message: 'iCloud-Kalender in Home Assistant eingerichtet. Die Kalender-Entitäten erscheinen in wenigen Augenblicken.' };
+    return { ok: true, message: m.ha_icloud_setup_ok() };
   }
   if (result.type === 'abort') {
     return result.reason === 'already_configured'
@@ -228,10 +263,28 @@ export class HaBackend implements Backend {
 
   async renameEntity(entityId: string, name: string): Promise<void> {
     const normalized = name.trim().replace(/\s+/g, ' ');
-    if (!normalized) throw new Error('Der Gerätename darf nicht leer sein.');
+    if (!normalized) throw new Error(m.ha_device_name_empty());
     if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
     await this.#conn.sendMessagePromise(entityRegistryRenameMessage(entityId, normalized));
     await this.#refreshCatalog();
+  }
+
+  /* Livestream einer Kamera: HA baut den Stream auf und antwortet mit einem
+     signierten HLS-Pfad. Der Aufrufer löst ihn gegen HA bzw. gegen den eigenen
+     Server auf — im App-Modus kennt der Browser keine HA-Adresse. */
+  async getCameraStreamPath(entityId: string): Promise<string | null> {
+    if (!this.#conn || this.#status !== 'connected') return null;
+    try {
+      const result = await this.#conn.sendMessagePromise<{ url?: unknown }>({
+        type: 'camera/stream',
+        entity_id: entityId,
+      });
+      return typeof result?.url === 'string' && result.url ? result.url : null;
+    } catch {
+      /* Kamera ohne Stream oder HA ohne die Fähigkeit: der Aufrufer fällt auf
+         Standbilder zurück. */
+      return null;
+    }
   }
 
   async listCalendarSources(): Promise<CalendarSource[]> {
@@ -258,6 +311,20 @@ export class HaBackend implements Backend {
      Reminder-Listen desselben CalDAV/iCloud-Kontos erscheinen in HA als
      `todo.*`-Entitäten; die Einträge liest der offizielle WS-Befehl
      `todo/item/list`. Read-only wie der Kalender-Seam. */
+  /* Bewohner (Paket 8): `person.*` aus Home Assistant als Auswahlliste für die
+     Zuordnung in den Erinnerungs-Einstellungen. Read-only wie die anderen
+     Quellenlisten. */
+  async listPersonSources(): Promise<PersonSource[]> {
+    if (!this.#conn || this.#status !== 'connected') return [];
+    const states = await getStates(this.#conn);
+    return states
+      .filter((state) => state.entity_id.startsWith('person.'))
+      .map((state) => ({
+        entityId: state.entity_id,
+        name: String(state.attributes.friendly_name ?? state.entity_id),
+      }));
+  }
+
   async listReminderSources(): Promise<ReminderSource[]> {
     if (!this.#conn || this.#status !== 'connected') return [];
     const states = await getStates(this.#conn);
@@ -278,11 +345,36 @@ export class HaBackend implements Backend {
     return (result.items ?? []).map((item, index) => reminderFromHa(item, index));
   }
 
+  /* ── Einkaufsliste (Schreibrichtung) ──
+     Läden sind `todo.*`-Listen (z. B. „Local To-do"). Gelesen wird über
+     getReminders, geschrieben über die offiziellen Services; `todo.update_item`
+     adressiert den Eintrag über seine `uid`. */
+  async addTodoItem(entityId: string, title: string): Promise<void> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    await callService(this.#conn, 'todo', 'add_item', { item: title }, { entity_id: entityId });
+  }
+
+  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    await callService(
+      this.#conn,
+      'todo',
+      'update_item',
+      { item: uid, status: completed ? 'completed' : 'needs_action' },
+      { entity_id: entityId },
+    );
+  }
+
+  /* Nur Core, Betriebssystem und Apps (Paket 3, docs/20): Home Assistant führt
+     auch die Firmware jedes Funkschalters als `update.*`. Die trägt
+     `device_class: firmware` und gehört nicht in eine Liste, die zeigen soll,
+     was am Haus selbst zu tun ist. */
   async listSystemUpdates(): Promise<SystemUpdate[]> {
     if (!this.#conn || this.#status !== 'connected') return [];
     const states = await getStates(this.#conn);
     return states
       .filter((state) => state.entity_id.startsWith('update.') && state.state === 'on')
+      .filter((state) => state.attributes.device_class !== 'firmware')
       .map((state) => ({
         entityId: state.entity_id,
         name: String(state.attributes.title ?? state.attributes.friendly_name ?? state.entity_id),
@@ -442,8 +534,8 @@ export class HaBackend implements Backend {
           + 'In configuration.yaml muss `http: cors_allowed_origins` den Panel-Origin erlauben.',
       };
     }
-    if (res.status === 401) return { ok: false, message: 'Token ungültig oder ohne Admin-Rechte.' };
-    if (res.status === 404) return { ok: false, message: 'CalDAV-Integration in dieser HA-Version nicht verfügbar.' };
+    if (res.status === 401) return { ok: false, message: m.ha_token_no_admin() };
+    if (res.status === 404) return { ok: false, message: m.ha_caldav_unavailable() };
     if (!res.ok) return { ok: false, message: `Einrichtung fehlgeschlagen (HTTP ${res.status}).` };
     const flow = (await res.json()) as { flow_id: string };
 
@@ -484,7 +576,7 @@ export class HaBackend implements Backend {
       { ok?: boolean; code?: string; result?: CaldavFlowResult } | null;
     if (!response.ok || !payload?.ok || !payload.result) {
       if (payload?.code === 'HA_CALDAV_NOT_AVAILABLE') {
-        return { ok: false, message: 'CalDAV-Integration in dieser HA-Version nicht verfügbar.' };
+        return { ok: false, message: m.ha_caldav_unavailable() };
       }
       if (payload?.code === 'HA_SUPERVISOR_TOKEN_MISSING') {
         return { ok: false, message: 'Der interne Home-Assistant-Zugang der App fehlt.' };
@@ -522,6 +614,13 @@ export class HaBackend implements Backend {
     try { sharedStorage.setItem(TOKEN_KEY, token.trim()); } catch { /* ignore */ }
     this.#resetRetry();
     void this.#start();
+  }
+
+  /* Retry-Knopf im Getrennt-Banner: derselbe Weg wie ein Resume — erst prüfen,
+     ob die bestehende Verbindung noch lebt, dann den Backoff verwerfen und
+     sofort neu verbinden, statt bis zum nächsten Slot (bis 30 s) zu warten. */
+  retry(): void {
+    void this.#resume();
   }
 
   /* Dev-/Verifikations-Seam (Parallele zu FakeBackend.goOffline): schließt den
@@ -612,7 +711,7 @@ export class HaBackend implements Backend {
         gateway ? location.origin : this.#resolveUrl(),
         token,
       );
-      const conn = await createConnection({ auth });
+      const conn = await connectWithTimeout(auth);
       this.#conn = conn;
       // Library-Reconnect → ConnectionStatus (ADR-018 §2). Die Library
       // resubscribed die laufende subscribe_entities-Nachricht selbst. Raw-State
@@ -723,7 +822,7 @@ export class HaBackend implements Backend {
         if (name) map.set(entry.entity_id, name);
       }
     } catch (err) {
-      console.warn('[HaBackend] Bereichszuordnung nicht verfügbar:', err);
+      console.warn('[HaBackend] area mapping unavailable:', err);
     }
     return map;
   }

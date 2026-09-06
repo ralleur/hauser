@@ -2,6 +2,7 @@
   import Icon from './Icon.svelte';
   import { TABS, activeTab, showScreen, type ScreenId } from '../state/nav.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
+  import { connection } from '../state/connection.svelte.ts';
   import { editMode, noteBlockedConfigAttempt } from '../state/edit-mode.svelte.ts';
   import { moduleVisible } from '../state/module-config.svelte.ts';
   import ClimatePill from './ClimatePill.svelte';
@@ -11,6 +12,7 @@
   import { roomContacts, type RoomContact } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
   import { familyCalendar } from '../state/calendar.svelte.ts';
+  import { notifications } from '../state/notifications.svelte.ts';
   import { IS_DEMO } from '../demo/demo-mode.ts';
   import { m } from '../../paraglide/messages.js';
   import { pluralCategory } from '../state/locale.svelte.ts';
@@ -62,14 +64,21 @@
   function windowsOpenLabel(count: number): string {
     return WINDOWS_OPEN[pluralCategory(count)]({ count });
   }
+  /* „Alles ruhig" ist eine Aussage über das ganze Haus (Paket 3, docs/20).
+     Solange eine Meldung auf dem Schirm steht, ist eben nicht alles ruhig —
+     dann sagt die Leiste nur, was sie wirklich weiß: die Fenster sind zu. */
+  const quietLabel = $derived(
+    notifications.items.length === 0 ? m.status_all_quiet() : m.status_windows_closed(),
+  );
+
   const securityLabel = $derived(
     openWindows.length === 0
-      ? m.status_all_quiet()
+      ? quietLabel
       : windowsOpenLabel(openWindows.length),
   );
 
   const securityTitle = $derived(
-    openWindows.length ? openWindows.map((room) => room.name).join(', ') : m.status_all_quiet(),
+    openWindows.length ? openWindows.map((room) => room.name).join(', ') : quietLabel,
   );
 
   function go(target: string) {
@@ -96,7 +105,8 @@
     {#if centralClimate.hasClimate}
       <ClimatePill label={m.status_climate_central()}
                    coolerLabel={m.status_all_rooms_cooler()}
-                   warmerLabel={m.status_all_rooms_warmer()} />
+                   warmerLabel={m.status_all_rooms_warmer()}
+                   online={connection().online} />
     {/if}
   </div>
 

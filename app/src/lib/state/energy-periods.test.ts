@@ -4,6 +4,7 @@ import type { EnergyView } from './energy.svelte.ts';
 
 const baseView: EnergyView = {
   configured: true,
+  hasGeneration: true,
   pv: 3.2,
   load: 1.8,
   grid: 1.4,

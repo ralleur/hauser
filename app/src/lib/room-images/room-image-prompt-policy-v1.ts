@@ -1,6 +1,6 @@
 export const ROOM_IMAGE_PROMPT_POLICY_V1 = Object.freeze({
   id: 'room-image-prompt-policy-v1',
-  phases: Object.freeze(['composition', 'style-light', 'dark', 'dark-off'] as const),
+  phases: Object.freeze(['composition', 'style-light', 'dark', 'dark-off', 'overcast'] as const),
   stylePresets: Object.freeze(['hauser-room-v1'] as const),
   declutter: Object.freeze(['none', 'light', 'strong'] as const),
   tones: Object.freeze(['neutral', 'warm'] as const),
@@ -66,12 +66,19 @@ const HAUSER_STYLE_AVOID = [
   'comic-book styling, flat vector clip-art, poster graphics, and heavy painterly brush texture.',
 ].join(' ');
 
-/** Erprobter Wortlaut der Vorlage, unverändert. Jede Ergänzung — auch gut
-    gemeinte Schutzklauseln — unterdrückt nachweislich die freie Neukomposition,
-    auf die es in dieser Phase ankommt. Nicht erweitern ohne Gegentest über
-    app/scripts/room-image-prompt-baseline.mjs. */
+/** Erprobter Wortlaut der Vorlage, bis auf den Raumbezug unverändert. Jede
+    Ergänzung — auch gut gemeinte Schutzklauseln — unterdrückt nachweislich die
+    freie Neukomposition, auf die es in dieser Phase ankommt. Nicht erweitern
+    ohne Gegentest über app/scripts/room-image-prompt-baseline.mjs.
+
+    Der Wortlaut entstand an einem Wohnzimmerfoto und nannte das Wohnzimmer
+    zweimal beim Namen. Für jeden anderen Raum stand damit eine Falschaussage
+    im Prompt — und das Modell folgt dem Text: Ein Schlafzimmerfoto ergab am
+    2026-09-06 ein frei erfundenes Wohnzimmer mit Sofa und Fernseher, das mit
+    der Vorlage nur noch Lampe und Fensterblick gemeinsam hatte. Der Raum
+    bleibt deshalb ungenannt; welcher es ist, steht im Bild. */
 const COMPOSITION_PROMPT = 'Ich habe in meinem Smarthome Dashboard Kacheln für alle Räume. '
-  + 'Hier ein Foto vom Wohnzimmer. Ich brauche ein background Bild für die Kachel Wohnzimmer '
+  + 'Hier ein Foto von einem dieser Räume. Ich brauche ein background Bild für dessen Kachel '
   + 'aber das Foto ist bei weitem nicht professionell genug. Ausschnitt , Perspektive alles '
   + 'suboptimal. Erstelle eine passende Version';
 
@@ -174,11 +181,34 @@ export function buildDarkOffRoomImagePrompt(specification: unknown): string {
   ].join(' ');
 }
 
+/* ── Trübe Variante (Paket 13) ──
+   Derselbe Raum bei bedecktem Himmel. Das ist ausdrücklich KEIN Nachtbild und
+   kein Filter: Geometrie, Möbel und Stil bleiben, nur das Licht kommt von
+   einem grauen Himmel statt von der Sonne. Der Ton bleibt bewohnbar — ein
+   Regentag ist kein Trauerfall, und ein Zimmer, das plötzlich blaugrau
+   erscheint, wäre eine schlechtere Lüge als das ewige Nachmittagslicht. */
+export function buildOvercastRoomImagePrompt(specification: unknown): string {
+  validateRoomImagePromptSpec(specification);
+  return [
+    'Create the coherent overcast-daylight variant directly from the selected light image.',
+    'Keep the identical illustration style of the supplied light image.',
+    HAUSER_STYLE_DIRECTION,
+    'Replace the sunny daylight with the flat, even light of a grey overcast sky:',
+    'cool down the exterior view behind the windows, mute its contrast, and let the sky read as uniformly clouded;',
+    'inside, reduce the warm sunlit accents, flatten the shading further, and let shadows become softer, shallower, and less directional.',
+    'Keep the room clearly lit and inviting — this is a dull day, not dusk and not a switched-off room;',
+    'keep whites warm-neutral rather than blue, and keep wood, plants and textiles in their own colours.',
+    'Keep camera, perspective, geometry, crop, architecture, furniture identity, layout, and object positions unchanged; no text, UI, or logos.',
+    HAUSER_STYLE_AVOID,
+  ].join(' ');
+}
+
 export const ROOM_IMAGE_PROMPT_BUILDERS_V1 = Object.freeze({
   composition: buildCompositionRoomImagePrompt,
   'style-light': buildStyleLightRoomImagePrompt,
   dark: buildDarkRoomImagePrompt,
   'dark-off': buildDarkOffRoomImagePrompt,
+  overcast: buildOvercastRoomImagePrompt,
 });
 
 export function buildRoomImagePrompt(phase: RoomImagePromptPhase, specification: unknown): string {

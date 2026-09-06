@@ -17,18 +17,35 @@ interface ConnectionView {
   banner: string | null; // schmales Banner, null = kein Banner
 }
 
+/* Die Ursache in einem Satz. Mehr weiß die Oberfläche nicht: liegt das Gerät
+   selbst offline, ist Home Assistant unerreichbar, egal ob es antworten
+   würde — deshalb hat „Kein Netz" Vorrang. */
+function outageReason(): string {
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  return offline ? m.conn_cause_offline() : m.conn_cause_unreachable();
+}
+
 export function connection(): ConnectionView {
   const status = runtime.connectionStatus;
   const online = status === 'connected';
   const disconnected = status === 'disconnected';
   const copy = m.connection_status_copy().split('|');
   const index = online ? 0 : status === 'connecting' ? 1 : status === 'reconnecting' ? 2 : 3;
+  /* Banner nur einmal je Störung: der erste Verbindungsaufbau bekommt keins
+     (er ist der Normalfall), und zwischen „reconnecting" und „disconnected"
+     bleibt derselbe Satz stehen — sonst liefe die Einblendung bei jedem
+     Backoff-Schritt neu an und aria-live meldete es erneut. */
   return {
     status,
     online,
     disconnected,
     label: copy[index],
     dot: online ? 'dot-online' : disconnected ? 'dot-offline' : 'dot-warning',
-    banner: online ? null : copy[index],
+    banner: online || status === 'connecting' ? null : outageReason(),
   };
+}
+
+/** Sofort neu verbinden, statt auf den nächsten Backoff-Schritt zu warten. */
+export function retryConnection(): void {
+  runtime.retryConnection();
 }

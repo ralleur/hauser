@@ -259,11 +259,33 @@ describe('Kamera-Durchleitung im App-Modus', () => {
     expect(factory.closed).toEqual([true]);
   });
 
+  it('reicht die HLS-Playlisten und -Segmente des Livestreams durch', async () => {
+    const factory = fakeSupervisorClient();
+    const { base } = await serve({ haConnectionMode: 'supervisor', haSupervisorClientFactory: factory });
+    const token = 'a'.repeat(64);
+    for (const path of [
+      `/api/hls/${token}/master_playlist.m3u8`,
+      `/api/hls/${token}/playlist.m3u8`,
+      `/api/hls/${token}/init.mp4`,
+      `/api/hls/${token}/segment/7.m4s`,
+    ]) {
+      expect((await fetch(`${base}${path}`)).status).toBe(200);
+    }
+    expect(factory.streamed).toEqual([
+      `/api/hls/${token}/master_playlist.m3u8`,
+      `/api/hls/${token}/playlist.m3u8`,
+      `/api/hls/${token}/init.mp4`,
+      `/api/hls/${token}/segment/7.m4s`,
+    ]);
+  });
+
   it('lehnt fremde Pfade und den direkten Modus ab', async () => {
     const factory = fakeSupervisorClient();
     const supervisor = await serve({ haConnectionMode: 'supervisor', haSupervisorClientFactory: factory });
     expect((await fetch(`${supervisor.base}/api/camera_proxy/light.kitchen`)).status).not.toBe(200);
     expect((await fetch(`${supervisor.base}/api/camera_proxy/camera.front/../states`)).status).not.toBe(200);
+    expect((await fetch(`${supervisor.base}/api/hls/${'a'.repeat(64)}/../../states`)).status).not.toBe(200);
+    expect((await fetch(`${supervisor.base}/api/hls/${'a'.repeat(64)}`)).status).not.toBe(200);
     expect(factory.streamed).toEqual([]);
     const direct = await serve({ haConnectionMode: 'direct' });
     expect((await fetch(`${direct.base}/api/camera_proxy/camera.front`)).status).toBe(404);

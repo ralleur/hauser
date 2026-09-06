@@ -93,12 +93,22 @@ function toMs(iso: string | undefined): number {
    Die Fake-Daten nutzen dieselben Felder als Rangzahlen; die Semantik
    „größer = neuer/zuletzt" bleibt konsistent. */
 
+/** Jellyfin-Name ohne das Jahr, das die Kachel ohnehin darunter zeigt: aus
+    „Dune (2021)" wird „Dune", sonst stünde dort „Dune (2021) · 2021"
+    (Paket 3, docs/20). Nur ein eingeklammertes Produktionsjahr am Ende fällt
+    weg — ein Titel wie „2012" oder „Blade Runner 2049" bleibt unangetastet. */
+export function titleWithoutYear(name: string, year: number): string {
+  if (!year) return name;
+  const stripped = name.replace(new RegExp(`\\s*[([]${year}[)\\]]\\s*$`), '').trim();
+  return stripped || name;
+}
+
 /** Film-DTO → LibraryItem. Position/Runtime aus Ticks in Sekunden. */
 export function mapMovie(dto: BaseItemDto): LibraryItem {
   return {
     id: dto.Id,
     type: 'movie',
-    title: dto.Name ?? '',
+    title: titleWithoutYear(dto.Name ?? '', dto.ProductionYear ?? 0),
     year: dto.ProductionYear ?? 0,
     fsk: parseFsk(dto.OfficialRating),
     genres: dto.Genres ?? [],
@@ -120,7 +130,7 @@ export function mapSeries(dto: BaseItemDto, seasons?: Season[]): LibraryItem {
   return {
     id: dto.Id,
     type: 'series',
-    title: dto.Name ?? '',
+    title: titleWithoutYear(dto.Name ?? '', dto.ProductionYear ?? 0),
     year: dto.ProductionYear ?? 0,
     fsk: parseFsk(dto.OfficialRating),
     genres: dto.Genres ?? [],

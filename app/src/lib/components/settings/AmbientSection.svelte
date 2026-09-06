@@ -13,6 +13,14 @@
     setAmbientCityMap,
     setAmbientDeepNight,
     setAmbientHeroText,
+    setPresenceAwayDark,
+    setPresenceGreeting,
+    setAmbientWeather,
+    setPresenceWake,
+    setStandbyAfterMinutes,
+    STANDBY_DEFAULT_MINUTES,
+    STANDBY_MAX_MINUTES,
+    STANDBY_MIN_MINUTES,
   } from '../../state/settings.svelte.ts';
   import { aiHealth } from '../../state/ai-health.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';
@@ -152,6 +160,39 @@
     <button class="secondary-btn pressable" type="button" onclick={() => requestAmbient()}>{m.sys_start_now()}</button>
   </div>
 
+  <!-- Wer den Lockscreen nicht will, schaltet ihn hier ganz ab; wer ihn will,
+       bestimmt die Wartezeit. Beides gerätelokal — dasselbe Muster wie die
+       Ruhezeit des Bedienen-Modus. -->
+  <div class="settings-row" data-setting-id="standby-after">
+    <span class="settings-row-icon"><Icon name="i-timer-lock-outline" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_standby_after()}</span>
+      <span class="settings-row-sub">
+        {settingsValues.standbyAfterMinutes === null
+          ? m.sys_standby_after_off()
+          : m.sys_standby_after_hint()}
+      </span>
+    </div>
+    {#if settingsValues.standbyAfterMinutes !== null}
+      <input class="settings-input settings-minutes-input" type="number"
+             min={STANDBY_MIN_MINUTES} max={STANDBY_MAX_MINUTES} step="1"
+             aria-label={m.sys_standby_after_minutes()}
+             value={settingsValues.standbyAfterMinutes}
+             onchange={(event) => setStandbyAfterMinutes(
+               event.currentTarget.valueAsNumber || STANDBY_DEFAULT_MINUTES,
+             )} />
+      <span class="settings-row-unit">{m.sys_edit_auto_unit()}</span>
+    {/if}
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.standbyAfterMinutes !== null}
+            aria-label={m.sys_standby_after_toggle()}
+            onclick={() => setStandbyAfterMinutes(
+              settingsValues.standbyAfterMinutes === null ? STANDBY_DEFAULT_MINUTES : null,
+            )}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+
   <div class="settings-row" data-setting-id="ambient-deep-night">
     <span class="settings-row-icon"><Icon name="i-weather-night" cls="icon icon-md" /></span>
     <div class="settings-row-text">
@@ -168,6 +209,70 @@
         <span class="settings-switch-knob"></span>
       </button>
     </div>
+  </div>
+
+  <!-- Wetter über dem Lockscreen (Paket 9): der Standby ist eine Wandtafel,
+       dort zieht das Wetter draußen vorbei. Über dem Raumbild stand es einmal
+       falsch — das ist ein Innenraum. -->
+  <div class="settings-row" data-setting-id="ambient-weather">
+    <span class="settings-row-icon"><Icon name="i-weather-pouring" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_ambient_weather()}</span>
+      <span class="settings-row-sub">{m.sys_ambient_weather_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.ambientWeather}
+            aria-label={m.sys_ambient_weather()}
+            onclick={() => setAmbientWeather(!settingsValues.ambientWeather)}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+
+  <!-- ── Präsenz und Person (Paket 8) ──
+       Drei Schalter, alle aus Werkseinstellung heraus aus: Aufwachen bei
+       Bewegung, Dunkelschalten bei leerem Haus, persönliche Begrüßung. Die
+       Zuordnung der Bewohner zu `person.*` lebt bei den Bewohnern selbst
+       (Notizen → Bewohner), hier steht nur, ob sie genutzt wird. -->
+  <div class="settings-row" data-setting-id="presence-wake">
+    <span class="settings-row-icon"><Icon name="i-motion-sensor" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_presence_wake()}</span>
+      <span class="settings-row-sub">{m.sys_presence_wake_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.presenceWake}
+            aria-label={m.sys_presence_wake()}
+            onclick={() => setPresenceWake(!settingsValues.presenceWake)}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+
+  <div class="settings-row" data-setting-id="presence-away-dark">
+    <span class="settings-row-icon"><Icon name="i-home-export-outline" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_presence_away()}</span>
+      <span class="settings-row-sub">{m.sys_presence_away_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.presenceAwayDark}
+            aria-label={m.sys_presence_away()}
+            onclick={() => setPresenceAwayDark(!settingsValues.presenceAwayDark)}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+
+  <div class="settings-row" data-setting-id="presence-greeting">
+    <span class="settings-row-icon"><Icon name="i-account-heart-outline" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_presence_greeting()}</span>
+      <span class="settings-row-sub">{m.sys_presence_greeting_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.presenceGreeting}
+            aria-label={m.sys_presence_greeting()}
+            onclick={() => setPresenceGreeting(!settingsValues.presenceGreeting)}>
+      <span class="settings-switch-knob"></span>
+    </button>
   </div>
 
   <div class="settings-row" data-setting-id="ambient-hero-text">

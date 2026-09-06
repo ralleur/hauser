@@ -1,3 +1,5 @@
+import { m } from '../../paraglide/messages.js';
+
 const CACHE_KEY = 'hmi:ha-cache';
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -17,23 +19,23 @@ export interface MinimalShellConfigStatus {
 
 const INVALID_STATUS: MinimalShellConfigStatus = {
   code: 'HOUSEHOLD_CONFIG_INVALID',
-  title: 'Konfiguration ungültig',
-  message: 'Die lokale Oberfläche bleibt bedienbar. Eine gültige Konfiguration ist erforderlich.',
+  get title() { return m.minimal_error_invalid_title(); },
+  get message() { return m.minimal_error_invalid_message(); },
 };
 const UNSUPPORTED_STATUS: MinimalShellConfigStatus = {
   code: 'HOUSEHOLD_CONFIG_UNSUPPORTED',
-  title: 'Konfiguration nicht unterstützt',
-  message: 'Die lokale Oberfläche bleibt bedienbar. Live-Daten und Geräteaktionen sind nicht verfügbar.',
+  get title() { return m.minimal_error_unsupported_title(); },
+  get message() { return m.minimal_error_unsupported_message(); },
 };
 const UNAVAILABLE_STATUS: MinimalShellConfigStatus = {
   code: 'HOUSEHOLD_CONFIG_UNAVAILABLE',
-  title: 'Konfiguration nicht verfügbar',
-  message: 'Die lokale Oberfläche bleibt bedienbar. Live-Daten und Geräteaktionen sind nicht verfügbar.',
+  get title() { return m.minimal_error_unavailable_title(); },
+  get message() { return m.minimal_error_unavailable_message(); },
 };
 const VALIDATION_STATUS: MinimalShellConfigStatus = {
   code: 'HOUSEHOLD_CONFIG_VALIDATION_FAILED',
-  title: 'Konfiguration konnte nicht geprüft werden',
-  message: 'Die lokale Oberfläche bleibt bedienbar. Die sichere Prüfung muss erneut ausgeführt werden.',
+  get title() { return m.minimal_error_validation_title(); },
+  get message() { return m.minimal_error_validation_message(); },
 };
 
 function renderAfterNavigation(shell: HTMLElement, render: () => void): void {
@@ -67,6 +69,9 @@ export function publishMinimalShellConfigStatus(
     header.textContent = status.title;
     header.setAttribute('role', 'alert');
   }
+  // Die Ursache in einem Satz, direkt über dem Neuladen-Knopf.
+  const cause = shell?.querySelector<HTMLElement>('.minimal-shell__cause');
+  if (cause) cause.textContent = status.message;
   const renderSystemStatus = () => {
     if (shell?.dataset.view !== 'system') return;
     const view = shell.querySelector<HTMLElement>('.minimal-shell__intro');
@@ -75,7 +80,7 @@ export function publishMinimalShellConfigStatus(
     const details = view?.querySelector<HTMLElement>('p');
     if (title) title.textContent = status.title;
     if (summary) summary.textContent = status.message;
-    if (details) details.textContent = `${status.code} · Lokale Navigation verfügbar`;
+    if (details) details.textContent = m.minimal_error_code({ code: status.code });
   };
   if (shell) renderAfterNavigation(shell, renderSystemStatus);
   return status;
@@ -141,8 +146,13 @@ export function hydrateMinimalShellCache(
     const view = shell.querySelector<HTMLElement>('.minimal-shell__intro');
     const summary = view?.querySelector<HTMLElement>('span');
     const details = view?.querySelector<HTMLElement>('p');
-    if (summary) summary.textContent = `${snapshot.deviceCount} Geräte im letzten Stand · ${snapshot.lightsOn} Lichter an`;
-    if (details) details.textContent = 'Letzter lokaler Stand · Daten können veraltet sein';
+    if (summary) {
+      summary.textContent = m.minimal_cache_summary({
+        deviceCount: snapshot.deviceCount,
+        lightsOn: snapshot.lightsOn,
+      });
+    }
+    if (details) details.textContent = m.minimal_cache_details();
   };
   renderAfterNavigation(shell, render);
 }

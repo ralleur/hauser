@@ -136,6 +136,48 @@ button {
 }
 .mode-toggle-rays { transform-origin: 50% 50%; }
 
+/* ── „Arbeitet" (Paket 13) ──
+   Läuft im Hintergrund ein Raumbild-Auftrag, dreht sich dasselbe Zeichen. Ein
+   voller Ring sähe beim Drehen still aus, deshalb wird er zum angeschnittenen
+   Bogen — die vertraute Sprache fürs Warten, ohne die Form zu verlassen. Nur
+   Transform, also reine Compositor-Arbeit. */
+.mode-toggle-mark.is-busy {
+  animation: mode-busy-spin 2.4s linear infinite;
+  transform-origin: 50% 50%;
+}
+.mode-toggle-mark.is-busy .mode-toggle-ring {
+  stroke-dasharray: 33 14;
+  stroke-linecap: round;
+}
+@keyframes mode-busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Steht neben dem Zeichen, ohne es aus der Mitte zu schieben: absolut gesetzt
+   und deshalb ohne Platzbedarf im Raster der Kopfzeile. */
+.mode-busy {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  translate: 0 -50%;
+  margin-left: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: mode-busy-pulse 2.8s var(--ease-in-out) infinite;
+}
+@keyframes mode-busy-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-toggle-mark.is-busy { animation: none; }
+  .mode-busy { animation: none; opacity: 0.75; }
+}
+
 /* Kreiswelle vom Knopf aus — reiner Compositor-Job (docs/03): nur Transform
    und Opacity, keine Layout-Arbeit. */
 .mode-ripple {
@@ -413,7 +455,7 @@ button {
 }
 
 /* Tab-Wechsel: Crossfade 200 ms (docs/07 Transitions-Tabelle) */
-:root { --duration-tabfade: 200ms; }
+/* --duration-tabfade kommt aus design-tokens/tokens.css. */
 
 @keyframes screen-fade-in  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes screen-fade-out { from { opacity: 1; } to { opacity: 0; } }
@@ -496,17 +538,26 @@ button {
 
 /* ── Theme-Crossfade (≤300 ms, docs/07 Day/Night) ──
    Nur während des Umschaltens aktiv; überschreibt kurzzeitig alle Transitions. */
+/* Die Hero-Ebenen sind ausgenommen: die Regel ersetzt den ganzen
+   `transition`-Kurzschreibweise und würde ihren Opacity-Crossfade abwürgen —
+   ausgerechnet beim Tageswechsel, wo Bild und Fläche gemeinsam blenden. */
 body.theme-fade,
-body.theme-fade * {
+body.theme-fade *:not(.hero-layer) {
   transition:
-    background-color var(--duration-enter) var(--ease-out),
-    border-color var(--duration-enter) var(--ease-out),
-    color var(--duration-enter) var(--ease-out) !important;
+    background-color var(--duration-theme-fade) var(--ease-out),
+    border-color var(--duration-theme-fade) var(--ease-out),
+    color var(--duration-theme-fade) var(--ease-out) !important;
 }
+
+/* Paket 4: Kippt das Interface mitten in der Dämmerung, blendet es so langsam
+   wie das Hero-Bild darunter — sonst springt die Fläche, während das Bild noch
+   unterwegs ist. Außerhalb des Bandes bleibt es beim kurzen Wechsel. */
+body.theme-fade { --duration-theme-fade: var(--duration-enter); }
+body.theme-fade.is-dusk { --duration-theme-fade: var(--duration-dusk); }
 
 @media (prefers-reduced-motion: reduce) {
   body.theme-fade,
-  body.theme-fade * { transition: none !important; }
+  body.theme-fade *:not(.hero-layer) { transition: none !important; }
 }
 
 /* ── Tab-Bar ── */
@@ -1200,7 +1251,7 @@ button.security-bar {
 }
 .tickscale.is-vertical.is-intro .tick.is-active {
   transform-origin: left center;
-  animation: tick-charge-in 120ms var(--ease-out) both;
+  animation: tick-charge-in var(--duration-quick) var(--ease-out) both;
   animation-delay: calc(var(--charge-order) * 6ms);
 }
 
@@ -1417,15 +1468,40 @@ button.security-bar {
 }
 .conn-banner.is-visible { transform: translateY(0); opacity: 1; }
 
+/* Nur der Retry-Knopf ist anfassbar; das Banner selbst bleibt durchlässig. */
+.conn-retry {
+  margin-left: auto;
+  min-height: var(--touch-min);
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: var(--color-surface-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 /* Offline: Controls deaktiviert (keine Commands, docs/02) — Navigation (Tabs,
-   Raum-/Player-Auswahl) bleibt bewusst aktiv, das Panel friert nicht ein. */
+   Raum-/Player-Auswahl) bleibt bewusst aktiv, das Panel friert nicht ein.
+   Das Phone lädt dieselben Regeln, sobald es das Raum-Sheet öffnet. */
 .app.is-disconnected .light-list,
 .app.is-disconnected .slider,
 .app.is-disconnected .stepper,
 .app.is-disconnected .mode-selector,
 .app.is-disconnected .transport,
 .app.is-disconnected .preset-grid,
-.app.is-disconnected .scene-row {
+.app.is-disconnected .scene-row,
+.app.is-disconnected .climate-dock,
+.phone-shell.is-disconnected .light-list,
+.phone-shell.is-disconnected .slider,
+.phone-shell.is-disconnected .stepper,
+.phone-shell.is-disconnected .mode-selector,
+.phone-shell.is-disconnected .transport,
+.phone-shell.is-disconnected .preset-grid,
+.phone-shell.is-disconnected .scene-row {
   opacity: 0.4;
   pointer-events: none;
 }
@@ -1469,7 +1545,7 @@ button.security-bar {
   pointer-events: none;
 }
 .room-controls .scene-btn.is-success .scene-check {
-  animation: scene-success 400ms var(--ease-out) both;
+  animation: scene-success var(--duration-emphasis) var(--ease-out) both;
 }
 @keyframes scene-success {
   0% { opacity: 0; }
@@ -1874,6 +1950,12 @@ button.security-bar {
   padding: var(--space-1) 0;
 }
 
+/* Ohne Erzeugungssensor fehlen Solar-Knoten und seine Linie; der Fluss läuft
+   dann nur zwischen Haus und Netz (Paket 3, docs/20). */
+.energy-flow.is-no-solar {
+  grid-template-columns: auto minmax(36px, 1fr) auto;
+}
+
 .flow-node {
   display: flex;
   flex-direction: column;
@@ -2034,7 +2116,7 @@ button.security-bar {
   height: 100%;
   transform: scaleY(var(--h, 0));
   transform-origin: bottom;
-  animation: bar-in 400ms var(--ease-out) backwards;
+  animation: bar-in var(--duration-emphasis) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 18ms);
 }
 .bar-prod { background: var(--color-accent-warm); }
@@ -2305,7 +2387,7 @@ button.security-bar {
 }
 ::view-transition-group(library-header),
 ::view-transition-group(*) {
-  animation-duration: 240ms;
+  animation-duration: var(--duration-slow);
   animation-timing-function: var(--ease-out);
 }
 /* Shared Cover bleiben visuell dasselbe Objekt; nur ihre Group interpoliert
@@ -2316,7 +2398,7 @@ button.security-bar {
   mix-blend-mode: normal;
 }
 ::view-transition-new(.library-enter-card) {
-  animation: library-card-enter 240ms var(--ease-out) both;
+  animation: library-card-enter var(--duration-slow) var(--ease-out) both;
   animation-delay: 200ms;
   mix-blend-mode: normal;
 }
@@ -2324,13 +2406,13 @@ button.security-bar {
 ::view-transition-old(library-exit-latest),
 ::view-transition-old(library-exit-series),
 ::view-transition-old(library-exit-movies) {
-  animation: library-shelf-out 240ms var(--ease-in) both;
+  animation: library-shelf-out var(--duration-slow) var(--ease-in) both;
 }
 ::view-transition-new(library-return-continue),
 ::view-transition-new(library-return-latest),
 ::view-transition-new(library-return-series),
 ::view-transition-new(library-return-movies) {
-  animation: library-shelf-return 240ms var(--ease-out) both;
+  animation: library-shelf-return var(--duration-slow) var(--ease-out) both;
 }
 @keyframes library-shelf-out {
   from { opacity: 1; }
@@ -2370,7 +2452,7 @@ button.security-bar {
   color: var(--color-text-secondary);
   text-align: left;
 }
-.shelf-button svg { width: 17px; height: 17px; transition: transform 120ms var(--ease-out); }
+.shelf-button svg { width: 17px; height: 17px; transition: transform var(--duration-quick) var(--ease-out); }
 .shelf-button:active svg { transform: translateX(2px); }
 
 @media (min-width: 1696px) {
@@ -2893,14 +2975,35 @@ button.security-bar {
    entfernt beide Knoten bereits, die Regel hält den Vertrag auch dann. */
 .ambient.deep-night .ambient-map { display: none; }
 
+/* Umgebungslicht (Paket 9): ein schwarzer Schleier über allem, dessen
+   Deckkraft dem gemessenen Licht folgt. Er liegt über der App und unter dem
+   Standby — im Ruhezustand regelt der Deep-Night-Modus die Helligkeit selbst.
+   Nur Deckkraft, kein Filter: sonst kostet jedes Frame Rechenzeit. */
+.ambient-dim-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  pointer-events: none;
+  background: #000;
+  transition: opacity var(--duration-slow, 400ms) var(--ease-out, ease-out);
+}
+
+/* Leeres Haus (Paket 8): niemand ist da, also zeigt das Panel nichts. Der
+   Layer bleibt bedienbar — der erste Tap weckt wie sonst auch. Nur Deckkraft,
+   damit kein Layout und keine Bildrate daran hängt. */
+.ambient.is-away-dark { background: #000; }
+.ambient.is-away-dark > *:not(.ambient-away-hint) { opacity: 0; }
+
 .ambient-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
   text-align: center;
-  /* Pixel-Shift (LCD-Schonung): JS setzt translate, sanft statt Sprung */
-  transition: transform var(--duration-enter) var(--ease-in-out);
+  /* Pixel-Shift (LCD-Schonung): JS setzt alle 2,5 min ein neues translate.
+     Bewusst viel länger als jede UI-Bewegung — die Uhr soll unmerklich
+     wandern, nicht sichtbar umspringen. */
+  transition: transform 4s var(--ease-in-out);
 }
 
 /* Ohne Hero-Kommentar wird die Uhr selbst zum Hero statt als verkleinerter
@@ -2932,7 +3035,13 @@ button.security-bar {
   font-size: var(--text-3xl);
   line-height: var(--leading-tight);
   color: var(--color-text-primary);
+  /* Zwei Zeilen sind das Maximum der Hero-Zeile; der Platz steht von Anfang
+     an, damit die Uhr beim Eintreffen des Textes nicht springt. */
+  min-height: 2lh;
 }
+/* Ohne Hero-Kommentar gibt es nichts zu reservieren — ein Moment ersetzt die
+   Zeile nur tageweise und wechselt nicht im Minutentakt. */
+.ambient-content.without-hero .ambient-greeting { min-height: 0; }
 .ambient-clock {
   font-size: var(--text-4xl);
   font-weight: var(--font-weight-semibold);
@@ -3128,6 +3237,9 @@ button.security-bar {
 .postit-sam    { --postit-paper: #fde68a; --postit-ink: #3f3406; --postit-muted: #7a6712; }
 .postit-alex { --postit-paper: #bce29e; --postit-ink: #263d10; --postit-muted: #567433; }
 .postit-beide   { --postit-paper: #dde579; --postit-ink: #383b0a; --postit-muted: #6f7420; }
+/* Nach der Messung ausgeblendet: es ist kein Platz mehr bis zum Wochenband
+   (AmbientLayer.fitPostits). Sie zählen dann in „+n weitere". */
+.ambient-postit.is-clipped { display: none; }
 .ambient-postit-more {
   font-size: var(--text-2xs);
   color: var(--color-text-tertiary);
@@ -3143,7 +3255,7 @@ button.security-bar {
    oberen linken Ecke — Gegenstück zu den Post-its, gleiche Papier-Sprache
    (leicht gekippt, weicher Schatten), aber ruhiges, fast weißes Papier mit
    Laden-Überschriften als kleine Kapitälchen. Keine Checkboxen: der Zettel
-   ist Anzeige, gepflegt wird in Notion bzw. auf der Notizen-Seite. ── */
+   ist Anzeige, gepflegt wird in der Liste bzw. auf der Notizen-Seite. ── */
 .ambient-shopping {
   position: absolute;
   top: clamp(var(--space-4), 4vh, var(--space-8));
@@ -3357,7 +3469,10 @@ button.security-bar {
    reines Schwarz + stark abgesenkter Inhalt; Phase 3/4 verfeinert
    über sun.sun bzw. Fully-Kiosk-Brightness-API. */
 :root[data-theme='dark'] .ambient { background: #000; }
-:root[data-theme='dark'] .ambient-content { opacity: 0.55; }
+/* Gedämpft, aber DECKEND: `opacity` liess den Stadtplan durch die Ziffern der
+   Uhr schimmern — dieselbe Falle wie bei den Post-its. `brightness` senkt die
+   Schrift auf demselben Schwarz ab, ohne sie durchsichtig zu machen. */
+:root[data-theme='dark'] .ambient-content { filter: brightness(0.55); }
 
 /* Deep Night nach dem iPhone-StandBy-Prinzip: kein Informationsdashboard,
    sondern nur eine sehr dunkle rote Uhr. Die eigene Opacity hebt die normale
@@ -3368,6 +3483,7 @@ button.security-bar {
 }
 .ambient.deep-night .ambient-content {
   opacity: 1;
+  filter: none;
 }
 .ambient-content.deep-night-content .ambient-clock {
   font-size: calc(var(--text-4xl) * 2);
@@ -3376,6 +3492,82 @@ button.security-bar {
 }
 
 /* ── Dev-HUD (Hardware-Smoke-Test: Viewport, dpr, fps) ── */
+/* ── Werkstatt-Simulator (Paket 4, fünfmal auf die Uhr tippen) ──
+   Sitzt wie das HUD über allem, nimmt aber Eingaben an. Bewusst schmal und
+   links unten: die Bühne rechts bleibt frei, denn genau die wird beurteilt. */
+.sim-panel {
+  position: fixed;
+  /* Rechts, nicht links: links liegen die Raumkacheln und die Szenen- und
+     Lichtschalter — dort verdeckte das Feld genau das, was man beim Prüfen
+     bedienen will. Rechts steht bei allen Räumen nur die Bühne. */
+  right: var(--space-4);
+  bottom: calc(72px + var(--space-4));
+  z-index: 100;
+  width: min(340px, calc(100vw - var(--space-8)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-3);
+  box-shadow: var(--elevation-overlay-shadow);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+.sim-head { display: flex; align-items: center; justify-content: space-between; }
+.sim-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.sim-close {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.sim-row { display: flex; flex-direction: column; gap: var(--space-2); }
+.sim-label { display: flex; align-items: baseline; justify-content: space-between; color: var(--color-text-secondary); }
+.sim-value { color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.sim-slider { width: 100%; accent-color: var(--color-accent-warm); }
+.sim-buttons { display: flex; gap: var(--space-2); }
+/* Fünf Wetterlagen passen nicht in eine Reihe des schmalen Feldes. */
+.sim-buttons.is-wrap { flex-wrap: wrap; }
+.sim-buttons.is-wrap .sim-btn { flex: 1 1 30%; }
+.sim-hint { margin: 0; color: var(--color-text-secondary); font-size: var(--text-2xs); }
+.sim-btn {
+  flex: 1 1 0;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-2xs);
+}
+.sim-btn.is-active { border-color: var(--color-accent-warm); color: var(--color-accent-warm); }
+.sim-check { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); }
+.sim-check input { width: var(--space-5); height: var(--space-5); accent-color: var(--color-accent-warm); }
+.sim-layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  font-size: var(--text-3xs);
+  color: var(--color-text-secondary);
+}
+.sim-reset { flex: none; }
+
 .hud {
   position: fixed;
   left: var(--space-4);
@@ -3484,7 +3676,7 @@ button.security-bar {
   outline: none;
 }
 .room-edit-panel.is-immersion {
-  width: calc(100vw - var(--space-8));
+  width: 100%;
 }
 .room-edit-panel.is-background {
   width: min(760px, calc(100vw - var(--space-8)));
@@ -3731,7 +3923,13 @@ button.security-bar {
 }
 .re-toggle.is-on .re-toggle-knob { background: var(--color-surface-1); }
 
+/* Der Platzierungs-Editor muss vollständig ins Fenster passen: das Bild ist die
+   Trefferfläche, ein abgeschnittener Rand wäre nicht erreichbar. Deshalb bindet
+   `--re-immersion-chrome` alles, was über und unter dem Bild liegt (Modal- und
+   Panel-Polster plus Kopfzeile), und die Vorschau nimmt die kleinere der beiden
+   Grenzen — Spaltenbreite oder verbleibende Fensterhöhe. */
 .re-immersion-editor {
+  --re-immersion-chrome: calc(var(--space-6) * 4 + 44px + var(--space-5));
   display: grid;
   grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
   gap: var(--space-5);
@@ -3741,6 +3939,9 @@ button.security-bar {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-height: calc(100dvh - var(--re-immersion-chrome));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .re-light-choice.is-selected {
   border-color: var(--color-accent-warm);
@@ -3749,7 +3950,8 @@ button.security-bar {
 .re-light-choice.is-placed .re-icon { color: var(--color-accent-warm); }
 .re-immersion-preview {
   position: relative;
-  width: 100%;
+  width: min(100%, calc((100dvh - var(--re-immersion-chrome)) * 212 / 150));
+  margin-inline: auto;
   aspect-ratio: 212 / 150;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -3793,7 +3995,13 @@ button.security-bar {
 
 @media (max-width: 760px) {
   .room-edit-panel.is-immersion { width: 100%; }
-  .re-immersion-editor { grid-template-columns: 1fr; }
+  /* Einspaltig liegt die Lampenliste über dem Bild und isst von derselben
+     Fensterhöhe. Die Vorschau bekommt deshalb nur den halben Rest. */
+  .re-immersion-editor {
+    grid-template-columns: 1fr;
+    --re-immersion-chrome: calc(50dvh + var(--space-6) * 4);
+  }
+  .re-immersion-lights { max-height: none; overflow-y: visible; }
   .re-immersion-lights .re-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4238,7 +4446,7 @@ button.security-bar {
   .rem-popout { animation: none; }
 }
 
-/* Inline-Add: Eingabezeile + Bestätigen; Fehler (Bridge aus, Notion lehnt ab)
+/* Inline-Add: Eingabezeile + Bestätigen; Fehler (Liste nicht erreichbar)
    erscheinen direkt unter der Zeile statt als Overlay. */
 .notes-add-form {
   display: grid;

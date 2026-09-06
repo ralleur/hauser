@@ -5,6 +5,8 @@
   import { appearanceMode, cycleAppearanceMode } from '../state/theme.svelte.ts';
   import type { AppearanceMode } from '../state/appearance-mode.ts';
   import { hudClockTap } from '../state/hud.svelte.ts';
+  import { showClockZoom } from '../state/hidden-gestures.svelte.ts';
+  import { longpress } from '../actions/longpress.ts';
   import { connection } from '../state/connection.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { nav } from '../state/nav.svelte.ts';
@@ -39,8 +41,10 @@
 <header class="status-bar">
   <div class="status-group">
     <!-- svelte-ignore a11y_no_static_element_interactions — Dev-Easter-Egg
-         (3× Tap = HUD), kein Bedienelement; DOM bleibt identisch zu Phase 2 -->
-    <span class="status-clock num" onpointerdown={hudClockTap}>{clock.time}</span>
+         (3× Tap = HUD), kein Bedienelement; DOM bleibt identisch zu Phase 2.
+         Langes Drücken zeigt Sekunden und Datum groß (Paket 10). -->
+    <span class="status-clock num" onpointerdown={hudClockTap}
+          use:longpress={{ enabled: true, onLongPress: showClockZoom }}>{clock.time}</span>
     <span class="status-date">{clock.date}</span>
   </div>
   <!-- Mitte: Bearbeiten ⇄ Bedienen. „Bedienen" sperrt die Konfigurations-

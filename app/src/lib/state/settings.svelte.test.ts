@@ -128,3 +128,42 @@ describe('setAmbientDeepNight', () => {
     expect(settingsValues.ambientDeepNight).toBe(false);
   });
 });
+
+describe('setStandbyAfterMinutes', () => {
+  it('startet bei drei Minuten und schaltet den automatischen Standby ab', async () => {
+    const { settingsValues, setStandbyAfterMinutes } = await freshSettings();
+    expect(settingsValues.standbyAfterMinutes).toBe(3);
+
+    setStandbyAfterMinutes(null);
+    expect(settingsValues.standbyAfterMinutes).toBeNull();
+    expect(localStorage.getItem('hmi:standby-after')).toBe('off');
+
+    setStandbyAfterMinutes(12);
+    expect(settingsValues.standbyAfterMinutes).toBe(12);
+    expect(localStorage.getItem('hmi:standby-after')).toBe('12');
+  });
+
+  it('begrenzt die Wartezeit und rundet auf ganze Minuten', async () => {
+    const { settingsValues, setStandbyAfterMinutes } = await freshSettings();
+
+    setStandbyAfterMinutes(0);
+    expect(settingsValues.standbyAfterMinutes).toBe(1);
+
+    setStandbyAfterMinutes(9999);
+    expect(settingsValues.standbyAfterMinutes).toBe(240);
+
+    setStandbyAfterMinutes(7.6);
+    expect(settingsValues.standbyAfterMinutes).toBe(8);
+  });
+
+  it('übernimmt gespeicherte Werte, unbrauchbare fallen auf den Standard zurück', async () => {
+    localStorage.setItem('hmi:standby-after', 'off');
+    expect((await freshSettings()).settingsValues.standbyAfterMinutes).toBeNull();
+
+    localStorage.setItem('hmi:standby-after', '45');
+    expect((await freshSettings()).settingsValues.standbyAfterMinutes).toBe(45);
+
+    localStorage.setItem('hmi:standby-after', 'spaeter');
+    expect((await freshSettings()).settingsValues.standbyAfterMinutes).toBe(3);
+  });
+});

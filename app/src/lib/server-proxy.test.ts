@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import neutralApartment from '../../config/examples/neutral-apartment.json';
 // Der Produktionsserver bleibt absichtlich natives Node-ESM ohne Build-Schritt.
 // @ts-expect-error Für die .mjs-Laufzeitdatei existiert keine separate Declaration.
-import { ablageRequestAllowed, allowedRoomImageOrigin, hotelAdminOnlyRoute, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, notionBridgeRequestAllowed, notionBridgeTargetPath, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
+import { ablageRequestAllowed, allowedRoomImageOrigin, hotelAdminOnlyRoute, ambientRequestAllowed, buildAceSongRequest, buildSongPlanMessages, configRequestAllowed, createAblageAccess, createFamilyDataStore, createHmiServer, createHouseholdConfigReader, createSongLibrary, familyDataRequestAllowed, householdConfigRequestAllowed, normalizeHouseholdConfigMode, paperlessTargetPath, parseSongPlan, proxyRequestAllowed, proxyTargetPath, requestOriginAllowed, serveHouseholdConfig, serveHouseholdConfigMode, songRequestAllowed, songTargetPath, staticCacheControl, staticPathFor } from '../../server.mjs';
 
 const servers: Array<{ close: (callback: () => void) => void }> = [];
 const tempDirs: string[] = [];
@@ -551,58 +551,13 @@ describe('HMI-Backend-Proxy', () => {
 
   });
 
-  it('erlaubt nur die Shopping-Routen der Notion-Bridge', () => {
-    const allowed = new Set(['https://dashboard.example.com']);
-    expect(notionBridgeTargetPath('/notion-bridge/health')).toBe('/health');
-    expect(notionBridgeTargetPath('/notion-bridge/shopping/add')).toBe('/shopping/add');
-    expect(notionBridgeTargetPath('/notion-bridge/shopping/toggle')).toBe('/shopping/toggle');
-    expect(notionBridgeTargetPath('/notion-bridge/tasks/add')).toBeNull();
-    expect(notionBridgeTargetPath('/notion-bridge/tasks/complete')).toBeNull();
-    expect(notionBridgeRequestAllowed({ method: 'POST', headers: { origin: 'https://dashboard.example.com' } }, '/shopping/add', allowed)).toBe(true);
-    expect(notionBridgeRequestAllowed({ method: 'GET', headers: {} }, '/health', allowed)).toBe(true);
-    expect(notionBridgeRequestAllowed({ method: 'GET', headers: {} }, '/shopping/add', allowed)).toBe(false);
-    expect(notionBridgeRequestAllowed({ method: 'POST', headers: { origin: 'https://evil.invalid' } }, '/shopping/add', allowed)).toBe(false);
-  });
-
-  it('reicht Shopping-POSTs zur lokalen Notion-Bridge weiter', async () => {
-    const snapshotDir = mkdtempSync(join(tmpdir(), 'hmi-notion-shopping-'));
-    tempDirs.push(snapshotDir);
-    const notionShoppingPath = join(snapshotDir, 'notion-shopping.json');
-    writeFileSync(notionShoppingPath, JSON.stringify({ sections: [{ id: 'aldi', title: 'Aldi', items: [] }] }));
-    let observedPath = '';
-    let observedBody = '';
-    const notionBridge = http.createServer((req: any, res: any) => {
-      observedPath = req.url || '';
-      req.on('data', (chunk: any) => { observedBody += chunk.toString(); });
-      req.on('end', () => {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end('{"ok":true}');
-      });
-    });
-    servers.push(notionBridge);
-    await new Promise<void>((resolve) => notionBridge.listen(0, '127.0.0.1', resolve));
+  it('beantwortet die abgeloeste Companion-Einkaufsroute mit 410', async () => {
     const server = createHmiServer('server-secret', {
-      notionBridgePort: (notionBridge.address() as { port: number }).port,
-      notionShoppingPath,
       allowedOrigins: new Set(['https://dashboard.example.com']),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const port = (server.address() as { port: number }).port;
-
-    const response = await fetch(`http://127.0.0.1:${port}/notion-bridge/shopping/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Origin: 'https://dashboard.example.com' },
-      body: '{"store":"aldi","title":"Test"}',
-    });
-    expect(response.status).toBe(200);
-    expect(observedPath).toBe('/shopping/add');
-    expect(observedBody).toBe('{"store":"aldi","title":"Test"}');
-
-    const snapshot = await fetch(`http://127.0.0.1:${port}/notion-shopping.json`);
-    expect(snapshot.status).toBe(200);
-    expect(snapshot.headers.get('content-type')).toContain('application/json');
-    expect((await snapshot.json()).sections[0].id).toBe('aldi');
 
     const obsoleteCompanionRoute = await fetch(`http://127.0.0.1:${port}/api/shopping`);
     expect(obsoleteCompanionRoute.status).toBe(410);
@@ -1007,7 +962,7 @@ describe('Hotel-Mode-Adminschranke', () => {
     for (const url of [
       '/api/config', '/api/config?x=1', '/api/setup/activate', '/api/room-images/access',
       '/api/room-image-assets', '/api/ablage/documents', '/api/laundry/existing/apply',
-      '/api/reminders', '/api/songs/health', '/notion-bridge/x', '/notion-shopping.json',
+      '/api/reminders', '/api/songs/health', '/api/shopping/notion', '/api/shopping/ha-list',
       '/hermes/v1/chat', '/ambient-llm/v1/chat/completions', '/shopping-llm/v1/chat/completions',
     ]) {
       expect(hotelAdminOnlyRoute(url), url).toBe(true);

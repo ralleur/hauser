@@ -76,6 +76,11 @@ jobs:
       - name: Verify container contract
         run: ./scripts/verify-container.sh "ci-${GITHUB_SHA::12}"
 
+      # Paket 12: the step a household actually takes — previous release to
+      # this build, on the same volumes. Skips itself before the first release.
+      - name: Upgrade smoke from previous release
+        run: ./scripts/upgrade-smoke.sh "ci-${GITHUB_SHA::12}"
+
   release-image:
     name: Publish immutable GHCR image
     if: startsWith(github.ref, 'refs/tags/v')

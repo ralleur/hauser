@@ -1,33 +1,37 @@
+import { m } from '../../paraglide/messages.js';
+
 export type MinimalShellViewId = 'home' | 'rooms' | 'system';
 
 export interface MinimalShellView {
   id: MinimalShellViewId;
-  label: string;
-  title: string;
-  summary: string;
-  details: string;
+  readonly label: string;
+  readonly title: string;
+  readonly summary: string;
+  readonly details: string;
 }
 
+/* Getter statt fester Zeichenketten: die Liste entsteht beim Import, die
+   Sprache steht erst beim Rendern fest. */
 export const MINIMAL_SHELL_VIEWS: readonly MinimalShellView[] = [
   {
     id: 'home',
-    label: 'Zuhause',
-    title: 'Lokales Dashboard',
-    summary: 'Lokale Übersicht ohne Live-Daten.',
-    details: 'Raumstatus fehlt · Aktionen gesperrt',
+    get label() { return m.minimal_tab_home(); },
+    get title() { return m.minimal_home_title(); },
+    get summary() { return m.minimal_home_summary(); },
+    get details() { return m.minimal_home_details(); },
   },
   {
     id: 'rooms',
-    label: 'Räume',
-    title: 'Lokale Raumübersicht',
-    summary: 'Neutrale Liste ohne geladene Haushaltsdaten.',
-    details: 'Wohnbereich · Schlafbereich · Außenbereich',
+    get label() { return m.minimal_tab_rooms(); },
+    get title() { return m.minimal_rooms_title(); },
+    get summary() { return m.minimal_rooms_summary(); },
+    get details() { return m.minimal_rooms_details(); },
   },
   {
     id: 'system',
-    label: 'System',
-    title: 'Verbindung wird geprüft',
-    summary: 'Offline oder unbekannt. Lokal weiter bedienbar.',
-    details: 'Keine Geräteaktion · Freigabe wird geprüft',
+    get label() { return m.minimal_tab_system(); },
+    get title() { return m.minimal_system_title(); },
+    get summary() { return m.minimal_system_summary(); },
+    get details() { return m.minimal_system_details(); },
   },
 ];

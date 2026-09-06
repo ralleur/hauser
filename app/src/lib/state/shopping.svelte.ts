@@ -1,14 +1,38 @@
-import { bridgePost } from './notion-bridge.ts';
-import { purgeDoneEntries, type ShoppingDoneEntry, type ShoppingFile, type ShoppingItem, type ShoppingSection, type StoreId } from './shopping.ts';
+import { addItem, fetchSections, setItemChecked } from './shopping-lists.ts';
+import { purgeDoneEntries, type ShoppingDoneEntry, type ShoppingItem, type ShoppingSection, type StoreId } from './shopping.ts';
 import { shoppingConfig } from './shopping-settings.svelte.ts';
+import type { ShoppingStoreConfig } from './shopping-config.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 
-/* Notion bleibt die gemeinsame Quelle der Einkaufsliste. Der lokale Cache
-   sorgt nur für einen schnellen Start; die Bridge liest und schreibt Notion. */
+/* Die Quelle der Läden steht in der Konfiguration: Home-Assistant-Listen oder
+   die gemeinsame Notion-Seite (shopping-lists.ts). Der lokale Cache sorgt nur
+   für einen schnellen Start. */
 
 const CACHE_KEY = 'hmi:shopping-cache';
 const DONE_KEY = 'hmi:shopping-done-log.v1';
 const REFRESH_MS = 5 * 60 * 1000;
 const DONE_PURGE_MS = 60 * 1000;
+
+interface ShoppingSnapshot {
+  sections: ShoppingSection[];
+}
+
+function isShoppingSnapshot(value: unknown): value is ShoppingSnapshot {
+  return Array.isArray((value as Partial<ShoppingSnapshot> | null)?.sections);
+}
+
+const snapshot = createSnapshotStore<ShoppingSnapshot>({
+  key: CACHE_KEY,
+  maxAgeMs: REFRESH_MS,
+  validate: isShoppingSnapshot,
+  migrateLegacy: (raw) => {
+    const legacy = raw as (ShoppingSnapshot & { updatedAt?: number }) | null;
+    return isShoppingSnapshot(legacy) && Number.isFinite(legacy.updatedAt)
+      ? { v: 1, updatedAt: legacy.updatedAt as number, value: { sections: legacy.sections } }
+      : null;
+  },
+});
 
 export const shopping = $state({
   sections: [] as ShoppingSection[],
@@ -33,6 +57,7 @@ export function initShopping(): void {
   void refreshShopping();
   setInterval(() => void refreshShopping(), REFRESH_MS);
   setInterval(purgeDoneLog, DONE_PURGE_MS);
+  registerRevalidation({ name: 'shopping', isStale: () => snapshot.isStale(), revalidate: refreshShopping });
 }
 
 export async function refreshShopping(): Promise<void> {
@@ -41,7 +66,7 @@ export async function refreshShopping(): Promise<void> {
   return refreshPromise;
 }
 
-/* Neues Item über die lokale Bridge in Notion speichern. */
+/* Neues Item in die Liste des Ladens schreiben. */
 export async function addShoppingItem(store: StoreId, title: string): Promise<void> {
   const id = `optimistic-shopping-${Date.now()}-${optimisticSequence++}`;
   const expectedCount = (shopping.sections.find((section) => section.id === store)?.items
@@ -58,7 +83,7 @@ export async function addShoppingItem(store: StoreId, title: string): Promise<vo
       items: [{ id, title, checked: false }],
     }];
   try {
-    await bridgePost('/shopping/add', { store, title });
+    await addItem(shoppingConfig.provider, storeConfig(store), title);
     scheduleReconcile();
   } catch (error) {
     pendingAdds.delete(id);
@@ -69,7 +94,7 @@ export async function addShoppingItem(store: StoreId, title: string): Promise<vo
   }
 }
 
-/* Double-Tap schaltet sofort lokal um; bei Bridge-Fehler wird zurückgerollt. */
+/* Double-Tap schaltet sofort lokal um; bei einem Fehler wird zurückgerollt. */
 export async function toggleShoppingItem(store: StoreId, item: ShoppingItem): Promise<void> {
   const checked = !item.checked;
   const checkedAt = checked ? new Date().toISOString() : null;
@@ -83,7 +108,7 @@ export async function toggleShoppingItem(store: StoreId, item: ShoppingItem): Pr
 
   pendingToggles.set(item.id, checked);
   try {
-    await bridgePost('/shopping/toggle', { id: item.id, checked });
+    await setItemChecked(shoppingConfig.provider, storeConfig(store), item.id, checked);
     scheduleReconcile();
   } catch (error) {
     pendingToggles.delete(item.id);
@@ -101,13 +126,16 @@ export function purgeDoneLog(): void {
   saveDoneLog();
 }
 
+function storeConfig(store: StoreId): ShoppingStoreConfig {
+  return shoppingConfig.stores.find((entry) => entry.id === store)
+    ?? { id: store, label: store, categories: [], entityId: null };
+}
+
 async function refresh(): Promise<void> {
   shopping.loading = true;
   try {
-    const resp = await fetch('/notion-shopping.json', { cache: 'no-cache' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json() as ShoppingFile;
-    shopping.sections = mergePendingAdds(data.sections ?? []);
+    const sections = await fetchSections(shoppingConfig.provider, shoppingConfig.stores);
+    shopping.sections = mergePendingAdds(withCheckedAt(sections));
     shopping.updatedAt = Date.now();
     shopping.error = null;
     saveCache();
@@ -116,6 +144,22 @@ async function refresh(): Promise<void> {
   } finally {
     shopping.loading = false;
   }
+}
+
+/* HA-Listen kennen keinen Erledigt-Zeitpunkt, die Telefonansicht blendet
+   Erledigte aber nach 24 h aus (shopping.ts). Bekannte Zeitpunkte bleiben
+   deshalb erhalten, neu erledigte Einträge bekommen den aktuellen. */
+function withCheckedAt(sections: ShoppingSection[]): ShoppingSection[] {
+  const known = new Map(shopping.sections.flatMap((section) => section.items
+    .map((item) => [item.id, item.checkedAt ?? null] as const)));
+  const now = new Date().toISOString();
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      checkedAt: item.checked ? known.get(item.id) ?? now : null,
+    })),
+  }));
 }
 
 function mergePendingAdds(sections: ShoppingSection[]): ShoppingSection[] {
@@ -146,7 +190,8 @@ function mergePendingAdds(sections: ShoppingSection[]): ShoppingSection[] {
               : item),
           }));
           pendingToggles.set(remote.id, true);
-          void bridgePost('/shopping/toggle', { id: remote.id, checked: true }).then(scheduleReconcile);
+          void setItemChecked(shoppingConfig.provider, storeConfig(pending.store), remote.id, true)
+            .then(scheduleReconcile);
         }
       }
       continue;
@@ -182,14 +227,10 @@ function scheduleReconcile(): void {
 }
 
 function restoreCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null') as
-      { sections: ShoppingSection[]; updatedAt: number } | null;
-    if (!Array.isArray(parsed?.sections) || !Number.isFinite(parsed.updatedAt)) return;
-    shopping.sections = parsed.sections;
-    shopping.updatedAt = parsed.updatedAt;
-  } catch { /* Cache ist best-effort. */ }
+  const restored = snapshot.restoreSync();
+  if (!restored) return;
+  shopping.sections = restored.value.sections;
+  shopping.updatedAt = restored.updatedAt;
 }
 
 function restoreDoneLog(): void {
@@ -212,11 +253,5 @@ function saveDoneLog(): void {
 }
 
 function saveCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      sections: shopping.sections,
-      updatedAt: shopping.updatedAt,
-    }));
-  } catch { /* Storage blockiert/voll: Live-Daten funktionieren weiter. */ }
+  void snapshot.save({ sections: shopping.sections }, shopping.updatedAt);
 }

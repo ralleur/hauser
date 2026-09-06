@@ -13,7 +13,7 @@ connection.
 | Jellyfin | Authentication, browse/detail requests, artwork, playback negotiation, HLS and progress reporting | Simulated |
 | Paperless-ngx | Optional companion bridge with server-side authentication, search, preview/download and import | Omitted |
 | Reminders and shopping | Companion-owned shared household store; selected Home Assistant `todo.*` lists can also be projected | Simulated |
-| Notion | No runtime client, API route or adapter | Not applicable |
+| Notion | Optional, companion-side only; no browser client | Not applicable |
 
 ## Home Assistant
 
@@ -68,8 +68,8 @@ be implemented in a static browser bundle.
 
 Reminders are stored in a companion-owned JSON document. The path can be
 changed with `HMI_FAMILY_DATA_PATH`; writes are serialized and exposed through
-same-origin API routes. Shopping remains separate because the private deployment
-shares that list through Notion.
+same-origin API routes. Shopping is separate: it lives in Home Assistant lists
+or, optionally, on a shared Notion page.
 
 ### Paperless-ngx
 
@@ -79,13 +79,21 @@ proxies the supported search, status, preview, download and import operations.
 The public static demo omits this surface because it has no companion and no
 safe synthetic document server.
 
-## Notion
+## Shopping lists
 
-Notion is an optional private integration for the shopping list only. A local
-Python bridge polls the shared shopping page, writes a same-origin JSON snapshot,
-and accepts a narrow set of shopping write routes through the companion proxy.
-The browser never receives the Notion token. Reminders remain companion-owned.
-The public demo uses fixtures and does not connect to Notion.
+By default every shop is a Home Assistant `todo.*` entity, for example from the
+*Local To-do* integration. Items are read with the official `todo/item/list`
+WebSocket command and written with the `todo.add_item` and `todo.update_item`
+services, so the same list is also usable in the Home Assistant app and by voice
+assistants. In the Home Assistant App mode the settings screen can create a
+list through the `local_todo` config flow.
+
+Notion is the optional alternative for a shopping page shared outside Home
+Assistant. It needs an internal integration token and the address of the page;
+shops are headings there and items are checkboxes below them. Reading and
+writing happen on the companion server, because the Notion API rejects browser
+calls and the token must not reach the browser. The public demo uses fixtures
+and connects to neither.
 
 ## Demo isolation
 

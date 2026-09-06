@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.8.0 - 2026-09-06
+
+### Added
+
+- The room picture follows the weather: an overcast image variant per set,
+  surfaces detected once per image set, rain and snow only inside the windows.
+- Weather passes quietly through the standby screen.
+- Undo after "everything off", scenes and climate changes; a switch without an
+  echo pulses once.
+- Presence and person: wake on motion, dark when everyone is away, a personal
+  greeting for the first one home. Residents map to Home Assistant persons.
+- Ambient light dims the interface with a brightness sensor.
+- Hidden gestures: long-press the clock, triple-tap the logo for diagnostics.
+- Calendar moments: birthdays, selected fixed days and the first snow.
+- Dusk in real time around sunrise and sunset; light cones fade naturally.
+- New default room pictures from a real household, by room name in every
+  language.
+- Cameras stream live over HLS; shopping stores can be Home Assistant to-do
+  lists or a Notion page; companion-app pairing by QR code.
+
+### Changed
+
+- The outdoor weather uses the home location from Home Assistant; the
+  interface no longer carries fixed city coordinates (#15).
+- The room-image assistant chooses the room up front and reports through the
+  notification centre.
+- Weather, energy, camera stills and rules start from a snapshot; read routes
+  answer with 304 via ETag; the server pre-computes overnight and reports a
+  self-check.
+- Failure states name their cause and offer a retry.
+
+### Fixed
+
+- Connecting no longer hangs forever after a resume (#15).
+- The lamp-placement editor shows your own room picture (#16).
+- The unlit night picture applies as soon as no lamp in the room is on.
+
 ## 0.7.0 - 2026-09-02
 
 Includes the work that shipped with 0.6.3 but was missing from its notes.

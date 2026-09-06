@@ -48,6 +48,7 @@
 .camera-feed-status.is-live { color: var(--color-success); }
 
 .camera-feed-frame {
+  position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 16 / 9;
@@ -72,14 +73,26 @@
   cursor: default;
 }
 
-.camera-feed-frame img {
+.camera-feed-frame img,
+.camera-feed-frame video {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.camera-feed-frame:fullscreen img { object-fit: contain; }
+/* Das <video> steht erst da, wenn es wirklich Bilder liefert; bis dahin
+   tragen die Standbilder darunter. */
+.camera-feed-frame video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.camera-feed-frame video.is-ready { opacity: 1; }
+
+.camera-feed-frame:fullscreen img,
+.camera-feed-frame:fullscreen video { object-fit: contain; }
 
 .camera-feed-titlebar-hidden .camera-feed-frame { border-top: 0; }
 

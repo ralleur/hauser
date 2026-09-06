@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
   /* Geräte-Kachel (ehem. LightCard, B-xx): reduzierte Kachel für ALLE
      Overlay-Kategorien. Schaltbare Kategorien (light/switch) togglen per Tap
      und öffnen das Detail per Long-Press; nicht-schaltbare (temp/info/media)
@@ -6,7 +7,7 @@
      im Icon-Feld; info/temp/media tragen zusätzlich eine kleine Wert-Zeile. */
   import Icon from './Icon.svelte';
   import { fittext } from '../actions/fittext.ts';
-  import { mergedDevice, devicePending, deviceReconcile, toggleDevice } from '../state/commands.ts';
+  import { mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile, toggleDevice } from '../state/commands.ts';
   import { pulse } from '../actions/pulse.ts';
   import { longpress } from '../actions/longpress.ts';
   import { openDeviceDetail } from '../state/overlay.svelte.ts';
@@ -38,12 +39,12 @@
     if (toggles) return null;
     if (category === 'temp') {
       const c = cur as ClimateValue | undefined;
-      return c ? `${fmtTemp(c.target)}° Ziel` : '—';
+      return c ? `${fmtTemp(c.target)}° ${m.climate_target()}` : '—';
     }
     if (category === 'media') {
-      const m = cur as MediaValue | undefined;
-      if (!m) return '—';
-      return m.playing ? (m.track ?? 'Läuft') : 'Pausiert';
+      const media = cur as MediaValue | undefined;
+      if (!media) return '—';
+      return media.playing ? (media.track ?? m.dev_playing()) : m.dev_paused();
     }
     if (device.domain === 'binary_sensor') {
       const s = cur as SwitchValue | undefined;
@@ -71,6 +72,16 @@
     const s = ev.server as LightValue;
     if (o.on !== undefined && o.on !== s.on) toggleWobble++;
   });
+
+  /* Konfidenz (Paket 6): bleibt das Echo eine Sekunde aus, pulsiert die Kachel
+     einmal — derselbe Wobble-Token, nur ohne Rücksprung. */
+  let echoWobble = $state(0);
+  let wasUnconfirmed = false;
+  $effect(() => {
+    const unconfirmed = deviceUnconfirmed(device.entityId);
+    if (unconfirmed && !wasUnconfirmed) echoWobble++;
+    wasUnconfirmed = unconfirmed;
+  });
 </script>
 
 <!-- Gesamte Kachel = Button. Schaltbare Kategorien spiegeln an/aus über
@@ -78,7 +89,7 @@
      Icon dekorativ (aria-hidden), der Name trägt die Beschriftung. -->
 <button class="light-tile pressable" type="button"
         class:is-on={isOn} aria-pressed={toggles ? isOn : undefined}
-        use:pulse={{ seq: toggleWobble, cls: 'is-wobble', ms: 200 }}
+        use:pulse={{ seq: toggleWobble + echoWobble, cls: 'is-wobble', ms: 200 }}
         use:longpress={{ enabled: true, onLongPress: () => openDeviceDetail(roomId, device.id) }}
         onclick={onTap}>
   <span class="light-tile-icon" aria-hidden="true">

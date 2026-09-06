@@ -20,6 +20,13 @@
   } from '../../state/reminders.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
   import SettingsCardHead from './SettingsCardHead.svelte';
+  import {
+    MOMENT_HOLIDAY_KEYS,
+    selectedMomentHolidays,
+    setSelectedMomentHolidays,
+    type MomentHolidayKey,
+  } from '../../state/moment-holidays.ts';
+  import { momentHolidayLabel } from '../../state/moment-copy.ts';
 
   let calSelection = $state<string[] | null>(selectedCalendarIds());
   let reminderSelection = $state<string[]>(selectedReminderListIds() ?? []);
@@ -47,6 +54,17 @@
   function resetCalendarSelection(): void {
     calSelection = null;
     setSelectedCalendarIds(null);
+  }
+
+  /* Feste Tage der Kalendermomente: die Auswahl gilt für den ganzen Haushalt. */
+  let holidaySelection = $state<MomentHolidayKey[]>(selectedMomentHolidays());
+
+  function toggleHoliday(key: MomentHolidayKey): void {
+    const next = holidaySelection.includes(key)
+      ? holidaySelection.filter((entry) => entry !== key)
+      : MOMENT_HOLIDAY_KEYS.filter((entry) => entry === key || holidaySelection.includes(entry));
+    holidaySelection = next;
+    setSelectedMomentHolidays(next);
   }
 
   function toggleReminderList(entityId: string): void {
@@ -127,3 +145,22 @@
   {/if}
 </div>
 <p class="settings-note">{m.sys_reminder_note()}</p>
+
+<div class="settings-group" data-setting-id="moment-holidays">
+  <SettingsCardHead icon="i-calendar" tint="warm" title={m.sys_moment_days()} />
+  {#each MOMENT_HOLIDAY_KEYS as key (key)}
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-calendar" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{momentHolidayLabel(key)}</span>
+      </div>
+      <button class="settings-switch pressable" type="button" role="switch"
+              aria-checked={holidaySelection.includes(key)}
+              aria-label={momentHolidayLabel(key)}
+              onclick={() => toggleHoliday(key)}>
+        <span class="settings-switch-knob"></span>
+      </button>
+    </div>
+  {/each}
+</div>
+<p class="settings-note">{m.sys_moment_days_note()}</p>

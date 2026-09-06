@@ -39,7 +39,7 @@
      geschnitten wird und keinen hellen Rand zeigt */
   transform: scale(1.06);
   opacity: 0.92;
-  transition: opacity var(--duration-quick, 160ms) var(--ease-out, ease);
+  transition: opacity var(--duration-quick) var(--ease-out);
   pointer-events: none;
 }
 

@@ -2,6 +2,7 @@
   import '../../styles/notifications.css';
   import { untrack } from 'svelte';
   import NotificationTile from './NotificationTile.svelte';
+  import { followNotification } from '../state/notification-targets.ts';
   import { m } from '../../paraglide/messages.js';
   import { runtime } from '../adapter/runtime.svelte.ts';
   import type { PersistentNotification } from '../adapter/types.ts';
@@ -14,6 +15,7 @@
 
   let now = $state(Date.now());
   let remote = $state<PersistentNotification[]>([]);
+  let layer = $state<HTMLElement | null>(null);
 
   $effect(() => { void notificationRules.load(); });
 
@@ -79,12 +81,46 @@
     const timer = setInterval(() => { now = Date.now(); }, 30_000);
     return () => clearInterval(timer);
   });
+
+  /* Paket 3 (docs/20): Auf dem Phone soll die Kachel den Inhalt schieben statt
+     ihn zu verdecken. Sie bleibt eine einzige, für beide Shells gemountete
+     Ebene — nur ihre gemessene Höhe wandert als Variable an die Wurzel, und
+     die Phone-Shell hält genau diesen Streifen frei. Das Panel liest die
+     Variable nicht; dort schwebt die Kachel weiter. */
+  $effect(() => {
+    const node = layer;
+    const root = document.documentElement;
+    if (!node) {
+      root.style.removeProperty('--notification-flow-height');
+      return;
+    }
+    /* Die Unterkante, nicht die reine Höhe: darin steckt der Abstand zur
+       Safe-Area, ab dem der Inhalt wieder beginnen darf. */
+    const publish = () => {
+      root.style.setProperty(
+        '--notification-flow-height',
+        `${Math.max(0, Math.round(node.getBoundingClientRect().bottom))}px`,
+      );
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--notification-flow-height');
+    };
+  });
 </script>
 
 {#if notifications.items.length > 0}
-  <aside class="notification-layer" aria-label="Benachrichtigungen" aria-live="polite">
+  <aside bind:this={layer} class="notification-layer" aria-label="Benachrichtigungen" aria-live="polite">
     {#each notifications.items.slice(0, 2) as item (item.id)}
-      <NotificationTile {item} {now} ondismiss={() => notifications.dismiss(item.dedupeKey)} />
+      <NotificationTile {item} {now}
+                        ondismiss={() => notifications.dismiss(item.dedupeKey)}
+                        onactivate={() => {
+                          followNotification(item);
+                          notifications.dismiss(item.dedupeKey);
+                        }} />
     {/each}
   </aside>
 {/if}

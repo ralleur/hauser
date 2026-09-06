@@ -3,7 +3,7 @@
   import Icon from './Icon.svelte';
   import { longpress } from '../actions/longpress.ts';
   import { fmtTemp } from '../format.ts';
-  import { openCentralClimateEdit } from '../state/central-climate-overlay.svelte.ts';
+  import { openCentralClimateEdit } from '../state/overlay.svelte.ts';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
   import { centralClimate } from '../state/climate-central.svelte.ts';
   import { m } from '../../paraglide/messages.js';
@@ -14,13 +14,15 @@
      aria-Label — sichtbar würde er die Bottom-Leiste unnötig hoch machen.
      Panel (TabBar) und Phone teilen sich dieselbe Fassung; nur die Umgebung
      setzt die Breite. */
-  let { label, coolerLabel, warmerLabel }: {
-    label: string; coolerLabel: string; warmerLabel: string;
+  /* Ohne Verbindung nimmt niemand die Commands an: die Tasten sind dann
+     gesperrt, nicht nur ausgegraut. */
+  let { label, coolerLabel, warmerLabel, online = true }: {
+    label: string; coolerLabel: string; warmerLabel: string; online?: boolean;
   } = $props();
 </script>
 
 <div class="climate-dock" aria-label={label}>
-  <button class="cd-key cd-key-down pressable" type="button" aria-label={coolerLabel}
+  <button class="cd-key cd-key-down pressable" type="button" disabled={!online} aria-label={coolerLabel}
           onclick={() => centralClimate.step(-0.5)}><Icon name="i-minus" cls="icon cd-step-icon" /></button>
 
   <!-- Long-Press öffnet die zentrale Klimasteuerung. Er hängt an der Lesezone,
@@ -37,6 +39,6 @@
     </p>
   </div>
 
-  <button class="cd-key cd-key-up pressable" type="button" aria-label={warmerLabel}
+  <button class="cd-key cd-key-up pressable" type="button" disabled={!online} aria-label={warmerLabel}
           onclick={() => centralClimate.step(0.5)}><Icon name="i-plus" cls="icon cd-step-icon" /></button>
 </div>

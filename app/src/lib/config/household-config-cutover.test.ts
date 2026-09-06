@@ -676,9 +676,13 @@ describe('productive household bootstrap cutover', () => {
     expect(health?.headers.get('cache-control')).toBe('no-store');
     await expect(health?.json()).resolves.toMatchObject({ ok: true, status: 'ready', schemaVersion: 4 });
     expect(demoResponse('/api/health', 'POST')?.status).toBe(405);
-    const shopping = demoResponse('/notion-shopping.json', 'GET');
-    expect(shopping?.headers.get('cache-control')).toBe('no-store');
-    await expect(shopping?.json()).resolves.toMatchObject({ source_name: 'Demo' });
+    /* Die Einkaufsliste kommt in der Demo nicht mehr über eine eigene Route,
+       sondern als `todo.*`-Listen aus dem FakeBackend — die Ladenzuordnung der
+       Demo-Konfiguration muss zu diesen Startwerten passen. */
+    const shoppingConfig = demoResponse('/api/config', 'GET');
+    await expect(shoppingConfig?.json()).resolves.toMatchObject({
+      values: { 'hmi:shopping-config:v1': expect.stringContaining('todo.walmart') },
+    });
   });
 
   it('projects configured active Phone targets while preserving a valid device-local order', () => {

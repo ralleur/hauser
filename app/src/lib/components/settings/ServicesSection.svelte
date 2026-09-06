@@ -27,9 +27,11 @@
   import PaperlessConfig from './PaperlessConfig.svelte';
   import EnergyModuleConfig from './EnergyModuleConfig.svelte';
   import {
-    moduleConfig, moduleEnabled, setModuleEnabled, type ToggleableModuleId,
+    moduleConfig, moduleEnabled, type ToggleableModuleId,
   } from '../../state/module-config.svelte.ts';
+  import { setModuleEnabled } from '../../state/module-config-write.ts';
   import DeviceAddress from '../DeviceAddress.svelte';
+  import PairingCard from './PairingCard.svelte';
 
   const conn = $derived(connection());
 
@@ -141,6 +143,8 @@
     </div>
     <DeviceAddress />
   </div>
+
+  <PairingCard />
 
   {#if !managedByApp}
   <div class="settings-row is-stacked" data-setting-id="ha-url">

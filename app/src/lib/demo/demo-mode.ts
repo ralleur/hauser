@@ -31,9 +31,9 @@ const nowIso = () => new Date().toISOString();
 const demoShoppingConfig = {
   version: 1,
   stores: [
-    { id: 'walmart', label: 'Walmart', categories: [] },
-    { id: 'carrefour', label: 'Carrefour', categories: [] },
-    { id: 'tesco', label: 'Tesco', categories: [] },
+    { id: 'walmart', label: 'Walmart', categories: [], entityId: 'todo.walmart' },
+    { id: 'carrefour', label: 'Carrefour', categories: [], entityId: 'todo.carrefour' },
+    { id: 'tesco', label: 'Tesco', categories: [], entityId: 'todo.tesco' },
   ],
 };
 
@@ -112,41 +112,29 @@ function demoReminders() {
   };
 }
 
-function demoShopping() {
-  return {
-    updated_at: nowIso(),
-    source_name: 'Demo',
-    /* Die Abschnitts-IDs müssen der Demo-Konfiguration aus `/api/config`
-       entsprechen — sonst ordnet die UI nichts zu. */
-    sections: [
-      {
-        id: 'walmart',
-        title: 'Walmart',
-        items: [
-          { id: 'demo-a1', title: m.demo_shop_oat_milk(), checked: false },
-          { id: 'demo-a2', title: m.demo_shop_tomatoes(), checked: false },
-          { id: 'demo-a3', title: m.demo_shop_bread(), checked: true, checkedAt: nowIso() },
-        ],
-      },
-      {
-        id: 'carrefour',
-        title: 'Carrefour',
-        items: [
-          { id: 'demo-r1', title: m.demo_shop_coffee(), checked: false },
-          { id: 'demo-r2', title: m.demo_shop_parmesan(), checked: false },
-          { id: 'demo-r3', title: m.demo_shop_olive_oil(), checked: false },
-        ],
-      },
-      {
-        id: 'tesco',
-        title: 'Tesco',
-        items: [
-          { id: 'demo-d1', title: m.demo_shop_toothpaste(), checked: false },
-          { id: 'demo-d2', title: m.demo_shop_detergent(), checked: false },
-        ],
-      },
-    ],
-  };
+/* Die Einkaufsliste liest `todo.*`-Listen über das Backend (shopping-lists.ts).
+   In der Demo füttern diese Startwerte das FakeBackend; die IDs müssen zur
+   Ladenzuordnung in demoShoppingConfig passen. */
+export function demoTodoSeed(): [string, { id: string; title: string; due: null; completed: boolean; description: null }[]][] {
+  if (!IS_DEMO) return [];
+  const item = (id: string, title: string, completed = false) =>
+    ({ id, title, due: null, completed, description: null });
+  return [
+    ['todo.walmart', [
+      item('demo-a1', m.demo_shop_oat_milk()),
+      item('demo-a2', m.demo_shop_tomatoes()),
+      item('demo-a3', m.demo_shop_bread(), true),
+    ]],
+    ['todo.carrefour', [
+      item('demo-r1', m.demo_shop_coffee()),
+      item('demo-r2', m.demo_shop_parmesan()),
+      item('demo-r3', m.demo_shop_olive_oil()),
+    ]],
+    ['todo.tesco', [
+      item('demo-d1', m.demo_shop_toothpaste()),
+      item('demo-d2', m.demo_shop_detergent()),
+    ]],
+  ];
 }
 
 /* Der Songs-Screen erzeugt Musik über einen lokalen Generator-Dienst. In der
@@ -240,14 +228,6 @@ export function demoResponse(path: string, method: string): Response | null {
   }
   if (path.startsWith('/api/reminders')) {
     return method === 'GET' ? json(demoReminders()) : json({ ok: true });
-  }
-  if (path === '/notion-shopping.json') {
-    return method === 'GET'
-      ? json(demoShopping(), 200, { 'cache-control': 'no-store' })
-      : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'GET', 'cache-control': 'no-store' });
-  }
-  if (path.startsWith('/api/shopping')) {
-    return method === 'GET' ? json(demoShopping()) : json({ ok: true });
   }
   if (path.startsWith('/api/songs')) {
     return method === 'GET' ? json(demoSongs()) : json({ ok: true });

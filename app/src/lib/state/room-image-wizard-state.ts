@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import {
   RoomImageClientError,
   isRoomImageClientRequestId,
@@ -141,14 +142,14 @@ function safeError(error: unknown): RoomImageSafeError {
     kind: 'network',
     status: null,
     code: 'NETWORK_ERROR',
-    message: 'Die Room-Image-Route ist nicht erreichbar.',
+    message: m.rimg_err_route_unreachable(),
     retryable: false,
   };
 }
 
 function invalidResponseError(): RoomImageClientError {
   return new RoomImageClientError(
-    'invalid_response', null, 'INVALID_RESPONSE', 'Die Room-Image-Antwort ist ungültig.', false,
+    'invalid_response', null, 'INVALID_RESPONSE', m.rimg_err_response_invalid(), false,
   );
 }
 

@@ -4,14 +4,15 @@
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
   import { clock } from '../state/clock.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
-  import { roomTemperature, roomWindowOpen } from '../state/commands.ts';
+  import { roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
   import { familyCalendar, refreshFamilyCalendar } from '../state/calendar.svelte.ts';
   import { projectAmbientWeek } from '../state/calendar.ts';
   import { reminders, refreshReminders } from '../state/reminders.svelte.ts';
   import { projectPostits } from '../state/reminders.ts';
   import { postitStyle } from '../state/reminder-persons.ts';
-  import { personColorId, reminderPersons } from '../state/reminder-persons.svelte.ts';
+  import { personColorId, personDisplayLabel, reminderPersons } from '../state/reminder-persons.svelte.ts';
+  import { everyoneOut, greetedPersonId, watchPresence } from '../state/presence.svelte.ts';
   import { shopping, refreshShopping } from '../state/shopping.svelte.ts';
   import { projectShoppingSections } from '../state/shopping.ts';
   import { shoppingConfig, shoppingItemOrder } from '../state/shopping-settings.svelte.ts';
@@ -19,29 +20,43 @@
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { generateAmbientCopy } from '../state/ambient-copy.ts';
   import { ambientCopy, refreshAmbientCopy } from '../state/ambient-copy.svelte.ts';
+  import { currentMoment, initMoments } from '../state/moments.svelte.ts';
+  import { momentLine } from '../state/moment-copy.ts';
   import { outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { ambientMap, ensureAmbientMapStatus } from '../state/ambient-map.svelte.ts';
   import { localeState } from '../state/locale.svelte.ts';
   import { isDeepNightHour } from '../state/ambient-deep-night.ts';
+  import HeroWeatherLayer from './HeroWeatherLayer.svelte';
+  import { heroWeatherLayer, resolvedWeatherCondition } from '../state/hero-weather.ts';
+  import { simulation } from '../state/simulation.svelte.ts';
+  import { prefersReducedMotion } from '../motion/index.ts';
   import type { TempTrend } from '../state/weather.ts';
   import Icon from './Icon.svelte';
 
-  /* Trend → Pfeil (Wunsch: oben = steigt, rechts = gleich, links = fällt) und
+  /* Trend → Pfeil (oben = steigt, rechts = gleich, unten = fällt) und
      Vorlese-Label. null, solange kein Vergleichswert vorliegt → kein Pfeil. */
   function trendIcon(t: TempTrend | null): string | null {
-    return t === 'rising' ? 'i-arrow-up' : t === 'falling' ? 'i-arrow-left'
+    return t === 'rising' ? 'i-arrow-up' : t === 'falling' ? 'i-arrow-down'
       : t === 'steady' ? 'i-arrow-right' : null;
   }
   function trendLabel(t: TempTrend | null): string {
-    return t === 'rising' ? ', steigt' : t === 'falling' ? ', fällt'
-      : t === 'steady' ? ', gleichbleibend' : '';
+    return t === 'rising' ? m.ambient_trend_rising() : t === 'falling' ? m.ambient_trend_falling()
+      : t === 'steady' ? m.ambient_trend_steady() : '';
   }
 
-  /* Aktivierung nach Timeout ohne Touch (Startwert 3 min; Test-Override
-     ?idle=<Sekunden>), Touch weckt zurück zum letzten Screen (Fade ≤300 ms). */
+  /* Aktivierung nach Timeout ohne Touch (Wartezeit aus den Einstellungen,
+     Test-Override ?idle=<Sekunden>), Touch weckt zurück zum letzten Screen
+     (Fade ≤300 ms). `null` heißt: kein automatischer Standby — dann führt nur
+     noch der Knopf in den Einstellungen dorthin. */
   const idleParam = parseFloat(new URLSearchParams(location.search).get('idle') ?? '');
-  const idleTimeoutMs = idleParam > 0 ? idleParam * 1000 : 3 * 60 * 1000;
+  const idleTimeoutMs = $derived(
+    idleParam > 0
+      ? idleParam * 1000
+      : settingsValues.standbyAfterMinutes === null
+        ? null
+        : settingsValues.standbyAfterMinutes * 60_000,
+  );
   const forceDeepNight = new URLSearchParams(location.search).get('deepnight') === '1';
 
   let active = $state(false);
@@ -116,6 +131,7 @@
 
   function armIdleTimer() {
     clearTimeout(idleTimer);
+    if (idleTimeoutMs === null) return;
     idleTimer = setTimeout(showAmbient, idleTimeoutMs);
   }
 
@@ -123,6 +139,40 @@
     armIdleTimer();
     return () => { clearTimeout(idleTimer); clearInterval(shiftTimer); setAmbientActive(false); };
   });
+
+  /* ── Präsenz und Person (Paket 8) ──
+     Die Melder aus „Fenster & Bewegung" wecken das Panel; ein leeres Haus
+     lässt es ganz dunkel werden; wer heimkommt, wird begrüßt. Alle drei
+     Funktionen sind Opt-in, und der Auslöser bleibt bei Home Assistant —
+     hier wird nur gelesen. */
+  const presenceWatched = $derived(
+    settingsValues.presenceAwayDark || settingsValues.presenceGreeting,
+  );
+  $effect(() => {
+    if (!presenceWatched) return;
+    return watchPresence();
+  });
+
+  const motionSomewhere = $derived(appState.rooms.some((room) => roomPresence(room.id)));
+  let motionSeen = false;
+  $effect(() => {
+    const motion = motionSomewhere;
+    const known = motionSeen;
+    motionSeen = motion;
+    // Erst die Flanke weckt — der erste Messwert nach dem Abo tut es nicht.
+    if (motion && !known && active && settingsValues.presenceWake) wakeAmbient();
+  });
+
+  /* Leeres Haus: der Standby fällt auf Schwarz zurück. Der Tap weckt wie
+     immer — nur zu sehen gibt es bis dahin nichts. */
+  const awayDark = $derived(settingsValues.presenceAwayDark && everyoneOut());
+
+  /* Begrüßung: gilt dem, der ein leeres Haus wieder gefüllt hat, und bringt
+     dessen Zettel nach vorn. */
+  const greetedPerson = $derived(settingsValues.presenceGreeting ? greetedPersonId() : null);
+  const greetingLine = $derived(greetedPerson
+    ? m.ambient_welcome_home({ name: personDisplayLabel(greetedPerson) })
+    : null);
 
   /* Manueller Standby (B-06): der Status-Bar-Button erhöht ambientRequest.seq —
      gleicher Pfad wie der Timeout (inkl. Playback-Hemmung und Pixel-Shift). */
@@ -173,6 +223,18 @@
       || (settingsValues.ambientDeepNight && (forceDeepNight || isDeepNightHour(clock.hours))),
   );
 
+  /* ── Wetter über dem Lockscreen (B-01B, Paket 9) ──
+     Hier statt über dem Raumbild: die Bühne zeigt einen Innenraum, und Regen
+     über dem eigenen Sofa ergibt keinen Sinn. Der Standby ist eine Wandtafel
+     — was dort zieht, zieht draußen. Die Lage kommt aus derselben Messung wie
+     die Klimazeile darunter; `?weather=` friert sie für die Abnahme ein.
+     Deep Night zeigt weiter ausschließlich die gedämpfte Uhr. */
+  const weatherLayer = $derived.by(() => {
+    if (!settingsValues.ambientWeather || deepNight) return null;
+    const condition = resolvedWeatherCondition(simulation.weather, location.search, outdoor.condition);
+    return heroWeatherLayer(condition, outdoor.windSpeed, prefersReducedMotion());
+  });
+
   /* ── Stadtplan-Hintergrund (docs/18 §8): rein dekorativ, gerätelokal
      eingeschaltet und nur mit fertigem Serverasset. Deep Night zeigt weiter
      ausschließlich die gedämpfte rote Uhr — dort entfällt der Layer samt
@@ -200,10 +262,66 @@
 
   /* Offene iCloud-Erinnerungen als Notizzettel — bewusst in der freien oberen
      rechten Ecke, außerhalb des zentrierten Inhalts, damit sie Uhr, Begrüßung
-     und Wochenband nicht überlagern. */
+     und Wochenband nicht überlagern. Wie viele Zettel hängen, entscheidet der
+     Platz bis zum Wochenband, nicht eine feste Zahl: die Höhe eines Zettels
+     hängt an der Titellänge, der Platz am Panelformat. */
+  const POSTIT_CEILING = 12;
+  let postitsEl = $state<HTMLElement | null>(null);
+  let weekEl = $state<HTMLElement | null>(null);
+  let postitHidden = $state(0);
+  let viewportTick = $state(0);
+
   const postits = $derived.by(() => {
     void clock.time;
-    return projectPostits(reminders.items, new Date(), undefined, reminderPersons.list);
+    const projected = projectPostits(reminders.items, new Date(), POSTIT_CEILING, reminderPersons.list);
+    if (!greetedPerson) return projected;
+    /* Wer gerade heimkommt, sieht zuerst seine eigenen Zettel — die der
+       anderen rutschen dahinter, verschwinden aber nicht. */
+    const own = projected.items.filter((note) => note.person === greetedPerson);
+    const rest = projected.items.filter((note) => note.person !== greetedPerson);
+    return { items: [...own, ...rest], more: projected.more };
+  });
+
+  /* Gemessen statt geraten: gehängt wird, was bis zum Wochenband passt. Die
+     Zettel stehen alle im DOM; überzählige werden nach der Messung ausgeblendet
+     — sie hängen unten, ändern also die Lage der sichtbaren darüber nicht, und
+     eine einzige Messung genügt. Bleibt etwas übrig, ist der Platz für die
+     Zeile „+n weitere" vorher reserviert. */
+  function fitPostits(): void {
+    const list = postitsEl;
+    const notes = list ? [...list.querySelectorAll<HTMLElement>('.ambient-postit')] : [];
+    if (!list || !notes.length) {
+      postitHidden = 0;
+      return;
+    }
+    for (const note of notes) note.classList.remove('is-clipped');
+    const gap = Number.parseFloat(getComputedStyle(list).rowGap) || 0;
+    const floor = (weekEl?.getBoundingClientRect().top ?? window.innerHeight) - gap;
+    const chip = list.querySelector<HTMLElement>('.ambient-postit-more')?.getBoundingClientRect().height
+      ?? (Number.parseFloat(getComputedStyle(list).fontSize) || 16);
+
+    let shown = notes.length;
+    for (const [index, note] of notes.entries()) {
+      const rest = notes.length - index - 1 + postits.more;
+      const reserve = rest > 0 ? gap + chip : 0;
+      if (note.getBoundingClientRect().bottom + reserve > floor) {
+        shown = Math.max(1, index);
+        break;
+      }
+    }
+    for (const note of notes.slice(shown)) note.classList.add('is-clipped');
+    postitHidden = notes.length - shown + postits.more;
+  }
+
+  $effect(() => {
+    void reminders.items;
+    void clock.time;
+    void localeState.current;
+    void viewportTick;
+    void deepNight;
+    void active;
+    void weekHasEvents;
+    fitPostits();
   });
 
   /* Zentrale Einkaufsliste: links als weißlicher Notizzettel-
@@ -223,6 +341,18 @@
       ? ambientCopy.lines
       : generateAmbientCopy(familyCalendar.events, outdoor, new Date(), localeState.current).lines;
   });
+
+  /* Ein Moment hat Vorrang vor der formulierten Zeile — und erscheint auch,
+     wenn der Hero-Text sonst abgeschaltet ist: er gilt nur für heute. */
+  initMoments();
+  const heroLines = $derived.by(() => {
+    void clock.time;
+    void localeState.current;
+    // Die Begrüßung hat Vorrang: sie gilt genau jetzt, der Moment gilt heute.
+    if (greetingLine) return [greetingLine];
+    const moment = momentLine(currentMoment());
+    return moment ? [moment] : heroCopy;
+  });
   $effect(() => {
     if (!settingsValues.ambientHeroText) return;
     void clock.time;
@@ -239,6 +369,7 @@
      keine versehentliche Bedienung des darunterliegenden Screens.
      Der globale Capture-Listener armiert den Idle-Timer bei jedem Touch. -->
 <svelte:document onpointerdowncapture={armIdleTimer} />
+<svelte:window onresize={() => (viewportTick += 1)} />
 
 <!-- ── Ambient / Idle (docs/07 Screen 9): im Ruhezustand ist das Panel kein
      UI, sondern eine Uhr an der Wand. Statisch bis auf den Minutenwechsel.
@@ -247,6 +378,7 @@
 <div class="ambient" class:is-on={active} aria-hidden={active ? 'false' : 'true'}
      class:has-side-notes={shoppingSections.length > 0 || postits.items.length > 0}
      class:deep-night={deepNight}
+     class:is-away-dark={awayDark}
      onpointerdown={wakeTo}>
   <!-- Genau ein dekorativer Kartenlayer, ganz hinten: das fertige Serverasset
        dient als Maske über der primären Schriftfarbe. Kein Inline-SVG, keine
@@ -256,15 +388,22 @@
     <div class="ambient-map" aria-hidden="true"
          style="--ambient-map-src: url('{ambientMap.assetUrl}')"></div>
   {/if}
+  {#if weatherLayer}
+    <HeroWeatherLayer layer={weatherLayer} />
+  {/if}
   <div class="ambient-content" class:without-hero={!settingsValues.ambientHeroText && !deepNight}
        class:deep-night-content={deepNight} bind:this={contentEl}>
     {#if deepNight}
       <div class="ambient-clock num" bind:this={clockEl}>{clock.time}</div>
     {:else}
-    <!-- Hero-Zeile: höchstens zwei bewusst getrennte Kommentarzeilen. -->
-    {#if settingsValues.ambientHeroText}
-      <p class="ambient-greeting ambient-copy" aria-label="Kommentar zum heutigen Tag">
-        {#each heroCopy as line, index}
+    <!-- Hero-Zeile: höchstens zwei bewusst getrennte Kommentarzeilen. Sie steht
+         auch leer im Layout, solange der Text noch formuliert wird — sonst
+         rutscht die Uhr nach unten, sobald er eintrifft. -->
+    {#if heroLines.length > 0 || settingsValues.ambientHeroText}
+      <p class="ambient-greeting ambient-copy"
+         aria-label={heroLines.length ? 'Kommentar zum heutigen Tag' : undefined}
+         aria-hidden={heroLines.length ? undefined : 'true'}>
+        {#each heroLines as line, index}
           {#if index > 0}<br />{/if}{line}
         {/each}
       </p>
@@ -273,14 +412,14 @@
     <div class="ambient-date">{clock.date}</div>
 
     <!-- Klima-/Statuszeile: Außentemp Köln + Innentemp, je mit Piktogramm
-         (Sonne = außen, Haus = innen) und Trendpfeil (oben/rechts/links =
+         (Sonne = außen, Haus = innen) und Trendpfeil (oben/rechts/unten =
          steigt/gleich/fällt). Die Sensormeldung tritt nur hinzu, wenn ein
          Sensor etwas meldet. Ganz leer → die Zeile entfällt. -->
     {#if outdoor.temp !== null || refTemp !== null || safety}
       <div class="ambient-status">
         {#if outdoor.temp !== null}
           {@const arrow = trendIcon(outdoor.trend)}
-          <span class="ambient-temp" aria-label={`Außen Köln ${fmtTemp(outdoor.temp)} Grad${trendLabel(outdoor.trend)}`}>
+          <span class="ambient-temp" aria-label={m.ambient_temp_aria({ temp: fmtTemp(outdoor.temp), trend: trendLabel(outdoor.trend) })}>
             <Icon name="i-sun-thermometer-outline" cls="ambient-temp-icon" />
             <span class="num">{fmtTemp(outdoor.temp)}°</span>
             {#if arrow}<Icon name={arrow} cls="ambient-temp-trend" />{/if}
@@ -307,7 +446,7 @@
        lesbar bleibt. Bewusst außerhalb von .ambient-content: es sitzt fest am
        unteren Bildschirmrand, während Uhr & Begrüßung mittig zentriert bleiben. -->
   {#if weekHasEvents && !deepNight}
-    <section class="ambient-week" aria-label="Familientermine der kommenden Tage">
+    <section class="ambient-week" bind:this={weekEl} aria-label="Familientermine der kommenden Tage">
       {#each ambientWeek as day (day.key)}
         <div class="ambient-week-day">
           <header class="ambient-week-head">
@@ -333,7 +472,7 @@
        rechten Ecke. Bewusst außerhalb von .ambient-content — sie liegen am Rand
        und überlagern die zentrale Information (Uhr, Begrüßung, Woche) nicht. -->
   {#if postits.items.length && !deepNight}
-    <aside class="ambient-postits" aria-label="Offene Erinnerungen">
+    <aside class="ambient-postits" bind:this={postitsEl} aria-label="Offene Erinnerungen">
       {#each postits.items as note (note.id)}
         <div class="ambient-postit" style={postitStyle(personColorId(note.person))} class:is-overdue={note.overdue}>
           <span class="ambient-postit-person">{note.personLabel}</span>
@@ -343,8 +482,8 @@
           {/if}
         </div>
       {/each}
-      {#if postits.more}
-        <div class="ambient-postit-more num">{m.ambient_more_count({ count: postits.more })}</div>
+      {#if postitHidden}
+        <div class="ambient-postit-more num">{m.ambient_more_count({ count: postitHidden })}</div>
       {/if}
     </aside>
   {/if}

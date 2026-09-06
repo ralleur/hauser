@@ -18,7 +18,7 @@ import {
   windowEntityIds,
 } from './entities.ts';
 import type { LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
-import type { Light } from './app.svelte.ts';
+import { appState, type Light } from './app.svelte.ts';
 
 type RoomMetric = 'temperature' | 'humidity';
 let roomSensorResolver: ((roomId: string, metric: RoomMetric) => string) | null = null;
@@ -127,6 +127,16 @@ export function roomPresence(roomId: string, fallback = false): boolean {
 
 export function lightPending(roomId: string, lightId: string): boolean {
   return runtime.intentStatus(lightEntityId(roomId, lightId)) === 'pending';
+}
+
+export function lightUnconfirmed(roomId: string, lightId: string): boolean {
+  return runtime.intentStatus(lightEntityId(roomId, lightId)) === 'unconfirmed';
+}
+
+export function climateUnconfirmed(roomId: string): boolean {
+  const eid = climateEntityId(roomId);
+  if (!eid) return false;
+  return runtime.intentStatus(eid) === 'unconfirmed';
 }
 
 export function climatePending(roomId: string): boolean {
@@ -246,6 +256,12 @@ export function devicePending(entityId: string): boolean {
   return runtime.intentStatus(entityId) === 'pending';
 }
 
+/* Konfidenz (Paket 6): eine Sekunde ohne State-Echo. Das Control pulsiert
+   daraufhin einmal — der Wert bleibt optimistisch stehen. */
+export function deviceUnconfirmed(entityId: string): boolean {
+  return runtime.intentStatus(entityId) === 'unconfirmed';
+}
+
 export function deviceReconcile(entityId: string): ReconcileEvent | null {
   return runtime.reconcileEvent(entityId);
 }
@@ -300,6 +316,17 @@ export function turnOffHomeExceptBedroom(): void {
     { entityId: HOME_OFF_SCRIPT_ENTITY, domain: 'script', service: 'turn_on', data: {}, queuedAt: Date.now() },
     { on: true } satisfies SwitchValue,
   );
+}
+
+/* Alles, was „Alles aus" trifft: die schaltbaren Geräte aller Räume. Ihr
+   Schnappschuss ist der Rückweg des Undo-Streifens (Paket 6). */
+export function switchableHomeEntityIds(): string[] {
+  return appState.rooms.flatMap((room) => room.lights
+    .filter((device) => {
+      const category = device.category ?? 'light';
+      return category === 'light' || category === 'switch';
+    })
+    .map((device) => device.entityId ?? lightEntityId(room.id, device.id)));
 }
 
 export function vacationModeActive(): boolean {

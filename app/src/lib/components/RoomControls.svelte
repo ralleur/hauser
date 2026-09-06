@@ -9,7 +9,7 @@
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
   import { type SceneId } from '../state/scene-config.ts';
-  import { applyScene, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
+  import { applySceneWithUndo, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { pulse } from '../actions/pulse.ts';
@@ -45,7 +45,7 @@
   /* Tap wendet die Szene an (echte Einzel-Commands, state/scene-manager);
      Long-Press öffnet den Szenen-Editor (Mitglieder anpassen). */
   function onSceneTap(sceneId: SceneId, e: MouseEvent) {
-    applyScene(room.id, sceneId);
+    applySceneWithUndo(room.id, sceneId);
     const btn = e.currentTarget as HTMLElement;
     btn.classList.remove('is-success');
     void btn.offsetWidth;

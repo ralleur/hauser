@@ -137,10 +137,18 @@ describe('serverseitige Konsumenten im App-Modus', () => {
 });
 
 describe('Quelltextgrenze', () => {
-  const serverSource = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'server.mjs'),
-    'utf8',
-  );
+  /* Die Serverfläche besteht aus server.mjs und den Modulen unter server/;
+     die Grenze gilt für den gesamten Quelltext, nicht nur für die Einstiegsdatei. */
+  const serverRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const serverSource = [
+    readFileSync(join(serverRoot, 'server.mjs'), 'utf8'),
+    ...readdirSync(join(serverRoot, 'server'))
+      /* ha-supervisor.mjs und ha-gateway.mjs sind die Träger des
+         Supervisor-Tokens und stehen nicht unter dieser Grenze. */
+      .filter((entry: string) => entry.endsWith('.mjs') && !entry.startsWith('ha-'))
+      .sort()
+      .map((entry: string) => readFileSync(join(serverRoot, 'server', entry), 'utf8')),
+  ].join('\n');
 
   it('liest den gespeicherten HA-Zugang nur an einer einzigen Stelle', () => {
     const reads = serverSource.split('\n')

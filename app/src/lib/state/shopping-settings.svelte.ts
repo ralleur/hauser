@@ -1,4 +1,7 @@
-import { bridgePost } from './notion-bridge.ts';
+import { m } from '../../paraglide/messages.js';
+import { apiRequest } from '../api/client.ts';
+import { sharedStorage } from './shared-config.ts';
+import { loadAvailableReminderLists } from './reminders.svelte.ts';
 import {
   SHOPPING_CATEGORIES,
   categoryLabel,
@@ -6,6 +9,7 @@ import {
   loadShoppingConfig,
   moveItem,
   saveShoppingConfig,
+  type ShoppingProvider,
   type ShoppingStoreConfig,
   type StoreId,
 } from './shopping-config.ts';
@@ -16,7 +20,44 @@ export const shoppingConfig = $state(loadShoppingConfig());
 export function rehydrateShoppingConfig(): void {
   const loaded = loadShoppingConfig();
   shoppingConfig.version = loaded.version;
+  shoppingConfig.provider = loaded.provider;
   shoppingConfig.stores = loaded.stores;
+}
+
+/* Zugang zur Notion-Seite: Token und Seiten-Adresse liegen in der geteilten
+   Konfiguration, gelesen und geschrieben wird ausschließlich vom Server. */
+const NOTION_TOKEN_KEY = 'hmi:notion-token';
+const NOTION_PAGE_KEY = 'hmi:notion-page';
+
+export const notionAccess = $state({
+  token: sharedStorage.getItem(NOTION_TOKEN_KEY) ?? '',
+  page: sharedStorage.getItem(NOTION_PAGE_KEY) ?? '',
+});
+
+export function saveNotionAccess(token: string, page: string): void {
+  notionAccess.token = token.trim();
+  notionAccess.page = page.trim();
+  if (notionAccess.token) sharedStorage.setItem(NOTION_TOKEN_KEY, notionAccess.token);
+  else sharedStorage.removeItem(NOTION_TOKEN_KEY);
+  if (notionAccess.page) sharedStorage.setItem(NOTION_PAGE_KEY, notionAccess.page);
+  else sharedStorage.removeItem(NOTION_PAGE_KEY);
+}
+
+export function setShoppingProvider(provider: ShoppingProvider): void {
+  shoppingConfig.provider = provider;
+  persist(shoppingConfig.stores);
+}
+
+/* Legt in Home Assistant eine „Local To-do"-Liste an. Geht nur im App-Modus,
+   in dem der Server den internen Zugang hat — sonst legt man sie in Home
+   Assistant selbst an und wählt sie hier aus. */
+export async function createShoppingList(name: string): Promise<void> {
+  const result = await apiRequest('shoppingHaList', { method: 'POST', body: { name } });
+  if (!result.ok) {
+    const payload = result.data as { message?: string; error?: string } | null;
+    throw new Error(payload?.message || payload?.error || result.error);
+  }
+  await loadAvailableReminderLists();
 }
 
 export const shoppingSort = $state({
@@ -27,23 +68,26 @@ export const shoppingSort = $state({
 });
 
 function persist(stores: ShoppingStoreConfig[]): void {
-  const saved = saveShoppingConfig({ version: 1, stores });
+  const saved = saveShoppingConfig({ version: 1, provider: shoppingConfig.provider, stores });
+  shoppingConfig.provider = saved.provider;
   shoppingConfig.stores = saved.stores;
 }
 
-export async function addShoppingStore(label: string): Promise<boolean> {
-  const store = createStore(label, shoppingConfig.stores);
+/* Läden sind eine reine HMI-Ansicht auf HA-Listen: Anlegen und Löschen
+   verändert nur die Zuordnung, nie die `todo.*`-Entität selbst. */
+export function addShoppingStore(label: string, entityId: string | null = null): boolean {
+  const store = createStore(label, shoppingConfig.stores, entityId);
   if (!store) return false;
-  await bridgePost('/shopping/store/add', { id: store.id, label: store.label });
   persist([...shoppingConfig.stores, store]);
   return true;
 }
 
-export async function deleteShoppingStore(id: StoreId): Promise<void> {
-  const store = shoppingConfig.stores.find((entry) => entry.id === id);
-  if (!store) return;
-  await bridgePost('/shopping/store/delete', { id, label: store.label });
+export function deleteShoppingStore(id: StoreId): void {
   persist(shoppingConfig.stores.filter((entry) => entry.id !== id));
+}
+
+export function setShoppingStoreEntity(id: StoreId, entityId: string | null): void {
+  persist(shoppingConfig.stores.map((store) => store.id === id ? { ...store, entityId } : store));
 }
 
 export function moveShoppingStore(index: number, delta: -1 | 1): void {
@@ -90,7 +134,7 @@ export async function sortShoppingList(sections: readonly ShoppingSection[]): Pr
         messages: [
           {
             role: 'system',
-            content: `Ordne jeden Einkaufsartikel genau einer Kategorie zu. Antworte ausschließlich als JSON {"items":[{"id":"…","category":"…"}]}. Erlaubte Kategorien: ${SHOPPING_CATEGORIES.map((category) => `${category.id} (${categoryLabel(category.id)})`).join(', ')}.`,
+            content: `Ordne jeden Einkaufsartikel genau einer Kategorie zu. Antworte ausschließlich als JSON {"items":[{"id":"…","category":"…"}]}. Erlaubte Kategorien: ${SHOPPING_CATEGORIES.map((category) => `${category.id} (${categoryLabel(category.id)})`).join(', ')}.`, // i18n-ignore: Systemprompt an das Modell, keine Anzeige
           },
           { role: 'user', content: JSON.stringify(items) },
         ],
@@ -101,7 +145,7 @@ export async function sortShoppingList(sections: readonly ShoppingSection[]): Pr
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new Error('Luna hat keine Sortierung geliefert.');
     const classified = parseClassification(content, new Set(items.map((item) => item.id)));
-    if (!Object.keys(classified).length) throw new Error('Luna hat keine gültigen Kategorien geliefert.');
+    if (!Object.keys(classified).length) throw new Error(m.shop_ai_invalid_categories());
     shoppingSort.categoryByItem = classified;
     shoppingSort.active = true;
   } catch (error) {

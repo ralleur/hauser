@@ -53,11 +53,37 @@ describe('room hero asset selection', () => {
     expect(selectHeroVariant(undefined, 'dark')).toBe('dark');
   });
 
-  it('falls back to the all-room collage for missing or unknown panel room ids', () => {
-    expect(normalizeHeroRoom(null)).toBe('all');
-    expect(normalizeHeroRoom('garage')).toBe('all');
+  /* Owner-Entscheidung 2026-09-06: Wo kein Bild passt, gilt das Wohnzimmer. */
+  it('falls back to the living room for missing or unknown panel room ids', () => {
+    expect(normalizeHeroRoom(null)).toBe('wohnzimmer');
+    expect(normalizeHeroRoom('garage')).toBe('wohnzimmer');
     expect(heroAssetUrl({ baseUrl: '/', roomId: 'garage', sun: { day: false }, fallbackTheme }))
-      .toBe('/hero/all-dark.avif');
+      .toBe('/hero/wohnzimmer-dark.avif');
+  });
+
+  /* Die Raumkennung entsteht aus dem Bereichsnamen in Home Assistant. Sie
+     verliert dabei Umlaute und fremde Zeichen — deshalb traf ein Vergleich auf
+     Gleichheit selbst im deutschen Haushalt daneben und in einem
+     fremdsprachigen nie. */
+  it('erkennt die Grundbegriffe aller Oberflächensprachen', () => {
+    const erwartet: Record<string, string[]> = {
+      wohnzimmer: ['wohnzimmer', 'grosses_wohnzimmer', 'living_room', 'lounge', 'salon',
+        'sejour', 'soggiorno', 'salotto', 'pokoj_dzienny', 'sala_de_estar'],
+      kueche: ['kueche', 'kuche', 'kitchen', 'cuisine', 'cucina', 'kuchnia', 'cozinha'],
+      bad: ['bad', 'badezimmer', 'bathroom', 'salle_de_bain', 'bagno', 'azienka',
+        'lazienka', 'casa_de_banho', 'wc'],
+      schlafzimmer: ['schlafzimmer', 'bedroom', 'master_bedroom', 'chambre', 'camera_da_letto',
+        'sypialnia', 'quarto'],
+      kinderzimmer: ['kinderzimmer', 'kids_room', 'nursery', 'chambre_d_enfant', 'cameretta',
+        'pokoj_dzieciecy', 'quarto_das_criancas'],
+      flur: ['flur', 'diele', 'hallway', 'corridor', 'couloir', 'entree', 'corridoio',
+        'ingresso', 'korytarz', 'przedpokoj', 'corredor'],
+    };
+    for (const [room, kennungen] of Object.entries(erwartet)) {
+      for (const kennung of kennungen) {
+        expect(`${kennung} → ${normalizeHeroRoom(kennung)}`).toBe(`${kennung} → ${room}`);
+      }
+    }
   });
 });
 
@@ -83,7 +109,7 @@ describe('shared panel and phone hero resolver', () => {
 
   /* B-27 D6: Phone bekommt die Ableitung — gleiche Geometrie (106:75), rund
      ein Fuenftel der Bytes. Panel bleibt bei der Vollfassung. */
-  it('keeps phone light/dark semantics, device focus and neutral unknown static rooms', () => {
+  it('keeps phone light/dark semantics, device focus and the living-room fallback', () => {
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/app', roomId: 'bad', config, variant: 'dark',
     })).toMatchObject({
@@ -91,14 +117,20 @@ describe('shared panel and phone hero resolver', () => {
       userCandidate: { url: '/assets/room-images/family-room_42/phone-dark.avif', position: '60% 40%' },
       projectFallback: { url: '/app/hero/bad-dark-phone.avif', position: '50% 50%' },
     });
+    /* Owner-Entscheidung 2026-09-06: Wo kein Bild passt, gilt das Wohnzimmer —
+       am Panel wie auf dem Telefon. */
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/', roomId: 'garage', config: null, variant: 'light',
-    })).toEqual({ variant: 'light', userCandidate: null, projectFallback: null });
+    })).toMatchObject({
+      variant: 'light',
+      userCandidate: null,
+      projectFallback: { url: '/hero/wohnzimmer-light-phone.avif' },
+    });
     expect(resolveRoomHero({
       target: 'phone', baseUrl: '/', roomId: 'garage', config, variant: 'light',
     })).toMatchObject({
       userCandidate: { url: '/assets/room-images/family-room_42/phone-light.avif' },
-      projectFallback: null,
+      projectFallback: { url: '/hero/wohnzimmer-light-phone.avif' },
     });
   });
 

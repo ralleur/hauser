@@ -12,6 +12,7 @@ const phoneShellCss = readFileSync(new URL('../../styles/phone-shell.css', impor
 
 const availableView: EnergyView = {
   configured: true,
+  hasGeneration: true,
   pv: 3.2,
   load: 1.8,
   grid: 1.4,
@@ -57,6 +58,7 @@ describe('phone energy projection', () => {
   it('keeps unknown values as dashes and distinguishes unconfigured from unavailable', () => {
     const absentView: EnergyView = {
       configured: false,
+      hasGeneration: true,
       pv: null,
       load: null,
       grid: null,

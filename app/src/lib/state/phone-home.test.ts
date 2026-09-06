@@ -38,11 +38,13 @@ function readers(overrides: Partial<PhoneHomeReaders> = {}): PhoneHomeReaders {
 }
 
 describe('phone home room projection', () => {
-  it('builds the visible day/night card asset and preserves the unknown-room fallback', async () => {
+  it('builds the visible day/night card asset and falls back to the living room', async () => {
     // B-27 D6: Phone laedt die Ableitung, nicht die Vollfassung.
     await expect(phoneHeroUrl('/', 'wohnzimmer', 'light')).resolves.toBe('/hero/wohnzimmer-light-phone.avif');
     await expect(phoneHeroUrl('/app', 'bad', 'dark')).resolves.toBe('/app/hero/bad-dark-phone.avif');
-    await expect(phoneHeroUrl('/', 'garage', 'light')).resolves.toBeNull();
+    /* Owner-Entscheidung 2026-09-06: Wo kein Bild passt, gilt das Wohnzimmer —
+       eine leere Kachel ist die schlechtere Antwort. */
+    await expect(phoneHeroUrl('/', 'garage', 'light')).resolves.toBe('/hero/wohnzimmer-light-phone.avif');
   });
 
   it('preserves room order and projects merged temperature/light/security values', () => {
@@ -150,7 +152,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(roomSheet).toContain('wrappedFocusIndex');
     expect(roomSheet).toMatch(/out:scrimExit/);
     expect(roomSheet).toMatch(/out:sheetExit/);
-    expect(roomSheet).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    expect(roomSheet).toContain("import { prefersReducedMotion, tokenDuration } from '../../motion/index.ts'");
     expect(phoneShell).toMatch(/createPhoneLayerController/);
     expect(phoneShell).not.toMatch(/inert=\{modalBlocking\}/);
   });

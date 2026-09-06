@@ -2,13 +2,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import viteConfigSource from '../../../vite.config.ts?raw';
+import { PROJECT_OVERCAST_ROOMS } from '../components/room-hero-assets.ts';
 
 const appCss = readFileSync(new URL('../../styles/app.css', import.meta.url), 'utf8');
 
 const visibleHeroRooms = ['wohnzimmer', 'kinderzimmer', 'schlafzimmer', 'bad', 'kueche', 'flur'];
 /* B-27 D5: Vorgehalten werden nur noch die Phone-Ableitungen. `dark-off` und
-   `all-*` fragt der Phone-Resolver nie an (PhoneHeroVariant, PHONE_HERO_ROOMS);
-   die Vollbilder uebernimmt der Runtime-Cache. */
+   `overcast` fragt der Phone-Resolver nie an (PhoneHeroVariant); die
+   Vollbilder uebernimmt der Runtime-Cache. */
 const expectedHeroAssets = [
   ...visibleHeroRooms.flatMap((room) => [
     `hero/${room}-dark-phone.avif`,
@@ -23,8 +24,11 @@ const fullSizeHeroAssets = [
     `hero/${room}-dark-off.avif`,
     `hero/${room}-light.avif`,
   ]),
-  'hero/all-dark.avif',
-  'hero/all-light.avif',
+  /* Seit der neuen Standardlinie (2026-09-06) gibt es kein Sammelbild mehr;
+     wo kein Raum passt, gilt das Wohnzimmer. Die trübe Fassung hat nur, wer
+     sie mitbringt — der Resolver fragt sie sonst gar nicht an. */
+  ...visibleHeroRooms.filter((room) => PROJECT_OVERCAST_ROOMS.has(room))
+    .map((room) => `hero/${room}-overcast.avif`),
 ].sort();
 
 const expectedMdiAssets = [

@@ -8,7 +8,7 @@
     centralClimateEdit,
     closeCentralClimateEdit,
     finishCentralClimateEditClose,
-  } from '../state/central-climate-overlay.svelte.ts';
+  } from '../state/overlay.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   // animationend-Fallback (deckt prefers-reduced-motion: 0ms ab)

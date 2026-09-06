@@ -18,7 +18,12 @@ Instrument Serif — SIL Open Font License 1.1
   Copyright (c) The Instrument Serif Project Authors
   Full license: app/public/fonts/LICENSE-InstrumentSerif-OFL.txt
 
-Both are subsetted for size. The unmodified license texts ship alongside them,
+Caveat — SIL Open Font License 1.1
+  Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+  Full license: app/public/fonts/LICENSE-Caveat-OFL.txt
+  Used only for the handwritten tips in the demo build.
+
+All are subsetted for size. The unmodified license texts ship alongside them,
 as the OFL requires.
 
 

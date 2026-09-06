@@ -1,16 +1,19 @@
 /* ============================================
-   Ambient-Klimazeile (Standby): Außentemperatur und Wetterlage für Köln über
-   Open-Meteo (öffentlich, ohne API-Key). Die Anfrage trägt nur feste
-   Stadtkoordinaten, keine Nutzerdaten. State-/Fetch-Teil: weather.svelte.ts.
+   Ambient-Klimazeile (Standby): Außentemperatur und Wetterlage über Open-Meteo
+   (öffentlich, ohne API-Key). Im Betrieb fragt die Oberfläche den eigenen
+   Server (`/api/weather`), der den Ort aus Home Assistant kennt; nur die
+   statische Demo ruft Open-Meteo direkt mit festen Beispielkoordinaten auf.
+   State-/Fetch-Teil: weather.svelte.ts.
    ============================================ */
 
 export type TempTrend = 'rising' | 'steady' | 'falling';
 export type WeatherCondition = 'sunny' | 'rainy' | 'snowy' | 'cloudy';
 
-/* Köln (Innenstadt) — bewusst nur grob gerundet. */
-export const COLOGNE = { latitude: 50.94, longitude: 6.96 } as const;
+/* Beispielort der Demo (Köln, grob gerundet) — im Betrieb kommt der Ort aus
+   Home Assistant, siehe server/weather.mjs. */
+export const DEMO_COORDS = { latitude: 50.94, longitude: 6.96 } as const;
 
-export function openMeteoUrl(coords: { latitude: number; longitude: number } = COLOGNE): string {
+export function openMeteoUrl(coords: { latitude: number; longitude: number }): string {
   const p = new URLSearchParams({
     latitude: String(coords.latitude),
     longitude: String(coords.longitude),
@@ -18,7 +21,7 @@ export function openMeteoUrl(coords: { latitude: number; longitude: number } = C
     hourly: 'temperature_2m',
     past_hours: '1',
     forecast_hours: '1',
-    timezone: 'Europe/Berlin',
+    timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${p}`;
 }

@@ -4,6 +4,7 @@
    atomaren Mutationspfad. Dieser Store hält nur den Serverstand — der
    Formentwurf lebt in der Komponente. */
 
+import { m } from '../../paraglide/messages.js';
 import type { HotelModeConfig } from '../config/household-config.ts';
 import { parseHotelActivationReport, type HotelActivationReport } from '../hotel-mode-activation.ts';
 
@@ -61,7 +62,7 @@ export async function loadHotelSettings(): Promise<void> {
   try {
     const { status, payload } = await request(HOTEL_SETTINGS_ENDPOINT);
     if (status !== 200) {
-      fail(payload, 'Die Hotel-Mode-Einstellungen sind nicht verfügbar.');
+      fail(payload, m.hotel_err_settings_unavailable());
       return;
     }
     hotelSettings.etag = typeof payload.etag === 'string' ? payload.etag : null;
@@ -138,7 +139,7 @@ export async function setHotelOverride(startsAt: number | null, endsAt: number):
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(startsAt === null ? { endsAt } : { startsAt, endsAt }),
     });
-    if (status !== 200) return fail(payload, 'Der manuelle Aufenthalt ist ungültig.');
+    if (status !== 200) return fail(payload, m.hotel_err_manual_stay());
     hotelSettings.error = null;
     await loadHotelStay();
     return true;
@@ -173,12 +174,12 @@ export async function resetHotelCheckout(): Promise<boolean> {
   hotelSettings.busy = true;
   try {
     const { status, payload } = await request(HOTEL_CHECKOUT_ENDPOINT, { method: 'DELETE' });
-    if (status !== 200) return fail(payload, 'Die Checkout-Markierung konnte nicht zurückgenommen werden.');
+    if (status !== 200) return fail(payload, m.hotel_err_checkout_undo());
     hotelSettings.error = null;
     await loadHotelStay();
     return true;
   } catch {
-    return fail(null, 'Die Checkout-Markierung konnte nicht zurückgenommen werden.');
+    return fail(null, m.hotel_err_checkout_undo());
   } finally {
     hotelSettings.busy = false;
   }
@@ -190,10 +191,10 @@ export async function inspectHotelActivation(): Promise<void> {
   try {
     const { status, payload } = await request(HOTEL_ACTIVATION_ENDPOINT);
     hotelSettings.activation = status === 200 ? parseHotelActivationReport(payload) : null;
-    if (status !== 200) fail(payload, 'Der Aktivierungscheck ist gerade nicht möglich.');
+    if (status !== 200) fail(payload, m.hotel_err_activation_check());
   } catch {
     hotelSettings.activation = null;
-    fail(null, 'Der Aktivierungscheck ist gerade nicht möglich.');
+    fail(null, m.hotel_err_activation_check());
   } finally {
     hotelSettings.busy = false;
   }

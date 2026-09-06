@@ -195,7 +195,7 @@
               <h3 class="notes-section-title">{section.title}</h3>
               <span class="notes-section-count num">{section.items.filter((item) => !item.checked).length || ''}</span>
               <button class="notes-add-btn pressable" type="button"
-                      aria-label="Eintrag bei {section.title} hinzufügen"
+                      aria-label={m.notes_add_to_section({ section: section.title })}
                       onclick={() => toggleAdd(`shop:${section.id}`)}>
                 <Icon name="i-plus" cls="icon icon-md" />
               </button>
@@ -263,7 +263,7 @@
               {#each row.open as item (item.id)}
                 <button class="rem-card pressable" type="button" style={postitStyle(entry.color)}
                         class:is-selected={popout?.id === item.id}
-                        aria-label="{reminderDisplayTitle(item.title, persons)} — Kontextmenü öffnen"
+                        aria-label={m.rem_context_menu({ title: reminderDisplayTitle(item.title, persons) })}
                         use:longpress={{ onLongPress: () => { if (hmiReminderId(item.id)) popout = { id: item.id, x: window.innerWidth / 2 - 90, y: window.innerHeight / 2 - 48 }; } }}
                         onclick={(e) => openPopout(e, item.id)}>
                   <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>

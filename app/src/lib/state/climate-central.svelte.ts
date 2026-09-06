@@ -23,6 +23,7 @@ import {
   centralRoomDelta,
   centralRoomIncluded,
 } from './climate-central-config.svelte.ts';
+import { climateEntityId } from './entities.ts';
 
 function climateTargets(): number[] {
   if (centralClimateConfig.customEntityId) {
@@ -73,6 +74,10 @@ export const centralClimate = (() => {
     return Math.round((t.reduce((a, b) => a + b, 0) / t.length) * 2) / 2;
   });
 
+  /* Kein Rückgängig-Streifen (Owner-Entscheidung 2026-09-06): ein Stepper
+     ist sein eigenes Undo — wer einen Schritt zu weit ist, drückt den anderen
+     Knopf. Der Streifen bleibt den großen Eingriffen vorbehalten („Alles aus",
+     Szenenwechsel). Der Sollwert geht sofort raus. */
   function setAll(v: number): void {
     const clamped = Math.min(26, Math.max(16, v));
     lastSet = clamped;

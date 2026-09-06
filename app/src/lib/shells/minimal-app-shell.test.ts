@@ -36,10 +36,10 @@ describe('minimal app shell local fallback', () => {
       /onMount\(\(\) => \{[\s\S]*?import\('\.\/minimal-shell-cache\.ts'\)[\s\S]*?hydrateMinimalShellCache/,
     );
     expect(cacheSource).toContain("shell.dataset.view !== 'home'");
-    expect(cacheSource).toContain('${snapshot.deviceCount} Geräte im letzten Stand');
-    expect(cacheSource).toContain('${snapshot.lightsOn} Lichter an');
-    expect(cacheSource).toContain('Letzter lokaler Stand');
-    expect(cacheSource).toContain('Daten können veraltet sein');
+    expect(cacheSource).toContain('deviceCount: snapshot.deviceCount');
+    expect(cacheSource).toContain('lightsOn: snapshot.lightsOn');
+    expect(cacheSource).toContain('m.minimal_cache_summary(');
+    expect(cacheSource).toContain('m.minimal_cache_details()');
     expect(shellSource).not.toContain('snapshot');
     expect(() => compile(shellSource, { filename: 'MinimalAppShell.svelte', generate: 'client' })).not.toThrow();
   });
@@ -49,7 +49,12 @@ describe('minimal app shell local fallback', () => {
     expect(cacheSource).toContain('header.textContent = status.title');
     expect(cacheSource).toContain("shell?.dataset.view !== 'system'");
     expect(cacheSource).toContain('summary.textContent = status.message');
-    expect(cacheSource).toContain('details.textContent = `${status.code} · Lokale Navigation verfügbar`');
+    expect(cacheSource).toContain('details.textContent = m.minimal_error_code({ code: status.code })');
+    // Ursache in einem Satz plus der einzige Ausweg: neu laden (Paket 1).
+    expect(cacheSource).toContain('cause.textContent = status.message');
+    expect(shellSource).toContain('class="minimal-shell__cause"');
+    expect(shellSource).toContain('location.reload()');
+    expect(shellSource).toContain('{m.minimal_reload()}');
     expect(shellSource).toMatch(/<nav[\s\S]*?MINIMAL_SHELL_VIEWS[\s\S]*?<button/);
     expect(`${shellSource}\n${cacheSource}`).not.toMatch(/\{@html|innerHTML/);
   });
@@ -61,6 +66,7 @@ describe('minimal app shell local fallback', () => {
       'svelte',
       './minimal-app-shell.css',
       './minimal-shell-navigation.ts',
+      '../../paraglide/messages.js',
     ]);
 
     for (const source of [shellSource, JSON.stringify(MINIMAL_SHELL_VIEWS)]) {

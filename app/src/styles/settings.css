@@ -42,6 +42,29 @@
   gap: var(--space-2);
   color: var(--color-text-primary);
 }
+/* Lockup und QR-Knopf zum Koppeln der Companion-App in einer Zeile. */
+.settings-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.settings-brand-row { margin-bottom: var(--space-4); }
+.settings-brand-row .settings-title { margin: 0; }
+.settings-brand-pair {
+  width: var(--touch-min, 40px);
+  height: var(--touch-min, 40px);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.settings-brand-pair:hover { color: var(--color-text-primary); background: var(--color-surface-1); }
+.settings-brand-pair svg { width: 20px; height: 20px; }
 .settings-brand-mark {
   width: 1.25em;
   height: 1.25em;

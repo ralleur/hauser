@@ -69,8 +69,9 @@ export interface CommandQueueLayer {
    Pending Intents überlagern den Server-State; die UI liest ausschließlich
    die gemergte Sicht. Reine Merge-/Reconciliation-Logik: overlay.ts. */
 export type IntentStatus =
-  | 'inflight'  // Command raus, Antwort steht aus (< 5 s)
-  | 'pending';  // Timeout (5 s) — State bleibt optimistisch, „pending"-Dot (docs/02)
+  | 'inflight'     // Command raus, Antwort steht aus (< 1 s)
+  | 'unconfirmed'  // 1 s ohne State-Echo — das Control pulsiert einmal (Paket 6)
+  | 'pending';     // Timeout (5 s) — State bleibt optimistisch, „pending"-Dot (docs/02)
 
 export interface Intent<V = unknown> {
   entityId: string;
@@ -103,6 +104,10 @@ export interface Backend {
       über Dev-Hooks, HaBackend über den echten Reconnect. Emittiert initial den
       aktuellen Status. */
   onConnectionChange(cb: (status: ConnectionStatus) => void): void;
+  /** Sofortiger Verbindungsversuch auf Wunsch des Nutzers (Retry-Knopf im
+      Getrennt-Banner): überspringt den laufenden Backoff. Optional — das
+      FakeBackend ist nie getrennt. */
+  retry?(): void;
   /** Selektives Abo (ADR-006): das Backend abonniert nur die sichtbaren
       Entitäten und resubscribed bei Screen-Wechsel. Optional — das FakeBackend
       pusht ohnehin nur den Seed und implementiert es als No-op. */
@@ -116,8 +121,13 @@ export interface Backend {
   subscribeCatalog?(cb: (items: unknown[]) => void): void;
   /** Gemeinsamer Anzeigename. Live schreibt das in die HA Entity Registry. */
   renameEntity?(entityId: string, name: string): Promise<void>;
+  /** Signierter HLS-Pfad einer Kamera (`camera/stream`), relativ zu Home
+      Assistant. `null`, wenn die Kamera keinen Stream liefert. */
+  getCameraStreamPath?(entityId: string): Promise<string | null>;
   /** Read-only Kalender-Seam (B-10): Discovery + offizieller HA-Agenda-Abruf. */
   listCalendarSources?(): Promise<import('../state/calendar.ts').CalendarSource[]>;
+  /* Bewohner aus Home Assistant (Paket 8): Auswahlliste der Einstellungen. */
+  listPersonSources?(): Promise<PersonSource[]>;
   getCalendarEvents?(
     entityId: string,
     start: Date,
@@ -127,6 +137,11 @@ export interface Backend {
       als `todo.*`-Entitäten; Discovery + Item-Abruf über `todo/item/list`. */
   listReminderSources?(): Promise<import('../state/reminders.ts').ReminderSource[]>;
   getReminders?(entityId: string): Promise<import('../state/reminders.ts').Reminder[]>;
+  /** Einkaufsliste: jeder Laden ist eine `todo.*`-Liste. Gelesen wird über den
+      Erinnerungs-Seam (`todo/item/list`), geschrieben über die HA-Services
+      `todo.add_item` und `todo.update_item` (adressiert über die `uid`). */
+  addTodoItem?(entityId: string, title: string): Promise<void>;
+  setTodoItemStatus?(entityId: string, uid: string, completed: boolean): Promise<void>;
   /** Echte, von Home Assistant gemeldete `update.*`-Entitäten im Zustand on. */
   listSystemUpdates?(): Promise<SystemUpdate[]>;
   /** Benachrichtigungen (B-04B): Persistent Notifications von HA sind die
@@ -202,7 +217,13 @@ export interface ClimateValue { target: number; hvac: 'heat' | 'cool' | 'off'; c
    - SunValue treibt die Day/Night-Automatik (docs/07 Screen 9).
    - SensorValue ist die generische Zahl+Einheit für Energie-/Sensor-Werte
      (docs/07 Screen 10); `value === null` = unavailable/unknown/nicht-numerisch. */
-export interface SunValue { day: boolean }
+/* `elevation` ist die Sonnenhöhe in Grad aus `sun.sun`. Sie trägt die
+   Dämmerungs-Überblendung (Paket 4); fehlt sie, bleibt es beim Hartschnitt
+   an der Tag-/Nachtgrenze. */
+export interface SunValue { day: boolean; elevation?: number | null }
+/* Anwesenheit (Paket 8): `person.*` meldet in HA `home` bzw. eine Zone. Die
+   Oberfläche braucht nur „zuhause oder nicht" plus den Anzeigenamen. */
+export interface PersonValue { home: boolean; name: string | null }
 export interface SensorValue { value: number | null; unit: string | null }
 export interface CameraValue {
   available: boolean;
@@ -237,3 +258,7 @@ export interface ReconcileEvent {
   optimistic: unknown; // der verworfene Intent-Wert (Vorher)
   server: unknown;     // die durchgesetzte Server-Wahrheit (Nachher)
 }
+
+/** Ein `person.*` aus Home Assistant, wie ihn die Einstellungen zur Auswahl
+    anbieten (Paket 8). */
+export interface PersonSource { entityId: string; name: string }

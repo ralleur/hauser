@@ -1,6 +1,7 @@
 import { localDayKey, type CalendarEvent } from './calendar.ts';
 import type { OutdoorReading } from './weather.ts';
 import { m } from '../../paraglide/messages.js';
+import { intlLocale } from './locale.svelte.ts';
 
 
 export type AmbientCopyStyle = 'calendar' | 'wordplay' | 'weather' | 'daypart';
@@ -14,7 +15,22 @@ type Daypart = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
 const EXTREME_HEAT_C = 32;
 const EXTREME_COLD_C = 5;
 
-const weekdayLongFormatter = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
+/* Wochentag und Uhrzeit folgen der Oberflächensprache; die Formatter werden je
+   Sprache einmal gebaut. */
+const ambientFormatters = new Map<string, Intl.DateTimeFormat>();
+function ambientFormatter(kind: 'weekday' | 'time'): Intl.DateTimeFormat {
+  const locale = intlLocale();
+  const key = `${locale}:${kind}`;
+  let cached = ambientFormatters.get(key);
+  if (!cached) {
+    cached = new Intl.DateTimeFormat(locale, kind === 'weekday'
+      ? { weekday: 'long' }
+      : { hour: '2-digit', minute: '2-digit' });
+    ambientFormatters.set(key, cached);
+  }
+  return cached;
+}
+const weekdayLongFormatter = { format: (date: Date) => ambientFormatter('weekday').format(date) };
 
 const WORDPLAY_RULES: readonly {
   pattern: RegExp;
@@ -406,7 +422,7 @@ const CATEGORY_RULES: readonly { category: EventCategory; pattern: RegExp; fact:
   { category: 'family', pattern: /kita|schule|elternabend|familie|kinder|geburtstag/i, fact: 'Familientermin' },
 ];
 
-const timeFormatter = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+const timeFormatter = { format: (date: Date) => ambientFormatter('time').format(date) };
 const dayPeriodNames: Record<Daypart, string> = {
   morning: 'Morgen', midday: 'Mittag', afternoon: 'Nachmittag', evening: 'Abend', night: 'Nacht',
 };

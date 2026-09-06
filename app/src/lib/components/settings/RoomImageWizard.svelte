@@ -10,6 +10,7 @@
   import { appState } from '../../state/app.svelte.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
+  import { setRoomImageStage } from '../../state/room-image-activity.svelte.ts';
   import {
     initialRoomImageFocus,
     projectRoomImageCrop,
@@ -18,7 +19,10 @@
     type RoomImageWizardView,
   } from './room-image-wizard-ui.ts';
 
-  let { open, onclose }: { open: boolean; onclose: () => void } = $props();
+  /* `roomId` kommt aus dem Raum-Overlay: Wer den Assistenten dort öffnet, hat
+     den Raum längst gewählt — dann steht er hier schon in der Auswahl. */
+  let { open, roomId = null, onclose }:
+    { open: boolean; roomId?: string | null; onclose: () => void } = $props();
 
   const controller = createRoomImageWizardController({ api: createRoomImageClient() });
   let wizardState = $state<RoomImageWizardState>(controller.state());
@@ -136,7 +140,7 @@
     selectedCandidateId = null;
     finalCostConfirmed = false;
     retryConfirmed = false;
-    assignRoomId = '';
+    assignRoomId = roomId ?? '';
     assignBusy = false;
     assignError = null;
     assignNotice = null;
@@ -251,6 +255,9 @@
         costConfirmed: true,
         confirmedProviderCalls: 2,
       });
+      /* Sofort, nicht erst beim nächsten Durchgang des Wächters: Wer den
+         Assistenten schließt, soll das drehende Zeichen schon vorfinden. */
+      setRoomImageStage('set');
     } catch {
       localError = m.rimg_err_start();
     }
@@ -268,6 +275,7 @@
       costConfirmed: true,
       confirmedProviderCalls: 2,
     });
+    setRoomImageStage('set');
   }
 
   async function retryJob() {
@@ -283,6 +291,17 @@
 
   /* Punkt 4+5: optional zuweisen, danach den Wizard vollstaendig zuruecksetzen,
      damit direkt ein neues Bildset erstellt werden kann. */
+  /* Übernehmen ist der letzte Schritt: veröffentlichen, dem gewählten Raum
+     zuweisen, schließen. Der frühere Abschlussbildschirm mit erneuter
+     Raumwahl entfällt — der Raum steht seit dem ersten Schritt fest. Nur wenn
+     die Zuweisung scheitert, bleibt der Assistent offen und zeigt es. */
+  async function acceptSet() {
+    if (busy || !capabilityEnabled) return;
+    const asset = await controller.publish(true);
+    if (!asset) return;
+    await finishWizard(asset);
+  }
+
   async function finishWizard(asset: { assetId: string; focus: RoomImageFocus } | null) {
     if (assignBusy) return;
     if (asset && assignRoomId) {
@@ -305,9 +324,6 @@
     requestClose();
   }
 
-  function counterText(planned: number, started: number, completed: number, unknown: number) {
-    return m.rimg_counter_text({ planned, started, completed, unknown });
-  }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -417,6 +433,18 @@
               <li><span aria-hidden="true">2</span>{m.rimg_candidates_title()}</li>
               <li><span aria-hidden="true">3</span>{m.rimg_review_title()}</li>
             </ol>
+            <!-- Der Raum wird vorne gewählt, nicht am Ende: Danach läuft alles
+                 durch, das fertige Set hängt sofort im Raum. Ohne Auswahl
+                 landet es nur in der Bibliothek. -->
+            <label class="room-image-target">
+              <span>{m.rimg_assign_title()}</span>
+              <select bind:value={assignRoomId}>
+                <option value="">{m.rimg_assign_none()}</option>
+                {#each roomOptions as room (room.id)}
+                  <option value={room.id}>{room.name}</option>
+                {/each}
+              </select>
+            </label>
             <div class="room-image-consent">
               <label class="room-image-check"><input type="checkbox" bind:checked={consentConfirmed} />
                 <span>{m.rimg_consent_confirm()}</span>
@@ -464,11 +492,6 @@
             <span class="room-image-progress-mark" aria-hidden="true"></span>
             <h3>{roomImagePhaseLabel(job)}</h3>
             <p>{m.rimg_job_background()}</p>
-            <div class="room-image-counter-grid">
-              <div><strong>{m.rimg_counter_attempt()}</strong><span>{counterText(job.providerCalls.attempt.plannedCount, job.providerCalls.attempt.startedCount, job.providerCalls.attempt.completedCount, job.providerCalls.attempt.outcomeUnknownCount)}</span></div>
-              <div><strong>{m.rimg_counter_lineage()}</strong><span>{counterText(job.providerCalls.lineage.plannedCount, job.providerCalls.lineage.startedCount, job.providerCalls.lineage.completedCount, job.providerCalls.lineage.outcomeUnknownCount)}</span></div>
-              <div><strong>{m.rimg_counter_wizard()}</strong><span>{counterText(job.providerCalls.wizard.plannedCount, job.providerCalls.wizard.startedCount, job.providerCalls.wizard.completedCount, job.providerCalls.wizard.outcomeUnknownCount)}</span></div>
-            </div>
             <footer class="room-image-wizard-actions">
               <button class="secondary-btn pressable" type="button" onclick={requestClose}>{m.rimg_run_background()}</button>
               {#if job.cancellable}<button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>{m.rimg_cancel_job()}</button>{/if}
@@ -514,11 +537,14 @@
             </div>
             <footer class="room-image-wizard-actions">
               <button class="secondary-btn danger-btn pressable" type="button" onclick={() => controller.cancel()}>{m.rimg_reject_set()}</button>
-              <button class="primary-btn pressable" type="button" disabled={busy || !capabilityEnabled} onclick={() => controller.publish(true)}>{m.rimg_accept_set()}</button>
+              <button class="primary-btn pressable" type="button" disabled={busy || !capabilityEnabled} onclick={acceptSet}>{m.rimg_accept_set()}</button>
             </footer>
           </section>
 
         {:else if view === 'done' && job.asset}
+          <!-- Nach dem Übernehmen schließt der Assistent von selbst; diese
+               Karte erscheint nur, wenn die Zuweisung nicht durchging. Das Set
+               liegt dann bereits in der Bibliothek — verloren ist nichts. -->
           <section class="room-image-done">
             <h3>{m.rimg_saved_title()}</h3>
             <div class="room-image-set-grid">
@@ -526,9 +552,8 @@
                 <figure><button type="button" onclick={() => fullscreenUrl = variant[1]}><img src={variant[1]} alt={variant[0]} /></button><figcaption>{variant[0]}</figcaption></figure>
               {/each}
             </div>
+            {#if assignError}<p class="room-image-alert is-error" role="alert">{assignError}</p>{/if}
             <div class="room-image-final-confirm">
-              <h3>{m.rimg_assign_title()}</h3>
-              <p>{m.rimg_assign_hint()}</p>
               <label>{m.rimg_room()}
                 <select bind:value={assignRoomId} disabled={assignBusy}>
                   <option value="">{m.rimg_assign_none()}</option>
@@ -537,8 +562,6 @@
                   {/each}
                 </select>
               </label>
-              {#if assignError}<p class="room-image-alert is-error" role="alert">{assignError}</p>{/if}
-              {#if assignNotice}<p class="room-image-alert" role="status">{assignNotice}</p>{/if}
             </div>
             <footer class="room-image-wizard-actions">
               <button class="primary-btn pressable" type="button" disabled={assignBusy}

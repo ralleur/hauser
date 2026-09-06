@@ -22,6 +22,9 @@ export interface ReminderPersonConfig {
   /* null = Voreinstellung verwenden (bei „beide" die übersetzte Bezeichnung). */
   label: string | null;
   color: string;
+  /* Zugeordnete Person aus Home Assistant (Paket 8): Grundlage der
+     persönlichen Begrüßung im Standby. null = keine Zuordnung. */
+  personEntityId?: string | null;
 }
 
 export const REMINDER_PERSONS_KEY = 'hmi:reminder-persons:v1';
@@ -63,7 +66,7 @@ export function personLabel(person: ReminderPersonConfig): string {
 export function slugifyPerson(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    .replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); // i18n-ignore: Transliteration, keine Anzeige
 }
 
 function normalize(raw: unknown): ReminderPersonConfig[] {
@@ -81,9 +84,61 @@ function normalize(raw: unknown): ReminderPersonConfig[] {
     const color = typeof candidate.color === 'string' && POSTIT_COLORS.some((entry) => entry.id === candidate.color)
       ? candidate.color
       : POSTIT_COLORS[0].id;
-    return [{ id, label, color }];
+    const personEntityId = typeof candidate.personEntityId === 'string'
+      && candidate.personEntityId.startsWith('person.')
+      ? candidate.personEntityId
+      : null;
+    return [{ id, label, color, personEntityId }];
   });
   return persons.length ? persons : DEFAULT_REMINDER_PERSONS.map((person) => ({ ...person }));
+}
+
+/** true, sobald der Haushalt seine Bewohner einmal selbst festgelegt hat.
+    Nur solange das nicht so ist, dürfen die Personen aus Home Assistant
+    ungefragt einziehen — sonst kämen gelöschte Bewohner zurück. */
+export function hasStoredReminderPersons(): boolean {
+  try { return sharedStorage.getItem(REMINDER_PERSONS_KEY) !== null; }
+  catch { return true; }
+}
+
+/* ── Bewohner aus Home Assistant übernehmen (Paket 8) ──
+   Wer `person.*` gepflegt hat, soll sie nicht ein zweites Mal eintippen. Beim
+   ersten Start ziehen sie deshalb ein:
+     • Wer namentlich zu einem vorhandenen Bewohner passt, wird ihm zugeordnet.
+     • Wer fehlt, kommt als neuer Bewohner dazu, mit der nächsten freien Farbe.
+     • Wer schon eine Zuordnung trägt, bleibt unberührt.
+     • „beide" bleibt: das ist keine Person, sondern ein Sammelzettel.
+   Danach gehört die Liste dem Haushalt — anlegen, umbenennen und neu zuordnen
+   geht jederzeit von Hand. */
+export function adoptHaPersons(
+  existing: readonly ReminderPersonConfig[],
+  sources: readonly { entityId: string; name: string }[],
+): ReminderPersonConfig[] {
+  const persons = existing.map((person) => ({ ...person }));
+  const taken = new Set(persons.map((person) => person.personEntityId).filter(Boolean));
+
+  for (const source of sources) {
+    if (taken.has(source.entityId)) continue;
+    const slug = slugifyPerson(source.name);
+    if (!slug) continue;
+    const match = persons.find((person) => !person.personEntityId
+      && (person.id === slug || (person.label ? slugifyPerson(person.label) === slug : false)));
+    if (match) {
+      match.personEntityId = source.entityId;
+      taken.add(source.entityId);
+      continue;
+    }
+    // Der Name ist belegt, aber der Träger hört an einer anderen Entität.
+    if (persons.some((person) => person.id === slug)) continue;
+    persons.push({
+      id: slug,
+      label: source.name.trim().slice(0, 40),
+      color: POSTIT_COLORS[persons.length % POSTIT_COLORS.length].id,
+      personEntityId: source.entityId,
+    });
+    taken.add(source.entityId);
+  }
+  return persons;
 }
 
 export function loadReminderPersons(): ReminderPersonConfig[] {
@@ -111,5 +166,5 @@ export function createReminderPerson(
   let suffix = 2;
   const ids = new Set(existing.map((person) => person.id));
   while (ids.has(id)) id = `${base}-${suffix++}`;
-  return { id, label: clean, color: postitColor(color).id };
+  return { id, label: clean, color: postitColor(color).id, personEntityId: null };
 }

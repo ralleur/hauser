@@ -499,7 +499,7 @@
   }
 </script>
 
-<svelte:head><title>{embedded ? 'Smart Home HMI' : (reconfigure ? m.setup_head_title_reconfigure() : m.setup_head_title_first())}</title></svelte:head>
+<svelte:head><title>Hauser</title></svelte:head>
 
 {#key localeState.current}
 <main class:embedded class="setup-shell">

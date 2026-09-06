@@ -1,7 +1,7 @@
 import type { ScreenId } from './nav.svelte.ts';
 import { IS_DEMO } from '../demo/demo-mode.ts';
 import { m } from '../../paraglide/messages.js';
-import { HOUSEHOLD_DATA_SOURCE, NAV_TABS } from '../config/household-runtime-data.ts';
+import { HOUSEHOLD_DATA_SOURCE, NAV_SCREENS, NAV_TABS } from '../config/household-runtime-data.ts';
 
 /* ── Reihenfolge aller Phone-Ziele: Die ersten drei landen direkt in der
    Bottom-Nav, alle weiteren hinter dem festen vierten Punkt „Mehr". ── */
@@ -10,6 +10,14 @@ const STORAGE_KEY = 'hmi:phone-nav-order.v2';
 
 export type PhoneNavTarget = 'home' | 'shopping' | 'reminders' | 'calendar' | 'energy' | 'media' | 'ablage' | 'system';
 
+/* Das Phone bündelt Raum-Audio und Bibliothek unter einem Ziel. Es heißt wie
+   das, was dahinter liegt (Paket 3, docs/20): ohne Audio-Screen ist es schlicht
+   die Bibliothek — sonst stünde auf dem Phone „Media", wo das Panel
+   „Bibliothek" sagt. */
+export function mediaAreaLabel(): string {
+  return NAV_SCREENS.some(({ id }) => id === 'media') ? m.nav_media() : m.nav_library();
+}
+
 /* `label` als Getter (ADR-021) — siehe nav.svelte.ts. */
 export const PHONE_NAV_TARGETS: readonly { id: PhoneNavTarget; readonly label: string }[] = [
   { id: 'home', get label() { return m.nav_home(); } },
@@ -17,7 +25,7 @@ export const PHONE_NAV_TARGETS: readonly { id: PhoneNavTarget; readonly label: s
   { id: 'reminders', get label() { return m.nav_reminders(); } },
   { id: 'calendar', get label() { return m.nav_calendar(); } },
   { id: 'energy', get label() { return m.nav_energy(); } },
-  { id: 'media', get label() { return m.nav_media(); } },
+  { id: 'media', get label() { return mediaAreaLabel(); } },
   { id: 'ablage', get label() { return m.nav_files(); } },
   { id: 'system', get label() { return m.nav_system(); } },
 ];

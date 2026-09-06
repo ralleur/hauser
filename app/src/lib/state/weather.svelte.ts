@@ -1,4 +1,8 @@
-import { openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type OutdoorReading } from './weather.ts';
+import { DEMO_COORDS, openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type OutdoorReading } from './weather.ts';
+import { apiPath } from '../api/client.ts';
+import { IS_DEMO } from '../demo/demo-mode.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 
 /* State-/Fetch-Teil der Ambient-Klimazeile. Außentemperatur ist best-effort und
    nie blockierend — bei Offline/Timeout bleibt der letzte Wert stehen. Der
@@ -6,6 +10,23 @@ import { openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type Outdoor
    weil HA selbst keinen Trend liefert. */
 
 const REQUEST_TIMEOUT_MS = 10_000;
+
+/* Paket 5 (docs/20): Die letzte Messung überlebt den Reload. Ohne sie steht die
+   Klimazeile beim Kaltstart bis zur Antwort von Open-Meteo auf „—“; mit ihr
+   steht sofort ein Wert da, den die frische Messung ersetzt. */
+const WEATHER_MAX_AGE_MS = 15 * 60 * 1000;
+
+function isOutdoorReading(value: unknown): value is OutdoorReading {
+  const reading = value as Partial<OutdoorReading> | null;
+  return !!reading && typeof reading === 'object'
+    && (reading.temp === null || typeof reading.temp === 'number');
+}
+
+const snapshot = createSnapshotStore<OutdoorReading>({
+  key: 'hmi:weather-outdoor',
+  maxAgeMs: WEATHER_MAX_AGE_MS,
+  validate: isOutdoorReading,
+});
 
 export const outdoor = $state<OutdoorReading>({
   temp: null,
@@ -15,13 +36,29 @@ export const outdoor = $state<OutdoorReading>({
   windSpeed: null,
 });
 
+const restoredOutdoor = snapshot.restoreSync();
+if (restoredOutdoor && restoredOutdoor.value.temp !== null) Object.assign(outdoor, restoredOutdoor.value);
+
+registerRevalidation({
+  name: 'weather',
+  isStale: () => snapshot.isStale(),
+  revalidate: () => refreshWeather(),
+});
+
 let inflight = false;
+
+/* Der Ort gehört dem Server: er liest ihn aus Home Assistant und fragt
+   Open-Meteo selbst (Issue #15 — vorher stand hier eine feste Stadt). Nur die
+   statische Demo ohne Server ruft Open-Meteo direkt mit Beispielkoordinaten. */
+function weatherUrl(): string {
+  return IS_DEMO ? openMeteoUrl(DEMO_COORDS) : apiPath('weather');
+}
 
 export async function refreshWeather(): Promise<void> {
   if (inflight) return;
   inflight = true;
   try {
-    const res = await fetch(openMeteoUrl(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    const res = await fetch(weatherUrl(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) return;
     const reading = parseOutdoor(await res.json());
     // Nur übernehmen, wenn eine Temperatur da ist; sonst letzten Wert halten.
@@ -31,6 +68,7 @@ export async function refreshWeather(): Promise<void> {
       outdoor.tempDelta = reading.tempDelta;
       outdoor.condition = reading.condition;
       outdoor.windSpeed = reading.windSpeed;
+      void snapshot.save({ ...reading });
     }
   } catch { /* offline / Timeout: letzter Wert bleibt stehen */ }
   finally { inflight = false; }

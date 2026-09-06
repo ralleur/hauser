@@ -11,6 +11,7 @@
    Anzeige beim optimistischen Pause sofort ein und rührt die Reconciliation nie an.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import { SvelteMap } from 'svelte/reactivity';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { mediaEntityId } from './entities.ts';
@@ -23,8 +24,8 @@ export function mergedMedia(playerId: string): MediaValue {
 }
 
 export function mediaStateLabel(v: MediaValue): string {
-  if (!v.available) return 'Nicht verfügbar';
-  if (v.playing) return 'Läuft';
+  if (!v.available) return m.media_unavailable();
+  if (v.playing) return m.dev_playing();
   if (v.track) return 'Pause';
   return 'Bereit';
 }

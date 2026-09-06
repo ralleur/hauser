@@ -3,38 +3,58 @@
      Ein Raum ohne zugewiesenes Bild zeigt rechts neben den Kontrollflächen,
      wofür der Assistent da ist: Vorher/Nachher, die drei Schritte und die
      drei Wege weiter (generieren, aus der Bibliothek wählen, schließen).
-     Assistent und Bibliothek werden erst beim Öffnen nachgeladen — die
-     Home-Ansicht bleibt schlank. ── */
+
+     Sie erscheint genau einmal pro Gerät (Paket 3); danach steht der Weg zum
+     Assistenten dauerhaft unter „Räume & Geräte" in den Einstellungen. Ein
+     Haken „nicht mehr anzeigen" wäre daneben eine Lüge — die Karte kommt so
+     oder so nicht wieder.
+
+     Owner-Entscheidung 2026-09-04: „klein" aus dem Planpunkt meinte die
+     Häufigkeit, nicht den Inhalt. Das Bildpaar erklärt die Funktion; ohne es
+     bleibt eine Textanzeige. Assistent und Bibliothek werden erst beim Öffnen
+     nachgeladen — die Home-Ansicht bleibt schlank. ── */
   import Icon from './Icon.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../config/product-capabilities.ts';
   import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
   import { settingsValues, setRoomOnboardHidden } from '../state/settings.svelte.ts';
-  import { m } from '../../paraglide/messages.js';
 
   const ASSET_BASE = import.meta.env.BASE_URL;
+  import { m } from '../../paraglide/messages.js';
 
-  const dialogLoader = createRetryableLazyLoader({
+  /* Zwei Lader statt einem: Beide Dialoge haben eigene Eigenschaften, und ein
+     gemeinsamer Lader zwingt sie in einen Typ — dann verliert der eine, was
+     der andere braucht. */
+  const wizardLoader = createRetryableLazyLoader({
     wizard: () => import('./settings/RoomImageWizard.svelte'),
+  });
+  const libraryLoader = createRetryableLazyLoader({
     library: () => import('./settings/RoomImageLibrary.svelte'),
   });
 
-  let dismissed = $state<Record<string, boolean>>({});
+  /* Der Stand beim Betreten der Ansicht. Die Karte merkt sich selbst, dass sie
+     dran war — ohne diese Kopie würde sie im selben Atemzug verschwinden. */
+  const seenBefore = settingsValues.roomOnboardHidden;
+  let dismissed = $state(false);
   let wizardOpen = $state(false);
   let libraryOpen = $state(false);
 
   const roomId = $derived(appState.currentRoom);
   const visible = $derived(
     ROOM_IMAGE_WIZARD_ENABLED
-    && !settingsValues.roomOnboardHidden
+    && !seenBefore
+    && !dismissed
     && !!roomId
-    && roomHeroConfig(roomId) === null
-    && !dismissed[roomId as string],
+    && roomHeroConfig(roomId) === null,
   );
 
+  $effect(() => {
+    if (visible && !settingsValues.roomOnboardHidden) setRoomOnboardHidden(true);
+  });
+
   function dismiss(): void {
-    if (roomId) dismissed = { ...dismissed, [roomId]: true };
+    dismissed = true;
   }
 </script>
 
@@ -88,24 +108,19 @@
       <button class="secondary-btn pressable" type="button" onclick={dismiss}>
         {m.room_onboard_dismiss()}
       </button>
-      <label class="room-onboard-hide">
-        <input type="checkbox" checked={settingsValues.roomOnboardHidden}
-               onchange={(event) => setRoomOnboardHidden(event.currentTarget.checked)} />
-        <span>{m.room_onboard_hide()}</span>
-      </label>
     </footer>
   </aside>
 {/if}
 
 {#if wizardOpen}
-  {#await dialogLoader.load('wizard') then loaded}
+  {#await wizardLoader.load('wizard') then loaded}
     {@const RoomImageWizard = loaded.default}
-    <RoomImageWizard open={wizardOpen} onclose={() => wizardOpen = false} />
+    <RoomImageWizard open={wizardOpen} {roomId} onclose={() => wizardOpen = false} />
   {/await}
 {/if}
 
 {#if libraryOpen && roomId}
-  {#await dialogLoader.load('library') then loaded}
+  {#await libraryLoader.load('library') then loaded}
     {@const RoomImageLibrary = loaded.default}
     <RoomImageLibrary open={libraryOpen} targetRoomId={roomId}
                       onclose={() => libraryOpen = false}

@@ -160,6 +160,10 @@
   --duration-enter: 300ms;  /* Modal/Overlay-Entrance (Budget-Maximum) */
   --duration-wobble: 200ms;  /* Toggle-Widerspruch: Zurückspringen mit Wobble (docs/02) */
   --duration-correct: 300ms; /* Slider-/Wert-Korrektur interpolieren (docs/02) */
+  --duration-tabfade: 200ms;  /* Tab-Crossfade der Panel-Screens */
+  --duration-emphasis: 400ms; /* Erfolgsmoment, gestaffelter Balkenaufbau — nie für Bedienrückmeldung */
+  --duration-dusk: 1200ms;    /* Dämmerung und Nachdimmen des Hero-Bildes (Paket 4) — reine
+                                 Opacity über dem Compositor, nie für Bedienrückmeldung */
 
   /* ── Touch Targets ── */
   --touch-min: 44px;
@@ -240,6 +244,9 @@
     --duration-enter: 0ms;
     --duration-wobble: 0ms;
     --duration-correct: 0ms;
+    --duration-tabfade: 0ms;
+    --duration-emphasis: 0ms;
+    --duration-dusk: 0ms;
   }
 }
 

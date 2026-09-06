@@ -12,7 +12,7 @@ The following paths are licensed under
 
 | Path | Content |
 |---|---|
-| `app/public/hero/` | Room illustrations, one per room and lighting state |
+| `app/public/hero/` | Room illustrations, one per room and lighting state, plus `regions.json` with the areas detected in them |
 | `app/public/rooms/` | Room thumbnails |
 | `app/public/energy/` | Energy background artwork |
 | `app/public/notes/` | Notes background artwork |

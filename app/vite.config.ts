@@ -317,8 +317,7 @@ export default defineConfig({
        launchd-Dienst bedient 4173. Antwortet dort nichts, schlagen nur die
        Datenpfade fehl — die Oberfläche selbst lädt weiter. */
     proxy: Object.fromEntries(
-      ['/api', '/assets', '/hermes', '/ambient-llm', '/shopping-llm',
-        '/notion-bridge', '/notion-shopping']
+      ['/api', '/assets', '/hermes', '/ambient-llm', '/shopping-llm']
         .map((path) => [path, {
           target: `http://127.0.0.1:${DEV_API_PORT}`,
           changeOrigin: false,

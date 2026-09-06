@@ -243,6 +243,10 @@ HAUSER_SOURCE_TAG="$tag" docker compose \
   build --pull=false hauser
 
 HAUSER_IMAGE_REPOSITORY="$repository" ./scripts/verify-container.sh "$tag"
+# Paket 12: der Schritt, den ein fremder Haushalt wirklich geht — vorherige
+# Veroeffentlichung auf diese. Ohne erreichbares Vorgaengerimage ueberspringt
+# sich der Lauf selbst, damit das Preflight offline bleibt.
+HAUSER_IMAGE_REPOSITORY="$repository" ./scripts/upgrade-smoke.sh "$tag"
 
 printf 'public_package_preflight=PASS\nworking_tree_dirty=%s\n' "$dirty"
 if [[ "$dirty" == yes ]]; then

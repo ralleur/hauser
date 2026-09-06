@@ -181,9 +181,9 @@ describe('calendar refresh last-known boundary', () => {
     expect(runtimeMock.listCalendarSources).toHaveBeenCalledTimes(2);
     expect(runtimeMock.getCalendarEvents).toHaveBeenCalledTimes(1);
     expect(JSON.parse(storage.getItem('hmi:calendar-familie-cache') ?? 'null')).toEqual({
-      sources: familyCalendar.sources,
-      events: familyCalendar.events,
+      v: 1,
       updatedAt: familyCalendar.updatedAt,
+      value: { sources: familyCalendar.sources, events: familyCalendar.events },
     });
   });
 
@@ -226,7 +226,11 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneShellCss).toMatch(/\.phone-calendar\s*\{[^}]*height:\s*100%/s);
     expect(phoneShellCss).toMatch(/\.phone-bottom-nav\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*var\(--phone-nav-bottom-offset\);/s);
     expect(phoneShellCss).toMatch(/\.phone-shell\.has-connection-banner[\s\S]*padding-top:\s*calc\(var\(--phone-conn-banner-height\) \+ var\(--space-4\)\)/);
-    expect(phoneShellCss).toMatch(/\.room-sheet-scrim\s*\{[^}]*top:\s*var\(--phone-safe-top\);[^}]*right:\s*var\(--phone-safe-right\);[^}]*bottom:\s*var\(--phone-safe-bottom\);[^}]*left:\s*var\(--phone-safe-left\);[^}]*padding:\s*0;/);
+    /* Der Sheet-Anker ist seit Paket 3 die Unterkante aus Safe-Area und
+       Benachrichtigungsstreifen — nie weniger als die Safe-Area. */
+    expect(phoneShellCss).toMatch(/--phone-sheet-top:\s*max\(var\(--phone-safe-top\), var\(--phone-notification-band\)\)/);
+    expect(phoneShellCss).toMatch(/--phone-notification-band:\s*var\(--notification-flow-height, 0px\)/);
+    expect(phoneShellCss).toMatch(/\.room-sheet-scrim\s*\{[^}]*top:\s*var\(--phone-sheet-top\);[^}]*right:\s*var\(--phone-safe-right\);[^}]*bottom:\s*var\(--phone-safe-bottom\);[^}]*left:\s*var\(--phone-safe-left\);[^}]*padding:\s*0;/);
     expect(phoneShellCss).toMatch(/\.room-sheet-scroll\s*\{[^}]*overflow-anchor:\s*none/);
     expect(phoneShellCss).toMatch(/@media \(orientation: landscape\)[\s\S]*\.room-sheet\s*\{[^}]*height:\s*100%;[^}]*max-height:\s*100%/);
     expect(phoneShellCss).not.toMatch(/@media \(orientation: landscape\)[\s\S]*\.room-sheet\s*\{[^}]*height:\s*var\(--phone-viewport-height\)/);

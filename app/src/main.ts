@@ -5,10 +5,10 @@ import './styles/climate-controls.css';
 import { applyDemoDeepLink, installDemoApi } from './lib/demo/demo-mode.ts';
 
 const STARTUP_LABELS: Record<string, string> = {
-  'hmi:app-start': 'App-Start',
-  'hmi:svelte-mount': 'Svelte-Mount',
-  'hmi:first-render': 'Erste Darstellung',
-  'hmi:interactive': 'Erste Interaktion möglich',
+  'hmi:app-start': 'app start',
+  'hmi:svelte-mount': 'svelte mount',
+  'hmi:first-render': 'first render',
+  'hmi:interactive': 'interactive',
 };
 
 function markStartup(name: string): void {

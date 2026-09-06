@@ -142,8 +142,12 @@ describe('haToMedia', () => {
 
 describe('haToSun', () => {
   it('above_horizon → day:true, sonst false', () => {
-    expect(haToSun({ state: 'above_horizon', attributes: {} })).toEqual<SunValue>({ day: true });
-    expect(haToSun({ state: 'below_horizon', attributes: {} })).toEqual<SunValue>({ day: false });
+    expect(haToSun({ state: 'above_horizon', attributes: {} })).toEqual<SunValue>({ day: true, elevation: null });
+    expect(haToSun({ state: 'below_horizon', attributes: {} })).toEqual<SunValue>({ day: false, elevation: null });
+  });
+  it('Sonnenhöhe wird übernommen, sonst null (Paket 4)', () => {
+    expect(haToSun({ state: 'above_horizon', attributes: { elevation: 1.4 } }).elevation).toBe(1.4);
+    expect(haToSun({ state: 'below_horizon', attributes: { elevation: '-3' } }).elevation).toBeNull();
   });
 });
 
@@ -183,7 +187,7 @@ describe('haToValue (Domänen-Routing)', () => {
     expect((haToValue('media_player.x', { state: 'playing', attributes: {} }) as MediaValue).playing).toBe(true);
   });
   it('read-only-Domänen: sun.sun + sensor.* werden übersetzt', () => {
-    expect(haToValue('sun.sun', { state: 'above_horizon', attributes: {} })).toEqual<SunValue>({ day: true });
+    expect(haToValue('sun.sun', { state: 'above_horizon', attributes: {} })).toEqual<SunValue>({ day: true, elevation: null });
     expect(haToValue('sensor.pv', { state: '2.1', attributes: { unit_of_measurement: 'kW' } }))
       .toEqual<SensorValue>({ value: 2.1, unit: 'kW' });
   });

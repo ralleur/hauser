@@ -6,6 +6,7 @@
   } from '../../state/shopping.svelte.ts';
   import { projectPhoneShoppingSections, type ShoppingItem, type StoreId } from '../../state/shopping.ts';
   import { m } from '../../../paraglide/messages.js';
+  import { intlLocale } from '../../state/locale.svelte.ts';
   import {
     shoppingConfig, shoppingSort, shoppingItemOrder, sortShoppingList, undoShoppingSort,
   } from '../../state/shopping-settings.svelte.ts';
@@ -26,7 +27,9 @@
   ));
 
   const updatedLabel = $derived(shopping.updatedAt
-    ? `Stand ${new Date(shopping.updatedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+    ? m.notes_shopping_updated({
+        time: new Date(shopping.updatedAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' }),
+      })
     : m.notes_not_loaded());
 
   function toggle(store: StoreId, item: ShoppingItem) {
@@ -93,7 +96,7 @@
         <h3 class="notes-section-title">{section.title}</h3>
         <span class="notes-section-count num">{section.items.length || ''}</span>
         <button class="notes-add-btn pressable" type="button"
-                aria-label="Eintrag bei {section.title} hinzufügen"
+                aria-label={m.notes_add_to_section({ section: section.title })}
                 onclick={() => toggleAdd(section.id)}>
           <Icon name="i-plus" cls="icon icon-md" />
         </button>

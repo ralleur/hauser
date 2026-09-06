@@ -9,12 +9,16 @@
    Schicht ist reiner Lese-/Browse-Pfad: Shelves + Detail-Hydration + Login.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import { appState, libItem, resumeTarget, continueInfo, type LibraryItem } from './app.svelte.ts';
+import { installFakeLibrary } from './library-seed.ts';
 import { backend } from '../adapter/runtime.svelte.ts';
 import { FakeBackend } from '../adapter/fake-backend.ts';
 import { jellyfin, JellyfinAuthError } from '../adapter/jellyfin.ts';
 import { buildLiveLibrary, type LiveShelf } from '../adapter/jellyfin-shelves.ts';
 import { mapSeasons } from '../adapter/jellyfin-map.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 
 export type LibraryStatus = 'ready' | 'loading' | 'needs-login' | 'error';
 
@@ -54,10 +58,53 @@ const live: LibraryLive = $state({
   hydrating: null,
 });
 
+/* Snapshot der Bibliothek in IndexedDB: Regale und Item-Index sind bei einer
+   großen Jellyfin-Bibliothek zu groß für localStorage. Beim Start erscheint
+   der letzte Stand sofort, die API-Antwort ersetzt ihn im Hintergrund. */
+interface LibrarySnapshot {
+  items: LibraryItem[];
+  shelves: LiveShelf[];
+}
+
+const LIBRARY_SNAPSHOT_MAX_AGE_MS = 10 * 60 * 1000;
+
+const librarySnapshot = createSnapshotStore<LibrarySnapshot>({
+  key: 'hmi:library-snapshot',
+  tier: 'indexeddb',
+  maxAgeMs: LIBRARY_SNAPSHOT_MAX_AGE_MS,
+  validate: (value): value is LibrarySnapshot => {
+    const candidate = value as Partial<LibrarySnapshot> | null;
+    return Array.isArray(candidate?.items) && Array.isArray(candidate?.shelves);
+  },
+});
+
+let loadedOnce = false;
+
+async function restoreLibrarySnapshot(): Promise<void> {
+  const restored = await librarySnapshot.restore();
+  /* Ein frischer API-Stand hat inzwischen gewonnen: den Snapshot nicht darüberlegen. */
+  if (!restored || loadedOnce) return;
+  appState.library.items = restored.value.items;
+  live.shelves = restored.value.shelves;
+  if (live.status === 'loading') live.status = 'ready';
+}
+
+/* Im Fake-Modus kommt der Bestand aus dem Seed-Modul statt aus der API. Er
+   liegt bewusst nicht im appState-Startpfad (ADR-029). */
+if (!usingLiveLibrary) installFakeLibrary();
+
 if (usingLiveLibrary) {
   // Session-Verlust (Token ungültig) → zurück zum Login (docs/04).
   jellyfin.onAuthError(() => { live.status = 'needs-login'; });
-  if (jellyfin.hasSession()) void load();
+  if (jellyfin.hasSession()) {
+    void restoreLibrarySnapshot();
+    void load();
+  }
+  registerRevalidation({
+    name: 'library',
+    isStale: () => jellyfin.hasSession() && live.status !== 'loading' && librarySnapshot.isStale(),
+    revalidate: () => load(),
+  });
 }
 
 /* ── Lesen ── */
@@ -92,17 +139,18 @@ function fakeShelves(): LiveShelf[] {
   const series = items.filter((i) => i.type === 'series');
   const movies = items.filter((i) => i.type === 'movie');
   return [
-    { label: 'Weiterschauen', list: cont },
-    { label: 'Zuletzt hinzugefügt', list: latest },
-    { label: `Serien · ${series.length}`, list: series },
-    { label: `Filme · ${movies.length}`, list: movies },
+    { label: m.library_continue(), list: cont },
+    { label: m.library_recent(), list: latest },
+    { label: m.library_shelf_series({ count: series.length }), list: series },
+    { label: m.library_shelf_movies({ count: movies.length }), list: movies },
   ];
 }
 
 /* ── Laden (Live) ── */
 
 async function load(): Promise<void> {
-  live.status = 'loading';
+  /* Mit Snapshot bleibt die Anzeige stehen; nur ohne Stand sieht man das Laden. */
+  if (!live.shelves.length) live.status = 'loading';
   live.error = null;
   try {
     const [resume, latest, series, movies] = await Promise.all([
@@ -117,10 +165,12 @@ async function load(): Promise<void> {
     appState.library.items = built.items; // Detail/Player finden Items über libItem(id)
     live.shelves = built.shelves;
     live.status = 'ready';
+    loadedOnce = true;
+    void librarySnapshot.save({ items: built.items, shelves: built.shelves });
   } catch (err) {
     if (err instanceof JellyfinAuthError) { live.status = 'needs-login'; return; }
     live.error = 'Bibliothek konnte nicht geladen werden';
-    live.status = 'error';
+    live.status = live.shelves.length ? 'ready' : 'error';
     console.warn('[library] Laden fehlgeschlagen:', err);
   }
 }

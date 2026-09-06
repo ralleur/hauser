@@ -4,6 +4,7 @@
    und Suchindex; hier lebt nur, was reaktiv sein muss.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import { settingsEntry, type SettingsSectionId } from './settings-registry.ts';
 import { backend } from '../adapter/runtime.svelte.ts';
 import { HaBackend } from '../adapter/ha-backend.ts';
@@ -33,6 +34,11 @@ export const settingsUi = $state({
   highlightSeq: 0,
   /* Änderungen, die erst ein Neuladen der App aufnimmt (Backend-Wechsel, Resets) */
   needsReload: false,
+  /* Offener Ruf, den Raumbild-Assistenten zu öffnen — etwa aus einer Meldung.
+     Die Sektion verbraucht ihn, sobald sie da ist; deshalb ein Wunsch, der
+     liegen bleibt, und keine Zählnummer: Der Ruf kommt an, bevor die Seite
+     überhaupt gemountet ist. */
+  pendingRoomImageWizard: false,
 });
 
 /* Ein kurzer Abstecher (Raum nachsehen, Musik lauter) soll die geöffnete
@@ -70,6 +76,26 @@ export function openSetting(entryId: string): void {
 
 /* ── localStorage-gebundene Werte: reaktiver Spiegel + Persistenz ── */
 
+/* Wartezeit bis zum Lockscreen. `off` schaltet den automatischen Standby ganz
+   ab — dann führt nur noch der Knopf „Jetzt starten“ dorthin. Ein fehlender
+   Wert heißt Standardwert, nicht „aus“. */
+export const STANDBY_DEFAULT_MINUTES = 3;
+export const STANDBY_MIN_MINUTES = 1;
+export const STANDBY_MAX_MINUTES = 240;
+
+export function clampStandbyMinutes(value: number): number {
+  if (!Number.isFinite(value)) return STANDBY_DEFAULT_MINUTES;
+  return Math.min(STANDBY_MAX_MINUTES, Math.max(STANDBY_MIN_MINUTES, Math.round(value)));
+}
+
+function loadStandbyMinutes(): number | null {
+  const stored = lsGet('hmi:standby-after');
+  if (stored === null) return STANDBY_DEFAULT_MINUTES;
+  if (stored === 'off') return null;
+  const parsed = Number(stored);
+  return Number.isFinite(parsed) ? clampStandbyMinutes(parsed) : STANDBY_DEFAULT_MINUTES;
+}
+
 export const settingsValues = $state({
   demoMode: lsGet('hmi:backend') === 'fake',
   haUrl: lsGet('hmi:ha-url') ?? '',
@@ -81,7 +107,13 @@ export const settingsValues = $state({
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
   roomOnboardHidden: lsGet('hmi:room-onboard') === 'off',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
+  standbyAfterMinutes: loadStandbyMinutes(),
   ambientCityMap: lsGet('hmi:ambient-map') === 'on',
+  presenceWake: lsGet('hmi:presence-wake') === 'on',
+  presenceAwayDark: lsGet('hmi:presence-away-dark') === 'on',
+  presenceGreeting: lsGet('hmi:presence-greeting') === 'on',
+  ambientWeather: lsGet('hmi:ambient-weather') !== 'off',
+  ambientLightDim: lsGet('hmi:ambient-light-dim') === 'on',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
     ? null
     : (lsGet('hmi:off-confirm-before') ?? '22:00'),
@@ -134,6 +166,15 @@ export function setAmbientDeepNight(on: boolean): void {
   lsSet('hmi:ambient-deep-night', on ? null : 'off');
 }
 
+/* Wartezeit bis zum Lockscreen, gerätelokal wie die übrigen Standby-Schalter.
+   `null` schaltet den automatischen Standby ab; der manuelle Weg über
+   „Jetzt starten“ bleibt davon unberührt. */
+export function setStandbyAfterMinutes(minutes: number | null): void {
+  const value = minutes === null ? null : clampStandbyMinutes(minutes);
+  settingsValues.standbyAfterMinutes = value;
+  lsSet('hmi:standby-after', value === null ? 'off' : String(value));
+}
+
 /* Stadtplan-Hintergrund im Standby (docs/18 §3.2). Standort und Asset sind
    zentral, die Sichtbarkeit ist gerätelokal: `hmi:ambient-map` steht nicht in
    SHARED_CONFIG_KEYS und wandert deshalb nicht in die Household Config. Default
@@ -141,6 +182,38 @@ export function setAmbientDeepNight(on: boolean): void {
 export function setAmbientCityMap(on: boolean): void {
   settingsValues.ambientCityMap = on;
   lsSet('hmi:ambient-map', on ? 'on' : null);
+}
+
+/* ── Präsenz und Person (Paket 8) ──
+   Alle drei Schalter sind gerätelokal und standardmäßig aus: ein Panel, das
+   von selbst aufwacht oder Namen nennt, ist eine bewusste Entscheidung. */
+export function setPresenceWake(on: boolean): void {
+  settingsValues.presenceWake = on;
+  lsSet('hmi:presence-wake', on ? 'on' : null);
+}
+
+export function setPresenceAwayDark(on: boolean): void {
+  settingsValues.presenceAwayDark = on;
+  lsSet('hmi:presence-away-dark', on ? 'on' : null);
+}
+
+export function setPresenceGreeting(on: boolean): void {
+  settingsValues.presenceGreeting = on;
+  lsSet('hmi:presence-greeting', on ? 'on' : null);
+}
+
+/* ── Wetter und Helligkeit (Paket 9) ──
+   Das Wetter zieht über den Lockscreen und ist deshalb an — dort ist es eine
+   Wandtafel, kein Innenraum. Das Mitdimmen mit dem Raumlicht braucht einen
+   Sensor und bleibt aus, bis es jemand einschaltet. Beides gerätelokal. */
+export function setAmbientWeather(on: boolean): void {
+  settingsValues.ambientWeather = on;
+  lsSet('hmi:ambient-weather', on ? null : 'off');
+}
+
+export function setAmbientLightDim(on: boolean): void {
+  settingsValues.ambientLightDim = on;
+  lsSet('hmi:ambient-light-dim', on ? 'on' : null);
 }
 
 /* Sicherheitsabfrage für den mobilen „Aus“-Button. null deaktiviert sie;
@@ -199,7 +272,7 @@ export async function setupICloudCalendar(username: string, appPassword: string)
   icloudSetup.result = null;
   try {
     if (!(backend instanceof HaBackend)) {
-      icloudSetup.result = { ok: false, message: 'Im Demo-Modus ohne Funktion — echtes Home Assistant nötig.' };
+      icloudSetup.result = { ok: false, message: m.sys_icloud_demo_disabled() };
       return;
     }
     icloudSetup.result = await backend.setupICloudCalendar(user, appPassword);

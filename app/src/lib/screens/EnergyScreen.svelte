@@ -85,7 +85,7 @@
 
   <!-- Long-Press auf der freien Hero-Fläche öffnet — wie auf Home — den
        Layout-Dialog; das Panel liegt darüber (z-index) und bleibt unberührt. -->
-  <div class="hero-config-hitarea" aria-label="Freie Hero-Fläche"
+  <div class="hero-config-hitarea" aria-label={m.energy_hero_free_area()}
        use:longpress={{ onLongPress: whenEditable(() => layoutManager.show('energy')) }}></div>
 
   <aside class="energy-panel">
@@ -124,18 +124,22 @@
     {#if page === 'flow'}
       <section class="energy-section" aria-label={m.energy_flow()}>
         <span class="caps-label">{m.energy_live_flow()}</span>
-        <div class="energy-flow">
-          <div class="flow-node" class:is-warm={active(e.pv)} data-node="pv">
-            <div class="node-circle"><Icon name="i-sun" /></div>
-            <span class="node-value num">{dash(e.pv)}<span class="kpi-unit">kW</span></span>
-            <span class="caps-label node-label">{m.energy_solar()}</span>
-          </div>
-          <div class="flow-line" class:is-active={active(e.pv)} data-line="pv"
-               style="--flow-duration:{flowDuration(e.pv)}">
-            <div class="line-track">
-              <span class="flow-dot"></span><span class="flow-dot dot-2"></span>
+        <div class="energy-flow" class:is-no-solar={!e.hasGeneration}>
+          <!-- Ohne Erzeugungssensor beginnt der Fluss beim Haus (Paket 3,
+               docs/20): ein Solar-Knoten ohne Anlage wäre eine Behauptung. -->
+          {#if e.hasGeneration}
+            <div class="flow-node" class:is-warm={active(e.pv)} data-node="pv">
+              <div class="node-circle"><Icon name="i-sun" /></div>
+              <span class="node-value num">{dash(e.pv)}<span class="kpi-unit">kW</span></span>
+              <span class="caps-label node-label">{m.energy_solar()}</span>
             </div>
-          </div>
+            <div class="flow-line" class:is-active={active(e.pv)} data-line="pv"
+                 style="--flow-duration:{flowDuration(e.pv)}">
+              <div class="line-track">
+                <span class="flow-dot"></span><span class="flow-dot dot-2"></span>
+              </div>
+            </div>
+          {/if}
           {#if canOpenLoad}
             <button class="flow-node flow-node-trigger pressable" type="button" data-node="load"
                     aria-haspopup="dialog" aria-label={m.energy_show_breakdown()}

@@ -41,6 +41,9 @@ export const HA_GATEWAY_CLIENT_MESSAGE_TYPES = Object.freeze([
   'config/entity_registry/update',
   /* Erinnerungslisten derselben CalDAV-Quelle. */
   'todo/item/list',
+  /* Kamera-Livestream: liefert den signierten HLS-Pfad, den der Server
+     anschließend durchreicht. */
+  'camera/stream',
   /* Benachrichtigungen (B-04B): Persistent Notifications spiegeln, Verlauf
      der Hauser-Automationen aus dem Logbuch. */
   'persistent_notification/subscribe',

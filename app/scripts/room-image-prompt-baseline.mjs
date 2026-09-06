@@ -8,7 +8,7 @@ import { createChatGptRoomImageProvider, createRoomImageCredentialStore } from '
 const OUT = process.argv[2] || '/tmp/hauser-baseline';
 const SOURCE = process.argv[3] || '/tmp/hauser-room-images/sources/source-ntCtd7FV1gIIbRAEf63WQoLZRGuefw4u9dw1stfaIik.jpg';
 
-const PROMPT_1 = 'Ich habe in meinem Smarthome Dashboard Kacheln für alle Räume. Hier ein Foto vom Wohnzimmer. Ich brauche ein background Bild für die Kachel Wohnzimmer aber das Foto ist bei weitem nicht professionell genug. Ausschnitt , Perspektive alles suboptimal. Erstelle eine passende Version';
+const PROMPT_1 = 'Ich habe in meinem Smarthome Dashboard Kacheln für alle Räume. Hier ein Foto von einem dieser Räume. Ich brauche ein background Bild für dessen Kachel aber das Foto ist bei weitem nicht professionell genug. Ausschnitt , Perspektive alles suboptimal. Erstelle eine passende Version';
 
 const PROMPT_2 = `Transform the image into a clearly stylized, polished digital interior illustration.
 

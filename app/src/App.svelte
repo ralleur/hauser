@@ -32,6 +32,12 @@
 
   let NotificationLayerComponent = $state<Component | null>(null);
   let PlayerLayerComponent = $state<Component | null>(null);
+  /* Gekritzelte Tipps der Demo. Das Flag ist im Produktionsbuild statisch
+     `false`, der Import samt Komponente fällt dort aus dem Bundle. */
+  let DemoHintsComponent = $state<Component | null>(null);
+  if (import.meta.env.VITE_DEMO === '1') {
+    void import('./lib/demo/DemoHints.svelte').then((module) => { DemoHintsComponent = module.default; });
+  }
   let configuredRoomSensorIds = $state((): string[] => []);
 
   onMount(() => {
@@ -124,3 +130,4 @@
 
 {#if NotificationLayerComponent}<NotificationLayerComponent />{/if}
 {#if PlayerLayerComponent}<PlayerLayerComponent />{/if}
+{#if DemoHintsComponent}<DemoHintsComponent />{/if}

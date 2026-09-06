@@ -18,6 +18,14 @@ export const systemStatus = $state({
   failed: false,
 });
 
+/* Das Badge in der Systemnavigation zählt nur Hauser selbst (Paket 3,
+   docs/20): Ein Punkt an der Oberfläche fordert zum Handeln auf, und handeln
+   lässt sich hier nur am eigenen Add-on. Core- und OS-Updates stehen in der
+   Liste, holen den Nutzer aber nicht ab. */
+export function hauserUpdates(updates: readonly SystemUpdate[]): SystemUpdate[] {
+  return updates.filter((update) => /hauser/i.test(`${update.entityId} ${update.name}`));
+}
+
 let requestSequence = 0;
 
 export async function refreshSystemStatus(): Promise<void> {

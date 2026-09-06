@@ -50,7 +50,7 @@ const GERMAN_SEARCH_TERMS: Record<string, readonly string[]> = {
 };
 
 function normalize(value: string): string {
-  return value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  return value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); // i18n-ignore: Transliteration, keine Anzeige
 }
 
 const germanByIcon = new Map<string, string[]>();

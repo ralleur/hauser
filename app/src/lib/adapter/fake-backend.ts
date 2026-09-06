@@ -34,6 +34,8 @@ export class FakeBackend implements Backend {
   #push: ((entityId: string, value: unknown) => void) | null = null;
   #latencyMs: number;
   #forced = new Map<string, ForceMode>();
+  #todo = new Map<string, Reminder[]>();
+  #todoSequence = 0;
   #status: ConnectionStatus = 'connected';
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
@@ -45,10 +47,12 @@ export class FakeBackend implements Backend {
     seed: Map<string, unknown>,
     latencyMs = 40,
     catalog: readonly EntityCatalogItem[] = FAKE_DISCOVERY_CATALOG,
+    todoSeed: Iterable<[string, Reminder[]]> = [],
   ) {
     this.#truth = new Map(seed);
     this.#latencyMs = latencyMs;
     this.#catalog = cloneCatalog(catalog);
+    for (const [entityId, items] of todoSeed) this.#todo.set(entityId, structuredClone(items));
   }
 
   subscribe(onUpdate: (entityId: string, value: unknown) => void): void {
@@ -129,10 +133,33 @@ export class FakeBackend implements Backend {
     return [
       { entityId: 'todo.einkaufsliste', name: 'Einkaufsliste', color: '#f6c945' },
       { entityId: 'todo.haushalt', name: 'Haushalt', color: '#7ec98f' },
+      /* Zusätzlich alles, was als Startwert mitgegeben wurde (Demo-Läden). */
+      ...[...this.#todo.keys()]
+        .filter((entityId) => entityId !== 'todo.einkaufsliste' && entityId !== 'todo.haushalt')
+        .map((entityId) => ({ entityId, name: entityId.slice('todo.'.length), color: null })),
     ];
   }
 
+  /* Listen sind in der Demo veränderlich: die Einkaufsliste schreibt über
+     addTodoItem/setTodoItemStatus in dieselben Einträge. */
   async getReminders(entityId: string): Promise<Reminder[]> {
+    return structuredClone(this.#todoItems(entityId));
+  }
+
+  async addTodoItem(entityId: string, title: string): Promise<void> {
+    this.#todoItems(entityId).push({
+      id: `fake-todo-${++this.#todoSequence}`, title, due: null, completed: false, description: null,
+    });
+  }
+
+  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
+    const item = this.#todoItems(entityId).find((entry) => entry.id === uid);
+    if (item) item.completed = completed;
+  }
+
+  #todoItems(entityId: string): Reminder[] {
+    const existing = this.#todo.get(entityId);
+    if (existing) return existing;
     const day = new Date();
     day.setHours(0, 0, 0, 0);
     const due = (offset: number, hour = 0, minute = 0) => {
@@ -141,20 +168,20 @@ export class FakeBackend implements Backend {
       value.setHours(hour, minute, 0, 0);
       return value.toISOString();
     };
-    if (entityId === 'todo.einkaufsliste') {
-      return [
+    const seeded: Reminder[] = entityId === 'todo.einkaufsliste'
+      ? [
         { id: 'fake-r-1', title: 'Milch & Butter', due: null, completed: false, description: null },
         { id: 'fake-r-2', title: 'Geschenk für Mia', due: due(2, 18), completed: false, description: null },
         { id: 'fake-r-3', title: 'Batterien AA', due: null, completed: true, description: null },
-      ];
-    }
-    if (entityId === 'todo.haushalt') {
-      return [
-        { id: 'fake-r-4', title: 'Rechnung Stadtwerke', due: due(-1, 12), completed: false, description: null },
-        { id: 'fake-r-5', title: 'Blumen gießen', due: due(0, 19), completed: false, description: null },
-      ];
-    }
-    return [];
+      ]
+      : entityId === 'todo.haushalt'
+        ? [
+          { id: 'fake-r-4', title: 'Rechnung Stadtwerke', due: due(-1, 12), completed: false, description: null },
+          { id: 'fake-r-5', title: 'Blumen gießen', due: due(0, 19), completed: false, description: null },
+        ]
+        : [];
+    this.#todo.set(entityId, seeded);
+    return seeded;
   }
 
   onConnectionChange(cb: (status: ConnectionStatus) => void): void {

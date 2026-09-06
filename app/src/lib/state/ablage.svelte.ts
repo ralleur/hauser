@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 export interface AblageDocument {
   id: number;
   title: string;
@@ -75,12 +76,12 @@ export async function enterAblage(): Promise<void> {
   ablage.processingError = false;
   try {
     const response = await fetch('/api/ablage/lock', { method: 'POST' });
-    if (!response.ok) throw new Error(await responseError(response, 'Ablage konnte nicht gesperrt werden'));
+    if (!response.ok) throw new Error(await responseError(response, m.abl_err_lock()));
     const status = await fetch('/api/ablage/status');
     const payload = await status.json();
     ablage.configured = Boolean(payload.configured);
   } catch (error) {
-    ablage.error = error instanceof Error ? error.message : 'Ablage ist nicht erreichbar';
+    ablage.error = error instanceof Error ? error.message : m.abl_err_unreachable();
   }
 }
 
@@ -105,11 +106,11 @@ export async function unlockAblage(pin: string): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin }),
     });
-    if (!response.ok) throw new Error(await responseError(response, 'Ablage konnte nicht entsperrt werden'));
+    if (!response.ok) throw new Error(await responseError(response, m.abl_err_unlock()));
     ablage.unlocked = true;
     return true;
   } catch (error) {
-    ablage.error = error instanceof Error ? error.message : 'Ablage konnte nicht entsperrt werden';
+    ablage.error = error instanceof Error ? error.message : m.abl_err_unlock();
     return false;
   } finally {
     ablage.loading = false;
@@ -135,8 +136,8 @@ export async function importAblageFiles(files: File[]): Promise<number> {
   const unsupported = files.find((file) => !isAblageFileSupported(file));
   if (unsupported) {
     ablage.error = unsupported.size > ABLAGE_FILE_MAX
-      ? `${unsupported.name} ist größer als 50 MiB.`
-      : `${unsupported.name} hat ein nicht unterstütztes Dateiformat.`;
+      ? m.abl_err_too_large({ name: unsupported.name })
+      : m.abl_err_unsupported_format({ name: unsupported.name });
     return 0;
   }
 
@@ -153,16 +154,16 @@ export async function importAblageFiles(files: File[]): Promise<number> {
       if (response.status === 401) {
         ablage.unlocked = false;
         ablage.documents = [];
-        throw new Error('Sitzung abgelaufen. Bitte PIN erneut eingeben.');
+        throw new Error(m.abl_err_session());
       }
-      if (!response.ok) throw new Error(await responseError(response, `${file.name} konnte nicht importiert werden`));
+      if (!response.ok) throw new Error(await responseError(response, m.abl_err_import_file({ name: file.name })));
       ablage.importCompleted += 1;
     }
     const count = ablage.importCompleted;
-    ablage.importMessage = `${count} ${count === 1 ? 'Datei wurde' : 'Dateien wurden'} zur Verarbeitung übergeben.`;
+    ablage.importMessage = count === 1 ? m.abl_import_done_one({ count }) : m.abl_import_done_other({ count });
     return count;
   } catch (error) {
-    ablage.error = error instanceof Error ? error.message : 'Dateien konnten nicht importiert werden';
+    ablage.error = error instanceof Error ? error.message : m.abl_err_import();
     return ablage.importCompleted;
   } finally {
     ablage.importing = false;
@@ -177,9 +178,9 @@ export async function refreshAblageProcessing(): Promise<void> {
     if (response.status === 401) {
       ablage.unlocked = false;
       ablage.documents = [];
-      throw new Error('Sitzung abgelaufen');
+      throw new Error(m.abl_err_session_short());
     }
-    if (!response.ok) throw new Error('Verarbeitungsstatus nicht verfügbar');
+    if (!response.ok) throw new Error(m.abl_err_processing_status());
     const payload = await response.json() as AblageTasksResponse;
     if (requestGeneration !== processingGeneration) return;
     const processing = Array.isArray(payload.processing) ? payload.processing : [];
@@ -205,9 +206,9 @@ export async function searchAblage(query: string, page = 1, range?: AblageDateRa
     const response = await fetch(`/api/ablage/documents?${params}`);
     if (response.status === 401) {
       ablage.unlocked = false;
-      throw new Error('Sitzung abgelaufen. Bitte PIN erneut eingeben.');
+      throw new Error(m.abl_err_session());
     }
-    if (!response.ok) throw new Error(await responseError(response, 'Dokumente konnten nicht geladen werden'));
+    if (!response.ok) throw new Error(await responseError(response, m.abl_err_documents()));
     const payload = await response.json() as AblageResponse;
     if (requestGeneration !== generation) return;
     ablage.documents = payload.results;
@@ -217,7 +218,7 @@ export async function searchAblage(query: string, page = 1, range?: AblageDateRa
     ablage.previous = payload.previous;
   } catch (error) {
     if (requestGeneration !== generation) return;
-    ablage.error = error instanceof Error ? error.message : 'Dokumente konnten nicht geladen werden';
+    ablage.error = error instanceof Error ? error.message : m.abl_err_documents();
   } finally {
     if (requestGeneration === generation) ablage.loading = false;
   }

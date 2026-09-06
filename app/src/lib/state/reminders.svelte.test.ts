@@ -26,6 +26,8 @@ function installLocalStorage(): Storage {
   return storage;
 }
 
+/* Altformat ohne Hülle, wie es ältere Geräte hinterlassen haben; der
+   Snapshot-Store liest es weiter (migrateLegacy). */
 function cacheLastKnown(storage: Storage): void {
   storage.setItem(CACHE_KEY, JSON.stringify({
     sources: [cachedSource],
@@ -131,6 +133,6 @@ describe('reminder last-known cache', () => {
     expect(module.reminders.items).toEqual([]);
     expect(module.reminders.updatedAt).toBeGreaterThan(1234);
     expect(module.reminders.error).toBeNull();
-    expect(JSON.parse(localStorage.getItem(CACHE_KEY)!)).toMatchObject({ sources: [], items: [] });
+    expect(JSON.parse(localStorage.getItem(CACHE_KEY)!)).toMatchObject({ v: 1, value: { sources: [], items: [] } });
   });
 });

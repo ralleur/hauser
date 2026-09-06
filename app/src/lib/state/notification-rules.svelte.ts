@@ -24,6 +24,8 @@ import {
   type NotificationColorMap,
   type NotificationRule,
 } from './notification-rules.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 
 export type NotificationRulesStatus =
   | { kind: 'idle' }
@@ -37,6 +39,25 @@ type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 function snapshot(rules: readonly NotificationRule[]): NotificationRule[] {
   return JSON.parse(JSON.stringify(rules)) as NotificationRule[];
 }
+
+/* Paket 5 (docs/20): Die Regelliste kommt vom Server und ist beim Kaltstart
+   erst nach der Antwort da. Der Snapshot zeigt den letzten Stand sofort; die
+   Antwort ersetzt ihn, solange am Entwurf nichts geändert wurde. */
+const RULES_SNAPSHOT_MAX_AGE_MS = 10 * 60 * 1000;
+
+interface RulesSnapshot {
+  rules: NotificationRule[];
+  colors: NotificationColorMap;
+}
+
+const rulesSnapshot = createSnapshotStore<RulesSnapshot>({
+  key: 'hmi:notification-rules',
+  maxAgeMs: RULES_SNAPSHOT_MAX_AGE_MS,
+  validate: (value): value is RulesSnapshot => {
+    const candidate = value as Partial<RulesSnapshot> | null;
+    return Array.isArray(candidate?.rules) && !!candidate?.colors;
+  },
+});
 
 function withLaundryRules(rules: NotificationRule[]): NotificationRule[] {
   const next = rules.filter((rule) => rule.category !== 'laundry');
@@ -83,6 +104,7 @@ class NotificationRulesStore {
 
   load(): Promise<void> {
     if (this.#loading) return this.#loading;
+    this.#restoreSnapshot();
     this.#loading = (async () => {
       let rules: NotificationRule[] = [];
       let colors: NotificationColorMap = {};
@@ -94,13 +116,39 @@ class NotificationRulesStore {
           colors = parseNotificationColors(payload?.colors) ?? {};
         }
       } catch { /* Offline oder Demo: leere Liste, Wäsche kommt aus der Konfiguration. */ }
+      /* Der Entwurf gehört dem Nutzer: hat er seit dem Snapshot schon etwas
+         umgestellt, bleibt seine Fassung stehen. */
+      const keepDraft = this.loaded && this.dirty;
       this.rules = rules;
-      this.draft = withLaundryRules(snapshot(rules));
       this.colors = colors;
-      this.draftColors = { ...colors };
+      if (!keepDraft) {
+        this.draft = withLaundryRules(snapshot(rules));
+        this.draftColors = { ...colors };
+      }
       this.loaded = true;
+      void rulesSnapshot.save({ rules: snapshot(rules), colors: { ...colors } });
     })();
     return this.#loading;
+  }
+
+  /** Erneut vom Server holen (Revalidierung nach Sichtbarkeit oder Netzrückkehr). */
+  reload(): Promise<void> {
+    this.#loading = null;
+    return this.load();
+  }
+
+  /** Letzter bekannter Stand aus dem Snapshot — synchron, für den ersten Frame. */
+  #restoreSnapshot(): void {
+    if (this.loaded) return;
+    const restored = rulesSnapshot.restoreSync();
+    const rules = restored ? parseNotificationRules(restored.value.rules) : null;
+    if (!rules) return;
+    const colors = parseNotificationColors(restored?.value.colors) ?? {};
+    this.rules = rules;
+    this.draft = withLaundryRules(snapshot(rules));
+    this.colors = colors;
+    this.draftColors = { ...colors };
+    this.loaded = true;
   }
 
   #edit(id: string, mutate: (rule: NotificationRule) => void): void {
@@ -213,6 +261,7 @@ class NotificationRulesStore {
     this.draft = withLaundryRules(snapshot(saved));
     this.colors = savedColors;
     this.draftColors = { ...savedColors };
+    void rulesSnapshot.save({ rules: snapshot(saved), colors: { ...savedColors } });
     if (payload.syncError) {
       this.status = { kind: 'ha-error', message: String(payload.syncError.message ?? '') };
       return;
@@ -227,3 +276,9 @@ class NotificationRulesStore {
 }
 
 export const notificationRules = new NotificationRulesStore();
+
+registerRevalidation({
+  name: 'notification-rules',
+  isStale: () => notificationRules.loaded && rulesSnapshot.isStale(),
+  revalidate: () => notificationRules.reload(),
+});

@@ -12,6 +12,35 @@ instance you control. It has not been audited, and it is not hardened for
 exposure to the public internet. Do not put it on a public address without
 putting your own authentication in front of it.
 
+## Trust model
+
+**The trust boundary is your network, not the device.** Anyone who can reach
+Hauser on your LAN can operate your home: switch lights, change the heating,
+see camera stills. There is no login, and that is deliberate — a wall panel
+next to the front door that asks for a password every morning is not a wall
+panel.
+
+What that does and does not buy you:
+
+- Browser requests are origin-checked, so a random website you visit cannot
+  drive your house through your browser. That is a cross-site protection, not
+  device authentication.
+- A device on your own network is trusted by definition. A guest phone, a smart
+  TV, a cheap IoT plug — if it can reach the port, it has the same power over
+  your home that you do.
+- Practically: treat your WLAN password like your house key, keep devices you
+  do not trust on a separate network or guest WLAN, and never forward this port
+  from the internet.
+
+This is a deliberate decision, not an oversight, and it is the model Hauser
+ships with today. Per-device pairing is planned: it will arrive together with
+the companion app, which needs a pairing step anyway — one mechanism, built
+once, rather than two half-mechanisms. Until then, the paragraph above is the
+whole story.
+
+**Hotel mode** is the one exception, and it is described further down: there,
+the server — not the browser — is the permission boundary.
+
 ## Reporting a vulnerability
 
 Please report security issues privately rather than in a public issue:

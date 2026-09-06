@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import type { LaundryAdapterConfig } from '../config/household-config.ts';
 
 export type NotificationType = 'neutral' | 'info' | 'success' | 'warning' | 'critical';
@@ -62,7 +63,15 @@ export interface HmiNotification {
   expiresAt?: number;
   dedupeKey: string;
   state?: string;
+  /* Wohin ein Tipp auf die Kachel führt. Bewusst ein Schlüssel und keine
+     Funktion: Meldungen überleben ein Neuladen im Speicher des Geräts, ein
+     Callback täte das nicht. Wer keinen Zielort hat, bleibt eine reine
+     Mitteilung — die Kachel ist dann nicht antippbar. */
+  action?: NotificationAction;
 }
+
+/** Ziele, die eine Meldung ansteuern kann. */
+export type NotificationAction = 'room-image-wizard';
 
 /** Aus Home Assistant gespiegelte Einträge (Persistent Notifications mit
  * Hauser-Präfix) werden nicht lokal persistiert und dort quittiert. */
@@ -76,9 +85,9 @@ export function sortNotifications(items: readonly HmiNotification[]): HmiNotific
 
 export function relativeDuration(timestamp: number, now: number): string {
   const minutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
-  if (minutes < 1) return '< 1 Min.';
-  if (minutes < 60) return `${minutes} Min.`;
+  if (minutes < 1) return m.notif_dur_lt_min();
+  if (minutes < 60) return m.notif_dur_min({ minutes });
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `${hours} Std. ${rest} Min.` : `${hours} Std.`;
+  return rest ? m.notif_dur_hours_min({ hours, minutes: rest }) : m.notif_dur_hours({ hours });
 }

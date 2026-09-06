@@ -13,13 +13,21 @@
   import RoomImageLibrary from './RoomImageLibrary.svelte';
   import CentralClimateConfig from './CentralClimateConfig.svelte';
   import { ROOM_IMAGE_WIZARD_ENABLED } from '../../config/product-capabilities.ts';
-  import { settingsValues } from '../../state/settings.svelte.ts';
+  import { settingsUi, settingsValues } from '../../state/settings.svelte.ts';
   import { resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
   const base = import.meta.env.BASE_URL;
 
   let roomImageWizardOpen = $state(false);
+  /* Ruf von außen (Meldung antippen): Der Wunsch liegt bereit, bevor diese
+     Seite überhaupt existiert — deshalb wird er hier verbraucht, sobald sie
+     da ist. */
+  $effect(() => {
+    if (!settingsUi.pendingRoomImageWizard) return;
+    settingsUi.pendingRoomImageWizard = false;
+    roomImageWizardOpen = true;
+  });
   let roomImageLibraryOpen = $state(false);
   let rescanConfirming = $state(false);
 

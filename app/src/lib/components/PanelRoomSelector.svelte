@@ -12,6 +12,7 @@
     panelRoomPageForSelection,
     panelRoomPages,
   } from '../state/panel-room-pages.ts';
+  import { resetHeroParallax, setHeroParallaxFraction } from '../state/hero-parallax.svelte.ts';
   import { fmtTemp } from '../format.ts';
   import { m } from '../../paraglide/messages.js';
 
@@ -40,10 +41,11 @@
 
   function handleScroll(): void {
     if (!viewport?.clientWidth) return;
-    currentPage = clampPanelRoomPage(
-      Math.round(viewport.scrollLeft / viewport.clientWidth),
-      rooms.length,
-    );
+    const exact = viewport.scrollLeft / viewport.clientWidth;
+    currentPage = clampPanelRoomPage(Math.round(exact), rooms.length);
+    /* Paket 4: Solange der Finger zwischen zwei Seiten steht, folgt das
+       Hero-Bild ein kleines Stück. Eingerastet ist der Rest null. */
+    setHeroParallaxFraction(exact - Math.round(exact));
   }
 
   $effect(() => {
@@ -56,6 +58,10 @@
     currentPage = nextPage;
     if (selectionChanged) void tick().then(() => scrollToPage(nextPage, 'auto'));
   });
+
+  /* Verschwindet die Auswahl (Layout-Wechsel, Screen-Wechsel), darf kein
+     Versatz zurückbleiben — sonst steht das Hero-Bild dauerhaft schief. */
+  $effect(() => resetHeroParallax);
 </script>
 
 <div class="room-selector" class:has-pages={multiPage} style={`--rooms-per-row:${roomsPerRow}`}>

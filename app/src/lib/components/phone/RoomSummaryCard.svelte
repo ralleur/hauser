@@ -46,8 +46,9 @@
         roomHeroConfig(summary.id),
       ),
       import('../room-hero-assets.ts'),
-    ]).then(([resolution, { loadRoomHero }]) => (
-      loadRoomHero(resolution, undefined, () => request === currentRequest)
+      import('../hero-image-decoder.ts'),
+    ]).then(([resolution, { loadRoomHero }, { decodeHeroImageOffThread }]) => (
+      loadRoomHero(resolution, decodeHeroImageOffThread, () => request === currentRequest)
     )).then((candidate) => {
       if (candidate && request === currentRequest) shownHero = candidate;
     }).catch(() => {

@@ -40,33 +40,46 @@ export function energyPanelData(view: EnergyView, period: EnergyPeriod, page: En
     return historicalPlaceholder(period, page);
   }
 
+  /* Ohne Erzeugungssensor hat das Haus keine Solarseite (Paket 3, docs/20):
+     Kennzahlen, die es nur mit Erzeugung gibt, fallen ganz weg — ein Feld,
+     das für immer „—" zeigt, sieht aus wie ein Defekt. */
+  const solar = view.hasGeneration;
+
   if (page === 'consumption') {
     return {
       primary: { label: m.energy_measured_load(), value: view.load, unit: 'kW' },
       secondary: [
         { label: m.energy_grid_import(), value: view.grid !== null && view.grid < -0.05 ? Math.abs(view.grid) : null, unit: 'kW' },
-        { label: m.energy_pv_share(), value: view.pv !== null && view.load !== null ? Math.min(view.pv, view.load) : null, unit: 'kW' },
+        ...(solar
+          ? [{ label: m.energy_pv_share(), value: view.pv !== null && view.load !== null ? Math.min(view.pv, view.load) : null, unit: 'kW' as const }]
+          : []),
       ],
       kpis: [
         { label: m.energy_consumed(), value: view.today.consumed, unit: 'kWh' },
         { label: m.energy_drawn(), value: view.today.drawn, unit: 'kWh' },
-        { label: m.energy_self_use(), value: ownUseToday(view), unit: 'kWh' },
-        { label: m.energy_fed_in(), value: view.today.fedIn, unit: 'kWh' },
+        ...(solar
+          ? [
+              { label: m.energy_self_use(), value: ownUseToday(view), unit: 'kWh' as const },
+              { label: m.energy_fed_in(), value: view.today.fedIn, unit: 'kWh' as const },
+            ]
+          : []),
       ],
       hint: liveValueHint(view, m.energy_no_load_sensors(), m.energy_load_sensors_no_value()),
     };
   }
 
   return {
-    primary: { label: m.energy_solar_now(), value: view.pv, unit: 'kW' },
+    primary: solar
+      ? { label: m.energy_solar_now(), value: view.pv, unit: 'kW' }
+      : { label: m.energy_measured_load(), value: view.load, unit: 'kW' },
     secondary: [
-      { label: m.energy_measured_load(), value: view.load, unit: 'kW' },
+      ...(solar ? [{ label: m.energy_measured_load(), value: view.load, unit: 'kW' as const }] : []),
       { label: gridLabel(view.grid), value: view.grid === null ? null : Math.abs(view.grid), unit: 'kW' },
     ],
     kpis: [
-      { label: m.energy_produced(), value: view.today.produced, unit: 'kWh' },
+      ...(solar ? [{ label: m.energy_produced(), value: view.today.produced, unit: 'kWh' as const }] : []),
       { label: m.energy_consumed(), value: view.today.consumed, unit: 'kWh' },
-      { label: m.energy_fed_in(), value: view.today.fedIn, unit: 'kWh' },
+      ...(solar ? [{ label: m.energy_fed_in(), value: view.today.fedIn, unit: 'kWh' as const }] : []),
       { label: m.energy_drawn(), value: view.today.drawn, unit: 'kWh' },
     ],
     hint: liveValueHint(view, m.energy_no_sensors(), m.energy_sensors_no_value()),

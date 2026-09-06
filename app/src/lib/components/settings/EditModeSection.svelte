@@ -5,7 +5,8 @@
      das Panel von selbst in den Bedienen-Modus zurückfällt, und ob das
      Verlassen eine PIN verlangt. */
   import Icon from '../Icon.svelte';
-  import { editMode, setAutoLockMinutes, setEditPin } from '../../state/edit-mode.svelte.ts';
+  import { editMode } from '../../state/edit-mode.svelte.ts';
+  import { setAutoLockMinutes, setEditPin } from '../../state/edit-mode-controls.ts';
   import { m } from '../../../paraglide/messages.js';
 
   const DEFAULT_MINUTES = 5;

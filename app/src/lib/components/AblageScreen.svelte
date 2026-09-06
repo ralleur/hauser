@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { m } from '../../paraglide/messages.js';
+  import { intlLocale } from '../state/locale.svelte.ts';
   import '../../styles/ablage.css';
   import { onDestroy, onMount, tick } from 'svelte';
   import {
@@ -134,11 +136,11 @@
   function applyCustomRange(event: SubmitEvent) {
     event.preventDefault();
     if (!draftFrom || !draftTo) {
-      dateError = 'Bitte Von und Bis auswählen.';
+      dateError = m.abl_range_missing();
       return;
     }
     if (draftFrom > draftTo) {
-      dateError = '„Von“ muss vor „Bis“ liegen.';
+      dateError = m.abl_range_order();
       return;
     }
     dateFilter = 'custom';
@@ -169,9 +171,9 @@
   }
 
   function formatDate(value: string | null): string {
-    if (!value) return 'Datum unbekannt';
+    if (!value) return m.abl_date_unknown();
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 'Datum unbekannt' : date.toLocaleDateString('de-DE');
+    return Number.isNaN(date.getTime()) ? m.abl_date_unknown() : date.toLocaleDateString(intlLocale());
   }
 </script>
 
@@ -180,50 +182,52 @@
 <main class:phone-ablage={phone} class:screen-inner={!phone} class="ablage-screen" aria-labelledby="ablage-title">
   {#if !ablage.unlocked}
     <section class="ablage-pin-card">
-      <p class="ablage-eyebrow">Geschützter Bereich</p>
-      <h1 bind:this={titleAnchor} id="ablage-title" tabindex="-1">Ablage</h1>
-      <p>Dokumente werden erst nach Eingabe deiner PIN geladen.</p>
+      <p class="ablage-eyebrow">{m.abl_protected()}</p>
+      <h1 bind:this={titleAnchor} id="ablage-title" tabindex="-1">{m.nav_files()}</h1>
+      <p>{m.abl_pin_intro()}</p>
       {#if !ablage.configured}
-        <p class="ablage-error" role="alert">Die Ablage ist serverseitig noch nicht konfiguriert.</p>
+        <p class="ablage-error" role="alert">{m.abl_not_configured()}</p>
       {:else}
         <form onsubmit={submitPin}>
           <label for="ablage-pin">PIN</label>
           <input bind:this={pinInput} bind:value={pin} id="ablage-pin" type="password" inputmode="numeric"
                  autocomplete="off" maxlength="12" disabled={ablage.loading} aria-describedby={ablage.error ? 'ablage-error' : undefined} />
-          <button class="pressable" type="submit" disabled={!pin || ablage.loading}>{ablage.loading ? 'Prüfe …' : 'Entsperren'}</button>
+          <button class="pressable" type="submit" disabled={!pin || ablage.loading}>{ablage.loading ? m.abl_checking() : m.abl_unlock()}</button>
         </form>
       {/if}
       {#if ablage.error}<p id="ablage-error" class="ablage-error" role="alert">{ablage.error}</p>{/if}
     </section>
   {:else}
-    <h1 bind:this={titleAnchor} id="ablage-title" class="phone-visually-hidden" tabindex="-1">Ablage</h1>
+    <h1 bind:this={titleAnchor} id="ablage-title" class="phone-visually-hidden" tabindex="-1">{m.nav_files()}</h1>
     <div inert={dateDialogOpen || openDocument !== null} aria-hidden={dateDialogOpen || openDocument !== null}>
       <div class="ablage-toolbar">
         <label class="ablage-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-          <span class="phone-visually-hidden">Dokumente durchsuchen</span>
+          <span class="phone-visually-hidden">{m.abl_search()}</span>
           <input bind:this={searchInput} bind:value={query} type="search" autocomplete="off" enterkeyhint="search"
-                 placeholder="Dokumente durchsuchen" oninput={queueSearch} />
+                 placeholder={m.abl_search()} oninput={queueSearch} />
         </label>
-        <div class="ablage-date-filters" aria-label="Zeitraum einschränken">
-          <button class:is-active={dateFilter === 'month'} class="pressable" type="button" onclick={() => applyPreset('month', 1)}>Letzter Monat</button>
-          <button class:is-active={dateFilter === 'six-months'} class="pressable" type="button" onclick={() => applyPreset('six-months', 6)}>Letzte 6 Monate</button>
+        <div class="ablage-date-filters" aria-label={m.abl_range_label()}>
+          <button class:is-active={dateFilter === 'month'} class="pressable" type="button" onclick={() => applyPreset('month', 1)}>{m.abl_range_month()}</button>
+          <button class:is-active={dateFilter === 'six-months'} class="pressable" type="button" onclick={() => applyPreset('six-months', 6)}>{m.abl_range_six_months()}</button>
           <button class:is-active={dateFilter === 'custom'} class="pressable ablage-custom-filter" type="button" onclick={openDateDialog}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14a1 1 0 0 1 1 1V20H4V5.5a1 1 0 0 1 1-1ZM8 2v5m8-5v5M4 9h16" /></svg>
-            Wählen
+            {m.abl_range_pick()}
           </button>
         </div>
-        <button class="ablage-lock pressable" type="button" onclick={() => void enterAblage()}>Sperren</button>
+        <button class="ablage-lock pressable" type="button" onclick={() => void enterAblage()}>{m.abl_lock()}</button>
       </div>
 
       <section class="ablage-import" aria-labelledby="ablage-import-title">
         <div>
-          <h2 id="ablage-import-title">Dateien importieren</h2>
-          <p>Unterstützt: PDF; JPG/JPEG, PNG, TIFF, WebP, HEIC, BMP, GIF; TXT, TEXT, CSV und SRT. Maximal 50 MiB pro Datei.</p>
+          <h2 id="ablage-import-title">{m.abl_import_title()}</h2>
+          <p>{m.abl_import_hint()}</p>
         </div>
         <input bind:this={fileInput} hidden type="file" accept={ABLAGE_ACCEPT} multiple onchange={importFiles} />
         <button class="ablage-import-button pressable" type="button" disabled={ablage.importing} onclick={() => fileInput?.click()}>
-          {ablage.importing ? `${ablage.importCompleted} von ${ablage.importTotal} …` : 'Dateien auswählen'}
+          {ablage.importing
+            ? m.abl_import_progress({ done: ablage.importCompleted, total: ablage.importTotal })
+            : m.abl_import_pick()}
         </button>
       </section>
       {#if ablage.importMessage}<p class="ablage-import-status" role="status">{ablage.importMessage}</p>{/if}
@@ -233,43 +237,47 @@
         <section class="ablage-processing" role="status" aria-live="polite">
           <span class="ablage-processing-dot" aria-hidden="true"></span>
           <div>
-            <strong>Paperless verarbeitet gerade {ablage.processing.length} {ablage.processing.length === 1 ? 'Dokument' : 'Dokumente'}.</strong>
+            <strong>{ablage.processing.length === 1
+              ? m.abl_processing_one({ count: ablage.processing.length })
+              : m.abl_processing_other({ count: ablage.processing.length })}</strong>
             {#if names.length}<p>{names.join(' · ')}{ablage.processing.length > names.length ? ' · …' : ''}</p>{/if}
           </div>
         </section>
       {:else if ablage.processingError}
-        <p class="ablage-processing-error" role="status">Der Paperless-Verarbeitungsstatus ist gerade nicht verfügbar.</p>
+        <p class="ablage-processing-error" role="status">{m.abl_processing_error()}</p>
       {/if}
 
       {#if ablage.error}<p class="ablage-error" role="alert">{ablage.error}</p>{/if}
       {#if ablage.loading}
-        <p class="ablage-status" role="status">Dokumente werden geladen …</p>
+        <p class="ablage-status" role="status">{m.abl_loading()}</p>
       {:else if ablage.documents.length}
-        <p class="ablage-status">{ablage.count} {ablage.count === 1 ? 'Dokument' : 'Dokumente'}</p>
-        <section class="ablage-grid" aria-label="Dokumente">
+        <p class="ablage-status">{ablage.count === 1 ? m.abl_count_one({ count: ablage.count }) : m.abl_count_other({ count: ablage.count })}</p>
+        <section class="ablage-grid" aria-label={m.abl_documents()}>
           {#each ablage.documents as document (document.id)}
             <article class="ablage-document">
-              <button class="ablage-thumb" type="button" onclick={() => showDocument(document)} aria-label={`${document.title} öffnen`}>
+              <button class="ablage-thumb" type="button" onclick={() => showDocument(document)} aria-label={m.abl_open_document({ title: document.title })}>
                 <img src={`/api/ablage/documents/${document.id}/thumb`} alt="" loading="lazy" />
               </button>
               <div class="ablage-document-body">
                 <h2>{document.title}</h2>
                 <p>{formatDate(document.created)}{document.archiveSerialNumber !== null ? ` · ASN ${document.archiveSerialNumber}` : ''}</p>
                 <div class="ablage-actions">
-                  <button class="pressable" type="button" onclick={() => showDocument(document)}>Öffnen</button>
-                  <a href={`/api/ablage/documents/${document.id}/download`} download>Download</a>
+                  <button class="pressable" type="button" onclick={() => showDocument(document)}>{m.abl_open()}</button>
+                  <a href={`/api/ablage/documents/${document.id}/download`} download>{m.abl_download()}</a>
                 </div>
               </div>
             </article>
           {/each}
         </section>
-        <nav class="ablage-pagination" aria-label="Ergebnisseiten">
-          <button class="pressable" type="button" disabled={!ablage.previous} onclick={() => void searchAblage(query, ablage.page - 1, dateRange)}>Zurück</button>
-          <span>Seite {ablage.page}</span>
-          <button class="pressable" type="button" disabled={!ablage.next} onclick={() => void searchAblage(query, ablage.page + 1, dateRange)}>Weiter</button>
+        <nav class="ablage-pagination" aria-label={m.abl_pages()}>
+          <button class="pressable" type="button" disabled={!ablage.previous} onclick={() => void searchAblage(query, ablage.page - 1, dateRange)}>{m.abl_prev()}</button>
+          <span>{m.abl_page({ page: ablage.page })}</span>
+          <button class="pressable" type="button" disabled={!ablage.next} onclick={() => void searchAblage(query, ablage.page + 1, dateRange)}>{m.abl_next()}</button>
         </nav>
       {:else}
-        <p class="ablage-empty">{query.trim() ? `Keine Dokumente für „${query.trim()}“ gefunden.` : dateRange ? 'Keine Dokumente im gewählten Zeitraum.' : 'Noch keine Dokumente vorhanden.'}</p>
+        <p class="ablage-empty">{query.trim()
+          ? m.abl_empty_query({ query: query.trim() })
+          : dateRange ? m.abl_empty_range() : m.abl_empty()}</p>
       {/if}
     </div>
   {/if}
@@ -279,42 +287,42 @@
       <header>
         <button class="ablage-viewer-back pressable" type="button" onclick={closeDocument}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-          Zurück zur Ablage
+          {m.abl_back_to_list()}
         </button>
         <h2 id="ablage-viewer-title">{openDocument.title}</h2>
-        <a class="ablage-viewer-download" href={`/api/ablage/documents/${openDocument.id}/download`} download>Download</a>
+        <a class="ablage-viewer-download" href={`/api/ablage/documents/${openDocument.id}/download`} download>{m.abl_download()}</a>
       </header>
-      <iframe src={`/api/ablage/documents/${openDocument.id}/preview`} title={`Vorschau: ${openDocument.title}`}></iframe>
+      <iframe src={`/api/ablage/documents/${openDocument.id}/preview`} title={m.abl_preview({ title: openDocument.title })}></iframe>
     </div>
   {/if}
 
   {#if dateDialogOpen}
     <div class="ablage-date-layer">
-      <button class="ablage-date-scrim" type="button" aria-label="Zeitraumauswahl schließen" onclick={closeDateDialog}></button>
+      <button class="ablage-date-scrim" type="button" aria-label={m.abl_close_range()} onclick={closeDateDialog}></button>
       <div class="ablage-date-dialog" role="dialog" aria-modal="true" aria-labelledby="ablage-date-title">
         <header>
           <div>
-            <p class="ablage-eyebrow">Benutzerdefinierter Filter</p>
-            <h2 id="ablage-date-title">Zeitraum wählen</h2>
+            <p class="ablage-eyebrow">{m.abl_custom_filter()}</p>
+            <h2 id="ablage-date-title">{m.abl_range_title()}</h2>
           </div>
-          <button class="ablage-date-close pressable" type="button" aria-label="Schließen" onclick={closeDateDialog}>×</button>
+          <button class="ablage-date-close pressable" type="button" aria-label={m.common_close()} onclick={closeDateDialog}>×</button>
         </header>
         <form onsubmit={applyCustomRange}>
           <div class="ablage-date-fields">
             <label>
-              <span>Von</span>
+              <span>{m.abl_from()}</span>
               <input bind:this={fromInput} bind:value={draftFrom} type="date" max={draftTo || today} required />
             </label>
             <span class="ablage-date-arrow" aria-hidden="true">→</span>
             <label>
-              <span>Bis</span>
+              <span>{m.abl_to()}</span>
               <input bind:value={draftTo} type="date" min={draftFrom || undefined} max={today} required />
             </label>
           </div>
           {#if dateError}<p class="ablage-error" role="alert">{dateError}</p>{/if}
           <footer>
-            <button class="ablage-clear-filter pressable" type="button" onclick={clearDateRange}>Zeitraum löschen</button>
-            <button class="ablage-apply-filter pressable" type="submit">Übernehmen</button>
+            <button class="ablage-clear-filter pressable" type="button" onclick={clearDateRange}>{m.abl_range_clear()}</button>
+            <button class="ablage-apply-filter pressable" type="submit">{m.sys_apply()}</button>
           </footer>
         </form>
       </div>

@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 export type RoomImageFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export type RoomImageId = string;
@@ -321,13 +322,13 @@ export function isRoomImageOpaqueId(value: unknown): value is string {
 
 function invalidRequest(): RoomImageClientError {
   return new RoomImageClientError(
-    'invalid_request', null, 'INVALID_REQUEST', 'Die Room-Image-Anfrage ist ungültig.', false,
+    'invalid_request', null, 'INVALID_REQUEST', m.rimg_err_request_invalid(), false,
   );
 }
 
 function invalidResponse(): RoomImageClientError {
   return new RoomImageClientError(
-    'invalid_response', null, 'INVALID_RESPONSE', 'Die Room-Image-Antwort ist ungültig.', false,
+    'invalid_response', null, 'INVALID_RESPONSE', m.rimg_err_response_invalid(), false,
   );
 }
 

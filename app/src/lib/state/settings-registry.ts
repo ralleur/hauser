@@ -169,10 +169,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
    auch wenn sich die Sektionszuordnung ändert. */
 const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   /* ── Zuhause · Räume & Geräte ── */
-  { id: 'household-setup', section: 'rooms-devices', label: 'Räume verwalten',
+  { id: 'household-setup', section: 'rooms-devices', get label() { return m.settings_entry_household_setup_label(); },
     keywords: ['räume', 'raum', 'zimmer', 'geräte', 'sortieren', 'umbenennen', 'löschen'] },
   ...(ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO ? [{
-    id: 'room-image-wizard', section: 'rooms-devices' as const, label: 'Raumbilder erstellen',
+    id: 'room-image-wizard', section: 'rooms-devices' as const,
+    get label() { return m.settings_entry_room_image_wizard_label(); },
     keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
   }] : []),
   { id: 'central-climate', section: 'rooms-devices', get label() { return m.central_climate_settings_title(); },
@@ -235,6 +236,9 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['pin', 'code', 'sperre', 'schutz', 'bearbeiten', 'edit', 'lock'] },
   { id: 'standby-now', section: 'ambient', get label() { return m.settings_entry_standby_now_label(); },
     keywords: ['ruhezustand', 'idle', 'bildschirmschoner', 'screensaver', 'schlafen', 'aus'] },
+  { id: 'standby-after', section: 'ambient', get label() { return m.settings_entry_standby_after_label(); },
+    keywords: ['lockscreen', 'sperrbildschirm', 'wartezeit', 'ruhezeit', 'timeout', 'minuten',
+      'automatisch', 'deaktivieren', 'ausschalten', 'nie', 'aus', 'idle', 'bildschirmschoner'] },
   { id: 'ambient-deep-night', section: 'ambient', get label() { return m.settings_entry_ambient_deep_night_label(); },
     keywords: ['nacht', 'nachts', 'uhr', 'rot', 'dunkel', 'standby', 'lockscreen', '22', '06', 'iphone'] },
   { id: 'ambient-hero-text', section: 'ambient', get label() { return m.settings_entry_ambient_hero_text_label(); },
@@ -248,6 +252,9 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['auswahl', 'familie', 'termine', 'agenda', 'entität', 'anzeigen', 'ausblenden'] },
   { id: 'reminders-selection', section: 'calendar', get label() { return m.settings_entry_reminders_selection_label(); },
     keywords: ['erinnerungen', 'reminders', 'todo', 'aufgaben', 'listen', 'einkaufsliste', 'post-it', 'apple', 'icloud'] },
+  { id: 'moment-holidays', section: 'calendar', get label() { return m.settings_entry_moment_holidays_label(); },
+    keywords: ['momente', 'feiertage', 'weihnachten', 'silvester', 'ostern', 'heiligabend', 'geburtstag',
+      'konfetti', 'schnee'] },
   { id: 'shopping-stores', section: 'shopping', get label() { return m.settings_entry_shopping_stores_label(); },
     keywords: ['einkaufsliste', 'laden', 'aldi', 'rewe', 'dm', 'anlegen', 'löschen', 'reihenfolge'] },
   { id: 'shopping-categories', section: 'shopping', get label() { return m.settings_entry_shopping_categories_label(); },

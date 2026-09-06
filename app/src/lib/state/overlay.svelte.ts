@@ -53,3 +53,27 @@ export function closeRoomEdit(instant = false) {
 export function finishRoomEditClose() {
   if (roomEdit.mode === 'closing') roomEdit.mode = 'hidden';
 }
+
+/* ── Zentrale Klimasteuerung: Long-Press auf die Klima-Pille ──
+   Dieselbe Zustandsmaschine, eigener Stack-Slot. Die Shells müssen nur wissen,
+   OB das Overlay offen ist, um den lazy geladenen Editor zu rendern; die
+   Konfigurationsoberfläche mit Gerätekatalog liegt in
+   `climate-central-config.svelte.ts`. Wohnt hier statt in einem eigenen Modul,
+   weil die Pille im Startpfad beider Shells liegt und der sonst einen Chunk
+   mehr lädt (ADR-029). */
+export const centralClimateEdit = $state({
+  mode: 'hidden' as 'hidden' | 'open' | 'closing',
+});
+
+export function openCentralClimateEdit(): void {
+  centralClimateEdit.mode = 'open';
+}
+
+export function closeCentralClimateEdit(instant = false): void {
+  if (centralClimateEdit.mode === 'hidden' || centralClimateEdit.mode === 'closing') return;
+  centralClimateEdit.mode = instant ? 'hidden' : 'closing';
+}
+
+export function finishCentralClimateEditClose(): void {
+  if (centralClimateEdit.mode === 'closing') centralClimateEdit.mode = 'hidden';
+}

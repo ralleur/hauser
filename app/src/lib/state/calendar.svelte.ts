@@ -7,16 +7,34 @@ import {
 } from './calendar.ts';
 import { connection } from './connection.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 
 const CACHE_KEY = 'hmi:calendar-familie-cache';
 const SELECTION_KEY = 'hmi:calendar-selected';
 const REFRESH_MS = 5 * 60 * 1000;
 
-interface CalendarCache {
+interface CalendarSnapshot {
   sources: CalendarSource[];
   events: CalendarEvent[];
-  updatedAt: number;
 }
+
+function isCalendarSnapshot(value: unknown): value is CalendarSnapshot {
+  const candidate = value as Partial<CalendarSnapshot> | null;
+  return Array.isArray(candidate?.sources) && Array.isArray(candidate?.events);
+}
+
+const snapshot = createSnapshotStore<CalendarSnapshot>({
+  key: CACHE_KEY,
+  maxAgeMs: REFRESH_MS,
+  validate: isCalendarSnapshot,
+  migrateLegacy: (raw) => {
+    const legacy = raw as (CalendarSnapshot & { updatedAt?: number }) | null;
+    return isCalendarSnapshot(legacy) && Number.isFinite(legacy.updatedAt)
+      ? { v: 1, updatedAt: legacy.updatedAt as number, value: { sources: legacy.sources, events: legacy.events } }
+      : null;
+  },
+});
 
 export const familyCalendar = $state({
   sources: [] as CalendarSource[],
@@ -44,6 +62,7 @@ export function initFamilyCalendar(): void {
   restoreCache();
   void refreshFamilyCalendar();
   refreshTimer = setInterval(() => void refreshFamilyCalendar(), REFRESH_MS);
+  registerRevalidation({ name: 'calendar', isStale: () => snapshot.isStale(), revalidate: refreshFamilyCalendar });
 }
 
 export async function refreshFamilyCalendar(): Promise<void> {
@@ -123,31 +142,18 @@ async function refresh(): Promise<void> {
 }
 
 function restoreCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null') as CalendarCache | null;
-    // Alte Cache-Form (einzelnes `source`-Feld) fällt hier durch und wird beim
-    // nächsten erfolgreichen Refresh überschrieben.
-    if (!Array.isArray(parsed?.sources) || !Array.isArray(parsed.events) || !Number.isFinite(parsed.updatedAt)) return;
-    familyCalendar.sources = parsed.sources;
-    familyCalendar.events = parsed.events;
-    familyCalendar.updatedAt = parsed.updatedAt;
-  } catch { /* Cache ist best-effort. */ }
+  const restored = snapshot.restoreSync();
+  if (!restored) return;
+  familyCalendar.sources = restored.value.sources;
+  familyCalendar.events = restored.value.events;
+  familyCalendar.updatedAt = restored.updatedAt;
 }
 
 function saveCache(): void {
-  if (typeof localStorage === 'undefined' || !familyCalendar.sources.length) return;
-  try {
-    const value: CalendarCache = {
-      sources: familyCalendar.sources,
-      events: familyCalendar.events,
-      updatedAt: familyCalendar.updatedAt,
-    };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(value));
-  } catch { /* Storage blockiert/voll: Live-Daten funktionieren weiter. */ }
+  if (!familyCalendar.sources.length) return;
+  void snapshot.save({ sources: familyCalendar.sources, events: familyCalendar.events }, familyCalendar.updatedAt);
 }
 
 function clearCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
+  void snapshot.clear();
 }

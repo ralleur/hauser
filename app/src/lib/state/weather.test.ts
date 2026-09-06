@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyTrend, parseOutdoor, openMeteoUrl, COLOGNE } from './weather.ts';
+import { classifyTrend, parseOutdoor, openMeteoUrl, DEMO_COORDS } from './weather.ts';
 
 describe('classifyTrend', () => {
   it('meldet steigend/fallend jenseits des Totbands', () => {
@@ -64,9 +64,9 @@ describe('parseOutdoor', () => {
 
 describe('openMeteoUrl', () => {
   it('nutzt feste Köln-Koordinaten und fordert Wettercode, Niederschlag und Wind mit an', () => {
-    const url = openMeteoUrl();
-    expect(url).toContain(`latitude=${COLOGNE.latitude}`);
-    expect(url).toContain(`longitude=${COLOGNE.longitude}`);
+    const url = openMeteoUrl(DEMO_COORDS);
+    expect(url).toContain(`latitude=${DEMO_COORDS.latitude}`);
+    expect(url).toContain(`longitude=${DEMO_COORDS.longitude}`);
     expect(url).toContain('current=temperature_2m%2Cweather_code%2Cprecipitation%2Cwind_speed_10m');
   });
 });

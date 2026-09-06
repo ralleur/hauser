@@ -5,10 +5,12 @@
   import { centralClimate } from '../../state/climate-central.svelte.ts';
   import {
     shouldConfirmHomeOff,
+    switchableHomeEntityIds,
     toggleVacationMode,
     turnOffHomeExceptBedroom,
     vacationModeActive,
   } from '../../state/commands.ts';
+  import { offerUndo } from '../../state/undo.svelte.ts';
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
   import { m } from '../../../paraglide/messages.js';
 
@@ -17,17 +19,24 @@
   const vacationActive = $derived(vacationModeActive());
   const settingsLoader = createPhoneSettingsLoader();
 
+  /* Der Befehl geht sofort raus; der Rückgängig-Streifen hält fünf Sekunden
+     lang den Weg zurück offen (Paket 6). Die Rückfrage vor der eingestellten
+     Uhrzeit bleibt — sie ist eine bewusste Sperre, kein Bestätigungsritual. */
+  function homeOffWithUndo(): void {
+    offerUndo({ kind: 'all-off' }, switchableHomeEntityIds(), turnOffHomeExceptBedroom);
+  }
+
   function finishHomeOff(confirmBefore: string | null): void {
     if (shouldConfirmHomeOff(new Date(), confirmBefore)
       && !window.confirm(m.phone_off_confirm())) return;
-    turnOffHomeExceptBedroom();
+    homeOffWithUndo();
   }
 
   function onHomeOff(): void {
     void settingsLoader.load('settings', ({ settingsValues }) => {
       finishHomeOff(settingsValues.offConfirmBefore);
     }).catch(() => {
-      if (window.confirm(m.phone_off_confirm_nocfg())) turnOffHomeExceptBedroom();
+      if (window.confirm(m.phone_off_confirm_nocfg())) homeOffWithUndo();
     });
   }
 </script>
@@ -41,7 +50,8 @@
     </button>
     <ClimatePill label={m.phone_climate_central()}
                  coolerLabel={m.phone_climate_colder()}
-                 warmerLabel={m.phone_climate_warmer()} />
+                 warmerLabel={m.phone_climate_warmer()}
+                 {online} />
     <button class="phone-quick-action is-vacation pressable" class:is-active={vacationActive}
             type="button" disabled={!online} aria-pressed={vacationActive}
             aria-label={vacationActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()}

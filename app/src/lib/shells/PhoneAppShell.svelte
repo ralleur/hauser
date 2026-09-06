@@ -6,25 +6,29 @@
   import '../../styles/phone-shell.css';
   import '../../styles/demo.css';
   import { onMount, tick, type Component } from 'svelte';
-  import { cubicInOut, cubicOut } from 'svelte/easing';
+  import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
+  import { slideFade, tokenDuration } from '../motion/index.ts';
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomTemperature, roomWindowOpen } from '../state/commands.ts';
-  import { connection } from '../state/connection.svelte.ts';
+  import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
     projectPhoneRooms,
     reconcilePhoneRoomLayer,
+    resolvePhoneHero,
     validPhoneRoom,
+    type PhoneHeroVariant,
     type PhoneRoomLayer,
     type PhoneRoomSummary,
   } from '../state/phone-home.ts';
   import { endTransition, nav, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
-  import { navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
-  import { closeRoomEdit, roomEdit } from '../state/overlay.svelte.ts';
-  import { centralClimateEdit, closeCentralClimateEdit } from '../state/central-climate-overlay.svelte.ts';
+  import { mediaAreaLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
+  import {
+    centralClimateEdit, closeCentralClimateEdit, closeRoomEdit, roomEdit,
+  } from '../state/overlay.svelte.ts';
   import {
     createPhoneModalLifecycle,
     createPhoneLayerController,
@@ -36,7 +40,10 @@
     type PhoneLayerController,
   } from '../state/phone-navigation.svelte.ts';
   import { createLatestPhoneLoader, createPhoneLayerLoader, createPhoneSystemLoader } from '../state/phone-lazy-loader.ts';
+  import { whenIdle } from '../state/idle-prewarm.ts';
   import { shellLifecycle } from '../state/shell-lifecycle-instance.ts';
+  import { undoOffer } from '../state/undo.svelte.ts';
+  import { clockZoom, diagnostics } from '../state/hidden-gestures.svelte.ts';
 
   import { m } from '../../paraglide/messages.js';
   const conn = $derived(connection());
@@ -44,12 +51,18 @@
   const systemActive = $derived(target.area === 'more' && target.subtarget === 'system');
   const activeTarget = $derived(navTargetForScreen(nav.screen));
   const activeMain = $derived(phoneNavOrder.order.slice(0, 3).includes(activeTarget) ? activeTarget : 'more');
+  /* Eine Benennung für Panel und Phone (Paket 3, docs/20): Jeder Bereich
+     heißt hier wie sein Tab im gemeinsamen Nav-Katalog — kein zweiter Satz
+     Namen, der in anderen Sprachen ohnehin fehlen würde. */
   const targetName = $derived(
     target.area === 'media'
-      ? `Medien · ${target.subtarget === 'audio' ? 'Raum-Audio' : 'Bibliothek'}`
+      ? (target.subtarget === 'audio' ? m.nav_media() : m.nav_library())
       : target.area === 'more'
-        ? `Mehr · ${{ energy: 'Energie', shopping: 'Einkaufsliste', reminders: 'Erinnerungen', ablage: 'Ablage', system: 'System' }[target.subtarget]}`
-        : target.area === 'calendar' ? 'Kalender' : 'Home',
+        ? {
+            energy: m.nav_energy(), shopping: m.nav_shopping(), reminders: m.nav_reminders(),
+            ablage: m.nav_files(), system: m.nav_system(),
+          }[target.subtarget]
+        : target.area === 'calendar' ? m.nav_calendar() : m.nav_home(),
   );
   const roomSummaries = $derived(projectPhoneRooms(appState.rooms, {
     temperature: roomTemperature,
@@ -94,6 +107,31 @@
   let PhoneScreenComponent = $state<Component<any> | null>(null);
   let phoneScreenFailed = $state(false);
   let SceneEditComponent = $state<Component<any> | null>(null);
+  /* Rückgängig-Streifen (Paket 6): erst laden, wenn es etwas zurückzunehmen
+     gibt — der Startpfad bleibt unberührt. */
+  let UndoToastComponent = $state<Component<any> | null>(null);
+  /* Versteckte Gesten (Paket 10): beide Ansichten kommen erst, wenn die Geste
+     sie ruft — der Startpfad kennt nur die zwei Schalter. */
+  let ClockZoomComponent = $state<Component<any> | null>(null);
+  let DiagnosticsComponent = $state<Component<any> | null>(null);
+  $effect(() => {
+    if (!clockZoom.active || ClockZoomComponent) return;
+    void import('../components/ClockZoom.svelte')
+      .then((loaded) => { ClockZoomComponent = loaded.default; })
+      .catch(() => { /* versteckte Geste: ein Fehlschlag bleibt folgenlos */ });
+  });
+  $effect(() => {
+    if (!diagnostics.active || DiagnosticsComponent) return;
+    void import('../components/DiagnosticsOverlay.svelte')
+      .then((loaded) => { DiagnosticsComponent = loaded.default; })
+      .catch(() => { /* versteckte Geste: ein Fehlschlag bleibt folgenlos */ });
+  });
+  $effect(() => {
+    if (!undoOffer.active || UndoToastComponent) return;
+    void import('../components/UndoToast.svelte')
+      .then((loaded) => { UndoToastComponent = loaded.default; })
+      .catch(() => { /* ohne Streifen bleibt der Eingriff trotzdem gefahren */ });
+  });
   const activePhoneScreenId = $derived.by<PhoneScreenFeatureId | null>(() => {
     if (target.area === 'calendar') return 'calendar';
     if (target.area === 'media') {
@@ -147,42 +185,21 @@
     if (moreLoadFailed) ensureMoreSheet();
   }
 
-  function tokenValue(node: Element, token: string): string {
-    return getComputedStyle(node).getPropertyValue(token).trim();
-  }
-
-  function tokenDuration(node: Element, token: string): number {
-    const value = tokenValue(node, token);
-    if (value.endsWith('ms')) return Number.parseFloat(value) || 0;
-    if (value.endsWith('s')) return (Number.parseFloat(value) || 0) * 1000;
-    return 0;
-  }
-
   let phoneScreenDirection = $state<1 | -1>(1);
 
+  /* Screenwechsel: Fade plus Versatz in Wischrichtung aus dem Motion-System;
+     der alte Screen weicht in dieselbe Richtung (negierter Versatz). */
   function phoneScreenEnter(node: Element): TransitionConfig {
-    const direction = phoneScreenDirection;
-    const shift = Number.parseFloat(tokenValue(node, '--space-6')) || 0;
-    return {
-      duration: tokenDuration(node, '--duration-slow'),
-      easing: cubicInOut,
-      css: (t, u) => `opacity:${t};transform:translate3d(${direction * u * shift}px,0,0)`,
-    };
+    return slideFade(node, { direction: phoneScreenDirection });
   }
 
   function phoneScreenExit(node: Element): TransitionConfig {
-    const direction = phoneScreenDirection;
-    const shift = Number.parseFloat(tokenValue(node, '--space-6')) || 0;
-    return {
-      duration: tokenDuration(node, '--duration-slow'),
-      easing: cubicInOut,
-      css: (t, u) => `opacity:${t};transform:translate3d(${-direction * u * shift}px,0,0)`,
-    };
+    return slideFade(node, { direction: -phoneScreenDirection });
   }
 
   function phoneContentTransition(node: Element): TransitionConfig {
     return {
-      duration: tokenDuration(node, '--duration-normal'),
+      duration: tokenDuration(node, 'normal'),
       easing: cubicOut,
       css: (t) => `opacity:${t}`,
     };
@@ -348,6 +365,22 @@
     appState.currentRoom = room.id;
     focusTrigger = trigger;
     openLayer('room');
+    preloadNeighbourHeroes(room.id);
+  }
+
+  /* Paket 5 (docs/20): Nach dem Antippen liegen die Hero-Bilder der beiden
+     Nachbarräume im Cache — die nächste Kachel öffnet ohne Ladepause. */
+  function preloadNeighbourHeroes(roomId: string): void {
+    const variant: PhoneHeroVariant = appState.heroSun
+      ? (appState.heroSun.day ? 'light' : 'dark')
+      : appState.theme;
+    void import('../components/hero-preload.ts').then(async ({ neighbourRoomIds, preloadHeroes }) => {
+      const { roomHeroConfig } = await import('../state/room-hero-config.svelte.ts');
+      const ids = neighbourRoomIds(appState.rooms.map((room) => room.id), roomId);
+      preloadHeroes(ids.map((id) => resolvePhoneHero(
+        import.meta.env.BASE_URL, id, variant, roomHeroConfig(id),
+      )));
+    }).catch(() => { /* ohne Vorladen weiter */ });
   }
 
   function selectMain(target: PhoneNavTarget | 'more', trigger: HTMLButtonElement) {
@@ -397,8 +430,16 @@
     };
     layer = createPhoneLayerController(browser, handleLayerChange);
     const unregister = shellLifecycle.register(() => layer?.destroy());
+    /* Paket 5 (docs/20): Bibliothek und Notizen kommen nach dem Home-Screen am
+       häufigsten dran. Im Leerlauf — also nach dem ersten Bild — liegen ihre
+       Chunks samt Snapshot bereit, der Tabwechsel zeigt dann kein Skelett. */
+    const cancelPrewarm = whenIdle(() => {
+      void phoneScreenLoader.loadValue('library').catch(() => {});
+      void phoneScreenLoader.loadValue('calendar').catch(() => {});
+    });
     return () => {
       window.removeEventListener('hauser:scene-edit-open', handleSceneEditOpen);
+      cancelPrewarm();
       unregister();
       clearTimeout(modalReleaseTimer);
       phoneLayerLoader.cancel();
@@ -443,14 +484,17 @@
     <div class={`${kind}-sheet`} role="dialog" aria-modal="true" aria-label={label}>
       <p role="alert">{m.shell_load_failed()}</p>
       <button class="secondary-btn pressable" type="button" onclick={retry}>Erneut versuchen</button>
-      <button class="secondary-btn pressable" type="button" onclick={close}>Schließen</button>
+      <button class="secondary-btn pressable" type="button" onclick={close}>{m.common_close()}</button>
     </div>
   </div>
 {/snippet}
 
-<div class="phone-shell" data-shell="phone" class:is-disconnected={conn.disconnected} class:has-connection-banner={conn.banner !== null}>
+<div class="phone-shell" data-shell="phone" class:is-disconnected={conn.banner !== null} class:has-connection-banner={conn.banner !== null}>
   <div class="phone-conn-banner" class:is-visible={conn.banner !== null} role="status" aria-live="polite">
     <span class="dot {conn.dot}"></span>{conn.banner ?? ''}
+    {#if conn.banner !== null}
+      <button class="phone-conn-retry" type="button" onclick={retryConnection}>{m.conn_retry()}</button>
+    {/if}
   </div>
   <div class="phone-content-frame">
     {#key nav.screen}
@@ -461,9 +505,9 @@
           {#if target.area === 'media'}
             <div class="phone-media-area">
               {#if nav.screen !== 'library-detail'}
-                <nav class="phone-media-switcher" aria-label="Medienbereich">
-                  {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => navigatePhoneScreen('media')}>Audio</button>{/if}
-                  {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => navigatePhoneScreen('library')}>Bibliothek</button>{/if}
+                <nav class="phone-media-switcher" aria-label={mediaAreaLabel()}>
+                  {#if hasMediaScreen}<button class="pressable" class:is-active={target.subtarget === 'audio'} type="button" aria-current={target.subtarget === 'audio' ? 'page' : undefined} onclick={() => navigatePhoneScreen('media')}>{m.nav_media()}</button>{/if}
+                  {#if hasLibraryScreen}<button class="pressable" class:is-active={target.subtarget === 'library'} type="button" aria-current={target.subtarget === 'library' ? 'page' : undefined} onclick={() => navigatePhoneScreen('library')}>{m.nav_library()}</button>{/if}
                 </nav>
               {/if}
               {@render phoneScreenState()}
@@ -480,7 +524,7 @@
             <main class="phone-skeleton" aria-labelledby="phone-target-title">
               <section>
                 <p class="phone-skeleton-label">Phone</p>
-                <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">System</h1>
+                <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{m.nav_system()}</h1>
                 {#if systemLoadFailed}
                   <p role="alert">{m.shell_load_failed()}</p>
                   <button class="secondary-btn pressable" type="button" onclick={ensureSystemScreen}>Erneut versuchen</button>
@@ -589,4 +633,7 @@
   {#if !roomOpen && featureStylesReady && SceneEditComponent}
     <SceneEditComponent />
   {/if}
+  {#if UndoToastComponent}<UndoToastComponent />{/if}
+{#if ClockZoomComponent && clockZoom.active}<ClockZoomComponent />{/if}
+{#if DiagnosticsComponent && diagnostics.active}<DiagnosticsComponent />{/if}
 </div>

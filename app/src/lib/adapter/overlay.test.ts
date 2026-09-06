@@ -4,7 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  mergedValue, applyIntent, reconcile, markTimeouts, COMMAND_TIMEOUT_MS,
+  mergedValue, applyIntent, reconcile, markTimeouts, markUnconfirmed,
+  COMMAND_TIMEOUT_MS, CONFIDENCE_TIMEOUT_MS,
   subsetMatch, mergePatch,
 } from './overlay.ts';
 import type { EntityState, Intent } from './types.ts';
@@ -127,6 +128,38 @@ describe('Timeout-Handling (docs/02: kein Dauer-Spinner, kein Auto-Retry)', () =
   it('späte Antwort nach Timeout reconciled normal (Timer cancel)', () => {
     const after = markTimeouts(sent, T0 + COMMAND_TIMEOUT_MS);
     const { intents, outcome } = reconcile(after, { entityId: 'light.a', value: true });
+    expect(outcome).toBe('confirmed');
+    expect(intents.find((i) => i.entityId === 'light.a')).toBeUndefined();
+  });
+});
+
+describe('Konfidenz-Timer (Paket 6: ein Puls, wenn das Echo ausbleibt)', () => {
+  const sent: Intent<boolean>[] = [
+    { entityId: 'light.a', value: true, sentAt: T0, status: 'inflight' },
+    { entityId: 'light.b', value: false, sentAt: T0 + 800, status: 'inflight' },
+  ];
+
+  it('nach 1 s ohne Echo wird der Intent unconfirmed — der Wert bleibt stehen', () => {
+    const after = markUnconfirmed(sent, T0 + CONFIDENCE_TIMEOUT_MS);
+    expect(after[0].status).toBe('unconfirmed');
+    expect(after[1].status).toBe('inflight'); // erst 200 ms alt
+    expect(mergedValue(server(false), after[0])).toBe(true);
+  });
+
+  it('vor der Schwelle bleibt alles inflight', () => {
+    const after = markUnconfirmed(sent, T0 + CONFIDENCE_TIMEOUT_MS - 1);
+    expect(after.every((i) => i.status === 'inflight')).toBe(true);
+  });
+
+  it('der 5-s-Rücksprung nach Vertrag greift auch aus unconfirmed heraus', () => {
+    const unconfirmed = markUnconfirmed(sent, T0 + CONFIDENCE_TIMEOUT_MS);
+    const after = markTimeouts(unconfirmed, T0 + COMMAND_TIMEOUT_MS);
+    expect(after[0].status).toBe('pending');
+  });
+
+  it('ein bestätigtes Echo räumt den Intent, egal ob unconfirmed', () => {
+    const unconfirmed = markUnconfirmed(sent, T0 + CONFIDENCE_TIMEOUT_MS);
+    const { outcome, intents } = reconcile(unconfirmed, { entityId: 'light.a', value: true });
     expect(outcome).toBe('confirmed');
     expect(intents.find((i) => i.entityId === 'light.a')).toBeUndefined();
   });

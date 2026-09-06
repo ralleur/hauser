@@ -54,7 +54,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.7.0` is current. The first installation by
+normal installation path; `v0.8.0` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -125,11 +125,11 @@ configured live service are not the same thing:
 | **Jellyfin** | Implemented. A dedicated REST client handles authentication, shelves, browse and detail data; playback uses PlaybackInfo, HLS and progress reporting. | Curated simulated library data; no connection to a live Jellyfin server. |
 | **Calendar** | Implemented through Home Assistant, not as a separate calendar backend. Hauser discovers `calendar.*` entities and reads events with HA's `calendar/list` WebSocket command. The settings UI can also start HA's iCloud/CalDAV config flow. | Curated simulated events. |
 | **Reminders** | Implemented by the optional companion server as central household data. Selected HA `todo.*` lists can additionally be merged through WebSocket. | Curated simulated data. |
-| **Shopping** | A local server-side bridge keeps the HMI and a shared Notion shopping page in sync without exposing the Notion token to the browser. | Curated simulated data; no Notion connection. |
+| **Shopping** | Every shop is a Home Assistant `todo.*` list, read with `todo/item/list` and written with the `todo.*` services; the settings screen can create one. A shared Notion page is the optional alternative, handled server-side. | Curated simulated data; no live connection. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
 | **OpenStreetMap / Overpass** | Optional and off by default. When a location is configured, the server queries a public Overpass endpoint once and renders a monochrome road SVG for the standby background. Map data © OpenStreetMap contributors, ODbL. | Not connected; the demo ships no generated map. |
 | **OpenAI** | Optional and inert until you supply your own access, either an API key or a signed-in ChatGPT account. Used by the room-image wizard only: the photo you pick is sent to the images endpoint to be redrawn. No other feature calls it, and the key stays server-side. | Deliberately omitted; the demo ships the bundled illustrations and never calls a paid provider. |
-| **Notion** | Optional private integration for the shared shopping list only. Reminders do not depend on Notion. | Not connected; shopping uses fixtures. |
+| **Notion** | Optional alternative source for the shopping list. Needs an integration token and the page address; both stay server-side. Reminders never depend on Notion. | Not connected; shopping uses fixtures. |
 
 ## Screenshots
 
@@ -216,7 +216,7 @@ Wall panel (kiosk tablet)            Phone (home-screen PWA)
   · household config, validated      library, playback
   · Home Assistant gateway
   · room-image store, map renderer
-  · Paperless / Notion bridges
+  · Paperless / Notion bridges (optional)
         │
         ▼
   Home Assistant  ←── or straight from the browser (Compose, `direct`)
@@ -238,11 +238,11 @@ active.
 
 The server (`app/server.mjs`) also holds the validated household configuration,
 the room-image store, the standby map renderer, centrally stored reminders, the
-same-origin proxy for the local Notion shopping bridge and the PIN-gated
-Paperless-ngx bridge. Integration credentials stay server-side and are never
-shipped to the browser. In Compose deployments the optional bridges can be left
-unconfigured; rooms, lights, climate, calendar, media and energy work without
-them. The public demo has no Notion dependency.
+optional Notion shopping source and the PIN-gated Paperless-ngx bridge.
+Integration credentials stay server-side and are never shipped to the browser.
+In Compose deployments the optional bridges can be left unconfigured; rooms,
+lights, climate, calendar, media, energy and the Home Assistant shopping lists
+work without them. The public demo has no Notion dependency.
 
 ## Installation
 
@@ -300,9 +300,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.7.0` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.8.0` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.7.0` tag, which the Home Assistant Supervisor
+publish the plain `0.8.0` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

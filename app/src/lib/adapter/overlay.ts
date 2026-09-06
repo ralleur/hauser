@@ -7,6 +7,11 @@
 import type { EntityState, Intent, ReconcileOutcome } from './types.ts';
 
 export const COMMAND_TIMEOUT_MS = 5000; // docs/02 Timeout-Schwelle
+/* Konfidenz-Schwelle (Paket 6): bleibt das State-Echo eine Sekunde aus, zeigt
+   das Control mit einem einzelnen Puls, dass der Befehl noch unterwegs ist.
+   Der Vertrag bleibt unberührt — erst bei COMMAND_TIMEOUT_MS kommt der
+   „pending"-Dot. */
+export const CONFIDENCE_TIMEOUT_MS = 1000;
 
 /* Flache Objekt-Gleichheit für die Reconciliation der Entity-Values
    (LightValue/ClimateValue): confirmed nur, wenn alle Felder übereinstimmen. */
@@ -86,6 +91,21 @@ export function reconcile<V>(
   };
 }
 
+/* Konfidenz-Übergang (Paket 6): nach 1 s ohne Echo bleibt der Intent
+   unangetastet, bekommt aber den Zwischenstatus „unconfirmed" — das Control
+   pulsiert daraufhin genau einmal. */
+export function markUnconfirmed<V>(
+  intents: readonly Intent<V>[],
+  now: number,
+  confidenceMs: number = CONFIDENCE_TIMEOUT_MS,
+): Intent<V>[] {
+  return intents.map((i) => (
+    i.status === 'inflight' && now - i.sentAt >= confidenceMs
+      ? { ...i, status: 'unconfirmed' as const }
+      : i
+  ));
+}
+
 /* Timeout-Übergang (docs/02): nach 5 s wird der Intent NICHT verworfen —
    der State bleibt optimistisch sichtbar, das Control zeigt den
    „pending"-Dot. Kein automatischer Retry; der User entscheidet durch
@@ -96,7 +116,7 @@ export function markTimeouts<V>(
   timeoutMs: number = COMMAND_TIMEOUT_MS,
 ): Intent<V>[] {
   return intents.map((i) => (
-    i.status === 'inflight' && now - i.sentAt >= timeoutMs
+    i.status !== 'pending' && now - i.sentAt >= timeoutMs
       ? { ...i, status: 'pending' as const }
       : i
   ));

@@ -50,7 +50,7 @@ const DEFAULTS: Record<RoomMetric, boolean> = { temperature: true, humidity: fal
 function slug(value: string): string {
   return value
     .toLowerCase()
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss') // i18n-ignore: Transliteration, keine Anzeige
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 }

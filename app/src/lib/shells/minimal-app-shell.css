@@ -60,6 +60,37 @@
   font-size: var(--text-sm);
 }
 
+.minimal-shell__recovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 720px;
+  margin-top: var(--space-6);
+}
+
+.minimal-shell__cause {
+  flex: 1 1 260px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.minimal-shell__reload {
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  background: var(--color-surface-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.minimal-shell__reload:focus-visible { outline: 2px solid var(--color-accent-cool); outline-offset: 2px; }
+
 .minimal-shell__nav {
   display: flex;
   align-items: stretch;

@@ -41,7 +41,7 @@ export function projectRoomImageCrop(
   controls: CropControls,
 ): CropProjection {
   if (!Number.isInteger(imageWidth) || !Number.isInteger(imageHeight) || imageWidth <= 0 || imageHeight <= 0) {
-    throw new Error('Ungültige Bildabmessungen.');
+    throw new Error(m.rimg_err_crop_dimensions());
   }
 
   const zoom = clamp(controls.zoom, 1, 3);

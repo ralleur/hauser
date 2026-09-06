@@ -269,6 +269,26 @@ async function assertProviderPng(input: Uint8Array): Promise<void> {
   assertDimensions(metadata.width, metadata.height);
 }
 
+/* ── Trübe Variante (Paket 13) ──
+   Sie entsteht nicht aus dem Quellfoto, sondern aus dem fertigen Tagbild des
+   Bildsets — und das liegt als AVIF vor. Ansonsten gilt exakt dasselbe wie
+   für den Weg vom Quellfoto: Alpha weg, sRGB, Zielmaß, JPEG für den Anbieter. */
+export async function finalAvifToProviderJpeg(finalVariant: Uint8Array): Promise<Uint8Array> {
+  const metadata = await decoder(finalVariant).metadata();
+  assertFormat(metadata, 'avif');
+  assertSingleFrame(metadata);
+  assertDimensions(metadata.width, metadata.height);
+
+  return jpegOutput(
+    stripAlphaAndConvertToSrgb(decoder(finalVariant))
+      .resize(ROOM_IMAGE_TRANSFORM_POLICY_V1.target.width, ROOM_IMAGE_TRANSFORM_POLICY_V1.target.height, {
+        fit: ROOM_IMAGE_TRANSFORM_POLICY_V1.resize.providerFit,
+        position: ROOM_IMAGE_TRANSFORM_POLICY_V1.resize.providerPosition,
+        kernel: sharp.kernel.lanczos3,
+      }),
+  ).toBuffer();
+}
+
 export async function providerPngToProviderJpeg(input: Uint8Array): Promise<Uint8Array> {
   await assertProviderPng(input);
   return jpegOutput(providerOutputGeometry(input)).toBuffer();

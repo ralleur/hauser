@@ -50,7 +50,12 @@ export async function changeLocale(
   if (next === localeState.current) return;
   await setLocale(next, { reload: false });
   localeState.current = next;
-  if (typeof document !== 'undefined') document.documentElement.lang = next;
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = next;
+    /* Uhr, Datum und andere Intl-Anzeigen sollen sofort umspringen, nicht erst
+       beim nächsten Tick — sie lauschen auf dieses Ereignis. */
+    document.dispatchEvent(new CustomEvent('hmi:locale-changed', { detail: { locale: next } }));
+  }
 
   // Im First-Run-Wizard existiert der produktive App-State noch nicht. Die
   // Sprachwahl muss dort persistieren, ohne ihn vor dem Config-Bootstrap zu laden.
@@ -70,13 +75,41 @@ export function initLocale(): void {
 }
 
 /* Für Intl-Formatierer: Datum, Uhrzeit und Zahlen folgen der Oberfläche.
-   Ohne das bliebe die Uhr deutsch, obwohl die Texte übersetzt sind. */
+   Ohne das bliebe die Uhr deutsch, obwohl die Texte übersetzt sind.
+
+   Die Region kommt vom Gerät: Wer Englisch wählt und ein US-Gerät hat, sieht
+   „Wednesday, September 2“ und die 12-Stunden-Uhr, mit einem britischen
+   Gerät „Wednesday 2 September“. Passt keine Gerätesprache zur gewählten
+   Sprache, gilt die Vorgabe je Sprache. */
 const INTL_TAGS: Readonly<Record<string, string>> = {
   de: 'de-DE', en: 'en-GB', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT', pl: 'pl-PL',
 };
 
+/** Wählt das Intl-Tag zur Oberflächensprache; `candidates` sind die
+    Gerätesprachen in Präferenzreihenfolge (`navigator.languages`). */
+export function resolveIntlTag(locale: string, candidates: readonly string[] = []): string {
+  const fallback = INTL_TAGS[locale] ?? 'de-DE';
+  for (const candidate of candidates) {
+    const [language, region] = String(candidate).split(/[-_]/);
+    if (!region || language.toLowerCase() !== locale.toLowerCase()) continue;
+    try {
+      return Intl.DateTimeFormat.supportedLocalesOf([candidate])[0] ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function deviceLanguages(): readonly string[] {
+  /* Nur im Browser: Node kennt seit v21 ebenfalls `navigator`, dort sollen
+     Tests aber die Vorgabe je Sprache sehen. */
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return [];
+  try { return navigator.languages?.length ? navigator.languages : (navigator.language ? [navigator.language] : []); } catch { return []; }
+}
+
 export function intlLocale(): string {
-  return INTL_TAGS[readLocale()] ?? 'de-DE';
+  return resolveIntlTag(readLocale(), deviceLanguages());
 }
 
 /* Pluralkategorie der aktiven Sprache. Das Katalogformat kennt keine

@@ -3,7 +3,7 @@
   import { appState } from '../state/app.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { DEFAULT_LAYOUT_CONFIG, panelSizeOf, widthPreset } from '../state/layout-config.ts';
-  import { slider } from '../actions/slider.ts';
+  import TickScale from './TickScale.svelte';
   import { tick } from 'svelte';
 
   let dialog = $state<HTMLElement>();
@@ -13,11 +13,6 @@
      verstellt: die Vorschau läuft links im Panel, nicht im Dialog selbst. */
   const panelWidth = $derived(widthPreset(layoutManager.draft, layoutManager.scope).totalPercent);
   const scopeLabel = $derived(layoutManager.scope === 'energy' ? m.nav_energy() : m.nav_home());
-  const roomsSliderValue = $derived((layoutManager.draft.roomsPerRow - 1) / 3 * 100);
-
-  function setRoomsFromSlider(value: number): void {
-    layoutManager.setRoomsPerRow(1 + Math.round(value * 3 / 100));
-  }
 
   $effect(() => {
     if (layoutManager.open && !wasOpen) {
@@ -92,16 +87,14 @@
               <button class="text-btn pressable" type="button"
                       onclick={() => layoutManager.setPanelSize(DEFAULT_LAYOUT_CONFIG.panelSize)}>{m.layout_default()}</button>
             </div>
-            <div class="slider" role="slider" tabindex="0" aria-label={m.layout_size_aria()}
-                 aria-valuemin="28" aria-valuemax="68" aria-valuenow={Math.round(panelWidth)}
-                 use:slider={{
-                   value: panelSizeOf(layoutManager.draft, layoutManager.scope),
-                   onChange: (value) => layoutManager.setPanelSize(value),
-                   format: (value) => `${Math.round(28 + value * 0.4)}%`,
-                 }}>
-              <div class="slider-track"><div class="slider-fill"></div></div>
-              <div class="slider-thumb"></div>
-            </div>
+            <!-- Dieselbe Leiter wie am Lichtdimmer, nur liegend: Der Regler
+                 zeigt seine Schritte, statt sie hinter einem Knopf zu
+                 verstecken (Owner-Wunsch 2026-09-06). -->
+            <TickScale ariaLabel={m.layout_size_aria()} orientation="horizontal" mode="fill"
+                       value={panelSizeOf(layoutManager.draft, layoutManager.scope)}
+                       min={0} max={100} step={1} keyStep={5}
+                       onInput={(value) => layoutManager.setPanelSize(value)}
+                       format={() => `${Math.round(panelWidth)}%`} />
           </div>
 
           <div class="layout-slider-setting">
@@ -110,16 +103,13 @@
               <button class="text-btn pressable" type="button"
                       onclick={() => layoutManager.setRoomsPerRow(DEFAULT_LAYOUT_CONFIG.roomsPerRow)}>{m.layout_default()}</button>
             </div>
-            <div class="slider" role="slider" tabindex="0" aria-label={m.layout_rooms_per_row()}
-                 aria-valuemin="1" aria-valuemax="4" aria-valuenow={layoutManager.draft.roomsPerRow}
-                 use:slider={{
-                   value: roomsSliderValue,
-                   onChange: setRoomsFromSlider,
-                   format: (value) => String(1 + Math.round(value * 3 / 100)),
-                 }}>
-              <div class="slider-track"><div class="slider-fill"></div></div>
-              <div class="slider-thumb"></div>
-            </div>
+            <!-- Vier Werte, vier Sprossen: Hier fällt die Leiter mit den
+                 möglichen Werten zusammen, und man sieht sofort, wo man steht. -->
+            <TickScale ariaLabel={m.layout_rooms_per_row()} orientation="horizontal" mode="fill"
+                       value={layoutManager.draft.roomsPerRow}
+                       min={1} max={4} step={1} keyStep={1} tickCount={4}
+                       onInput={(value) => layoutManager.setRoomsPerRow(Math.round(value))}
+                       format={(value) => String(Math.round(value))} />
           </div>
       </div>
 

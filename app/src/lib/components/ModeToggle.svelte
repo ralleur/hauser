@@ -7,11 +7,12 @@
      Beim Umschalten läuft eine Kreiswelle vom Knopf aus und darunter steht
      kurz, was jetzt gilt. Dieselbe Zeile erklärt den Weg hierher, wenn jemand
      im Bedienen-Modus wiederholt eine Konfiguration zu öffnen versucht. */
+  import { editMode, modeNotice, dismissNotice } from '../state/edit-mode.svelte.ts';
   import {
-    editMode, modeNotice, dismissNotice, setEditMode,
-    editModeNeedsPin, pinMatches, startAutoLock,
-  } from '../state/edit-mode.svelte.ts';
+    setEditMode, editModeNeedsPin, pinMatches, startAutoLock,
+  } from '../state/edit-mode-controls.ts';
   import { m } from '../../paraglide/messages.js';
+  import { roomImageActivity } from '../state/room-image-activity.svelte.ts';
 
   let button = $state<HTMLButtonElement>();
   let ripple = $state<{ x: number; y: number; seq: number } | null>(null);
@@ -20,6 +21,11 @@
   let pinWrong = $state(false);
 
   const label = $derived(editMode.active ? m.mode_edit() : m.mode_user());
+  /* Läuft im Hintergrund ein Raumbild-Auftrag, dreht sich dasselbe Zeichen und
+     sagt daneben knapp, woran gerade gearbeitet wird (Paket 13). */
+  const busyText = $derived(roomImageActivity.stage === 'set'
+    ? m.mode_busy_set()
+    : roomImageActivity.stage === 'regions' ? m.mode_busy_regions() : null);
   const action = $derived(editMode.active ? m.mode_switch_to_user() : m.mode_switch_to_edit());
   const noticeText = $derived.by(() => {
     if (modeNotice.kind === 'edit') return m.mode_announce_edit();
@@ -76,7 +82,7 @@
   <button bind:this={button} class="mode-toggle pressable" type="button"
           aria-pressed={!editMode.active} aria-label={action} title={`${label} · ${action}`}
           onclick={activate}>
-    <svg class="mode-toggle-mark" viewBox="0 0 24 24" aria-hidden="true">
+    <svg class="mode-toggle-mark" class:is-busy={busyText !== null} viewBox="0 0 24 24" aria-hidden="true">
       {#if editMode.active}
         <!-- Strahlen nur im Bearbeiten-Modus: der Zustand ist die Form. -->
         <g class="mode-toggle-rays">
@@ -88,6 +94,9 @@
     </svg>
   </button>
 
+  {#if busyText}
+    <span class="mode-busy" role="status" aria-live="polite">{busyText}</span>
+  {/if}
   {#if modeNotice.kind}
     {#key modeNotice.seq}
       <p class="mode-notice" class:is-warning={modeNotice.kind === 'locked'} role="status" aria-live="polite">

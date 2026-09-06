@@ -332,7 +332,7 @@ function stableDeviceId(entityId: string): string {
 
 function normalizeRoomId(area: string | null | undefined, roomIds: Set<string>): string | null {
   if (!area) return null;
-  const normalized = area.toLowerCase().replace('ü', 'ue').replace(/[^a-z0-9_-]+/g, '_');
+  const normalized = area.toLowerCase().replace('ü', 'ue').replace(/[^a-z0-9_-]+/g, '_'); // i18n-ignore: Transliteration, keine Anzeige
   if (roomIds.has(normalized)) return normalized;
   return [...roomIds].find((id) => id === area || id.toLowerCase() === area.toLowerCase()) ?? null;
 }

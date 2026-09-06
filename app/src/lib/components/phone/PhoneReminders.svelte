@@ -142,7 +142,7 @@
         {#each row.open as item (item.id)}
           <button class="rem-card pressable" type="button" style={postitStyle(personColorId(person))}
                   class:is-selected={popout?.id === item.id}
-                  aria-label="{reminderDisplayTitle(item.title, persons)} — Kontextmenü öffnen"
+                  aria-label={m.rem_context_menu({ title: reminderDisplayTitle(item.title, persons) })}
                   use:longpress={{ onLongPress: () => openPopoutCentered(item.id) }}
                   onclick={(e) => openPopout(e, item.id)}>
             <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>

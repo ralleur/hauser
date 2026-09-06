@@ -6,7 +6,7 @@
    Ohne WebSocket-/Framework-Bezug → per Unit-Test abgesichert (ha-entities.test).
    ============================================ */
 
-import type { CameraValue, LightValue, ClimateValue, MediaValue, SunValue, SensorValue, SwitchValue } from './types.ts';
+import type { CameraValue, LightValue, ClimateValue, MediaValue, PersonValue, SunValue, SensorValue, SwitchValue } from './types.ts';
 
 /* Roher HA-Entity-Zustand, wie ihn `subscribe_entities` transportiert. */
 export interface RawEntity {
@@ -200,7 +200,21 @@ export function haToMedia(raw: RawEntity, prevVolume?: number): MediaValue {
    Messwert im state + `unit_of_measurement`. Nicht-numerisch/unavailable →
    value null (die UI zeigt dann „—" bzw. lässt den Node inaktiv). */
 export function haToSun(raw: RawEntity): SunValue {
-  return { day: raw.state === 'above_horizon' };
+  const elevation = raw.attributes.elevation;
+  return {
+    day: raw.state === 'above_horizon',
+    elevation: typeof elevation === 'number' && Number.isFinite(elevation) ? elevation : null,
+  };
+}
+
+/* Anwesenheit (Paket 8): alles außer `home` gilt als unterwegs — Zonen wie
+   `Arbeit` sind für die Begrüßung dasselbe wie `not_home`. */
+export function haToPerson(raw: RawEntity): PersonValue {
+  const name = raw.attributes.friendly_name;
+  return {
+    home: raw.state === 'home',
+    name: typeof name === 'string' && name ? name : null,
+  };
 }
 
 export function haToSensor(raw: RawEntity): SensorValue {
@@ -249,6 +263,9 @@ export function haToValue(entityId: string, raw: RawEntity, prev?: unknown): unk
   }
   if (entityId === 'sun.sun') {
     return haToSun(raw);
+  }
+  if (entityId.startsWith('person.')) {
+    return haToPerson(raw);
   }
   if (entityId.startsWith('sensor.')) {
     return haToSensor(raw);

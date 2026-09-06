@@ -9,6 +9,7 @@
 
 import { m } from '../../paraglide/messages.js';
 import type { ReminderPersonConfig } from './reminder-persons.ts';
+import { intlLocale } from './locale.svelte.ts';
 
 export interface ReminderSource {
   entityId: string; // todo.*
@@ -218,9 +219,24 @@ export interface Postit {
 
 const POSTIT_MAX = 4;
 
-const postitTimeFormatter = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-const postitWeekdayFormatter = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
-const postitDateFormatter = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' });
+/* Fälligkeit auf den Zetteln in der Oberflächensprache; je Sprache einmal gebaut. */
+const postitFormatters = new Map<string, Intl.DateTimeFormat>();
+function postitFormatter(kind: 'time' | 'weekday' | 'date'): Intl.DateTimeFormat {
+  const locale = intlLocale();
+  const key = `${locale}:${kind}`;
+  let cached = postitFormatters.get(key);
+  if (!cached) {
+    const options: Intl.DateTimeFormatOptions = kind === 'time'
+      ? { hour: '2-digit', minute: '2-digit' }
+      : kind === 'weekday' ? { weekday: 'short' } : { day: 'numeric', month: 'short' };
+    cached = new Intl.DateTimeFormat(locale, options);
+    postitFormatters.set(key, cached);
+  }
+  return cached;
+}
+const postitTimeFormatter = { format: (date: Date) => postitFormatter('time').format(date) };
+const postitWeekdayFormatter = { format: (date: Date) => postitFormatter('weekday').format(date) };
+const postitDateFormatter = { format: (date: Date) => postitFormatter('date').format(date) };
 
 export function projectPostits(
   items: readonly Reminder[],
@@ -253,12 +269,12 @@ export function projectPostits(
    ein kurzes Datum. Ohne Termin: kein Label. */
 export function postitDueLabel(item: Reminder, now = new Date()): string | null {
   if (!item.due) return null;
-  if (reminderOverdue(item, now)) return 'Überfällig';
+  if (reminderOverdue(item, now)) return m.rem_due_overdue();
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(item.due);
   const due = new Date(item.due);
   const diffDays = Math.round((startOfDay(due).getTime() - startOfDay(now).getTime()) / DAY_MS);
-  if (diffDays <= 0) return dateOnly ? 'Heute' : postitTimeFormatter.format(due);
-  if (diffDays === 1) return 'Morgen';
+  if (diffDays <= 0) return dateOnly ? m.period_today() : postitTimeFormatter.format(due);
+  if (diffDays === 1) return m.rem_due_tomorrow();
   if (diffDays < 7) return postitWeekdayFormatter.format(due).replace(/\./g, '');
   return postitDateFormatter.format(due).replace(/\./g, '');
 }

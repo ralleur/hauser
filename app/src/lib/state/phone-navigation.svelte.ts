@@ -1,5 +1,6 @@
 import { m } from '../../paraglide/messages.js';
 import { projectPhoneTarget, type ScreenId } from './nav.svelte.ts';
+import { mediaAreaLabel } from './phone-nav-order.svelte.ts';
 
 export type PhoneMainTarget = 'home' | 'calendar' | 'media' | 'more';
 export type MediaRootTarget = 'media' | 'library';
@@ -10,7 +11,7 @@ export type LayerChangeReason = LayerCloseReason | 'open';
 export const PHONE_MAIN_TARGETS = [
   { id: 'home', get label() { return m.nav_home(); } },
   { id: 'calendar', get label() { return m.nav_calendar(); } },
-  { id: 'media', get label() { return m.nav_media(); } },
+  { id: 'media', get label() { return mediaAreaLabel(); } },
   { id: 'more', get label() { return m.nav_more(); } },
 ] as const satisfies readonly { id: PhoneMainTarget; readonly label: string }[];
 

@@ -57,3 +57,147 @@
     padding: 5px 10px;
   }
 }
+
+/* ── Gekritzelte Tipps (DemoHints.svelte) ──
+   Handschrift als eigene Webfont (Caveat, OFL, public/fonts): Android und
+   Linux haben keine Handschrift an Bord und fielen sonst auf Serif zurück.
+   Latin-Ext deckt Polnisch ab. Die Ebene selbst lässt Berührungen durch —
+   nur die Blase fängt sie, damit die Geste am Ziel weiter geht. */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Caveat-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Caveat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+:root {
+  --demo-ink: #ffcf5c;
+  --demo-ink-halo: rgb(0 0 0 / 0.6);
+}
+:root[data-theme='light'] {
+  --demo-ink: #d9731a;
+  --demo-ink-halo: rgb(255 255 255 / 0.75);
+}
+
+.demo-hints {
+  position: fixed;
+  inset: 0;
+  z-index: 45; /* über der App (40), unter Ambient (50) und Overlays (200) */
+  pointer-events: none;
+  font-family: 'Caveat', 'Segoe Print', 'Bradley Hand', 'Chalkboard SE', cursive;
+  color: var(--demo-ink);
+}
+
+.demo-hints-ink {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.demo-hints-loop,
+.demo-hints-arrow {
+  fill: none;
+  stroke: var(--demo-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 3px var(--demo-ink-halo));
+  animation: demo-hints-draw 0.7s ease-out forwards;
+}
+.demo-hints-arrow { animation-delay: 0.45s; }
+.demo-hints-loop { stroke-width: 2.5; }
+
+.demo-hints-bubble {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  max-inline-size: min(320px, 72vw);
+  padding: 14px 20px 12px;
+  /* Ein hauchdünner Fleck hinter der Schrift: über Fotos und dunklen Kacheln
+     bleibt sie lesbar, ohne dass daraus eine Sprechblase mit Rahmen wird.
+     Die Ecken sind nur leicht ungleich gerundet, damit der Text nie über den
+     Rand ragt; die ganze Blase steht schief, nicht der Text allein. */
+  border-radius: 22px 28px 20px 30px / 26px 20px 30px 22px;
+  background: color-mix(in srgb, var(--color-surface-1) 55%, transparent);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  rotate: -2deg;
+  transform-origin: center;
+  animation: demo-hints-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  animation-delay: 0.1s;
+}
+
+.demo-hints-bubble.is-floating {
+  max-inline-size: min(420px, 80vw);
+  text-align: center;
+  rotate: 1.5deg;
+}
+.demo-hints-bubble.is-floating .demo-hints-actions { justify-content: center; }
+
+.demo-hints-text {
+  margin: 0;
+  font-size: clamp(26px, 2.6vw, 32px);
+  line-height: 1.1;
+  text-shadow:
+    0 0 2px var(--demo-ink-halo),
+    0 0 8px var(--demo-ink-halo),
+    0 0 14px var(--demo-ink-halo);
+}
+
+.demo-hints-actions {
+  display: flex;
+  gap: 16px;
+  margin-block-start: 8px;
+}
+
+.demo-hints-btn {
+  padding: 4px 10px;
+  border: 2px solid var(--demo-ink);
+  border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
+  background: transparent;
+  color: var(--demo-ink);
+  font: inherit;
+  font-size: 19px;
+  line-height: 1;
+  text-shadow: 0 0 6px var(--demo-ink-halo);
+  cursor: pointer;
+}
+.demo-hints-btn.is-quiet {
+  border-color: transparent;
+  text-decoration: underline wavy;
+  text-underline-offset: 4px;
+}
+
+.demo-badge.has-hints {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@keyframes demo-hints-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes demo-hints-pop {
+  from { opacity: 0; scale: 0.85; }
+  to { opacity: 1; scale: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-hints-loop,
+  .demo-hints-arrow,
+  .demo-hints-bubble {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

@@ -12,7 +12,12 @@
 
 import { m } from '../../paraglide/messages.js';
 import type { Command, LightValue, SwitchValue } from '../adapter/types.ts';
+import type { SceneCommand } from './entity-restore.ts';
 import { sharedStorage } from './shared-config.ts';
+/* Der Rückweg lebt in einem eigenen Mini-Modul, damit ihn der Undo-Streifen
+   ohne die ganze Szenen-Konfiguration laden kann. */
+export { buildRestoreCommand } from './entity-restore.ts';
+export type { SceneCommand } from './entity-restore.ts';
 
 /* Ids der drei eingebauten Szenen plus frei vergebene Ids eigener Szenen. */
 export type SceneId = string;
@@ -583,11 +588,6 @@ export interface SceneMemberInfo {
   state?: SceneMemberState;
 }
 
-export interface SceneCommand {
-  command: Command;
-  optimistic: Partial<LightValue> | SwitchValue;
-}
-
 export function buildSceneCommands(
   scene: SceneDef,
   members: readonly SceneMemberInfo[],
@@ -623,46 +623,4 @@ export function buildSceneCommands(
       optimistic: { on: target.on } satisfies SwitchValue,
     };
   });
-}
-
-/* ── Vorschau zurücknehmen ──
-   Der Szenen-Editor fährt Änderungen live auf die Geräte; beim Verlassen wird
-   der Zustand von vor dem Öffnen wiederhergestellt. Aus einem gemergten Wert
-   (LightValue/SwitchValue) wird dafür der gegenläufige Command gebaut. */
-export function buildRestoreCommand(entityId: string, value: unknown, now = Date.now()): SceneCommand | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const domain = entityId.slice(0, entityId.indexOf('.'));
-  if (domain === 'light') {
-    const light = value as Partial<LightValue>;
-    if (!light.on) {
-      return {
-        command: { entityId, domain, service: 'turn_off', data: {}, queuedAt: now },
-        optimistic: { on: false } satisfies Partial<LightValue>,
-      };
-    }
-    const data: Record<string, unknown> = {};
-    if (typeof light.brightness === 'number') data.brightness_pct = light.brightness;
-    // Farbmodus hat Vorrang: die Vorschau kann das Licht auf Farbtemperatur
-    // gezogen haben, dann bringt erst rgb_color die Farbe zurück.
-    if (typeof light.color === 'string') data.rgb_color = hexToRgbTriple(light.color);
-    else if (typeof light.colorTemp === 'number') data.color_temp_kelvin = light.colorTemp;
-    return {
-      command: { entityId, domain, service: 'turn_on', data, queuedAt: now },
-      optimistic: { ...light, on: true } as Partial<LightValue>,
-    };
-  }
-  const sw = value as Partial<SwitchValue>;
-  return {
-    command: { entityId, domain, service: sw.on ? 'turn_on' : 'turn_off', data: {}, queuedAt: now },
-    optimistic: { on: !!sw.on } satisfies SwitchValue,
-  };
-}
-
-function hexToRgbTriple(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.slice(0, 2), 16) || 0,
-    parseInt(h.slice(2, 4), 16) || 0,
-    parseInt(h.slice(4, 6), 16) || 0,
-  ];
 }

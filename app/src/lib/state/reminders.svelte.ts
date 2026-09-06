@@ -1,4 +1,8 @@
+import { m } from '../../paraglide/messages.js';
 import { runtime } from '../adapter/runtime.svelte.ts';
+import { apiRequest } from '../api/client.ts';
+import { createSnapshotStore } from '../data/query-cache.ts';
+import { registerRevalidation } from '../data/revalidation.ts';
 import { hmiDataRequest } from './hmi-data.ts';
 import {
   reminderPerson,
@@ -44,16 +48,12 @@ type HmiTaskFetchResult =
   | { ok: false };
 
 async function fetchHmiTasks(): Promise<HmiTaskFetchResult> {
-  try {
-    const resp = await fetch('/api/reminders', { cache: 'no-store' });
-    if (!resp.ok) return { ok: false };
-    const data: HmiTaskFile = await resp.json();
-    return Array.isArray(data.items)
-      ? { ok: true, items: data.items }
-      : { ok: false };
-  } catch {
-    return { ok: false };
-  }
+  const result = await apiRequest('reminders');
+  if (!result.ok) return { ok: false };
+  const data = result.data as HmiTaskFile | null;
+  return Array.isArray(data?.items)
+    ? { ok: true, items: data.items }
+    : { ok: false };
 }
 
 function hmiTaskToReminder(task: HmiTask): Reminder {
@@ -80,11 +80,29 @@ const CACHE_KEY = 'hmi:reminders-cache';
 const SELECTION_KEY = 'hmi:reminders-selected';
 const REFRESH_MS = 5 * 60 * 1000;
 
-interface ReminderCache {
+interface ReminderSnapshot {
   sources: ReminderSource[];
   items: Reminder[];
-  updatedAt: number;
 }
+
+function isReminderSnapshot(value: unknown): value is ReminderSnapshot {
+  const candidate = value as Partial<ReminderSnapshot> | null;
+  return Array.isArray(candidate?.sources) && Array.isArray(candidate?.items);
+}
+
+/* Snapshot des letzten Stands: sofort beim Start sichtbar, danach revalidiert.
+   Ältere Geräte tragen noch das Format ohne Hülle ({ sources, items, updatedAt }). */
+const snapshot = createSnapshotStore<ReminderSnapshot>({
+  key: CACHE_KEY,
+  maxAgeMs: REFRESH_MS,
+  validate: isReminderSnapshot,
+  migrateLegacy: (raw) => {
+    const legacy = raw as (ReminderSnapshot & { updatedAt?: number }) | null;
+    return isReminderSnapshot(legacy) && Number.isFinite(legacy.updatedAt)
+      ? { v: 1, updatedAt: legacy.updatedAt as number, value: { sources: legacy.sources, items: legacy.items } }
+      : null;
+  },
+});
 
 export const reminders = $state({
   sources: [] as ReminderSource[],
@@ -114,6 +132,7 @@ export function initReminders(): void {
   restoreCache();
   void refreshReminders();
   refreshTimer = setInterval(() => void refreshReminders(), REFRESH_MS);
+  registerRevalidation({ name: 'reminders', isStale: () => snapshot.isStale(), revalidate: refreshReminders });
 }
 
 /* Neue Aufgabe zentral im HMI-Backend anlegen und optimistisch anzeigen. */
@@ -219,7 +238,7 @@ async function refresh(): Promise<void> {
     /* ── Zentrale HMI-Quelle (always-on, kein Opt-in) ── */
     const hmiTasks = await fetchHmiTasks();
     if (!hmiTasks.ok) {
-      reminders.error = 'Erinnerungen konnten nicht vollständig aktualisiert werden.';
+      reminders.error = m.rem_refresh_error();
       return;
     }
     const hmiItems = hmiTasks.items.map(hmiTaskToReminder);
@@ -259,24 +278,13 @@ function scheduleReconcile(): void {
 }
 
 function restoreCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null') as ReminderCache | null;
-    if (!Array.isArray(parsed?.sources) || !Array.isArray(parsed.items) || !Number.isFinite(parsed.updatedAt)) return;
-    reminders.sources = parsed.sources;
-    reminders.items = parsed.items;
-    reminders.updatedAt = parsed.updatedAt;
-  } catch { /* Cache ist best-effort. */ }
+  const restored = snapshot.restoreSync();
+  if (!restored) return;
+  reminders.sources = restored.value.sources;
+  reminders.items = restored.value.items;
+  reminders.updatedAt = restored.updatedAt;
 }
 
 function saveCache(): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const value: ReminderCache = {
-      sources: reminders.sources,
-      items: reminders.items,
-      updatedAt: reminders.updatedAt,
-    };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(value));
-  } catch { /* Storage blockiert/voll: Live-Daten funktionieren weiter. */ }
+  void snapshot.save({ sources: reminders.sources, items: reminders.items }, reminders.updatedAt);
 }

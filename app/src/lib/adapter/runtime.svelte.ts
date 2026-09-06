@@ -5,16 +5,17 @@
    `merged()` (lesen) und `dispatch()` (schreiben) — nie das Backend direkt.
    ============================================ */
 
+import { m } from '../../paraglide/messages.js';
 import { SvelteMap } from 'svelte/reactivity';
 import { EntityStore } from './entity-store.svelte.ts';
 import { FakeBackend } from './fake-backend.ts';
-import { demoEnergySeed } from '../demo/demo-mode.ts';
+import { demoEnergySeed, demoTodoSeed } from '../demo/demo-mode.ts';
 import { HaBackend, type HaTransport } from './ha-backend.ts';
-import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS } from './overlay.ts';
+import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS, CONFIDENCE_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
 import type {
   Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate,
-  HaScene, NotificationHistoryEntry, PersistentNotification,
+  HaScene, NotificationHistoryEntry, PersistentNotification, PersonSource,
 } from './types.ts';
 import { markOperable, markResumeOperable } from '../state/startup-marks.svelte.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
@@ -33,11 +34,15 @@ export class AdapterRuntime {
   #queue: Command[] = [];
   #flushScheduled = false;
   #timers = new Map<string, ReturnType<typeof setTimeout>>();
+  #confidenceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   #backend!: Backend;
   #visible: string[] | null = null;
   #catalogSubscriber: ((items: unknown[]) => void) | null = null;
   #equals: (a: unknown, b: unknown) => boolean;
   #connection = $state<ConnectionStatus>('connected');
+  /* Seit wann steht dieser Verbindungszustand? Die versteckte Diagnose
+     (Paket 10) zeigt daraus das Verbindungsalter. */
+  #connectionSince = $state(Date.now());
 
   // Subset-Match (ADR-017 Addendum): Teil-Patches (Media) und volle Werte
   // (Licht/Klima) reconcilen durch dieselbe Logik.
@@ -64,6 +69,7 @@ export class AdapterRuntime {
     // Status-Dot und Command-Sperre.
     backend.onConnectionChange((status) => {
       if (backend !== this.#backend) return;
+      if (status !== this.#connection) this.#connectionSince = Date.now();
       this.#connection = status;
       /* B-27 E1: Ab hier verwirft dispatch() keinen Command mehr — das ist der
          Moment, den docs/03 als „reagierend" begrenzt. */
@@ -94,10 +100,20 @@ export class AdapterRuntime {
     return this.#connection;
   }
 
+  /** Zeitpunkt des letzten Zustandswechsels (Paket 10, Diagnose). */
+  get connectionSince(): number {
+    return this.#connectionSince;
+  }
+
   /** Externe Verbindungen bewusst erst nach dem ersten Paint starten. Der
       lokale Entity-Cache wurde bereits synchron im Konstruktor eingespielt. */
   start(): void {
     this.#backend.start?.();
+  }
+
+  /** Nutzer-Retry aus dem Getrennt-Banner: sofortiger Verbindungsversuch. */
+  retryConnection(): void {
+    this.#backend.retry?.();
   }
 
   /* Selektives Abo (ADR-006): reicht die sichtbaren entity_ids an das Backend
@@ -113,8 +129,8 @@ export class AdapterRuntime {
   }
 
   async renameEntity(entityId: string, name: string): Promise<void> {
-    if (this.#connection !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
-    if (!this.#backend.renameEntity) throw new Error('Das aktive Backend unterstützt keine gemeinsamen Gerätenamen.');
+    if (this.#connection !== 'connected') throw new Error(m.ha_not_connected());
+    if (!this.#backend.renameEntity) throw new Error(m.ha_rename_unsupported());
     await this.#backend.renameEntity(entityId, name);
   }
 
@@ -126,12 +142,31 @@ export class AdapterRuntime {
     return this.#backend.getCalendarEvents?.(entityId, start, end) ?? [];
   }
 
+  /* Bewohner aus Home Assistant (Paket 8). Ohne fähiges Backend leer — die
+     Einstellungen zeigen dann nur den Hinweis, dass nichts zu wählen ist. */
+  async listPersonSources(): Promise<PersonSource[]> {
+    return this.#backend.listPersonSources?.() ?? [];
+  }
+
   async listReminderSources(): Promise<ReminderSource[]> {
     return this.#backend.listReminderSources?.() ?? [];
   }
 
   async getReminders(entityId: string): Promise<Reminder[]> {
     return this.#backend.getReminders?.(entityId) ?? [];
+  }
+
+  /* Einkaufsliste: Läden sind `todo.*`-Listen. Ohne schreibfähiges Backend
+     (Demo ohne HA) bleibt der Aufruf ein sprechender Fehler statt eines
+     stillen No-ops — die Oberfläche rollt den optimistischen Eintrag zurück. */
+  async addTodoItem(entityId: string, title: string): Promise<void> {
+    if (!this.#backend.addTodoItem) throw new Error('Das aktive Backend kennt keine Listen.');
+    await this.#backend.addTodoItem(entityId, title);
+  }
+
+  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
+    if (!this.#backend.setTodoItemStatus) throw new Error('Das aktive Backend kennt keine Listen.');
+    await this.#backend.setTodoItemStatus(entityId, uid, completed);
   }
 
   async listSystemUpdates(): Promise<SystemUpdate[]> {
@@ -226,8 +261,11 @@ export class AdapterRuntime {
     this.#queue = enqueue(this.#queue, cmd);
     this.#scheduleFlush();
 
-    const prev = this.#timers.get(cmd.entityId);
-    if (prev) clearTimeout(prev);
+    this.#clearTimers(cmd.entityId);
+    this.#confidenceTimers.set(
+      cmd.entityId,
+      setTimeout(() => this.#onUnconfirmed(cmd.entityId), CONFIDENCE_TIMEOUT_MS),
+    );
     this.#timers.set(cmd.entityId, setTimeout(() => this.#onTimeout(cmd.entityId), COMMAND_TIMEOUT_MS));
   }
 
@@ -256,8 +294,7 @@ export class AdapterRuntime {
       this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic, server: value });
     }
     this.#intents.delete(entityId);
-    const t = this.#timers.get(entityId);
-    if (t) { clearTimeout(t); this.#timers.delete(entityId); }
+    this.#clearTimers(entityId);
   }
 
   /* Service-Error (docs/02): der Server hat den Command abgelehnt. Wie ein
@@ -271,8 +308,26 @@ export class AdapterRuntime {
     const server = this.store.get(entityId)?.value;
     this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic: intent.value, server });
     this.#intents.delete(entityId);
-    const t = this.#timers.get(entityId);
-    if (t) { clearTimeout(t); this.#timers.delete(entityId); }
+    this.#clearTimers(entityId);
+  }
+
+  #clearTimers(entityId: string): void {
+    const timeout = this.#timers.get(entityId);
+    if (timeout) { clearTimeout(timeout); this.#timers.delete(entityId); }
+    const confidence = this.#confidenceTimers.get(entityId);
+    if (confidence) { clearTimeout(confidence); this.#confidenceTimers.delete(entityId); }
+  }
+
+  /* Konfidenz (Paket 6): nach einer Sekunde ohne State-Echo wechselt der
+     Intent auf „unconfirmed" — die Controls lesen das und pulsieren einmal.
+     Der optimistische Wert bleibt stehen; erst das 5-s-Timeout bringt den
+     „pending"-Dot nach Vertrag. */
+  #onUnconfirmed(entityId: string): void {
+    this.#confidenceTimers.delete(entityId);
+    const intent = this.#intents.get(entityId);
+    if (intent && intent.status === 'inflight') {
+      this.#intents.set(entityId, { ...intent, status: 'unconfirmed' });
+    }
   }
 
   #onTimeout(entityId: string): void {
@@ -280,7 +335,7 @@ export class AdapterRuntime {
     // In-place setzen (nicht Map ersetzen), sonst verpassen die reaktiven Leser
     // den Wechsel. Die pure Variante markTimeouts() bleibt für die Unit-Tests.
     const intent = this.#intents.get(entityId);
-    if (intent && intent.status === 'inflight') {
+    if (intent && intent.status !== 'pending') {
       this.#intents.set(entityId, { ...intent, status: 'pending' });
     }
   }
@@ -370,7 +425,7 @@ function useFake(): boolean {
 }
 
 export let backend: Backend = useFake()
-  ? new FakeBackend(seed)
+  ? new FakeBackend(seed, undefined, undefined, demoTodoSeed())
   : new HaBackend({
       // Erst in start() nach dem Shared-Config-Sync auflösen; der Modulimport
       // darf noch mit dem lokalen letzten Stand die Shell erzeugen.
