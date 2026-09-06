@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1 - 2026-09-06
+
+### Fixed
+
+- The App starts even when the room-image assistant's job store refuses to
+  load; the assistant stays off, the health check names the reason, and the
+  log names the offending job.
+
 ## 0.8.0 - 2026-09-06
 
 ### Added

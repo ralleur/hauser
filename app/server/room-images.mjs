@@ -2235,14 +2235,18 @@ export function createRoomImageJobStore({
     if (changed) { record.updatedAt = now(); persist(record); }
   }
 
-  function validStoredReferences() {
+  /* Welche Datensätze die Verweisregeln verletzen — mit Regelname, damit das
+     Log beim Start sagt, welcher Job das Haus blockiert hätte. */
+  function referenceViolations() {
+    const violations = [];
+    const flag = (record, rule) => { violations.push({ jobId: record.jobId, rule }); };
     const recordsByAttemptId = new Map();
     const finalCandidateKeys = new Set();
     const tempOwners = new Map();
     const lineageAggregates = new Map();
     const wizardAggregates = new Map();
     for (const record of jobs.values()) {
-      if (recordsByAttemptId.has(record.attemptId)) return false;
+      if (recordsByAttemptId.has(record.attemptId)) flag(record, 'duplicate_attempt');
       recordsByAttemptId.set(record.attemptId, record);
       const attemptCounters = derivedRoomImageAttemptCounters(record);
       for (const [aggregates, id] of [[lineageAggregates, record.lineageId], [wizardAggregates, record.wizardId]]) {
@@ -2251,12 +2255,12 @@ export function createRoomImageJobStore({
         aggregates.set(id, aggregate);
       }
       for (const reference of allTempNames(record)) {
-        if (tempOwners.has(reference)) return false;
+        if (tempOwners.has(reference)) flag(record, 'shared_temp');
         tempOwners.set(reference, record.jobId);
       }
       if (record.kind === 'variant_set') {
         const key = `${record.request.parentJobId}\u0000${record.request.candidateId}`;
-        if (finalCandidateKeys.has(key)) return false;
+        if (finalCandidateKeys.has(key)) flag(record, 'duplicate_final');
         finalCandidateKeys.add(key);
       }
     }
@@ -2264,33 +2268,37 @@ export function createRoomImageJobStore({
       if (!ROOM_IMAGE_COUNTER_KEYS.every((key) => (
         record.providerCalls.lineage[key] === lineageAggregates.get(record.lineageId)[key]
         && record.providerCalls.wizard[key] === wizardAggregates.get(record.wizardId)[key]
-      ))) return false;
+      ))) flag(record, 'counters');
       if (record.kind === 'variant_set') {
         const parent = jobs.get(record.request.parentJobId);
         if (!parent || parent.kind !== 'main_candidates'
             || parent.owner !== record.owner || parent.wizardId !== record.wizardId
             || parent.expiresAt !== record.expiresAt
-            || JSON.stringify(parent.policy.spec) !== JSON.stringify(record.policy.spec)) return false;
+            || JSON.stringify(parent.policy.spec) !== JSON.stringify(record.policy.spec)) flag(record, 'variant_parent');
       }
       if (record.parentAttemptId !== null) {
         const parent = recordsByAttemptId.get(record.parentAttemptId);
         if (!parent || parent.status !== 'superseded' || parent.supersededByJobId !== record.jobId
             || parent.owner !== record.owner || parent.kind !== record.kind
             || parent.lineageId !== record.lineageId || parent.wizardId !== record.wizardId
-            || parent.expiresAt !== record.expiresAt) return false;
+            || parent.expiresAt !== record.expiresAt) flag(record, 'retry_parent');
       }
       if (record.status === 'superseded') {
         const successor = jobs.get(record.supersededByJobId);
-        if (!successor || successor.parentAttemptId !== record.attemptId) return false;
+        if (!successor || successor.parentAttemptId !== record.attemptId) flag(record, 'successor');
       }
       if (record.kind === 'main_candidates' && record.status === 'succeeded' && record.temp.source === null) {
         const finals = [...jobs.values()].filter((candidate) => (
           candidate.kind === 'variant_set' && candidate.request.parentJobId === record.jobId
         ));
-        if (finals.length !== 1) return false;
+        if (finals.length !== 1) flag(record, 'final_count');
       }
     }
-    return true;
+    return violations;
+  }
+
+  function validStoredReferences() {
+    return referenceViolations().length === 0;
   }
 
   function load() {
@@ -2345,7 +2353,11 @@ export function createRoomImageJobStore({
       if (idempotency.has(key)) throw roomImageJobStoreError('Doppelte Room-Image-Idempotenzdaten.');
       jobs.set(jobId, record); idempotency.set(key, jobId);
     }
-    if (!validStoredReferences()) throw roomImageJobStoreError('Inkohärente Room-Image-Jobreferenzen.');
+    const violations = referenceViolations();
+    if (violations.length > 0) {
+      const detail = violations.slice(0, 6).map((entry) => `${entry.jobId} (${entry.rule})`).join(', ');
+      throw roomImageJobStoreError(`Inkohärente Room-Image-Jobreferenzen: ${detail}${violations.length > 6 ? ', …' : ''}`);
+    }
     initializePrivateRoots();
     for (const transaction of transactions.filter((entry) => entry.state === 'committed')) {
       for (const reference of transaction.cleanupRefs) deleteTemp(reference);

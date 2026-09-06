@@ -5,6 +5,18 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-06
+
+### Fixed
+
+- **The App starts even when the room-image assistant's job store refuses to
+  load.** A single inconsistent job record used to stop the whole server, so
+  Home Assistant kept the App in an error state. The store stays fail-closed
+  (nothing is repaired or deleted), but the house now starts without the
+  assistant: its routes answer 503, `/api/health` reports
+  `selfCheck.roomImageJobStore`, and the log names the offending job and the
+  rule it breaks.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added

@@ -14,7 +14,9 @@
 > `0.8.0` lets the room picture follow the weather, adds undo, presence,
 > ambient light and calendar moments, and reads the outdoor weather from the
 > home location in Home Assistant; its App update path was exercised on the
-> same test system as `0.8.0-test.1` over a `0.7.0` install with data kept. The
+> same test system as `0.8.0-test.1` over a `0.7.0` install with data kept.
+> `0.8.1` makes the App start even when the room-image job store refuses to
+> load; the assistant then stays off until the store is repaired. The
 > notification rules, the scene import added in `0.6.3` and the sensor
 > selection are covered by tests and were not exercised against a live Home
 > Assistant. The install path itself was not re-run on that version.
@@ -110,7 +112,7 @@ migration remains fail-closed and makes the internal health probe fail.
   uses the Supervisor token to reach Home Assistant Core internally. No host
   networking, privileged mode, hardware access or Home Assistant configuration
   mount is requested, and no further Supervisor role is claimed.
-- `0.8.0` is the current published App and Docker/Compose beta. Versions below
+- `0.8.1` is the current published App and Docker/Compose beta. Versions below
   `1.0.0` carry no `-beta.N` suffix since `0.5.0`: the number says on its own
   that it is a beta. Hauser is licensed under the GNU Affero General Public
   License instead of MIT; everything up to and including `0.4.0-beta.6` stays

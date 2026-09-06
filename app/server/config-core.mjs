@@ -885,6 +885,11 @@ function selfCheckWarnings(selfCheck) {
           missing: selfCheck.roomImages.missing ?? [],
         }
         : null,
+      /* Der Jobspeicher des Raumbild-Assistenten: `ok: false` heißt, das Haus
+         läuft ohne Assistent; der Grund steht im Serverlog. */
+      roomImageJobStore: selfCheck.roomImageJobStore
+        ? { ok: selfCheck.roomImageJobStore.ok !== false, code: selfCheck.roomImageJobStore.code ?? null }
+        : null,
     },
   };
 }

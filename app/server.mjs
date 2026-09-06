@@ -455,12 +455,32 @@ export function createHmiServer(
   const roomImageUploads = setupRecoveryResult.ok ? (roomImageUploadStore || roomImageUploadStoreFactory({
     root: roomImageUploadRoot, now: roomImageNow, assertSetupRecoveryHealthy,
   })) : null;
-  const roomImageJobs = setupRecoveryResult.ok ? (roomImageJobStore || (roomImageJobRoot && roomImageAuthConfig?.configured
-    ? roomImageJobStoreFactory({
-      metadataRoot: roomImageJobRoot, tempRoot: roomImageTempRoot, now: roomImageNow,
-      transactionStep: roomImagePublishStep, assertSetupRecoveryHealthy,
-    })
-    : null)) : null;
+  /* Der Jobspeicher des Raumbild-Assistenten bleibt fail-closed: ein
+     inkohärenter Datensatz wird nicht repariert und nicht gelöscht. Aber er
+     darf das Haus nicht am Starten hindern (Schwäche mit Würde, docs/23):
+     Ohne Jobspeicher läuft alles außer dem Assistenten, dessen Routen 503
+     antworten, und die Selbstprüfung im Health-Payload nennt den Grund. */
+  let roomImageJobs = null;
+  let roomImageStoreFailure = null;
+  if (setupRecoveryResult.ok) {
+    if (roomImageJobStore) {
+      roomImageJobs = roomImageJobStore;
+    } else if (roomImageJobRoot && roomImageAuthConfig?.configured) {
+      try {
+        roomImageJobs = roomImageJobStoreFactory({
+          metadataRoot: roomImageJobRoot, tempRoot: roomImageTempRoot, now: roomImageNow,
+          transactionStep: roomImagePublishStep, assertSetupRecoveryHealthy,
+        });
+      } catch (error) {
+        roomImageStoreFailure = {
+          code: typeof error?.code === 'string' ? error.code : 'ROOM_IMAGE_STORE_INVALID',
+          message: error instanceof Error ? error.message : 'Room-Image-Jobstore konnte nicht geladen werden.',
+        };
+        console.error(`[hauser] Raumbild-Jobspeicher nicht geladen — der Assistent bleibt abgeschaltet, das Haus startet trotzdem: ${roomImageStoreFailure.message}`);
+        if (error?.cause) console.error('[hauser] Ursache:', error.cause instanceof Error ? error.cause.message : String(error.cause));
+      }
+    }
+  }
   const resolvedRoomImageCredentialStore = roomImageCredentialStore || roomImageCredentialStoreFactory({
     path: roomImageCredentialPath,
     environmentApiKey: roomImageProviderCredential !== undefined
@@ -580,12 +600,17 @@ export function createHmiServer(
   /* Selbstprüfung beim Start (Paket 11): einmal den Katalog gegen den
      Assetroot halten. Ein fehlendes Bildset ist eine Warnung im Health-Payload
      — der Dienst startet trotzdem. */
-  const startupSelfCheck = runSelfCheck({
+  const assetSelfCheck = runSelfCheck({
     roomImages: {
       catalogPath: resolvedRoomImageAssetCatalogPath,
       assetRoot: roomImageAssetRoot,
     },
   });
+  const startupSelfCheck = {
+    ...assetSelfCheck,
+    ok: assetSelfCheck.ok && roomImageStoreFailure === null,
+    roomImageJobStore: roomImageStoreFailure ? { ok: false, ...roomImageStoreFailure } : { ok: true },
+  };
   if (!startupSelfCheck.ok) {
     console.warn(
       '[hauser] Selbstprüfung: %d Datei(en) fehlen im Assetroot, z. B. %s',

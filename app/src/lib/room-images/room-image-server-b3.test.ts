@@ -342,6 +342,16 @@ describe('B-08E10 B3 persistent job flow', () => {
     expect(existsSync(tempRoot)).toBe(false);
   });
 
+  it('names the offending job and rule when stored references are inconsistent', async () => {
+    const prepared = await persistedFinalAtValidatingSet();
+    unlinkSync(join(prepared.metadataRoot, `${prepared.final.request.parentJobId}.json`));
+    expect(() => createRoomImageJobStore({ metadataRoot: prepared.metadataRoot, tempRoot: prepared.tempRoot }))
+      .toThrowError(expect.objectContaining({
+        code: 'ROOM_IMAGE_STORE_INVALID',
+        message: expect.stringContaining(`${prepared.final.jobId} (variant_parent)`),
+      }));
+  });
+
   it('validates transaction journals before startup mutates jobs or private temps', () => {
     const sandbox = root();
     const metadataRoot = join(sandbox, 'jobs');
