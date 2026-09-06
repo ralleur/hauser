@@ -5,6 +5,18 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-09-06
+
+### Fixed
+
+- **The room editor opens again.** Since 0.8.0 the build ships a shared chunk
+  named `room-images-<hash>` next to the room-image assets, and the asset
+  route claimed everything starting with that prefix, answering 404. The
+  route now claims only the `/assets/room-images/` folder; bundle chunks are
+  served statically.
+- The startup self-check no longer logs a bogus "0 files missing" line when
+  only the room-image job store failed to load.
+
 ## [0.8.1] - 2026-09-06
 
 ### Fixed

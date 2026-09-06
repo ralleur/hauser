@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2 - 2026-09-06
+
+### Fixed
+
+- The room editor opens again: a bundle chunk named like the room-image
+  assets was answered with 404 by the asset route.
+
 ## 0.8.1 - 2026-09-06
 
 ### Fixed

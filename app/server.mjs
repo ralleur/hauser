@@ -611,7 +611,7 @@ export function createHmiServer(
     ok: assetSelfCheck.ok && roomImageStoreFailure === null,
     roomImageJobStore: roomImageStoreFailure ? { ok: false, ...roomImageStoreFailure } : { ok: true },
   };
-  if (!startupSelfCheck.ok) {
+  if (!assetSelfCheck.ok) {
     console.warn(
       '[hauser] Selbstprüfung: %d Datei(en) fehlen im Assetroot, z. B. %s',
       startupSelfCheck.roomImages.missing.length,

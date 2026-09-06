@@ -5071,7 +5071,11 @@ export function serveRoomImages(req, res, {
     if (identity) void serveRoomImageAccess(req, res, pathname, credentialStore);
     return true;
   }
-  if (pathname.startsWith('/assets/room-images')) {
+  /* Nur der Ordner ist die Assetroute. Ein Bundle-Chunk wie
+     `/assets/room-images-<hash>.js` (Rollup benennt geteilte Chunks nach dem
+     Modulordner) muss zur statischen Auslieferung durchfallen — sonst
+     beantwortet ihn diese Route mit 404 und das Raum-Overlay lädt nicht. */
+  if (pathname.startsWith('/assets/room-images/')) {
     const match = !parsed.search && pathname.match(/^\/assets\/room-images\/([^/]+)\/([^/]+)$/);
     if (!match || !assetStore) jsonResponse(res, 404, { code: 'ASSET_NOT_FOUND', message: 'Asset nicht gefunden.' });
     else serveRoomImagePublicAsset(req, res, match[1], match[2], assetStore);
