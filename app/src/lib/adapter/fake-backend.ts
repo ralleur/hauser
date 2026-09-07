@@ -8,7 +8,7 @@
    ============================================ */
 
 import type {
-  Backend, ConnectionStatus, LightValue, ClimateValue, MediaValue, PersistentNotification, SwitchValue,
+  Backend, ConnectionStatus, FanValue, LightValue, ClimateValue, MediaValue, PersistentNotification, SwitchValue,
   StatisticsBucket,
   StatisticsRequest,
   StatisticsResult,
@@ -275,7 +275,39 @@ export class FakeBackend implements Backend {
       }
       return v;
     }
-    if (domain === 'switch' || domain === 'fan' || domain === 'input_boolean' || domain === 'vacuum') {
+    if (domain === 'fan') {
+      const v = { ...(cur as FanValue) };
+      if (service === 'turn_off') v.on = false;
+      else if (service === 'turn_on' || (service === 'toggle' && !v.on)) {
+        v.on = true;
+        if (typeof data.percentage === 'number') v.percentage = data.percentage;
+        if (typeof data.preset_mode === 'string') v.presetMode = data.preset_mode;
+        // Wie HA: ein Ventilator, der ohne Stufe eingeschaltet wird, dreht —
+        // sonst stünde „an" neben 0 %.
+        if (v.percentage === 0) v.percentage = 100;
+      } else if (service === 'toggle') v.on = false;
+      else if (service === 'set_percentage' && typeof data.percentage === 'number') {
+        v.percentage = data.percentage;
+        v.on = data.percentage > 0;
+      } else if (service === 'set_preset_mode' && typeof data.preset_mode === 'string') {
+        v.presetMode = data.preset_mode;
+        v.on = true;
+      } else if (service === 'oscillate' && typeof data.oscillating === 'boolean') {
+        v.oscillating = data.oscillating;
+      } else if (service === 'set_direction' && typeof data.direction === 'string') {
+        v.direction = data.direction as FanValue['direction'];
+      }
+      // Widerspruch am zum Command passenden Feld (docs/02), analog Licht.
+      if (contradict) {
+        if (service === 'set_percentage') v.percentage = Math.max(0, Math.min(100, v.percentage - 20));
+        else if (service === 'oscillate') v.oscillating = !v.oscillating;
+        else if (service === 'set_direction') v.direction = v.direction === 'forward' ? 'reverse' : 'forward';
+        else if (service === 'set_preset_mode') v.presetMode = v.presetModes[0] ?? null;
+        else v.on = !v.on;
+      }
+      return v;
+    }
+    if (domain === 'switch' || domain === 'input_boolean' || domain === 'vacuum') {
       const v = { ...(cur as SwitchValue) };
       const wasOn = v.on;
       if (service === 'turn_off' || service === 'return_to_base' || service === 'stop') v.on = false;

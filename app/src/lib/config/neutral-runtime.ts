@@ -2,6 +2,7 @@ import { FakeBackend, type FakeBackendCatalogItem } from '../adapter/fake-backen
 import type {
   CameraValue,
   ClimateValue,
+  FanValue,
   LightValue,
   MediaValue,
   SensorValue,
@@ -226,8 +227,22 @@ function syntheticValue(
   if (context.energyPower) return { value: 0, unit: 'W' } satisfies SensorValue;
   if (context.energyKpi) return { value: 0, unit: 'kWh' } satisfies SensorValue;
   if (domain === 'sensor') return { value: 0, unit: null } satisfies SensorValue;
+  if (domain === 'fan') {
+    return {
+      on: false,
+      percentage: 0,
+      presetMode: null,
+      oscillating: false,
+      direction: 'forward',
+      presetModes: [],
+      supportsSpeed: true,
+      supportsPreset: false,
+      supportsOscillate: true,
+      supportsDirection: false,
+    } satisfies FanValue;
+  }
   if (context.role === 'presence' || context.role === 'window'
-      || ['switch', 'binary_sensor', 'input_boolean', 'fan', 'cover', 'vacuum'].includes(domain)) {
+      || ['switch', 'binary_sensor', 'input_boolean', 'cover', 'vacuum'].includes(domain)) {
     return { on: false } satisfies SwitchValue;
   }
   return { state: 'synthetic' };

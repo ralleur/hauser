@@ -3,8 +3,9 @@
      per Long-Press (bzw. Tap bei nicht-schaltbaren Kacheln) geöffnet. Die Shell
      (Scrim, Panel, Header mit Symbol-Picker, Zustandsmaschine) ist das bisherige
      LightDetail-Muster; der Body verzweigt nach Kategorie:
-     light = Helligkeit/Farbtemp/Farbe · switch = Ein/Aus · temp = Solltemp+Modus ·
-     info = read-only Wert/Zustand · media = Play/Pause + Lautstärke (Stufe 1). */
+     light = Helligkeit/Farbtemp/Farbe · switch = Ein/Aus · fan = Stufe/Modus/
+     Oszillation/Richtung · temp = Solltemp+Modus · info = read-only Wert/Zustand ·
+     media = Play/Pause + Lautstärke (Stufe 1). */
   import Icon from './Icon.svelte';
 
   import TickScale from './TickScale.svelte';
@@ -13,16 +14,18 @@
     mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile,
     toggleDevice, setBrightness, setColorTemp, setColor,
     setClimateTarget, setClimateHvac, toggleMediaEntity, setMediaVolume,
+    setFanPercentage, setFanPreset, setFanOscillating, setFanDirection,
   } from '../state/commands.ts';
   import { deviceDetail, closeDeviceDetail, finishDeviceDetailClose } from '../state/overlay.svelte.ts';
   import { pulse } from '../actions/pulse.ts';
-  import { LIGHT_COLOR_SWATCHES, tempTint, climateTint } from '../state/light-presets.ts';
+  import { LIGHT_COLOR_SWATCHES, tempTint, climateTint, lightLevel } from '../state/light-presets.ts';
+  import { fanPresetIcon, fanPresetLabel, fanSpinDuration } from '../state/fan-presets.ts';
   import { defaultIconFor, iconForDevice, persistLightIconOverride, resetLightIconOverride } from '../state/light-icons.ts';
 
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { renameDevice } from '../state/device-manager.svelte.ts';
   import { fmtTemp } from '../format.ts';
-  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue } from '../adapter/types.ts';
+  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue } from '../adapter/types.ts';
 
   import { m } from '../../paraglide/messages.js';
   const roomId = $derived(deviceDetail.roomId);
@@ -41,6 +44,7 @@
   const climate = $derived(category === 'temp' ? (cur as ClimateValue | undefined) : undefined);
   const sensor = $derived(category === 'info' && device?.domain === 'sensor' ? (cur as SensorValue | undefined) : undefined);
   const media = $derived(category === 'media' ? (cur as MediaValue | undefined) : undefined);
+  const fan = $derived(category === 'fan' ? (cur as FanValue | undefined) : undefined);
   /* null = kein Messwert; dann bleibt die Zeile weg (R3, docs/23). */
   const reading = $derived(fmtSensor(sensor?.value, sensor?.unit ?? device?.unit));
   const pending = $derived(!!device && devicePending(entityId));
@@ -78,6 +82,7 @@
   // „Aktiv"-Zustand fürs Piktogramm/den Power-Button je Kategorie.
   const isActive = $derived.by(() => {
     if (light) return light.on;
+    if (fan) return fan.on;
     if (sw) return sw.on;
     if (climate) return climate.hvac !== 'off';
     if (media) return media.playing;
@@ -99,6 +104,7 @@
   let dragTemp = $state<number | null>(null);
   let dragTarget = $state<number | null>(null);
   let dragVol = $state<number | null>(null);
+  let dragFanSpeed = $state<number | null>(null);
   let brightnessIntro = $state(0);
   let previousDetailMode = deviceDetail.mode;
   const briDisplay = $derived(dragBri ?? (light?.on ? light.brightness : 0));
@@ -107,6 +113,12 @@
   );
   const targetDisplay = $derived(dragTarget ?? climate?.target ?? 20);
   const volDisplay = $derived(dragVol ?? media?.volume ?? 0);
+  // Aus = 0 %, damit die Leiter denselben Zusammenhang zeigt wie die Helligkeit.
+  const fanSpeedDisplay = $derived(dragFanSpeed ?? (fan?.on ? fan.percentage : 0));
+  // Läuft der Ventilator, dreht sich sein Piktogramm im Tempo der Stufe.
+  const fanSpin = $derived(fanSpinDuration(fan));
+  // Dimmbare Lampe: die Helligkeit färbt das Piktogramm (wie auf der Kachel).
+  const lightIconLevel = $derived(lightLevel(briDisplay, !!light?.on, !!device?.dimmable));
 
   $effect(() => {
     const mode = deviceDetail.mode;
@@ -130,9 +142,13 @@
     dragVol = final ? null : val;
     if (final) setMediaVolume(entityId, val);
   }
+  function onFanSpeed(val: number, final: boolean) {
+    dragFanSpeed = final ? null : val;
+    if (final) setFanPercentage(entityId, val);
+  }
 
   // Primäraktion im Header: light/switch = Schalten, media = Play/Pause.
-  const hasPower = $derived(category === 'light' || category === 'switch' || category === 'media');
+  const hasPower = $derived(category === 'light' || category === 'switch' || category === 'fan' || category === 'media');
   function onPower() {
     if (!device) return;
     if (category === 'media') toggleMediaEntity(entityId);
@@ -226,7 +242,11 @@
       {#key deviceId}
         <header class="ld-header">
           <!-- Piktogramm: Tap öffnet die Symbol-Auswahl (nicht der Schalter) -->
-          <button class="ld-symbol pressable" class:is-on={isActive} type="button"
+          <button class="ld-symbol pressable" class:is-on={isActive}
+                  class:is-spinning={fanSpin !== null}
+                  style={fanSpin !== null
+                    ? `--fan-spin:${fanSpin}`
+                    : lightIconLevel !== null ? `--light-level:${lightIconLevel}` : undefined} type="button"
                   aria-haspopup="true" aria-expanded={pickerOpen}
                   aria-label={m.dev_change_icon()} onclick={togglePicker}>
             <Icon name={currentIcon} />
@@ -308,6 +328,74 @@
               <section class="ld-section">
                 <span class="caps-label">{m.dev_state()}</span>
                 <p class="ld-big-value">{sw.on ? m.dev_on() : m.dev_off()}</p>
+              </section>
+            {/if}
+          {:else if category === 'fan'}
+            {#if fan?.supportsSpeed}
+              <section class="ld-section ld-brightness">
+                <span class="caps-label">{m.dev_fan_speed()}</span>
+                {#key `${deviceId}-${brightnessIntro}`}
+                  <TickScale ariaLabel={m.dev_fan_speed()} orientation="vertical" mode="fill" intro
+                             value={fanSpeedDisplay} min={0} max={100} step={1} keyStep={5}
+                             onInput={onFanSpeed} format={(v) => `${Math.round(v)}%`} />
+                {/key}
+              </section>
+            {/if}
+
+            {#if fan?.supportsPreset && fan.presetModes.length}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_mode()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_mode()}>
+                  {#each fan.presetModes as preset (preset)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={fan.presetMode === preset}
+                            onclick={() => setFanPreset(entityId, preset)}>
+                      <Icon name={fanPresetIcon(preset)} cls="icon icon-md" />
+                      <span class="choice-label">{fanPresetLabel(preset)}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+
+            {#if fan?.supportsOscillate}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_oscillation()}</span>
+                <div class="choice-pill" role="radiogroup" aria-label={m.dev_oscillation()}>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={fan.oscillating} aria-label={m.dev_on()}
+                          onclick={() => setFanOscillating(entityId, true)}>
+                    <Icon name="i-arrow-oscillating" cls="icon icon-md" />
+                    <span>{m.dev_on_short()}</span>
+                  </button>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={!fan.oscillating} aria-label={m.dev_off()}
+                          onclick={() => setFanOscillating(entityId, false)}>
+                    <Icon name="i-arrow-oscillating-off" cls="icon icon-md" />
+                    <span>{m.dev_off_short()}</span>
+                  </button>
+                </div>
+              </section>
+            {/if}
+
+            {#if fan?.supportsDirection}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_fan_direction()}</span>
+                <div class="choice-pill" role="radiogroup" aria-label={m.dev_fan_direction()}>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={fan.direction === 'forward'}
+                          onclick={() => setFanDirection(entityId, 'forward')}>
+                    <Icon name="i-rotate-right" cls="icon icon-md" />
+                    <span>{m.dev_fan_forward()}</span>
+                  </button>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={fan.direction === 'reverse'}
+                          onclick={() => setFanDirection(entityId, 'reverse')}>
+                    <Icon name="i-rotate-left" cls="icon icon-md" />
+                    <span>{m.dev_fan_reverse()}</span>
+                  </button>
+                </div>
               </section>
             {/if}
           {:else if category === 'temp'}

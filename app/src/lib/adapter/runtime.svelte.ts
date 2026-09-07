@@ -26,6 +26,7 @@ import { themeFromLocalTime } from '../state/appearance-mode.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
 import { FAKE_DISCOVERY_CATALOG } from '../state/device-config.ts';
+import { FAKE_FAN_SEED } from '../state/fake-discovery-catalog.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 
@@ -359,7 +360,10 @@ export class AdapterRuntime {
    Schichttausch nur hier: FakeBackend ↔ HaBackend hinter demselben Interface. */
 export const seed = new Map<string, unknown>([
   ...buildEntitySeed(ROOM_SEED),
-  ...FAKE_DISCOVERY_CATALOG.map((item) => [item.entityId, { on: false }] as const),
+  ...FAKE_DISCOVERY_CATALOG.map((item) => [
+    item.entityId,
+    item.domain === 'fan' ? { ...FAKE_FAN_SEED } : { on: false },
+  ] as const),
   ...buildMediaSeed(MEDIA_SEED),
   // Read-only-Ambient: sun.sun-Fallback (Nacht) bis zum ersten echten Push —
   // deckt sich mit dem Default-Theme 'dark'. Energie-Sensoren haben keinen

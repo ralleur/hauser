@@ -1,7 +1,7 @@
 <script lang="ts">
   import { m } from '../../paraglide/messages.js';
   /* Geräte-Kachel (ehem. LightCard, B-xx): reduzierte Kachel für ALLE
-     Overlay-Kategorien. Schaltbare Kategorien (light/switch) togglen per Tap
+     Overlay-Kategorien. Schaltbare Kategorien (light/switch/fan) togglen per Tap
      und öffnen das Detail per Long-Press; nicht-schaltbare (temp/info/media)
      öffnen das Detail direkt per Tap (Entscheidung Stufe 1). Der Zustand lebt
      im Icon-Feld; info/temp/media tragen zusätzlich eine kleine Wert-Zeile. */
@@ -14,13 +14,15 @@
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { fmtTemp } from '../format.ts';
   import type { Light } from '../state/app.svelte.ts';
-  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue } from '../adapter/types.ts';
+  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue } from '../adapter/types.ts';
+  import { fanSpinDuration } from '../state/fan-presets.ts';
+  import { lightLevel } from '../state/light-presets.ts';
 
   interface Props { roomId: string; device: Light }
   const { roomId, device }: Props = $props();
 
   const category = $derived(device.category ?? 'light');
-  const toggles = $derived(category === 'light' || category === 'switch');
+  const toggles = $derived(category === 'light' || category === 'switch' || category === 'fan');
 
   const cur = $derived(mergedDevice(roomId, device));
   const pending = $derived(devicePending(device.entityId));
@@ -32,6 +34,18 @@
     if (category === 'media') return (cur as MediaValue).playing;
     if (category === 'info' && device.domain === 'sensor') return false;
     return !!(cur as SwitchValue).on;
+  });
+
+  /* Ein laufender Ventilator dreht sein Symbol; das Tempo folgt der Stufe
+     (null = steht still, dann keine Animation). */
+  const spin = $derived(category === 'fan' ? fanSpinDuration(cur as FanValue | undefined) : null);
+
+  /* Dimmbare Lampe: die Helligkeit färbt das Symbolfeld, damit 20 % und 100 %
+     auf einen Blick auseinandergehen. */
+  const level = $derived.by(() => {
+    if (category !== 'light') return null;
+    const value = cur as LightValue | undefined;
+    return lightLevel(value?.brightness, !!value?.on, !!device.dimmable);
   });
 
   /* Wert-Zeile der nicht-schaltbaren Kategorien (Kachel-Ebene 1, kein Detail).
@@ -94,7 +108,9 @@
         use:pulse={{ seq: toggleWobble + echoWobble, cls: 'is-wobble', ms: 200 }}
         use:longpress={{ enabled: true, onLongPress: () => openDeviceDetail(roomId, device.id) }}
         onclick={onTap}>
-  <span class="light-tile-icon" aria-hidden="true">
+  <span class="light-tile-icon" class:is-spinning={spin !== null}
+        style={spin !== null ? `--fan-spin:${spin}` : level !== null ? `--light-level:${level}` : undefined}
+        aria-hidden="true">
     <Icon name={device.icon ?? 'i-bulb'} />
     {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
   </span>

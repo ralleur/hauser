@@ -1033,10 +1033,15 @@ button.security-bar {
               border-color var(--duration-normal) var(--ease-out),
               color var(--duration-normal) var(--ease-out);
 }
+/* An = Akzent. Dimmbare Lampen tragen zusätzlich ihre Stufe in der Farbe:
+   --light-level (0,35 kleinste Stufe … 1 volle Stufe) mischt Symbol, Fläche
+   und Rand in Richtung Aus-Zustand, sodass 20 % und 100 % ohne Zahl
+   auseinandergehen. Ohne die Variable (Schalter, nicht dimmbar) bleibt es
+   exakt beim bisherigen Vollton. */
 .light-tile.is-on .light-tile-icon {
-  background: var(--accent-light-on-fill);
-  border-color: var(--accent-light-on-border);
-  color: var(--accent-light-on-icon);
+  background: color-mix(in srgb, var(--accent-light-on-fill) calc(var(--light-level, 1) * 100%), var(--color-surface-1));
+  border-color: color-mix(in srgb, var(--accent-light-on-border) calc(var(--light-level, 1) * 100%), var(--color-border));
+  color: color-mix(in srgb, var(--accent-light-on-icon) calc(var(--light-level, 1) * 100%), var(--color-text-secondary));
 }
 .light-tile-name {
   min-width: 0;
@@ -1122,9 +1127,9 @@ button.security-bar {
               color var(--duration-normal) var(--ease-out);
 }
 .ld-symbol.is-on {
-  background: var(--accent-light-on-fill);
-  border-color: var(--accent-light-on-border);
-  color: var(--accent-light-on-icon);
+  background: color-mix(in srgb, var(--accent-light-on-fill) calc(var(--light-level, 1) * 100%), var(--color-surface-2));
+  border-color: color-mix(in srgb, var(--accent-light-on-border) calc(var(--light-level, 1) * 100%), var(--color-border));
+  color: color-mix(in srgb, var(--accent-light-on-icon) calc(var(--light-level, 1) * 100%), var(--color-text-secondary));
 }
 /* Ein/Aus-Schalter: Ghost-Kreis, akzentuiert wenn an */
 .ld-power {
@@ -1324,6 +1329,107 @@ button.security-bar {
   font-size: var(--text-md);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
+}
+
+/* Laufender Ventilator: das Symbol dreht sich, das Tempo kommt als
+   --fan-spin aus der Stufe. Nur Transform (eigene Compositor-Layer), und
+   wer weniger Bewegung will, bekommt ein stehendes Symbol. */
+@keyframes fan-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.is-spinning > .icon {
+  animation: fan-spin var(--fan-spin, 1.6s) linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning > .icon { animation: none; }
+}
+
+/* ── Auswahl-Karten und Segment-Pille (Detail-Ebene) ──
+   Kartenraster für mehrwertige Eigenschaften (Ventilator-Presets), Pille für
+   zweiwertige (Oszillation, Drehrichtung). Aktive Wahl trägt denselben
+   Accent-Ring wie die Farb-Swatches, damit die Ebene eine Sprache spricht. */
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: var(--space-2);
+}
+.choice-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 76px;
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.choice-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-snug);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.choice-check {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-spring);
+}
+.choice-check .icon { width: var(--icon-sm); height: var(--icon-sm); }
+.choice-card[aria-checked='true'] {
+  color: var(--color-text-primary);
+  border-color: var(--accent-light-on-border);
+  background: var(--accent-light-on-fill);
+}
+.choice-card[aria-checked='true'] .choice-check { opacity: 1; transform: scale(1); }
+.choice-card:focus-visible,
+.choice-seg:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+
+.choice-pill {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+.choice-seg {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.choice-seg[aria-checked='true'] {
+  background: var(--accent-light-on-fill);
+  color: var(--accent-light-on-icon);
 }
 
 /* ── Farb-Swatches (kuratierte Palette) ── */

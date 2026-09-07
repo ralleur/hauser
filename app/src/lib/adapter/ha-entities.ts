@@ -6,7 +6,7 @@
    Ohne WebSocket-/Framework-Bezug → per Unit-Test abgesichert (ha-entities.test).
    ============================================ */
 
-import type { CameraValue, LightValue, ClimateValue, MediaValue, PersonValue, SunValue, SensorValue, SwitchValue } from './types.ts';
+import type { CameraValue, FanValue, LightValue, ClimateValue, MediaValue, PersonValue, SunValue, SensorValue, SwitchValue } from './types.ts';
 
 /* Roher HA-Entity-Zustand, wie ihn `subscribe_entities` transportiert. */
 export interface RawEntity {
@@ -178,6 +178,38 @@ export function haToVacuum(raw: RawEntity): SwitchValue {
   return { on: raw.state === 'cleaning' || raw.state === 'returning' };
 }
 
+/* fan.* (docs/04): Ventilatoren tragen neben an/aus bis zu vier steuerbare
+   Eigenschaften. Welche davon das Gerät kann, steht in der Bitmaske
+   `supported_features` (SET_SPEED=1, OSCILLATE=2, DIRECTION=4, PRESET_MODE=8).
+   Integrationen, die die Maske nicht melden, verraten sich über das jeweilige
+   Attribut — deshalb der Oder-Fallback. Nicht unterstützte Abschnitte bleiben
+   im Overlay weg, statt einen toten Regler zu zeigen (R3, docs/23). */
+const FAN_SET_SPEED = 1;
+const FAN_OSCILLATE = 2;
+const FAN_DIRECTION = 4;
+const FAN_PRESET_MODE = 8;
+
+export function haToFan(raw: RawEntity): FanValue {
+  const a = raw.attributes;
+  const features = typeof a.supported_features === 'number' ? a.supported_features : 0;
+  const hasPercentage = typeof a.percentage === 'number';
+  const presetModes = Array.isArray(a.preset_modes)
+    ? a.preset_modes.filter((mode): mode is string => typeof mode === 'string')
+    : [];
+  return {
+    on: raw.state === 'on',
+    percentage: hasPercentage ? Math.min(100, Math.max(0, Math.round(a.percentage as number))) : 0,
+    presetMode: typeof a.preset_mode === 'string' ? a.preset_mode : null,
+    oscillating: a.oscillating === true,
+    direction: a.direction === 'reverse' ? 'reverse' : 'forward',
+    presetModes,
+    supportsSpeed: (features & FAN_SET_SPEED) !== 0 || hasPercentage,
+    supportsPreset: (features & FAN_PRESET_MODE) !== 0 || presetModes.length > 0,
+    supportsOscillate: (features & FAN_OSCILLATE) !== 0 || typeof a.oscillating === 'boolean',
+    supportsDirection: (features & FAN_DIRECTION) !== 0 || typeof a.direction === 'string',
+  };
+}
+
 export function haToMedia(raw: RawEntity, prevVolume?: number): MediaValue {
   const vol = raw.attributes.volume_level;
   const dur = raw.attributes.media_duration;
@@ -243,7 +275,10 @@ export function haToValue(entityId: string, raw: RawEntity, prev?: unknown): unk
   if (entityId.startsWith('light.')) {
     return haToLight(raw, prev as Partial<LightValue> | undefined);
   }
-  if (entityId.startsWith('switch.') || entityId.startsWith('fan.') || entityId.startsWith('input_boolean.')) {
+  if (entityId.startsWith('fan.')) {
+    return haToFan(raw);
+  }
+  if (entityId.startsWith('switch.') || entityId.startsWith('input_boolean.')) {
     return haToSwitch(raw);
   }
   if (entityId.startsWith('binary_sensor.')) {

@@ -7,6 +7,7 @@ import {
   haToSun,
   haToSensor,
   haToLaundryState,
+  haToFan,
   haToValue,
   miredToKelvin,
   rgbToHex,
@@ -180,6 +181,56 @@ describe('haToLaundryState', () => {
   });
 });
 
+describe('haToFan', () => {
+  it('liest Stufe, Preset, Oszillation und Richtung aus den Attributen', () => {
+    expect(haToFan({
+      state: 'on',
+      attributes: {
+        supported_features: 15,
+        percentage: 66.6,
+        percentage_step: 33.3,
+        preset_mode: 'sleep',
+        preset_modes: ['normal', 'sleep', 7],
+        oscillating: true,
+        direction: 'reverse',
+      },
+    })).toEqual({
+      on: true,
+      percentage: 67,
+      presetMode: 'sleep',
+      oscillating: true,
+      direction: 'reverse',
+      presetModes: ['normal', 'sleep'],
+      supportsSpeed: true,
+      supportsPreset: true,
+      supportsOscillate: true,
+      supportsDirection: true,
+    });
+  });
+
+  it('ohne supported_features zählt die Anwesenheit des Attributs', () => {
+    expect(haToFan({ state: 'off', attributes: { oscillating: false } })).toMatchObject({
+      on: false,
+      percentage: 0,
+      supportsSpeed: false,
+      supportsPreset: false,
+      supportsOscillate: true,
+      supportsDirection: false,
+    });
+  });
+
+  it('ein reiner An/Aus-Ventilator meldet keine Fähigkeit', () => {
+    expect(haToFan({ state: 'on', attributes: {} })).toMatchObject({
+      on: true,
+      presetModes: [],
+      supportsSpeed: false,
+      supportsPreset: false,
+      supportsOscillate: false,
+      supportsDirection: false,
+    });
+  });
+});
+
 describe('haToValue (Domänen-Routing)', () => {
   it('routet nach entity_id-Präfix', () => {
     expect(haToValue('light.x', { state: 'on', attributes: { brightness: 255 } })).toEqual({ on: true, brightness: 100 });
@@ -200,12 +251,15 @@ describe('haToValue (Domänen-Routing)', () => {
       entityPicture: '/api/camera_proxy/camera.balkon?token=test',
     });
   });
-  it('schaltbare Zusatz-Domänen: fan/cover/binary_sensor → on/off-Shape', () => {
-    expect(haToValue('fan.x', { state: 'on', attributes: {} })).toEqual({ on: true });
+  it('schaltbare Zusatz-Domänen: cover/binary_sensor → on/off-Shape', () => {
     expect(haToValue('binary_sensor.fenster', { state: 'off', attributes: {} })).toEqual({ on: false });
     expect(haToValue('cover.x', { state: 'open', attributes: {} })).toEqual({ on: true });
     expect(haToValue('cover.x', { state: 'opening', attributes: {} })).toEqual({ on: true });
     expect(haToValue('cover.x', { state: 'closed', attributes: {} })).toEqual({ on: false });
+  });
+  it('fan → Ventilator-Shape statt Schalter', () => {
+    expect(haToValue('fan.x', { state: 'on', attributes: { supported_features: 3, percentage: 40 } }))
+      .toMatchObject({ on: true, percentage: 40, supportsSpeed: true, supportsOscillate: true });
   });
   it('ungemappte Domäne → undefined', () => {
     expect(haToValue('select.x', { state: 'running', attributes: {} })).toBeUndefined();

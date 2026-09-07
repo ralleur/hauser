@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import { sharp } from './sharp-runtime.ts';
 
 export const ROOM_IMAGE_TRANSFORM_POLICY_V1 = Object.freeze({
   id: 'room-image-transform-policy-v1',

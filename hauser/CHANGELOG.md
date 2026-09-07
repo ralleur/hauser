@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.1 - 2026-09-07
+
+### Added
+
+- Fans get a full control panel: speed in percent, the preset modes the device
+  reports, oscillation and direction of rotation. Only the abilities Home
+  Assistant reports are shown.
+
+### Changed
+
+- A running fan turns: its symbol rotates on the tile and in the control
+  panel, the tempo follows the speed. Reduced motion keeps it still.
+- A dimmable lamp carries its brightness in the colour of its symbol, on the
+  tile and in the control panel: full brightness glows, a low step stays
+  muted, off remains grey.
+
+### Fixed
+
+- Hauser starts again on older processors and in virtual machines with a
+  generic CPU: the image library's prebuilt binaries require x86-64-v2, and
+  their failure to load stopped the whole add-on instead of only the room
+  images. A portable fallback now ships alongside (#18).
+
 ## 0.9.0 - 2026-09-07
 
 Everything between 0.8.2 and this release, as one update.

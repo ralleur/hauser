@@ -9,7 +9,7 @@
    Auflösung: AVIF versteht die Schnittstelle nicht, und für „wo ist das
    Fenster" reicht ein Bruchteil der Pixel. */
 
-import sharp from 'sharp';
+import { sharp } from './runtime-env.mjs';
 import { detectRoomImageRegions, regionsRecord } from './room-image-regions.mjs';
 
 /* Gemessen am 2026-09-06: Mit 1024 px übersah das Modell in einer dreiteiligen

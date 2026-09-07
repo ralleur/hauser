@@ -31,3 +31,13 @@ export function climateTint(pf: number): string {
   const warm = Math.round(pf * 100);
   return `color-mix(in srgb, var(--color-error) ${warm}%, var(--color-accent-cool))`;
 }
+
+/* Symbolfarbe einer dimmbaren Lampe: die Helligkeit soll am Piktogramm
+   ablesbar sein, nicht nur an der Zahl. Der Anteil läuft von 0,35 (kleinste
+   Stufe — noch klar „an") bis 1 (volle Stufe). `null` = keine Stufe im Spiel
+   (aus, nicht dimmbar oder noch kein Wert), dann bleibt alles wie bisher. */
+export function lightLevel(brightness: number | undefined, on: boolean, dimmable: boolean): string | null {
+  if (!on || !dimmable || typeof brightness !== 'number') return null;
+  const pct = Math.max(0, Math.min(100, brightness));
+  return (0.35 + (pct / 100) * 0.65).toFixed(3);
+}

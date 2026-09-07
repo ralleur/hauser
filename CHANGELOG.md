@@ -5,6 +5,39 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-07
+
+### Added
+
+- **Fans have their own control panel.** A fan no longer hides behind an
+  on/off tile alone: press and hold it and the panel shows what the fan can
+  actually do — speed as a tick scale in percent, the preset modes the device
+  reports (normal, breeze, sleep, turbo, whatever it offers), oscillation on
+  or off, and the direction of rotation. Only what Home Assistant reports as
+  supported appears; a plain on/off fan keeps its plain panel.
+
+### Changed
+
+- **A running fan turns.** Its symbol rotates while the fan runs, on the tile
+  and in its control panel, and the tempo follows the speed: full speed turns
+  fast, the lowest step turns slowly, off stands still. Reduced motion keeps
+  the symbol still.
+- **A dimmed lamp looks dimmed.** The symbol of a dimmable lamp now carries
+  its brightness in its colour, on the tile and in its control panel: full
+  brightness glows in the full accent, a low step stays visibly muted, off
+  remains grey. The step is readable at a glance, without a number.
+
+### Fixed
+
+- **Hauser starts on older processors again.** The image library ships
+  prebuilt binaries that require an x86-64-v2 processor; on older hardware —
+  and in virtual machines that present a generic CPU without SSE4.2 — loading
+  them failed, and because the image library is loaded at startup the whole
+  add-on refused to start instead of merely losing room images. A portable
+  WebAssembly build now ships alongside and is used automatically when the
+  fast one is rejected, and a failure to load images can no longer take the
+  panel down with it. Thanks to @nadi1971 for the report (#18).
+
 ## [0.9.0] - 2026-09-07
 
 Everything below arrived between 0.8.2 and this release. It is one update:

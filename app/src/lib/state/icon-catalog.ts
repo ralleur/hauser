@@ -7,6 +7,7 @@ export interface IconEntry extends GeneratedIcon { searchText: string }
 export const DEFAULT_ICONS_BY_CATEGORY: Record<DeviceCategory, string> = {
   light: 'i-lightbulb',
   switch: 'i-lightning-bolt',
+  fan: 'i-fan',
   temp: 'i-thermometer',
   info: 'i-gauge',
   media: 'i-playlist-music',

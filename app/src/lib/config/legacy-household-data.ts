@@ -15,7 +15,7 @@ export type LegacyManagedDomain =
   | 'input_boolean'
   | 'vacuum'
   | 'camera';
-export type LegacyDeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media' | 'camera';
+export type LegacyDeviceCategory = 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera';
 
 export interface Light {
   id: string;

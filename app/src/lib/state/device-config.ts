@@ -9,6 +9,7 @@ import {
 
 export {
   FAKE_DISCOVERY_CATALOG,
+  FAKE_FAN_SEED,
   MANAGED_DOMAINS,
   type EntityCatalogItem,
   type ManagedDomain,
@@ -19,14 +20,16 @@ export {
    (categoryOf), nicht an der Domäne — neue Domänen brauchen hier nur einen
    Eintrag + eine Kategorie-Zuordnung. */
 /* Overlay-/Kachel-Kategorien: light = volles Licht-Detail, switch = Ein/Aus
-   (auch fan/cover, bis eigene Overlays existieren), temp = Solltemp+Modus,
-   info = read-only Wert/Zustand, media = Play/Pause+Lautstärke (Stufe 1). */
-export type DeviceCategory = 'light' | 'switch' | 'temp' | 'info' | 'media' | 'camera';
+   (auch cover, bis eigene Overlays existieren), fan = Stufe/Modus/Oszillation/
+   Richtung, temp = Solltemp+Modus, info = read-only Wert/Zustand,
+   media = Play/Pause+Lautstärke (Stufe 1). */
+export type DeviceCategory = 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera';
 
 /* Anzeige-Label je Kategorie (RoomEdit-Vorschläge, a11y). */
 export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
   light: 'Licht',
   switch: 'Schalter',
+  fan: 'Ventilator',
   temp: 'Klima',
   info: 'Sensor',
   media: 'Media',
@@ -36,7 +39,8 @@ export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
 export function categoryOf(domain: ManagedDomain): DeviceCategory {
   switch (domain) {
     case 'light': return 'light';
-    case 'switch': case 'fan': case 'cover': case 'input_boolean': case 'vacuum': return 'switch';
+    case 'fan': return 'fan';
+    case 'switch': case 'cover': case 'input_boolean': case 'vacuum': return 'switch';
     case 'climate': return 'temp';
     case 'sensor': case 'binary_sensor': return 'info';
     case 'media_player': return 'media';

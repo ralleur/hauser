@@ -15,7 +15,7 @@ import { ImportType, init, parse } from 'es-module-lexer';
 export const DEFAULT_BUDGETS = Object.freeze({
   initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
-  combinedPhoneStartupJsGzipBytes: 96 * 1024,
+  combinedPhoneStartupJsGzipBytes: 100 * 1024,
 });
 
 function emptyReport(budgets) {

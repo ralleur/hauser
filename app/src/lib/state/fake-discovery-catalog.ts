@@ -2,6 +2,8 @@
    Keep this module independent of storage and application runtime state so
    isolated runtimes can consume the same catalog truth without loading them. */
 
+import type { FanValue } from '../adapter/types.ts';
+
 export const MANAGED_DOMAINS = [
   'light', 'switch', 'sensor', 'binary_sensor', 'climate', 'media_player', 'cover', 'fan', 'input_boolean', 'vacuum', 'camera',
 ] as const;
@@ -23,7 +25,29 @@ export interface EntityCatalogItem {
   }>;
 }
 
+/* Startwert einer fan-Entität im Fake/Offline-Betrieb: Ventilatoren tragen
+   mehr als on/off, und welche Fähigkeiten es sind, meldet sonst nur Home
+   Assistant. Ohne diesen Seed bliebe das Ventilator-Overlay leer. */
+export const FAKE_FAN_SEED: FanValue = {
+  on: false,
+  percentage: 0,
+  presetMode: 'normal',
+  oscillating: false,
+  direction: 'forward',
+  presetModes: ['normal', 'breeze', 'sleep', 'turbo'],
+  supportsSpeed: true,
+  supportsPreset: true,
+  supportsOscillate: true,
+  supportsDirection: true,
+};
+
 export const FAKE_DISCOVERY_CATALOG: EntityCatalogItem[] = [
+  {
+    entityId: 'fan.demo_ventilator_wohnzimmer',
+    domain: 'fan',
+    name: 'Ventilator Wohnzimmer',
+    area: 'wohnzimmer',
+  },
   {
     entityId: 'switch.steckdose_wohnzimmer_regal',
     domain: 'switch',

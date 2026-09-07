@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import { sharp } from './sharp-runtime.ts';
 import { ROOM_IMAGE_TRANSFORM_POLICY_V1 } from './room-image-transform-policy-v1.ts';
 import {
   ROOM_IMAGE_PHONE_VARIANT_SOURCES,

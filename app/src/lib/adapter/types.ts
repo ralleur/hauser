@@ -207,6 +207,27 @@ export interface SwitchValue {
   /** HA `last_changed` in Millisekunden; fehlt nur bei Seed-/Legacy-Cache-Werten. */
   changedAt?: number;
 }
+/* FanValue (Ventilator): die fan-Domäne kennt mehr als an/aus — Stufe
+   (percentage), Preset-Modus, Oszillation und Drehrichtung. Optimistisch
+   überlagert werden nur die gesetzten Felder (on/percentage/presetMode/
+   oscillating/direction); welche Fähigkeiten das Gerät hat und welche Presets
+   es kennt, meldet ausschließlich Home Assistant (supported_features) und wird
+   nie geraten. */
+export interface FanValue {
+  /* optimistisch (überlagert) */
+  on: boolean;
+  percentage: number;          // 0–100 %
+  presetMode: string | null;
+  oscillating: boolean;
+  direction: 'forward' | 'reverse';
+  /* Server-Wahrheit (read-only) */
+  presetModes: string[];
+  supportsSpeed: boolean;
+  supportsPreset: boolean;
+  supportsOscillate: boolean;
+  supportsDirection: boolean;
+}
+
 /* `current` = gemessene Ist-Temperatur (HA-Attribut `current_temperature`,
    read-only). Optional: nicht jede climate-Entität meldet sie. Dient als
    Fallback-Quelle der Raum-Temperaturanzeige, wenn KEIN dedizierter Raum-

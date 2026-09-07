@@ -17,7 +17,7 @@ import {
   VACATION_MODE_ENTITY,
   windowEntityIds,
 } from './entities.ts';
-import type { LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
+import type { FanValue, LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
 import { appState, type Light } from './app.svelte.ts';
 
 type RoomMetric = 'temperature' | 'humidity';
@@ -303,6 +303,38 @@ export function setMediaVolume(entityId: string, pct: number): void {
   );
 }
 
+/* Ventilator (fan-Domäne): jede Eigenschaft ist ein eigener HA-Service und
+   ein eigener Teil-Patch — die supports*-Flags und presetModes bleiben
+   Server-Wahrheit und werden nicht mitgeraten (ADR-017 Addendum). */
+export function setFanPercentage(entityId: string, pct: number): void {
+  const percentage = Math.min(100, Math.max(0, Math.round(pct)));
+  runtime.dispatch(
+    { entityId, domain: 'fan', service: 'set_percentage', data: { percentage }, queuedAt: Date.now() },
+    { on: percentage > 0, percentage },
+  );
+}
+
+export function setFanPreset(entityId: string, presetMode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'fan', service: 'set_preset_mode', data: { preset_mode: presetMode }, queuedAt: Date.now() },
+    { on: true, presetMode },
+  );
+}
+
+export function setFanOscillating(entityId: string, oscillating: boolean): void {
+  runtime.dispatch(
+    { entityId, domain: 'fan', service: 'oscillate', data: { oscillating }, queuedAt: Date.now() },
+    { oscillating },
+  );
+}
+
+export function setFanDirection(entityId: string, direction: FanValue['direction']): void {
+  runtime.dispatch(
+    { entityId, domain: 'fan', service: 'set_direction', data: { direction }, queuedAt: Date.now() },
+    { direction },
+  );
+}
+
 export function shouldConfirmHomeOff(now: Date, before: string | null): boolean {
   if (!before) return false;
   const [hours, minutes] = before.split(':').map(Number);
@@ -324,7 +356,7 @@ export function switchableHomeEntityIds(): string[] {
   return appState.rooms.flatMap((room) => room.lights
     .filter((device) => {
       const category = device.category ?? 'light';
-      return category === 'light' || category === 'switch';
+      return category === 'light' || category === 'switch' || category === 'fan';
     })
     .map((device) => device.entityId ?? lightEntityId(room.id, device.id)));
 }

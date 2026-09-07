@@ -59,7 +59,9 @@ const {
 export const {
   deriveRoomImagePhoneVariants,
 } = await import(`${roomImageContractBase}/room-image-phone-derivation-policy-v1.${roomImageContractExtension}`);
-export const { default: sharp } = await import('sharp');
+export const { sharp, sharpAvailable, sharpUnavailableReason } = await import(
+  `${roomImageContractBase}/sharp-runtime.${roomImageContractExtension}`
+);
 
 /* B-08E11: Betriebsart des Home-Assistant-Zugangs. `direct` ist der heutige
    Browser-zu-HA-Pfad mit Long-Lived Access Token und bleibt der Default für
