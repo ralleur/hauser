@@ -37,7 +37,6 @@ import { HOUSEHOLD_CONFIG_CACHE_KEY } from './household-config-shadow.ts';
 import { normalizePhoneNavOrder, projectPhoneNavOrder } from '../state/phone-nav-order.svelte.ts';
 import { initialMediaTarget } from '../state/phone-navigation.svelte.ts';
 import { demoResponse } from '../demo/demo-mode.ts';
-import { MINIMAL_SHELL_VIEWS } from '../shells/minimal-shell-navigation.ts';
 import { collectProductivePrePaintSourceGraph } from './pre-paint-source-graph.test-utils.ts';
 
 function compileValid(input: unknown): HouseholdRuntimeModel {
@@ -257,11 +256,6 @@ describe('active household runtime projection', () => {
 });
 
 describe('productive household bootstrap cutover', () => {
-  it('keeps the provisional shell navigation local and bounded', () => {
-    expect(MINIMAL_SHELL_VIEWS.map(({ id }) => id)).toEqual(['home', 'rooms', 'system']);
-    expect(MINIMAL_SHELL_VIEWS.map(({ label }) => label)).toEqual(['Zuhause', 'Räume', 'System']);
-  });
-
   it('mounts the complete local shell before a no-cache validation may start or hang', async () => {
     const storage = new MemoryStorage();
     const events: string[] = [];
@@ -754,7 +748,6 @@ describe('productive household bootstrap cutover', () => {
       'src/lib/demo/demo-mode.ts',
       'src/lib/shells/MinimalAppShell.svelte',
       'src/lib/shells/minimal-shell-loader.ts',
-      'src/lib/shells/minimal-shell-navigation.ts',
       'src/main.ts',
     ];
 
@@ -775,7 +768,7 @@ describe('productive household bootstrap cutover', () => {
     expect(source).toContain('bootstrapHouseholdConfigFirstPaint');
     expect(source).toMatch(/scheduleValidation:\s*afterFirstPaint/);
     expect(source).toContain('mountMinimalShell(document.body)');
-    expect(source).toMatch(/result\.status === 'blocked'[\s\S]*?import\('\.\/lib\/shells\/minimal-shell-cache\.ts'\)[\s\S]*?publishMinimalShellConfigStatus\(result\.code\)/);
+    expect(source).toMatch(/result\.status === 'blocked'[\s\S]*?import\('\.\/lib\/shells\/minimal-shell-status\.ts'\)[\s\S]*?publishMinimalShellConfigStatus\(result\.code\)/);
     expect(source).not.toContain('const initialHealthStatus = await healthStatus()');
     expect(appSource).toContain("import('./lib/state/startup-background.ts')");
     expect(startupSource).toMatch(

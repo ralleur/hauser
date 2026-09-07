@@ -5,6 +5,110 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-07
+
+Everything below arrived between 0.8.2 and this release. It is one update:
+the energy screen became a picture of your own house, the calendar became a
+sheet of paper, and several places stopped claiming things the house cannot
+measure.
+
+### Added
+
+- **The energy screen can show your own house.** The image assistant and the
+  image library now offer "Outside (energy)" as a target next to the rooms.
+  An image set assigned there becomes the stage of the energy screen: the day
+  version by day, the night version at night, fading between the two at dusk
+  exactly like a room. The detection knows solar modules as a new kind of
+  area, so the generation figure hangs on the real modules and the load figure
+  on a window; the grid figure points to the edge, where the grid is. Without
+  an assigned set the built-in picture stays.
+- **The energy picture has a menu.** Press and hold its background in
+  configure mode and a small sheet offers what belongs there: create your own
+  house with the assistant, pick a picture from the library, move the notes,
+  or jump straight to the sensor assignment in the settings.
+- **The notes on the energy picture can be moved.** Every note and its pin
+  can be dragged; "Done" keeps the arrangement, "Reset" returns to the
+  built-in positions. Positions belong to the picture they were set on, so a
+  new picture starts again from its template. A note can never end up outside
+  the visible picture, under the tab bar or over the figures at the top left.
+- **The workshop simulator knows the energy screen.** Sliders for generation
+  and load, presets for noon, evening and grid draw, and the two special
+  cases — a house without a generation sensor and a house without any sensor.
+
+### Changed
+
+- **Energy lives in the picture.** The column of tiles is gone. Live
+  production, measured load and the grid sit as small paper notes in the
+  picture, each pinned by a hairline to the thing it measures, while the free
+  wall carries the day: the period's leading figure large in the paper voice,
+  the rest small beneath it. The period chips stay; the flow diagram, the
+  consumption card and the grid of figures are gone. What the house cannot
+  measure gets no note.
+- **True curves.** The day's line was an invented shape. It now comes from
+  Home Assistant's five-minute statistics of the configured sensors, and it is
+  simply absent until there is data. Last week, last month and total show real
+  sums from the long-term statistics of the meters — produced, fed in and
+  drawn only where a sensor exists.
+- **A new built-in picture for the energy screen.** No longer a balcony over a
+  specific city composed for a sidebar that no longer exists, but a generic
+  house from the garden in Hauser's illustration style, day and night. It is
+  also the demo picture.
+- **The calendar is a sheet of paper, not a table.** Hairlines instead of a
+  grid, small caps weekdays, a serif month and serif day numbers. The current
+  week sits at the top in full size, the coming weeks follow a step quieter,
+  and a week without appointments folds down to its numbers. Today is a small
+  pinned slip instead of a blue box. All-day entries are paper notes; timed
+  entries are ink, with the time in the colour of their calendar instead of a
+  coloured edge. Every calendar gets its own paper colour, and a resident's
+  own calendar wears the resident's colour from the pinboard. The "updated at"
+  line and the refresh button are gone: the sheet refreshes on its own.
+- **A clock never goes out.** When the household configuration is missing or
+  the server stays silent, the panel no longer imitates a dashboard. It shows
+  the time, the date and the coming days in the quiet standby style; the cause
+  is one translated sentence at the bottom, next to a reload button.
+- **Losing the connection no longer stacks a banner over the stage.** The room
+  picture stays where it is and the controls dim as before. On the panel the
+  title bar carries the cause and reconnects on tap; on the phone a small
+  floating chip does the same without pushing the content down.
+- **No dashes where the house has nothing to measure.** A figure only exists
+  with a reading: without a value the field is gone, and without fields the
+  section is gone — on the panel, on the phone, in the sensor tile and detail
+  window, and for the media source.
+- **The settings fit on one screen.** The sidebar lists nine areas without
+  scrolling, separated by hairlines instead of five headings. Maintenance and
+  diagnostics, the library override and the unfinished hotel mode are folded
+  away: they appear when the hidden gesture reveals them (tap the logo three
+  times) and the search finds them at any time.
+- **The consent line in the image assistant names the purpose**, not a number
+  of image calls. The number of provider calls still shows next to the button.
+- **The ambient street map is on by default.** It still appears only once a
+  location is set and the server has rendered the map, so nothing changes for
+  installations without one; a second device no longer starts without the
+  background. Turning it off is what gets stored now.
+
+### Fixed
+
+- **The calendar is there from the first minute.** On a freshly set-up panel
+  the calendar tab and the standby week strip only appeared after the first
+  five-minute refresh, because the first fetch ran before the connection to
+  Home Assistant stood. Now every stale reading reloads the moment the
+  connection is established.
+- **A house photo stays a house.** Sending a photo of your house through the
+  image assistant with "Outside (energy)" as the target produced a living
+  room, because every prompt spoke of a room. The outside target now has its
+  own recipe for all five passes.
+- **A green dot that tells the truth.** The image assistant showed "Connected"
+  as long as a credential file existed, even when the ChatGPT sign-in behind
+  it had long expired. The status now asks whether the sign-in still carries;
+  if it does not, the card says so and offers the sign-in right there. If the
+  machine is simply offline, nothing is claimed either way.
+- **The image assistant says why it stopped.** Every failure from the image
+  provider read the same sentence. An expired sign-in, an exhausted quota and
+  a refused photo need different next steps; each reason now has its own
+  sentence, and it names what to do.
+- **The image assistant keeps its target** while the pictures are generated,
+  even if the dialog is closed in between.
+
 ## [0.8.2] - 2026-09-06
 
 ### Fixed

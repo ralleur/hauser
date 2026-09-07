@@ -34,21 +34,23 @@
     return !!(cur as SwitchValue).on;
   });
 
-  // Wert-Zeile der nicht-schaltbaren Kategorien (Kachel-Ebene 1, kein Detail).
+  /* Wert-Zeile der nicht-schaltbaren Kategorien (Kachel-Ebene 1, kein Detail).
+     null = kein Messwert; die Zeile bleibt dann leer statt einen Strich zu
+     zeigen (R3, docs/23). */
   const stateLine = $derived.by(() => {
     if (toggles) return null;
     if (category === 'temp') {
       const c = cur as ClimateValue | undefined;
-      return c ? `${fmtTemp(c.target)}° ${m.climate_target()}` : '—';
+      return c ? `${fmtTemp(c.target)}° ${m.climate_target()}` : null;
     }
     if (category === 'media') {
       const media = cur as MediaValue | undefined;
-      if (!media) return '—';
+      if (!media) return null;
       return media.playing ? (media.track ?? m.dev_playing()) : m.dev_paused();
     }
     if (device.domain === 'binary_sensor') {
       const s = cur as SwitchValue | undefined;
-      return s ? binaryLabel(device.deviceClass, s.on) : '—';
+      return s ? binaryLabel(device.deviceClass, s.on) : null;
     }
     const s = cur as SensorValue | undefined;
     return fmtSensor(s?.value, s?.unit ?? device.unit);

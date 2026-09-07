@@ -126,6 +126,9 @@ export interface Backend {
   getCameraStreamPath?(entityId: string): Promise<string | null>;
   /** Read-only Kalender-Seam (B-10): Discovery + offizieller HA-Agenda-Abruf. */
   listCalendarSources?(): Promise<import('../state/calendar.ts').CalendarSource[]>;
+  /** Langzeitstatistik des Recorders (R21): Mittelwerte und Zuwächse je
+      Zeitscheibe für die Energiesensoren. Lesend. */
+  getStatistics?(request: StatisticsRequest): Promise<StatisticsResult>;
   /* Bewohner aus Home Assistant (Paket 8): Auswahlliste der Einstellungen. */
   listPersonSources?(): Promise<PersonSource[]>;
   getCalendarEvents?(
@@ -262,3 +265,22 @@ export interface ReconcileEvent {
 /** Ein `person.*` aus Home Assistant, wie ihn die Einstellungen zur Auswahl
     anbieten (Paket 8). */
 export interface PersonSource { entityId: string; name: string }
+
+/* ── Recorder-Statistik (R21) ── */
+export type StatisticsPeriod = '5minute' | 'hour' | 'day' | 'month';
+export interface StatisticsRequest {
+  statisticIds: string[];
+  start: Date;
+  end?: Date;
+  period: StatisticsPeriod;
+  types: Array<'mean' | 'change' | 'sum'>;
+}
+export interface StatisticsBucket {
+  /** Beginn der Zeitscheibe in Millisekunden seit Epoche. */
+  start: number;
+  end: number;
+  mean?: number | null;
+  change?: number | null;
+  sum?: number | null;
+}
+export type StatisticsResult = Record<string, StatisticsBucket[]>;

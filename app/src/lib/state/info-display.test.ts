@@ -24,8 +24,8 @@ describe('fmtSensor (Messwert de-DE + Einheit)', () => {
     expect(fmtSensor(2.1)).toBe('2,1');
   });
 
-  it('unavailable/unknown (null) → Gedankenstrich', () => {
-    expect(fmtSensor(null, '°C')).toBe('—');
-    expect(fmtSensor(undefined)).toBe('—');
+  it('unavailable/unknown (null) → kein Wert, kein Gedankenstrich', () => {
+    expect(fmtSensor(null, '°C')).toBeNull();
+    expect(fmtSensor(undefined)).toBeNull();
   });
 });

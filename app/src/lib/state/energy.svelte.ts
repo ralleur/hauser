@@ -9,6 +9,7 @@
    die UI rechnet in kW/kWh. `unit` aus dem Sensor entscheidet (W/Wh → /1000).
    ============================================ */
 
+import { simulation } from './simulation.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { ENERGY_SENSORS, energyRefIds, type EnergySensorRef, type LoadSource } from './app.svelte.ts';
 import { computeLoadBreakdown, type LoadBreakdown } from './energy-load.ts';
@@ -130,7 +131,36 @@ function fillFromSnapshot(readings: EnergyReadings): EnergyReadings {
   };
 }
 
+/* Simulator (R20): Werte von Hand ersetzen die Sensoren vollständig — auch die
+   Tagessummen, damit die Wand etwas trägt. Die Faktoren sind erfunden und
+   sollen nur plausibel aussehen; ein Neuladen beendet die Simulation. */
+function simulatedEnergyView(sim: NonNullable<typeof simulation.energy>): EnergyView {
+  const round = (value: number) => Math.round(value * 10) / 10;
+  if (!sim.configured) {
+    return {
+      configured: false, hasGeneration: false, pv: null, load: null, grid: null,
+      today: { produced: null, consumed: null, fedIn: null, drawn: null },
+    };
+  }
+  const pv = sim.generation ? sim.pv : null;
+  const load = sim.load;
+  return {
+    configured: true,
+    hasGeneration: sim.generation,
+    pv,
+    load,
+    grid: pv !== null ? round(pv - load) : null,
+    today: {
+      produced: pv !== null ? round(pv * 5.2) : null,
+      consumed: round(load * 6.1),
+      fedIn: pv !== null ? round(Math.max(0, pv - load) * 3.4) : null,
+      drawn: round(Math.max(0, load - (pv ?? 0)) * 4.7),
+    },
+  };
+}
+
 export function energyView(): EnergyView {
+  if (simulation.energy) return simulatedEnergyView(simulation.energy);
   const pv = sumRefs(ENERGY_SENSORS.pv, kw);
   const load = sumRefs(ENERGY_SENSORS.load, kw);
   // Netz-Fluss aus (PV − Last): >0 Überschuss/Einspeisung, <0 Bezug. Nur wenn

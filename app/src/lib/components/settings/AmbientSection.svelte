@@ -48,6 +48,9 @@
   $effect(() => { ensureAmbientMapStatus({ immediate: true, admin: true }); });
 
   let manualOpen = $state(false);
+  /* Alles außer Schalter und Zustand ist Einrichtung, keine tägliche
+     Einstellung — gefaltet, damit die Karte eine Zeile bleibt (R6, docs/23). */
+  let detailsOpen = $state(false);
   let manualLatitude = $state('');
   let manualLongitude = $state('');
 
@@ -334,6 +337,20 @@
   {/if}
 
   <div class="settings-row">
+    <span class="settings-row-icon"><Icon name="i-map-marker" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_details()}</span>
+      <span class="settings-row-sub">{m.sys_map_details_hint()}</span>
+    </div>
+    <button class="secondary-btn pressable" type="button"
+            aria-expanded={detailsOpen} aria-label={m.sys_map_details()}
+            onclick={() => { detailsOpen = !detailsOpen; }}>
+      <Icon name={detailsOpen ? 'i-chevron-up' : 'i-chevron-down'} cls="icon icon-md" />
+    </button>
+  </div>
+
+  {#if detailsOpen}
+  <div class="settings-row">
     <span class="settings-row-icon"><Icon name="i-home-assistant" cls="icon icon-md" /></span>
     <div class="settings-row-text">
       <span class="settings-row-label">{m.sys_map_use_home_assistant()}</span>
@@ -438,6 +455,7 @@
       <button class="secondary-btn pressable" type="button" disabled={mapBusy}
               onclick={regenerateAmbientMap}>{m.sys_start_now()}</button>
     </div>
+  {/if}
   {/if}
 </div>
 

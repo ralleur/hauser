@@ -46,7 +46,7 @@ export interface MainCandidatesJobRequest {
   crop: RoomImageCrop;
   canonicalCropPixels: RoomImageCanonicalCropPixels;
   focus: RoomImageFocus;
-  stylePreset: 'hauser-room-v1';
+  stylePreset: 'hauser-room-v1' | 'hauser-exterior-v1';
   adjustments: {
     declutter: 'none' | 'light' | 'strong';
     tone: 'neutral' | 'warm' | 'cool';
@@ -619,7 +619,8 @@ function parseJob(value: unknown): RoomImageJob | null {
 
 function rebuildMain(request: MainCandidatesJobRequest): MainCandidatesJobRequest {
   if (request.kind !== 'main_candidates' || !isRoomImageClientRequestId(request.clientRequestId)
-      || !opaqueId(request.uploadId) || request.stylePreset !== 'hauser-room-v1'
+      || !opaqueId(request.uploadId)
+      || !oneOf(request.stylePreset, ['hauser-room-v1', 'hauser-exterior-v1'] as const)
       || request.noticeVersion !== 'room-image-v1' || request.costConfirmed !== true
       || !oneOf(request.candidateCount, [1, 2] as const)
       || request.confirmedProviderCalls !== request.candidateCount + 1) throw invalidRequest();
@@ -640,7 +641,7 @@ function rebuildMain(request: MainCandidatesJobRequest): MainCandidatesJobReques
     crop: parsedCrop,
     canonicalCropPixels: pixels,
     focus: parsedFocus,
-    stylePreset: 'hauser-room-v1',
+    stylePreset: request.stylePreset,
     adjustments: {
       declutter: adjustments.declutter,
       tone: adjustments.tone,

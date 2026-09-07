@@ -18,6 +18,7 @@ export const REGION_COLOR: Readonly<Record<string, string>> = Object.freeze({
   bath: '#00b8a9',
   appliance: '#f2994a',
   bin: '#828282',
+  solar: '#1f3a93',
   toy: '#ff7ac8',
 });
 

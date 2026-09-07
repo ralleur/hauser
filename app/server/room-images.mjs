@@ -3223,7 +3223,45 @@ export function createRoomImageCredentialStore({
     return tokens.access_token.trim();
   }
 
-  return { beginChatGptLogin, chatGptAccessToken, clear, current, pollChatGptLogin, setApiKey, status };
+  /* Lebt der Zugang noch? (R15, docs/23) `status()` sieht nur, dass eine
+     Datei da ist — ein abgelaufenes Refresh-Token sieht genauso aus wie ein
+     frisches. Für den ChatGPT-Weg ist die Antwort eindeutig: derselbe Griff,
+     den auch der Assistent benutzt. Liefert er kein Token, ist die Anmeldung
+     hin. Ist der Mac gerade offline, wissen wir es nicht — dann `null`, denn
+     eine Warnung ohne Grund ist schlimmer als keine. Ein API-Key altert nicht
+     von selbst; ihn zu prüfen kostete bei jedem Öffnen eine Anfrage. */
+  async function check() {
+    const base = status();
+    if (base.mode !== 'chatgpt') return { ...base, valid: null };
+    try {
+      return { ...base, valid: Boolean(await chatGptAccessToken()) };
+    } catch {
+      return { ...base, valid: null };
+    }
+  }
+
+  return { beginChatGptLogin, chatGptAccessToken, check, clear, current, pollChatGptLogin, setApiKey, status };
+}
+
+/* Ein Satz je Grund (R16, docs/23): Bisher las jeder Anbieterfehler gleich —
+   „Der Provider hat den Request abgelehnt." Abgelaufene Anmeldung, erschöpftes
+   Kontingent und ein zurückgewiesenes Foto verlangen aber verschiedene
+   nächste Schritte. Der Code kennt den Unterschied längst; nur der Satz
+   verschwieg ihn. */
+export function roomImageProviderFailureMessage(code) {
+  if (code === 'PROVIDER_CREDENTIAL_INVALID') {
+    return 'Die Anmeldung beim Bildanbieter ist abgelaufen. Im Zugang neu anmelden.';
+  }
+  if (code === 'PROVIDER_QUOTA_OR_RATE_LIMIT') {
+    return 'Das Kontingent des Bildanbieters ist gerade erschöpft. Später noch einmal versuchen.';
+  }
+  if (code === 'PROVIDER_FORBIDDEN') {
+    return 'Dieser Zugang darf das Bildmodell nicht verwenden.';
+  }
+  if (code === 'PROVIDER_IMAGE_REJECTED') {
+    return 'Der Bildanbieter hat das Foto zurückgewiesen. Ein anderes Foto versuchen.';
+  }
+  return 'Der Bildanbieter hat den Auftrag abgelehnt.';
 }
 
 function roomImageProviderHttpErrorCode(status) {
@@ -3911,10 +3949,12 @@ export function createRoomImageJobRunner({
     if (processed.kind === 'http_error') {
       store.commitProviderTransition(jobId, attemptId, `http-${attemptId}`, {
         target: 'completed', outcome: 'http_error', errorCode: processed.errorCode, result: null,
-        jobState: cancelling ? null : failedJobState(current, processed.errorCode, 'Der Provider hat den Request abgelehnt.'),
+        jobState: cancelling ? null
+          : failedJobState(current, processed.errorCode, roomImageProviderFailureMessage(processed.errorCode)),
       });
       failJob(jobId, cancelling ? 'JOB_CANCELLED' : processed.errorCode,
-        cancelling ? 'Der Job wurde abgebrochen.' : 'Der Provider hat den Request abgelehnt.', { cancelled: cancelling });
+        cancelling ? 'Der Job wurde abgebrochen.' : roomImageProviderFailureMessage(processed.errorCode),
+        { cancelled: cancelling });
       runnerReleased = true; releaseController();
       return false;
     }
@@ -4191,7 +4231,7 @@ async function serveRoomImageAccess(req, res, pathname, credentialStore) {
     if (!credentialStore) throw new RoomImageRequestError(503, 'ROOM_IMAGE_ACCESS_UNAVAILABLE', 'Die Zugangskonfiguration ist nicht verfügbar.');
     if (pathname === '/api/room-images/access') {
       if (req.method === 'GET') {
-        roomImageJsonResponse(req, res, 200, credentialStore.status());
+        roomImageJsonResponse(req, res, 200, await credentialStore.check());
       } else if (req.method === 'DELETE') {
         roomImageJsonResponse(req, res, 200, credentialStore.clear());
       } else {
@@ -4673,8 +4713,26 @@ async function serveRoomImagePreview(req, res, store, reference, contentType, ex
   }
 }
 
+/* Das Außenbild (R14, docs/23) wird wie ein Raum zugewiesen, liegt aber
+   unter `document.exterior.hero`, nicht in `rooms`. Beide Wege teilen sich
+   diesen Griff, damit Zuweisung, Hochladen und Verwaisungsschutz dieselbe
+   Stelle sehen. */
+const EXTERIOR_HERO_ID = 'exterior';
+
+function heroTarget(document, roomId) {
+  if (roomId === EXTERIOR_HERO_ID) {
+    return {
+      get hero() { return document.exterior?.hero ?? null; },
+      set hero(value) { document.exterior = { hero: value }; },
+    };
+  }
+  return document.rooms.find((candidate) => candidate.id === roomId) ?? null;
+}
+
 function assignedRoomIds(document, assetId) {
-  return document.rooms.filter((room) => room.hero?.assetId === assetId).map((room) => room.id).sort();
+  const rooms = document.rooms.filter((room) => room.hero?.assetId === assetId).map((room) => room.id);
+  if (document.exterior?.hero?.assetId === assetId) rooms.push(EXTERIOR_HERO_ID);
+  return rooms.sort();
 }
 
 function normalizeRoomImageAssignment(payload) {
@@ -4870,7 +4928,7 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
       context.assertSetupRecoveryHealthy();
       const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
       if (matches[0] !== snapshot.etag) return { type: 'stale' };
-      const room = snapshot.document.rooms.find((candidate) => candidate.id === roomId);
+      const room = heroTarget(snapshot.document, roomId);
       if (!room) return { type: 'room_absent' };
       if (payload.asset) {
         const status = context.assetStore.status(payload.asset.assetId);
@@ -4918,7 +4976,7 @@ async function serveManualRoomBackground(req, res, roomId, context) {
       context.assertSetupRecoveryHealthy();
       const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
       if (matches[0] !== snapshot.etag) return { type: 'stale' };
-      const room = snapshot.document.rooms.find((candidate) => candidate.id === roomId);
+      const room = heroTarget(snapshot.document, roomId);
       if (!room) return { type: 'room_absent' };
 
       const previousAssetId = room.hero?.assetId ?? null;

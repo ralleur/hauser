@@ -29,6 +29,29 @@ function expectIssue(input: unknown, code: ConfigIssue['code'], path: string): v
   ]));
 }
 
+/* R19 (docs/23): Von Hand gesetzte Zettelplätze des Energie-Screens hängen am
+   Außenbild — geschlossen, in Bildprozent, je Motiv. */
+describe('household config exterior marks', () => {
+  const anchor = { point: { x: 64, y: 46 }, note: { x: 44, y: 28 }, tilt: -1.1 };
+  const marks = { assetId: null, sun: anchor, house: anchor, grid: anchor };
+
+  it('accepts hand-placed marks and compiles them into the runtime model', () => {
+    const parsed = parseHouseholdConfig({ ...neutralSmall, exterior: { hero: null, marks } });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.exterior?.marks).toEqual(marks);
+    expect(compileHouseholdConfig(parsed.value).exteriorMarks).toEqual(marks);
+    expect(compileHouseholdConfig(parseValid({ ...neutralSmall, exterior: { hero: null } })).exteriorMarks).toBeNull();
+  });
+
+  it('rejects percentages outside the picture and unknown keys', () => {
+    expectIssue({ ...neutralSmall, exterior: { hero: null, marks: { ...marks, sun: { ...anchor, point: { x: 120, y: 1 } } } } },
+      'INVALID_VALUE', '$.exterior.marks.sun.point.x');
+    expectIssue({ ...neutralSmall, exterior: { hero: null, marks: { ...marks, extra: true } } },
+      'UNKNOWN_FIELD', '$.exterior.marks.extra');
+  });
+});
+
 describe('household config v4', () => {
   it('accepts two independent configurations and compiles different runtime models', () => {
     const first = compileHouseholdConfig(parseValid(neutralSmall));

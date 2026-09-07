@@ -219,7 +219,7 @@ if (reconfigureRequested) {
       // ist der kleinste sichere Cutover auf den ersetzten/gelöschten Snapshot.
       location.reload();
     } else if (result.status === 'blocked') {
-      (await import('./lib/shells/minimal-shell-cache.ts')).publishMinimalShellConfigStatus(result.code);
+      (await import('./lib/shells/minimal-shell-status.ts')).publishMinimalShellConfigStatus(result.code);
     }
   });
 }

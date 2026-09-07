@@ -28,6 +28,7 @@ export const REGION_KINDS = Object.freeze([
   'appliance', // Küchengeräte: Herd, Ofen, Kühlschrank, Spülmaschine, Mikrowelle
   'bin',       // Mülleimer
   'toy',       // Spielzeug
+  'solar',     // Solarmodule auf Dach, Balkon oder Fassade (Außenbild, R14)
 ]);
 
 export const REGION_DETECTION_MAX_REGIONS = 24;
@@ -57,10 +58,11 @@ const KIND_GUIDE = [
   'appliance: kitchen appliances such as stove, oven, fridge, dishwasher, microwave',
   'bin: waste bins',
   'toy: toys and toy storage',
+  'solar: photovoltaic solar modules on a roof, a balcony railing, a facade or in the garden — the module surface itself',
 ].join('; ');
 
 export const REGION_DETECTION_PROMPT = [
-  'You are given a stylised illustration of one room in a home.',
+  'You are given a stylised illustration of one room in a home, or of a house seen from outside.',
   'Mark the areas that belong to these kinds:',
   `${KIND_GUIDE}.`,
   'Ignore anything that is not in that list. Ignore pictures on the wall, plants, lamps and doors to other rooms.',

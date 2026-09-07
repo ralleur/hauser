@@ -14,6 +14,16 @@ import type { WeatherCondition } from './weather.ts';
     wie der Adressparameter `?weather=`, nur ohne Neuladen. */
 export type SimulatedWeatherChoice = WeatherCondition | 'off';
 
+/** Energiewerte von Hand (R20): Erzeugung und Last in kW, dazu die zwei
+    Sonderfälle, die der Screen anders zeichnet — Haus ohne Erzeugungssensor
+    (keine Solarseite, R3) und Haus ohne jeden Sensor (nur das Bild). */
+export interface SimulatedEnergy {
+  pv: number;
+  load: number;
+  generation: boolean;
+  configured: boolean;
+}
+
 export const simulation = $state({
   /** Dämmerungsstand 0…1, überschreibt die Sonnenhöhe. */
   dusk: null as number | null,
@@ -26,7 +36,18 @@ export const simulation = $state({
      Erkennung gefunden hat, und beantwortet damit die Frage, ob das Wetter im
      richtigen Fenster zieht. */
   regions: false,
+  /** Energiewerte von Hand; `null` heißt „echte Sensoren". */
+  energy: null as SimulatedEnergy | null,
 });
+
+export function setSimulatedEnergy(value: SimulatedEnergy | null): void {
+  simulation.energy = value === null ? null : {
+    pv: Math.max(0, value.pv),
+    load: Math.max(0, value.load),
+    generation: value.generation,
+    configured: value.configured,
+  };
+}
 
 export function setSimulatedDusk(value: number | null): void {
   simulation.dusk = value === null ? null : Math.min(1, Math.max(0, value));
@@ -50,9 +71,10 @@ export function clearSimulation(): void {
   simulation.lightsOff = null;
   simulation.weather = null;
   simulation.regions = false;
+  simulation.energy = null;
 }
 
 export function simulationActive(): boolean {
   return simulation.dusk !== null || simulation.lightsOff !== null
-    || simulation.weather !== null || simulation.regions;
+    || simulation.weather !== null || simulation.regions || simulation.energy !== null;
 }

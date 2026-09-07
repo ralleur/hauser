@@ -8,6 +8,7 @@
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
   import { getRoomImageAccess, type RoomImageAccessStatus } from '../../state/room-image-access.ts';
   import { appState } from '../../state/app.svelte.ts';
+  import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
   import { setRoomImageStage } from '../../state/room-image-activity.svelte.ts';
@@ -52,7 +53,24 @@
   let finalCostConfirmed = $state(false);
   let retryConfirmed = $state(false);
   let fullscreenUrl = $state<string | null>(null);
+  /* Das Ziel überlebt Schließen und Neuladen (R14b-Nachtrag): Die Erzeugung
+     dauert Minuten, der Dialog wird zwischendurch zugemacht, und der Auftrag
+     kehrt über die Wiederaufnahme zurück — das Ziel muss mitkommen, sonst
+     hängt das fertige Set am Ende nirgends. Owner-Befund 2026-09-07. */
+  const TARGET_KEY = 'hmi:room-image-target';
+  function restoreTarget(): string {
+    try { return localStorage.getItem(TARGET_KEY) ?? ''; } catch { return ''; }
+  }
+  function forgetTarget(): void {
+    try { localStorage.removeItem(TARGET_KEY); } catch { /* best-effort */ }
+  }
   let assignRoomId = $state('');
+  $effect(() => {
+    try {
+      if (assignRoomId) localStorage.setItem(TARGET_KEY, assignRoomId);
+      else localStorage.removeItem(TARGET_KEY);
+    } catch { /* best-effort */ }
+  });
   let assignBusy = $state(false);
   let assignError = $state<string | null>(null);
   let assignNotice = $state<string | null>(null);
@@ -77,12 +95,22 @@
   const currentPreview = $derived(IS_DEMO ? objectUrl : (wizardState.sourcePreviewUrl ?? objectUrl));
   const capabilityEnabled = $derived(wizardState.capability.public?.enabled === true);
   const busy = $derived(uploadBusy || wizardState.lifecycle === 'loading');
-  const roomOptions = $derived(appState.rooms.map((room) => ({ id: room.id, name: room.name })));
+  /* Das Haus von außen ist ein Ziel wie ein Raum (R14): dasselbe Set, dieselbe
+     Zuweisung, es landet nur auf dem Energie-Screen statt in einem Raum. */
+  const roomOptions = $derived([
+    ...appState.rooms.map((room) => ({ id: room.id, name: room.name })),
+    { id: EXTERIOR_HERO_ID, name: m.rimg_target_exterior() },
+  ]);
   /* Der OpenAI-Zugang ist nur beim ersten Mal ein eigener Schritt. Steht er,
      bleibt im Kopf nur ein Chip, ueber den man ihn wieder aufklappen kann. */
   let accessStatus = $state<RoomImageAccessStatus | null>(null);
   let accessOpen = $state(false);
-  const accessConfigured = $derived(IS_DEMO || accessStatus?.configured === true);
+  /* „Konfiguriert" heißt nicht „gültig" (R15, docs/23): Eine abgelaufene
+     Anmeldung liegt als Datei vor wie eine frische. Zählte sie hier weiter,
+     verschwände der Zugang hinter dem Chip und der nächste Lauf liefe in
+     dieselbe Ablehnung. Also gilt nur, was auch trägt. */
+  const accessConfigured = $derived(IS_DEMO
+    || (accessStatus?.configured === true && accessStatus.valid !== false));
   const showAccess = $derived(!IS_DEMO && (accessOpen || !accessConfigured));
   /* Auf dem Tablet direkt aufnehmen; am Desktop ignoriert der Browser capture
      ohnehin, deshalb dort nur die Dateiauswahl. */
@@ -122,7 +150,7 @@
     try {
       accessStatus = await getRoomImageAccess();
     } catch {
-      accessStatus = { configured: false, mode: null, source: null };
+      accessStatus = { configured: false, mode: null, source: null, valid: null };
     }
   }
 
@@ -140,7 +168,7 @@
     selectedCandidateId = null;
     finalCostConfirmed = false;
     retryConfirmed = false;
-    assignRoomId = roomId ?? '';
+    assignRoomId = roomId ?? restoreTarget();
     assignBusy = false;
     assignError = null;
     assignNotice = null;
@@ -248,7 +276,9 @@
         crop: cropProjection.crop,
         canonicalCropPixels: cropProjection.canonicalCropPixels,
         focus,
-        stylePreset: 'hauser-room-v1',
+        /* Das Haus von außen bekommt sein eigenes Rezept (R14b): ein Hausfoto
+           durch das Raumrezept ergab ein Zimmer. */
+        stylePreset: assignRoomId === EXTERIOR_HERO_ID ? 'hauser-exterior-v1' : 'hauser-room-v1',
         adjustments: roomImageFixedAdjustments(),
         candidateCount,
         noticeVersion: 'room-image-v1',
@@ -319,6 +349,7 @@
       assignBusy = false;
     }
     controller.forget();
+    forgetTarget();
     resetLocalDraft();
     view = 'upload';
     requestClose();
@@ -353,7 +384,7 @@
       {:else if showAccess}
         <RoomImageAccess onchange={(status) => {
           accessStatus = status;
-          if (status.configured) accessOpen = false;
+          if (status.configured && status.valid !== false) accessOpen = false;
           void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
         }} />
       {/if}

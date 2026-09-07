@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.9.0 - 2026-09-07
+
+Everything between 0.8.2 and this release, as one update.
+
+### Added
+
+- The energy screen can show your own house: assign an image set to
+  "Outside (energy)" in the image assistant or the library. Solar modules are
+  detected and carry the generation figure; day and night fade at dusk.
+- Press and hold the energy picture (configure mode) for a menu: own house,
+  picture from the library, move the notes, sensor assignment.
+- Notes and pins on the energy picture can be dragged into place and kept;
+  Reset returns to the template. They always stay on screen.
+- The workshop simulator drives the energy screen: generation and load
+  sliders, presets, no-sensor cases.
+
+### Changed
+
+- Energy lives in the picture: no tiles, live figures as paper notes pinned to
+  what they measure, the day's totals on the free wall.
+- The day's line and the week, month and total sums come from Home Assistant
+  statistics; nothing is invented.
+- New built-in picture for the energy screen: a generic house from the garden,
+  day and night.
+- The calendar is a sheet of paper: current week large, empty weeks folded,
+  all-day entries as paper notes, times in the calendar's colour, distinct
+  papers per calendar, no refresh controls.
+- A clock never goes out: without a configuration or a server the panel shows
+  time, date and the coming days instead of imitating a dashboard.
+- Losing the connection dims the controls instead of stacking a banner.
+- No dashes where the house has nothing to measure.
+- The settings fit on one screen: nine areas without scrolling.
+- The consent line in the image assistant names the purpose instead of a call
+  count.
+- The ambient street map is on by default.
+
+### Fixed
+
+- The calendar tab and the standby week strip appear as soon as the connection
+  stands, not after the first five-minute refresh.
+- A house photo sent to "Outside (energy)" no longer turns into a room.
+- The image assistant no longer reports a connected account when the ChatGPT
+  sign-in has expired, and it names the reason a run stopped.
+- The image assistant keeps its chosen target while pictures are generated.
+
 ## 0.8.2 - 2026-09-06
 
 ### Fixed

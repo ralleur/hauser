@@ -69,12 +69,9 @@ describe('phone energy projection', () => {
 
     expect(unconfigured.status).toEqual({ kind: 'unconfigured', text: 'Keine Energie-Sensoren konfiguriert.' });
     expect(unavailable.status).toEqual({ kind: 'unavailable', text: 'Energie-Sensoren konfiguriert, aber aktuell nicht verfügbar.' });
-    expect(unavailable.live.map((metric) => [metric.label, metric.value])).toEqual([
-      ['Solar aktuell', '—'],
-      ['Erfasste Last', '—'],
-      ['Netzfluss', '—'],
-    ]);
-    expect(unavailable.kpis.every((metric) => metric.value === '—')).toBe(true);
+    // Ohne Messwerte bleibt die Liste leer statt drei Striche zu zeigen (R3).
+    expect(unavailable.live).toEqual([]);
+    expect(unavailable.kpis).toEqual([]);
     expect(unavailable.canExpand).toBe(false);
   });
 

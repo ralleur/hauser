@@ -4,7 +4,7 @@
   import Icon from '../components/Icon.svelte';
   import { hauserUpdates, systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
-  import { logoTap } from '../state/hidden-gestures.svelte.ts';
+  import { diagnostics, logoTap } from '../state/hidden-gestures.svelte.ts';
   import { m } from '../../paraglide/messages.js';
 
   import {
@@ -43,7 +43,10 @@
 
   const section = $derived(settingsSection(settingsUi.section));
   const results = $derived(searchSettings(settingsUi.query));
-  const sidebar = $derived(settingsSidebar());
+  /* Gefaltete Sektionen (Wartung, Hotelmodus, KI-Werkstatt) erscheinen erst,
+     wenn dieselbe versteckte Geste sie aufdeckt, die die Diagnose öffnet —
+     dreimal auf das Logo (R6, docs/23). Die Suche findet sie immer. */
+  const sidebar = $derived(settingsSidebar(diagnostics.active));
   const ownUpdates = $derived(hauserUpdates(systemStatus.updates));
 
   onMount(() => {
@@ -119,8 +122,9 @@
          Theme (dark: hell, light: dunkel), der Lichtpunkt bleibt gold. -->
     <div class="settings-brand-row">
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions — versteckte
-         Geste (Paket 10): dreimal tippen öffnet die Diagnoseansicht. Kein
-         Bedienelement, kein Menüeintrag; dokumentiert in docs/06. -->
+         Geste (Paket 10): dreimal tippen öffnet die Diagnoseansicht und
+         deckt zugleich die gefalteten Sektionen auf (R6). Kein Bedienelement,
+         kein Menüeintrag; dokumentiert in docs/06. -->
     <h1 class="settings-title settings-brand" bind:this={titleAnchor} tabindex="-1" aria-label="Hauser — System"
         onpointerdown={logoTap}>
       <svg class="settings-brand-mark" viewBox="0 0 512 512" aria-hidden="true">

@@ -48,6 +48,23 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
         },
         kpis: { ...config.energy.kpis },
       };
+  const exteriorHero = config.exterior?.hero == null ? null : {
+    assetId: config.exterior.hero.assetId,
+    focus: {
+      panel: { ...config.exterior.hero.focus.panel },
+      phone: { ...config.exterior.hero.focus.phone },
+    },
+  };
+  const marks = config.exterior?.marks;
+  const cloneAnchor = (anchor: { point: { x: number; y: number }; note: { x: number; y: number }; tilt: number }) => ({
+    point: { ...anchor.point }, note: { ...anchor.note }, tilt: anchor.tilt,
+  });
+  const exteriorMarks = marks == null ? null : {
+    assetId: marks.assetId,
+    sun: cloneAnchor(marks.sun),
+    house: cloneAnchor(marks.house),
+    grid: cloneAnchor(marks.grid),
+  };
   const globalEntities = {
     sun: config.globalEntities.sun,
     vacationMode: config.globalEntities.vacationMode,
@@ -141,6 +158,8 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
     energy,
     mediaTargets,
     globalEntities,
+    exteriorHero,
+    exteriorMarks,
     subscriptionEntityIds: sortedSubscriptionEntityIds,
     entityIds: sortedSubscriptionEntityIds,
     commandContracts,

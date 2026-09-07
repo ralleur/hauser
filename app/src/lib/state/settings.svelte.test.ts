@@ -81,23 +81,26 @@ describe('setAmbientHeroText', () => {
 });
 
 describe('setAmbientCityMap', () => {
-  it('ist standardmäßig aus und persistiert nur das Einschalten', async () => {
+  it('ist standardmäßig an und persistiert nur das Abschalten', async () => {
     const { settingsValues, setAmbientCityMap } = await freshSettings();
-    expect(settingsValues.ambientCityMap).toBe(false);
-
-    setAmbientCityMap(true);
     expect(settingsValues.ambientCityMap).toBe(true);
-    expect(localStorage.getItem('hmi:ambient-map')).toBe('on');
+    expect(localStorage.getItem('hmi:ambient-map')).toBeNull();
 
     setAmbientCityMap(false);
     expect(settingsValues.ambientCityMap).toBe(false);
+    expect(localStorage.getItem('hmi:ambient-map')).toBe('off');
+
+    setAmbientCityMap(true);
+    expect(settingsValues.ambientCityMap).toBe(true);
     expect(localStorage.getItem('hmi:ambient-map')).toBeNull();
   });
 
-  it('übernimmt einen gespeicherten eingeschalteten Zustand', async () => {
+  it('übernimmt ein gespeichertes Abschalten und den alten Wert „on"', async () => {
+    localStorage.setItem('hmi:ambient-map', 'off');
+    expect((await freshSettings()).settingsValues.ambientCityMap).toBe(false);
+
     localStorage.setItem('hmi:ambient-map', 'on');
-    const { settingsValues } = await freshSettings();
-    expect(settingsValues.ambientCityMap).toBe(true);
+    expect((await freshSettings()).settingsValues.ambientCityMap).toBe(true);
   });
 
   /* docs/18 §3.2: Standort und Asset sind zentral, die Sichtbarkeit ist

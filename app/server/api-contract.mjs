@@ -44,6 +44,7 @@ export const API_ROUTES = [
   { id: 'householdConfig', methods: ['GET', 'HEAD'], path: '/api/household-config', area: 'config', access: 'origin', purpose: 'Versionierte Haushaltskonfiguration (ETag-geschützt).', cacheable: true },
   { id: 'householdModuleToggle', methods: ['PUT'], path: '/api/household-modules/:moduleId', area: 'config', access: 'origin', purpose: 'Optionales Modul ein- oder ausschalten.' },
   { id: 'householdEnergy', methods: ['PUT'], path: '/api/household-energy', area: 'config', access: 'origin', purpose: 'Energie-Sensorauswahl speichern.' },
+  { id: 'householdEnergyMarks', methods: ['PUT'], path: '/api/household-energy-marks', area: 'config', access: 'origin', purpose: 'Zettelplätze des Energie-Screens speichern oder zurücknehmen.' },
   { id: 'setupDiscovery', methods: ['GET'], path: '/api/setup/discovery', area: 'setup', access: 'origin', purpose: 'Areas und Entitäten aus Home Assistant für den Wizard lesen.' },
   { id: 'setupActivate', methods: ['POST'], path: '/api/setup/activate', area: 'setup', access: 'origin', purpose: 'Haushaltskonfiguration validieren und atomar aktivieren.' },
 

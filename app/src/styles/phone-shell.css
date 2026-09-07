@@ -6,7 +6,6 @@
   --phone-safe-right: env(safe-area-inset-right, 0px);
   --phone-safe-bottom: env(safe-area-inset-bottom, 0px);
   --phone-safe-left: env(safe-area-inset-left, 0px);
-  --phone-conn-banner-height: calc(env(safe-area-inset-top, 0px) + var(--touch-min));
   /* Benachrichtigungsstreifen (Paket 3, docs/20): Die Kachel schwebt nur auf
      dem Panel. Auf dem Phone meldet die Ebene ihre Unterkante als
      --notification-flow-height, und alles darunter beginnt erst dort — Inhalt,
@@ -1069,40 +1068,36 @@
   }
 }
 
-.phone-conn-banner {
+/* Getrennt: eine schwebende Marke statt einer Leiste — sie liegt über der
+   Bühne, schiebt keinen Inhalt nach unten und verbindet auf Tipp neu (R2). */
+.phone-conn-chip {
   position: absolute;
   z-index: 2;
-  top: var(--phone-notification-band);
+  top: calc(var(--phone-notification-band) + env(safe-area-inset-top, 0px) + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  min-height: var(--phone-conn-banner-height);
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-2)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) var(--space-2) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  max-width: calc(100% - 2 * var(--space-4));
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
   color: var(--color-text-primary);
   background: var(--color-surface-2);
-  transform: translateY(-100%);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform var(--duration-normal) var(--ease-out), opacity var(--duration-normal) var(--ease-out);
-}
-
-.phone-conn-banner.is-visible {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* Nur der Retry-Knopf ist anfassbar; das Banner selbst bleibt durchlässig. */
-.phone-conn-retry {
-  margin-left: auto;
-  min-height: var(--touch-min);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  background: var(--color-surface-3);
   font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  pointer-events: auto;
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-md);
+  animation: phone-conn-chip-in var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes phone-conn-chip-in {
+  from { opacity: 0; transform: translate(-50%, -50%); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-conn-chip { animation: none; }
 }
 
 /* Getrennt: die zentrale Klimapille ist gesperrt, solange keine Verbindung
@@ -1110,16 +1105,6 @@
 .phone-shell.is-disconnected .climate-dock {
   opacity: 0.4;
   pointer-events: none;
-}
-
-/* Das Banner liegt für seine Ein-/Ausblend-Animation absolut. Solange es
-   sichtbar ist, beginnt der eigentliche Scrollinhalt darunter statt dahinter. */
-.phone-shell.has-connection-banner .phone-skeleton,
-.phone-shell.has-connection-banner .phone-home-feed,
-.phone-shell.has-connection-banner .phone-calendar,
-.phone-shell.has-connection-banner .phone-notes-page,
-.phone-shell.has-connection-banner .phone-energy {
-  padding-top: calc(var(--phone-conn-banner-height) + var(--space-4));
 }
 
 /* Schwebende Pille statt Vollbreiten-Leiste: schmiegt sich an die gerundeten

@@ -454,7 +454,7 @@
             <span class="ambient-week-num num">{day.dayOfMonth}</span>
           </header>
           {#each day.events as event (event.id)}
-            <div class="ambient-week-event">
+            <div class="ambient-week-event" style={event.color ? postitStyle(event.color) : ''}>
               <span class="ambient-week-time num" class:is-accent={event.emphasis !== null}>
                 {event.emphasis === 'now' ? `Jetzt · ${event.time}` : event.time}
               </span>
@@ -462,7 +462,6 @@
             </div>
           {/each}
           {#if day.more}<div class="ambient-week-more">{m.ambient_more_count({ count: day.more })}</div>{/if}
-          {#if !day.events.length}<div class="ambient-week-empty" aria-hidden="true">—</div>{/if}
         </div>
       {/each}
     </section>

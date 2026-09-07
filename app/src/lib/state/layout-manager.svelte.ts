@@ -12,7 +12,6 @@ import {
   setSlotRoom,
   setWidthPreset,
   type LayoutConfig,
-  type LayoutScope,
   type LayoutSlotId,
   type WidthPresetId,
 } from './layout-config.ts';
@@ -21,8 +20,6 @@ const initial = loadLayoutConfig();
 let applied = $state<LayoutConfig>(initial);
 let draft = $state<LayoutConfig>(cloneLayoutConfig(initial));
 let open = $state(false);
-/* Welche Kontrollfläche der Dialog gerade breit macht — Home oder Energie. */
-let scope = $state<LayoutScope>('home');
 
 export function rehydrateLayoutManager(): void {
   applied = loadLayoutConfig();
@@ -35,10 +32,8 @@ export const layoutManager = {
   get preview() { return open ? draft : applied; },
   get draft() { return draft; },
   get open() { return open; },
-  get scope() { return scope; },
-  show(target: LayoutScope = 'home') {
+  show() {
     draft = cloneLayoutConfig(applied);
-    scope = target;
     open = true;
   },
   cancel() {
@@ -64,7 +59,7 @@ export const layoutManager = {
     saveLayoutConfig(applied);
   },
   setWidth(preset: WidthPresetId) { draft = setWidthPreset(draft, preset); },
-  setPanelSize(value: number) { draft = setPanelSize(draft, value, scope); },
+  setPanelSize(value: number) { draft = setPanelSize(draft, value); },
   setRoomsPerRow(value: number) { draft = setRoomsPerRow(draft, value); },
   reconcileRooms(validRoomIds: readonly string[]) {
     const nextApplied = reconcileLayoutRooms(applied, validRoomIds);

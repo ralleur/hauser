@@ -5,6 +5,8 @@ export interface RoomImageAccessStatus {
   configured: boolean;
   mode: RoomImageAccessMode | null;
   source: 'environment' | 'stored' | null;
+  /** Gilt die Anmeldung noch? `null` = nicht prüfbar (API-Key, offline). */
+  valid: boolean | null;
 }
 
 export interface RoomImageChatGptLogin {
@@ -43,7 +45,10 @@ function status(value: any): RoomImageAccessStatus {
       || ![null, 'environment', 'stored'].includes(value.source)) {
     throw new RoomImageAccessError(m.rimg_err_access_status());
   }
-  return { configured: value.configured, mode: value.mode, source: value.source };
+  /* Ältere Antworten (Speichern, Trennen) kennen `valid` nicht — dann bleibt
+     die Gültigkeit offen, statt sie zu behaupten. */
+  const valid = [true, false].includes(value.valid) ? value.valid as boolean : null;
+  return { configured: value.configured, mode: value.mode, source: value.source, valid };
 }
 
 export async function getRoomImageAccess(): Promise<RoomImageAccessStatus> {

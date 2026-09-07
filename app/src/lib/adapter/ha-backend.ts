@@ -32,6 +32,8 @@ import type {
   PersistentNotification,
   PersonSource,
   SystemUpdate,
+  StatisticsRequest,
+  StatisticsResult,
 } from './types.ts';
 import { AUTOMATION_ID_PREFIX } from '../state/notification-rules.ts';
 import {
@@ -297,6 +299,39 @@ export class HaBackend implements Backend {
         name: String(state.attributes.friendly_name ?? state.entity_id),
         color: typeof state.attributes.color === 'string' ? state.attributes.color : null,
       }));
+  }
+
+  /* Recorder-Statistik (R21): `recorder/statistics_during_period`, lesend.
+     Home Assistant liefert `start`/`end` in Millisekunden; fehlende Werte
+     bleiben null, damit der Verlauf Lücken zeigt statt Nullen zu erfinden. */
+  async getStatistics(request: StatisticsRequest): Promise<StatisticsResult> {
+    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    if (!request.statisticIds.length) return {};
+    const raw = await this.#conn.sendMessagePromise<Record<string, Array<Record<string, unknown>>>>({
+      type: 'recorder/statistics_during_period',
+      start_time: request.start.toISOString(),
+      ...(request.end ? { end_time: request.end.toISOString() } : {}),
+      statistic_ids: request.statisticIds,
+      period: request.period,
+      types: request.types,
+    });
+    const number = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+    const stamp = (value: unknown): number => {
+      if (typeof value === 'number') return value;
+      const parsed = typeof value === 'string' ? Date.parse(value) : Number.NaN;
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const result: StatisticsResult = {};
+    for (const [id, buckets] of Object.entries(raw ?? {})) {
+      result[id] = (Array.isArray(buckets) ? buckets : []).map((bucket) => ({
+        start: stamp(bucket.start),
+        end: stamp(bucket.end),
+        mean: number(bucket.mean),
+        change: number(bucket.change),
+        sum: number(bucket.sum),
+      }));
+    }
+    return result;
   }
 
   async getCalendarEvents(entityId: string, start: Date, end: Date): Promise<CalendarEvent[]> {

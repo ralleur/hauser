@@ -41,6 +41,8 @@
   const climate = $derived(category === 'temp' ? (cur as ClimateValue | undefined) : undefined);
   const sensor = $derived(category === 'info' && device?.domain === 'sensor' ? (cur as SensorValue | undefined) : undefined);
   const media = $derived(category === 'media' ? (cur as MediaValue | undefined) : undefined);
+  /* null = kein Messwert; dann bleibt die Zeile weg (R3, docs/23). */
+  const reading = $derived(fmtSensor(sensor?.value, sensor?.unit ?? device?.unit));
   const pending = $derived(!!device && devicePending(entityId));
 
   // Tap auf den Namen schaltet in einen kompakten Inline-Editor. Im Live-Betrieb
@@ -301,10 +303,13 @@
               </section>
             {/if}
           {:else if category === 'switch'}
-            <section class="ld-section">
-              <span class="caps-label">{m.dev_state()}</span>
-              <p class="ld-big-value">{sw ? (sw.on ? m.dev_on() : m.dev_off()) : '—'}</p>
-            </section>
+            <!-- Ohne bekannten Zustand keine Zeile mit Strich (R3, docs/23). -->
+            {#if sw}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{sw.on ? m.dev_on() : m.dev_off()}</p>
+              </section>
+            {/if}
           {:else if category === 'temp'}
             <section class="ld-section">
               <span class="caps-label">{m.dev_target_temp()}</span>
@@ -329,11 +334,16 @@
             </section>
           {:else if category === 'info'}
             <section class="ld-section">
-              <span class="caps-label">{device.domain === 'binary_sensor' ? m.dev_state() : m.dev_reading()}</span>
+              <!-- Überschrift und Wert nur, wenn es einen Messwert gibt; die
+                   Entität nennen wir immer (R3, docs/23). -->
               {#if device.domain === 'binary_sensor'}
-                <p class="ld-big-value">{sw ? binaryLabel(device.deviceClass, sw.on) : '—'}</p>
-              {:else}
-                <p class="ld-big-value num">{fmtSensor(sensor?.value, sensor?.unit ?? device.unit)}</p>
+                {#if sw}
+                  <span class="caps-label">{m.dev_state()}</span>
+                  <p class="ld-big-value">{binaryLabel(device.deviceClass, sw.on)}</p>
+                {/if}
+              {:else if reading !== null}
+                <span class="caps-label">{m.dev_reading()}</span>
+                <p class="ld-big-value num">{reading}</p>
               {/if}
               <p class="ld-meta">{device.entityId}</p>
             </section>

@@ -53,6 +53,34 @@ export interface RoomConfig {
   hero: RoomHeroConfig | null;
 }
 
+/** Reserved target id for the picture of the house seen from outside (R14,
+    docs/23). It is assigned like a room and shown on the energy screen; no
+    room may carry this id. */
+export const EXTERIOR_HERO_ID = 'exterior';
+
+/** Wo ein Zettel des Energie-Screens hängt: Punkt im Motiv, Platz des
+    Zettels, Neigung — alles in Prozent des Bildes (R19, docs/23). */
+export interface EnergyMarkAnchorConfig {
+  point: { x: number; y: number };
+  note: { x: number; y: number };
+  tilt: number;
+}
+
+/** Von Hand gesetzte Zettelplätze. `assetId` nennt das Motiv, für das sie
+    gelten (null = mitgeliefertes Bild); ein anderes Motiv ignoriert sie. */
+export interface EnergyMarksConfig {
+  assetId: string | null;
+  sun: EnergyMarkAnchorConfig;
+  house: EnergyMarkAnchorConfig;
+  grid: EnergyMarkAnchorConfig;
+}
+
+export interface ExteriorConfig {
+  hero: RoomHeroConfig | null;
+  /** Absent until someone moved the notes by hand. */
+  marks?: EnergyMarksConfig;
+}
+
 export interface NavigationTargetConfig {
   type: 'room' | 'module';
   id: string;
@@ -180,6 +208,8 @@ export interface HouseholdConfigV4 {
   globalEntities: GlobalEntitiesConfig;
   /** Absent on every installation that never opted into hotel mode. */
   hotelMode?: HotelModeConfig;
+  /** Absent until a household assigns a picture of its house from outside. */
+  exterior?: ExteriorConfig;
 }
 
 export type ConfigIssueCode =
@@ -500,6 +530,72 @@ function parseRoomHeroFocus(
     x: validator.unitNumber(validator.required(object, 'x', path), `${path}.x`),
     y: validator.unitNumber(validator.required(object, 'y', path), `${path}.y`),
   };
+}
+
+function parsePercentPoint(validator: ConfigValidator, value: unknown, path: string): { x: number; y: number } {
+  const object = validator.object(value, path);
+  if (!object) return { x: 50, y: 50 };
+  validator.exactKeys(object, ['x', 'y'], path);
+  const read = (key: 'x' | 'y'): number => {
+    const raw = validator.required(object, key, path);
+    if (raw === MISSING) return 50;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0 || raw > 100) {
+      validator.issue('INVALID_VALUE', `${path}.${key}`, 'Expected a percentage between 0 and 100.');
+      return 50;
+    }
+    return raw;
+  };
+  return { x: read('x'), y: read('y') };
+}
+
+function parseEnergyMarkAnchor(validator: ConfigValidator, value: unknown, path: string): EnergyMarkAnchorConfig {
+  const object = validator.object(value, path);
+  if (!object) return { point: { x: 50, y: 50 }, note: { x: 50, y: 50 }, tilt: 0 };
+  validator.exactKeys(object, ['point', 'note', 'tilt'], path);
+  const tiltRaw = validator.required(object, 'tilt', path);
+  let tilt = 0;
+  if (tiltRaw !== MISSING) {
+    if (typeof tiltRaw !== 'number' || !Number.isFinite(tiltRaw) || Math.abs(tiltRaw) > 45) {
+      validator.issue('INVALID_VALUE', `${path}.tilt`, 'Expected a tilt between -45 and 45 degrees.');
+    } else tilt = tiltRaw;
+  }
+  return {
+    point: parsePercentPoint(validator, validator.required(object, 'point', path), `${path}.point`),
+    note: parsePercentPoint(validator, validator.required(object, 'note', path), `${path}.note`),
+    tilt,
+  };
+}
+
+function parseEnergyMarks(validator: ConfigValidator, value: unknown, path: string): EnergyMarksConfig {
+  const fallback = { point: { x: 50, y: 50 }, note: { x: 50, y: 50 }, tilt: 0 };
+  const object = validator.object(value, path);
+  if (!object) return { assetId: null, sun: fallback, house: fallback, grid: fallback };
+  validator.exactKeys(object, ['assetId', 'sun', 'house', 'grid'], path);
+  const assetRaw = validator.required(object, 'assetId', path);
+  const assetId = assetRaw === MISSING || assetRaw === null
+    ? null
+    : validator.roomHeroAssetId(assetRaw, `${path}.assetId`);
+  return {
+    assetId,
+    sun: parseEnergyMarkAnchor(validator, validator.required(object, 'sun', path), `${path}.sun`),
+    house: parseEnergyMarkAnchor(validator, validator.required(object, 'house', path), `${path}.house`),
+    grid: parseEnergyMarkAnchor(validator, validator.required(object, 'grid', path), `${path}.grid`),
+  };
+}
+
+function parseExterior(
+  validator: ConfigValidator,
+  value: unknown,
+  path: string,
+): ExteriorConfig {
+  const object = validator.object(value, path);
+  if (!object) return { hero: null };
+  validator.exactKeys(object, ['hero', 'marks'], path);
+  const hero = parseRoomHero(validator, validator.required(object, 'hero', path), `${path}.hero`);
+  const marks = Object.hasOwn(object, 'marks') && object.marks !== null
+    ? parseEnergyMarks(validator, object.marks, `${path}.marks`)
+    : undefined;
+  return { hero, ...(marks === undefined ? {} : { marks }) };
 }
 
 function parseRoomHero(
@@ -1214,7 +1310,7 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
     root,
     [
       'schemaVersion', 'rooms', 'navigation', 'enabledModules', 'energy', 'mediaTargets',
-      'globalEntities', 'hotelMode',
+      'globalEntities', 'hotelMode', 'exterior',
     ],
     '$',
   );
@@ -1236,6 +1332,11 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
   const roomItems = roomsValue === MISSING ? undefined : validator.array(roomsValue, '$.rooms');
   const rooms = (roomItems ?? []).map((room, index) => parseRoom(validator, room, `$.rooms[${index}]`));
   duplicateIds(validator, rooms.map((room, index) => ({ id: room.id, path: `$.rooms[${index}].id` })));
+  for (const [index, room] of rooms.entries()) {
+    if (room.id === EXTERIOR_HERO_ID) {
+      validator.issue('INVALID_ID', `$.rooms[${index}].id`, `Room ID "${EXTERIOR_HERO_ID}" is reserved for the exterior picture.`);
+    }
+  }
 
   const navigationValue = validator.required(root, 'navigation', '$');
   const navigationItems = navigationValue === MISSING
@@ -1293,6 +1394,9 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
   const hotelMode = Object.hasOwn(root, 'hotelMode')
     ? parseHotelMode(validator, root.hotelMode, '$.hotelMode', roomEntityRoles)
     : undefined;
+  const exterior = Object.hasOwn(root, 'exterior')
+    ? parseExterior(validator, root.exterior, '$.exterior')
+    : undefined;
 
   const roomIds = new Set(rooms.map((room) => room.id));
   const moduleIds = new Set(enabledModules);
@@ -1342,6 +1446,7 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
       mediaTargets,
       globalEntities,
       ...(hotelMode === undefined ? {} : { hotelMode }),
+      ...(exterior === undefined ? {} : { exterior }),
     },
   };
 }
@@ -1360,6 +1465,10 @@ export interface HouseholdRuntimeModel {
   energy: EnergyConfig | null;
   mediaTargets: MediaTargetConfig[];
   globalEntities: GlobalEntitiesConfig;
+  /** Picture of the house from outside (energy screen); null until assigned. */
+  exteriorHero: RoomHeroConfig | null;
+  /** Hand-placed notes of the energy screen; null until someone moved them. */
+  exteriorMarks: EnergyMarksConfig | null;
   /** Complete, duplicate-free and lexicographically sorted HA subscription set. */
   subscriptionEntityIds: string[];
   /** Compatibility alias. It is always the same array as subscriptionEntityIds. */

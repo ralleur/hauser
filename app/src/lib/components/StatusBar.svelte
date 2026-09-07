@@ -7,7 +7,7 @@
   import { hudClockTap } from '../state/hud.svelte.ts';
   import { showClockZoom } from '../state/hidden-gestures.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
-  import { connection } from '../state/connection.svelte.ts';
+  import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { nav } from '../state/nav.svelte.ts';
   import ModeToggle from './ModeToggle.svelte';
@@ -68,6 +68,14 @@
     {#if settingsValues.classicLockButton || nav.screen === 'system'}
       <LockButton variant="titlebar" />
     {/if}
-    <span class="ha-status"><span class="dot {conn.dot}"></span>{conn.label}</span>
+    <!-- Getrennt: statt eines Banners über der Bühne trägt die Titelleiste die
+         Ursache und ist selbst der Weg zurück — ein Tipp verbindet neu (R2). -->
+    {#if conn.banner !== null}
+      <button class="ha-status ha-status-retry" type="button"
+              title={conn.banner} aria-label={`${conn.banner} — ${m.conn_retry()}`}
+              onclick={retryConnection}><span class="dot {conn.dot}"></span>{conn.label}</button>
+    {:else}
+      <span class="ha-status"><span class="dot {conn.dot}"></span>{conn.label}</span>
+    {/if}
   </div>
 </header>

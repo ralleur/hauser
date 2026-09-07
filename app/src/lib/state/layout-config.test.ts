@@ -53,8 +53,6 @@ describe('layout config persistence', () => {
       version: 1,
       widthPreset: 'wide',
       panelSize: 70,
-      // Ältere Stände ohne eigene Energie-Breite erben die des Home-Screens.
-      energyPanelSize: 70,
       roomsPerRow: 2,
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }, { id: 'slot-2', roomId: 'buero' }],
     });
@@ -110,7 +108,6 @@ describe('layout config updates', () => {
       version: 1 as const,
       widthPreset: 'balanced' as const,
       panelSize: 40,
-      energyPanelSize: 40,
       roomsPerRow: 2,
       slots: [
         { id: 'slot-1' as const, roomId: 'geloescht' },

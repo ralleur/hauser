@@ -44,3 +44,26 @@ describe('B-08E10 B3 prompt policy v1', () => {
     expect(darkOff).toContain('never from the dark image');
   });
 });
+
+/* R14b (docs/23): Ein Hausfoto durch das Raumrezept ergab ein Wohnzimmer. Das
+   Außenrezept spricht in jeder Phase vom Haus, nie vom Raum. */
+describe('exterior preset (the house from outside)', () => {
+  const exterior = { stylePreset: 'hauser-exterior-v1', declutter: 'light', tone: 'neutral', preserveFeatures: ['windows', 'doors'] };
+  const room = { ...exterior, stylePreset: 'hauser-room-v1' };
+
+  it('is a second closed preset next to the room one', () => {
+    expect(validateRoomImagePromptSpec(exterior).stylePreset).toBe('hauser-exterior-v1');
+    expect(() => validateRoomImagePromptSpec({ ...exterior, stylePreset: 'hauser-garden-v1' })).toThrow();
+  });
+
+  it('never talks about a room in any phase', () => {
+    for (const phase of ['composition', 'style-light', 'dark', 'dark-off', 'overcast'] as const) {
+      const prompt = buildRoomImagePrompt(phase, exterior);
+      expect(prompt).not.toMatch(/interior|Räume|room lights|furniture/i);
+      expect(prompt).toMatch(/house|Haus/);
+      expect(prompt).not.toBe(buildRoomImagePrompt(phase, room));
+    }
+    expect(buildRoomImagePrompt('composition', exterior)).toContain('von außen');
+    expect(buildRoomImagePrompt('dark', exterior)).toContain('moon');
+  });
+});

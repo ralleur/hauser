@@ -1,78 +1,88 @@
+/* Minimal-Shell im Standby-Stil (R2): Uhr als Held, darunter das Wochenband,
+   ganz unten klein die Ursache und der Neuladen-Knopf. Dieselben Tokens wie
+   der Ambient-Screen — die Shell kopiert kein Dashboard mehr. */
 .minimal-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: 56px 1fr 80px;
+  grid-template-rows: 1fr auto auto;
+  justify-items: center;
+  gap: clamp(var(--space-4), 4vh, var(--space-8));
+  padding: clamp(var(--space-5), 5vw, var(--space-8));
   overflow: hidden;
+  text-align: center;
   color: var(--color-text-primary);
-  background:
-    radial-gradient(circle at 16% 8%, color-mix(in srgb, var(--color-accent-cool) 14%, transparent), transparent 34%),
-    var(--color-surface-0);
+  background: var(--color-surface-0);
   font-family: var(--font-family);
 }
 
-.minimal-shell__status {
-  display: flex;
-  align-items: center;
-  padding: 0 clamp(var(--space-4), 5vw, var(--space-7));
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-1) 90%, transparent);
-  backdrop-filter: blur(16px);
-  font-size: var(--text-xs);
+.minimal-shell__stage {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+}
+
+.minimal-shell__clock {
+  font-size: var(--text-4xl);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: .04em;
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-tightest);
+  font-variant-numeric: tabular-nums;
+}
+
+.minimal-shell__date {
+  font-size: var(--text-lg);
   color: var(--color-text-secondary);
 }
 
-.minimal-shell__main {
-  width: min(100%, 1180px);
-  margin: 0 auto;
-  padding: clamp(var(--space-5), 5vw, var(--space-8));
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* Wochenband wie im Standby: gleichbreite Spalten, heute ganz links. */
+.minimal-shell__week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-5);
+  width: min(88vw, 1480px);
+  text-align: left;
 }
 
-.minimal-shell__intro {
-  max-width: 720px;
+.minimal-shell__week-day {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
 }
 
-.minimal-shell__intro h1 {
-  font-size: clamp(var(--text-2xl), 6vw, var(--text-4xl));
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
-}
+.minimal-shell__week-day.is-today { border-top-color: var(--color-text-secondary); }
 
-.minimal-shell__intro > span {
-  display: block;
-  max-width: 620px;
-  margin-top: var(--space-3);
+.minimal-shell__week-name {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
   color: var(--color-text-secondary);
-  font-size: var(--text-sm);
 }
 
-.minimal-shell__details {
-  max-width: 620px;
-  margin-top: var(--space-6);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-secondary);
-  background: var(--color-surface-1);
-  font-size: var(--text-sm);
+.minimal-shell__week-num {
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Klein und unten: erst die Ursache, dann der einzige Ausweg. */
 .minimal-shell__recovery {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--space-4);
   max-width: 720px;
-  margin-top: var(--space-6);
+  padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
 }
 
 .minimal-shell__cause {
-  flex: 1 1 260px;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
 }
 
 .minimal-shell__reload {
@@ -80,10 +90,10 @@
   padding: var(--space-2) var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   background: var(--color-surface-2);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   touch-action: manipulation;
@@ -91,44 +101,7 @@
 
 .minimal-shell__reload:focus-visible { outline: 2px solid var(--color-accent-cool); outline-offset: 2px; }
 
-.minimal-shell__nav {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-2), env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface-1);
-}
-
-.minimal-shell__nav button {
-  min-width: 120px;
-  min-height: var(--touch-min);
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
-  border: 0;
-  border-radius: var(--radius-lg);
-  color: var(--color-text-secondary);
-  background: transparent;
-  font: inherit;
-  font-size: var(--text-xs);
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.minimal-shell__nav button.is-active {
-  color: var(--color-text-primary);
-  background: var(--color-surface-3);
-}
-
-.minimal-shell__nav button.is-active > span { background: var(--color-accent-warm); }
-.minimal-shell__nav button:focus-visible { outline: 2px solid var(--color-accent-cool); outline-offset: -2px; }
-
 @media (max-width: 767px) {
-  .minimal-shell { grid-template-rows: 52px 1fr 72px; }
-  .minimal-shell__main { padding: var(--space-5) var(--space-4); }
-  .minimal-shell__nav button { min-width: 0; flex: 1; padding-inline: var(--space-2); }
+  .minimal-shell { padding: var(--space-5) var(--space-4); }
+  .minimal-shell__week { gap: var(--space-3); }
 }

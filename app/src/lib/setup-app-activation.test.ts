@@ -110,11 +110,11 @@ describe('Endgeräte-Adresse', () => {
 
 describe('App-Dokumentation', () => {
   it('beschreibt Trusted LAN ehrlich und empfiehlt keine Internetfreigabe', () => {
-    expect(docs).toContain('no separate user login and no device pairing');
-    expect(docs).toContain('Do not publish the port directly to the internet.');
+    expect(docs).toContain('no separate Hauser login and no device pairing');
+    expect(docs).toContain('Do not publish it to the internet');
   });
 
   it('verspricht keine HA-URL- oder Token-Eingabe mehr', () => {
-    expect(docs).toContain('There is no field for a Home Assistant URL and no Long-Lived Access Token.');
+    expect(docs).toContain('no field for a Home Assistant URL and no Long-Lived Access Token');
   });
 });

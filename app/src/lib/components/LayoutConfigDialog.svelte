@@ -11,8 +11,7 @@
   let wasOpen = false;
   /* Der Dialog behält seine Breite, während der Regler die Seitenleiste
      verstellt: die Vorschau läuft links im Panel, nicht im Dialog selbst. */
-  const panelWidth = $derived(widthPreset(layoutManager.draft, layoutManager.scope).totalPercent);
-  const scopeLabel = $derived(layoutManager.scope === 'energy' ? m.nav_energy() : m.nav_home());
+  const panelWidth = $derived(widthPreset(layoutManager.draft).totalPercent);
 
   $effect(() => {
     if (layoutManager.open && !wasOpen) {
@@ -83,7 +82,7 @@
       <div class="layout-config-section layout-slider-settings">
           <div class="layout-slider-setting">
             <div class="layout-slider-head">
-              <span>{m.layout_size_adjust()} · {scopeLabel}</span>
+              <span>{m.layout_size_adjust()}</span>
               <button class="text-btn pressable" type="button"
                       onclick={() => layoutManager.setPanelSize(DEFAULT_LAYOUT_CONFIG.panelSize)}>{m.layout_default()}</button>
             </div>
@@ -91,7 +90,7 @@
                  zeigt seine Schritte, statt sie hinter einem Knopf zu
                  verstecken (Owner-Wunsch 2026-09-06). -->
             <TickScale ariaLabel={m.layout_size_aria()} orientation="horizontal" mode="fill"
-                       value={panelSizeOf(layoutManager.draft, layoutManager.scope)}
+                       value={panelSizeOf(layoutManager.draft)}
                        min={0} max={100} step={1} keyStep={5}
                        onInput={(value) => layoutManager.setPanelSize(value)}
                        format={() => `${Math.round(panelWidth)}%`} />

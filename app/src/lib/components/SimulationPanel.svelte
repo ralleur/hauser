@@ -22,6 +22,31 @@
     type SimulatedWeatherChoice,
   } from '../state/simulation.svelte.ts';
   import { roomRegions } from '../state/room-regions.svelte.ts';
+  import { nav } from '../state/nav.svelte.ts';
+  import { setSimulatedEnergy, type SimulatedEnergy } from '../state/simulation.svelte.ts';
+  /* Energie (R20): Auf dem Energie-Screen ersetzt der Simulator die Sensoren.
+     Regler für Erzeugung und Last, dazu die zwei Fälle, die der Screen anders
+     zeichnet — ohne Erzeugung (keine Solarseite) und ohne Sensoren (nur das
+     Bild). Die Dämmerung oben gilt hier genauso: Tag- und Nachtbild blenden. */
+  const onEnergy = $derived(nav.screen === 'energy');
+  const energy = $derived(simulation.energy);
+  function setEnergy(patch: Partial<SimulatedEnergy>): void {
+    const base = simulation.energy ?? { pv: 2.4, load: 1.1, generation: true, configured: true };
+    setSimulatedEnergy({ ...base, ...patch });
+  }
+  const ENERGY_PRESETS: readonly { label: string; value: SimulatedEnergy }[] = [
+    { label: 'Mittag', value: { pv: 6.4, load: 1.2, generation: true, configured: true } },
+    { label: 'Abend', value: { pv: 0, load: 2.8, generation: true, configured: true } },
+    { label: 'Bezug', value: { pv: 0.8, load: 3.1, generation: true, configured: true } },
+    { label: 'Ohne Solar', value: { pv: 0, load: 1.6, generation: false, configured: true } },
+    { label: 'Keine Sensoren', value: { pv: 0, load: 0, generation: false, configured: false } },
+  ];
+  const gridText = $derived.by(() => {
+    if (!energy || !energy.configured) return '';
+    if (!energy.generation) return 'Netz: unbekannt (keine Erzeugung)';
+    const grid = energy.pv - energy.load;
+    return `Netz: ${grid >= 0 ? 'Einspeisung' : 'Bezug'} ${Math.abs(grid).toFixed(1)} kW`;
+  });
 
   /* Ein Durchlauf dauert so lange wie das echte Band durch 60 — lang genug, um
      die Bewegung zu sehen, kurz genug, um sie mehrmals anzusehen. */
@@ -175,6 +200,41 @@
     </label>
     <p class="sim-hint num">{regionSummary || 'Für diesen Raum ist nichts erkannt'}</p>
   </div>
+
+  {#if onEnergy}
+    <div class="sim-row">
+      <span class="sim-label">Energie <span class="sim-value">{energy ? 'von Hand' : 'echte Sensoren'}</span></span>
+      <div class="sim-buttons is-wrap">
+        {#each ENERGY_PRESETS as preset (preset.label)}
+          <button class="sim-btn pressable" type="button" onclick={() => setSimulatedEnergy(preset.value)}>{preset.label}</button>
+        {/each}
+      </div>
+    </div>
+    {#if energy && energy.configured}
+      <div class="sim-row">
+        <label class="sim-label" for="sim-pv">
+          Erzeugung
+          <span class="sim-value num">{energy.generation ? `${energy.pv.toFixed(1)} kW` : '—'}</span>
+        </label>
+        <input id="sim-pv" class="sim-slider" type="range" min="0" max="10" step="0.1"
+               value={energy.pv} disabled={!energy.generation}
+               oninput={(event) => setEnergy({ pv: event.currentTarget.valueAsNumber })} />
+        <label class="sim-label" for="sim-load">
+          Last
+          <span class="sim-value num">{energy.load.toFixed(1)} kW</span>
+        </label>
+        <input id="sim-load" class="sim-slider" type="range" min="0" max="10" step="0.1"
+               value={energy.load}
+               oninput={(event) => setEnergy({ load: event.currentTarget.valueAsNumber })} />
+        <label class="sim-check">
+          <input type="checkbox" checked={energy.generation}
+                 onchange={(event) => setEnergy({ generation: event.currentTarget.checked })} />
+          Erzeugungssensor vorhanden
+        </label>
+        <p class="sim-hint num">{gridText}</p>
+      </div>
+    {/if}
+  {/if}
 
   <ul class="sim-layers num">
     {#each layers as layer (layer)}<li>{layer}</li>{/each}

@@ -104,6 +104,7 @@ import {
   serveHouseholdConfig,
   serveHouseholdConfigMode,
   serveHouseholdEnergy,
+  serveHouseholdEnergyMarks,
   serveHouseholdModuleToggle,
   setupRecoveryFailure,
   setupRecoveryRequiredError,
@@ -895,6 +896,18 @@ export function createHmiServer(
       });
     } else if ((req.url || '').split('?')[0] === '/api/household-energy') {
       jsonResponse(res, 403, { ok: false, code: 'ENERGY_ROUTE_FORBIDDEN', message: 'Energie-Auswahl nicht freigegeben.' });
+    } else if ((req.url || '').split('?')[0] === '/api/household-energy-marks' && req.method === 'PUT'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdEnergyMarks(req, res, {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-energy-marks') {
+      jsonResponse(res, 403, { ok: false, code: 'ENERGY_ROUTE_FORBIDDEN', message: 'Zettelplätze nicht freigegeben.' });
     } else if ((req.url || '').startsWith('/api/household-modules/')) {
       jsonResponse(res, 403, { ok: false, code: 'MODULE_ROUTE_FORBIDDEN', message: 'Modulschalter nicht freigegeben.' });
     } else if (serveRoomImages(req, res, {

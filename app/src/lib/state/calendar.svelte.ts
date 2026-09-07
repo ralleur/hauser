@@ -1,3 +1,5 @@
+import { calendarPaperColors } from './calendar-paper.ts';
+import { reminderPersons } from './reminder-persons.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import {
   calendarWindow,
@@ -124,9 +126,14 @@ async function refresh(): Promise<void> {
     /* Ein Abruf pro Kalender; jeder Termin trägt die Farbe seiner Quelle.
        Gemeinsam sortiert — die Projektionen (Agenda/Ambient) sortieren zwar
        selbst, aber der Cache soll deterministisch sein. */
+    /* `color` trägt seit R5 die Papierfarbe der Pinnwand (Palette-ID), nicht
+       mehr das Hex der Quelle — Kalender und Zettel sprechen eine Sprache.
+       Seit R17 ohne Kollisionen zwischen den Quellen. */
+    const papers = calendarPaperColors(sources, reminderPersons.list);
     const perSource = await Promise.all(sources.map(async (source) => {
       const events = await runtime.getCalendarEvents(source.entityId, start, end);
-      return events.map((event) => ({ ...event, id: `${source.entityId}:${event.id}`, color: source.color ?? null }));
+      const paper = papers.get(source.entityId) ?? 'gelb';
+      return events.map((event) => ({ ...event, id: `${source.entityId}:${event.id}`, color: paper }));
     }));
     familyCalendar.sources = sources;
     familyCalendar.events = perSource.flat()

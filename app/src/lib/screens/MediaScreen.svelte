@@ -126,10 +126,13 @@
           </div>
         </div>
 
-        <div class="player-source">
-          <span class="caps-label">{m.media_source()}</span>
-          <span class="source-value">{player.available ? (player.source ?? '—') : '—'}</span>
-        </div>
+        <!-- Unbekannte Quelle wird nicht behauptet: die Zeile entfällt (R3, docs/23). -->
+        {#if player.available && player.source}
+          <div class="player-source">
+            <span class="caps-label">{m.media_source()}</span>
+            <span class="source-value">{player.source}</span>
+          </div>
+        {/if}
       </div>
       {/key}
     </section>

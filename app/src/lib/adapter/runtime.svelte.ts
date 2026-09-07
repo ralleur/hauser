@@ -16,8 +16,11 @@ import { enqueue } from './command-queue.ts';
 import type {
   Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate,
   HaScene, NotificationHistoryEntry, PersistentNotification, PersonSource,
+  StatisticsRequest,
+  StatisticsResult,
 } from './types.ts';
 import { markOperable, markResumeOperable } from '../state/startup-marks.svelte.ts';
+import { revalidateStaleQueries } from '../data/revalidation.ts';
 import { ROOM_SEED, MEDIA_SEED, SUN_ENTITY } from '../state/app.svelte.ts';
 import { themeFromLocalTime } from '../state/appearance-mode.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
@@ -76,6 +79,10 @@ export class AdapterRuntime {
       if (status === 'connected') {
         markOperable();
         markResumeOperable();
+        /* R13 (docs/23): Leseabfragen, die vor der Verbindung leer ausgingen
+           (Kalender, Erinnerungen), laufen jetzt nach — nicht erst mit dem
+           nächsten Intervall in fünf Minuten. */
+        void revalidateStaleQueries('connected');
       }
     });
     // Service-Error (docs/02, Funktionsumfang 6): der Command wurde abgelehnt —
@@ -140,6 +147,12 @@ export class AdapterRuntime {
 
   async getCalendarEvents(entityId: string, start: Date, end: Date): Promise<CalendarEvent[]> {
     return this.#backend.getCalendarEvents?.(entityId, start, end) ?? [];
+  }
+
+  /* Recorder-Statistik (R21): ohne fähiges Backend leer — dann bleibt der
+     Verlauf weg, statt erfunden zu werden. */
+  async getStatistics(request: StatisticsRequest): Promise<StatisticsResult> {
+    return this.#backend.getStatistics?.(request) ?? {};
   }
 
   /* Bewohner aus Home Assistant (Paket 8). Ohne fähiges Backend leer — die

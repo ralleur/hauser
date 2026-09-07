@@ -21,6 +21,7 @@ export const API_ROUTES = {
   householdConfig: { methods: ['GET', 'HEAD'], path: '/api/household-config', area: 'config', access: 'origin' },
   householdModuleToggle: { methods: ['PUT'], path: '/api/household-modules/:moduleId', area: 'config', access: 'origin' },
   householdEnergy: { methods: ['PUT'], path: '/api/household-energy', area: 'config', access: 'origin' },
+  householdEnergyMarks: { methods: ['PUT'], path: '/api/household-energy-marks', area: 'config', access: 'origin' },
   setupDiscovery: { methods: ['GET'], path: '/api/setup/discovery', area: 'setup', access: 'origin' },
   setupActivate: { methods: ['POST'], path: '/api/setup/activate', area: 'setup', access: 'origin' },
   notificationRules: { methods: ['GET', 'PUT'], path: '/api/notifications/rules', area: 'notifications', access: 'origin' },

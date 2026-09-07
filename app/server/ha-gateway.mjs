@@ -48,6 +48,10 @@ export const HA_GATEWAY_CLIENT_MESSAGE_TYPES = Object.freeze([
      der Hauser-Automationen aus dem Logbuch. */
   'persistent_notification/subscribe',
   'logbook/get_events',
+  /* Wahre Kurven (R21): Tagesverlauf und Zeitraumsummen aus der
+     Langzeitstatistik des Recorders — lesend, für die konfigurierten
+     Energiesensoren. */
+  'recorder/statistics_during_period',
 ]);
 
 /* Was Home Assistant an den Browser zurückgeben darf. Auth-Frames stehen

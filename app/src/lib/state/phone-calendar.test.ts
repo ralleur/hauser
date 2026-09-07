@@ -6,6 +6,8 @@ import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 
 import type { CalendarEvent } from './calendar.ts';
 import { projectPhoneAgenda } from './phone-calendar.ts';
+import { calendarPaperColors } from './calendar-paper.ts';
+import { reminderPersons } from './reminder-persons.svelte.ts';
 
 const phoneShellCss = readFileSync(new URL('../../styles/phone-shell.css', import.meta.url), 'utf8');
 const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -175,7 +177,12 @@ describe('calendar refresh last-known boundary', () => {
     await refreshFamilyCalendar();
 
     expect(familyCalendar.sources).toEqual([freshSource]);
-    expect(familyCalendar.events).toEqual([{ ...freshEvent, id: 'calendar.familie:fresh', color: null }]);
+    // Seit R5 trägt jeder Termin die Zettelfarbe seines Kalenders (docs/23).
+    expect(familyCalendar.events).toEqual([{
+      ...freshEvent,
+      id: 'calendar.familie:fresh',
+      color: calendarPaperColors([freshSource], reminderPersons.list).get(freshSource.entityId),
+    }]);
     expect(familyCalendar.updatedAt).toBeGreaterThan(123);
     expect(familyCalendar.error).toBeNull();
     expect(runtimeMock.listCalendarSources).toHaveBeenCalledTimes(2);
@@ -225,7 +232,10 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneShellCss).toMatch(/\.phone-content-frame\s*\{[^}]*height:\s*100%/s);
     expect(phoneShellCss).toMatch(/\.phone-calendar\s*\{[^}]*height:\s*100%/s);
     expect(phoneShellCss).toMatch(/\.phone-bottom-nav\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*var\(--phone-nav-bottom-offset\);/s);
-    expect(phoneShellCss).toMatch(/\.phone-shell\.has-connection-banner[\s\S]*padding-top:\s*calc\(var\(--phone-conn-banner-height\) \+ var\(--space-4\)\)/);
+    /* R2: Der Getrennt-Zustand schiebt den Inhalt nicht mehr nach unten — die
+       Marke schwebt über der Bühne. */
+    expect(phoneShellCss).toMatch(/\.phone-conn-chip\s*\{[^}]*position:\s*absolute/s);
+    expect(phoneShellCss).not.toContain('has-connection-banner');
     /* Der Sheet-Anker ist seit Paket 3 die Unterkante aus Safe-Area und
        Benachrichtigungsstreifen — nie weniger als die Safe-Area. */
     expect(phoneShellCss).toMatch(/--phone-sheet-top:\s*max\(var\(--phone-safe-top\), var\(--phone-notification-band\)\)/);
@@ -235,7 +245,7 @@ describe('phone calendar shell and accessibility boundaries', () => {
     expect(phoneShellCss).toMatch(/@media \(orientation: landscape\)[\s\S]*\.room-sheet\s*\{[^}]*height:\s*100%;[^}]*max-height:\s*100%/);
     expect(phoneShellCss).not.toMatch(/@media \(orientation: landscape\)[\s\S]*\.room-sheet\s*\{[^}]*height:\s*var\(--phone-viewport-height\)/);
     expect(phoneShellCss).toMatch(/display-mode: standalone\) and \(orientation: landscape\)[\s\S]*--phone-safe-right:\s*max\([^;]*var\(--space-8\)\)[\s\S]*--phone-safe-left:\s*max\([^;]*var\(--space-8\)\)/);
-    expect(phoneShell).toContain('class:has-connection-banner={conn.banner !== null}');
+    expect(phoneShell).not.toContain('has-connection-banner');
   });
 
   it('mounts the agenda only for the canonical calendar target and preserves fallback targets', () => {

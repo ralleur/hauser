@@ -568,6 +568,45 @@ describe('B-08E10 Lane C OpenAI images edit wire contract', () => {
   });
 });
 
+/* R16 (docs/23): Der Grund des Fehlschlags steht im Code — er muss auch im
+   Satz stehen, den der Haushalt liest. */
+/* R14b (docs/23): Das Außenrezept reist als zweites Preset im Auftrag mit —
+   der Jobspeicher muss es annehmen und in jede Phase weiterreichen. */
+describe('Room-image exterior preset in the job store', () => {
+  it('accepts hauser-exterior-v1 and hands it to the prompt of every phase', async () => {
+    const root = sandbox('hauser-room-image-exterior-');
+    const store = createRoomImageJobStore({ metadataRoot: join(root, 'jobs'), tempRoot: join(root, 'private') });
+    const request = { ...directMainRequest('28282828-2828-4828-8828-000000000001'), stylePreset: 'hauser-exterior-v1' };
+    const created = store.createMain(
+      'fixture-user', request, readFileSync(new URL('./fixtures/orientation-1.jpg', import.meta.url)), 'e'.repeat(64),
+    );
+    expect(created.type).toBe('created');
+    expect(created.record.policy.spec.stylePreset).toBe('hauser-exterior-v1');
+    // @ts-expect-error The production server intentionally remains native Node ESM without declarations.
+    const { buildRoomImagePrompt } = await import('../../../server/runtime-env.mjs');
+    expect(buildRoomImagePrompt('composition', created.record.policy.spec)).toContain('von außen');
+    expect(buildRoomImagePrompt('style-light', created.record.policy.spec)).not.toMatch(/interior/i);
+  });
+});
+
+describe('Room-image provider failure wording', () => {
+  it('names the reason instead of one sentence for every rejection', async () => {
+    // @ts-expect-error The production server intentionally remains native Node ESM without declarations.
+    const { roomImageProviderFailureMessage: message } = await import('../../../server/room-images.mjs');
+    expect(message('PROVIDER_CREDENTIAL_INVALID')).toContain('abgelaufen');
+    expect(message('PROVIDER_QUOTA_OR_RATE_LIMIT')).toContain('Kontingent');
+    expect(message('PROVIDER_IMAGE_REJECTED')).toContain('Foto');
+    expect(message('PROVIDER_FORBIDDEN')).toContain('Bildmodell');
+    expect(new Set([
+      message('PROVIDER_CREDENTIAL_INVALID'),
+      message('PROVIDER_QUOTA_OR_RATE_LIMIT'),
+      message('PROVIDER_IMAGE_REJECTED'),
+      message('PROVIDER_FORBIDDEN'),
+      message('PROVIDER_HTTP_ERROR'),
+    ]).size).toBe(5);
+  });
+});
+
 describe('Room-image ChatGPT and API-key access', () => {
   it('stores an API key in a private file without exposing it through status', () => {
     const root = sandbox('hauser-room-image-access-');
@@ -579,6 +618,47 @@ describe('Room-image ChatGPT and API-key access', () => {
     });
     expect(JSON.stringify(store.status())).not.toContain('sk-test');
     expect(JSON.parse(readFileSync(path, 'utf8'))).toMatchObject({ mode: 'api_key' });
+  });
+
+  /* R15 (docs/23): Ein abgelaufenes Refresh-Token sieht in der Datei aus wie
+     ein frisches. `status()` darf das nicht unterscheiden koennen — `check()`
+     muss es. */
+  it('reports an expired ChatGPT sign-in instead of a green status', async () => {
+    const root = sandbox('hauser-room-image-access-expired-');
+    const path = join(root, 'auth.json');
+    writeFileSync(path, JSON.stringify({
+      version: 1, mode: 'chatgpt', accessToken: 'stale-access', refreshToken: 'stale-refresh', source: 'stored',
+    }), { mode: 0o600 });
+    const fetchImpl = vi.fn().mockResolvedValue(new Response('{}', { status: 400 }));
+    const store = createRoomImageCredentialStore({ path, environmentApiKey: '', fetchImpl });
+
+    expect(store.status()).toEqual({ configured: true, mode: 'chatgpt', source: 'stored' });
+    await expect(store.check()).resolves.toEqual({
+      configured: true, mode: 'chatgpt', source: 'stored', valid: false,
+    });
+  });
+
+  it('leaves validity open when the refresh cannot be reached at all', async () => {
+    const root = sandbox('hauser-room-image-access-offline-');
+    const path = join(root, 'auth.json');
+    writeFileSync(path, JSON.stringify({
+      version: 1, mode: 'chatgpt', accessToken: 'stale-access', refreshToken: 'stale-refresh', source: 'stored',
+    }), { mode: 0o600 });
+    const fetchImpl = vi.fn().mockRejectedValue(new Error('offline'));
+    const store = createRoomImageCredentialStore({ path, environmentApiKey: '', fetchImpl });
+
+    await expect(store.check()).resolves.toMatchObject({ configured: true, valid: null });
+  });
+
+  it('does not claim to have checked a stored API key', async () => {
+    const root = sandbox('hauser-room-image-access-key-check-');
+    const path = join(root, 'auth.json');
+    const store = createRoomImageCredentialStore({ path, environmentApiKey: '' });
+    store.setApiKey('sk-test-012345678901234567890');
+
+    await expect(store.check()).resolves.toEqual({
+      configured: true, mode: 'api_key', source: 'stored', valid: null,
+    });
   });
 
   it('runs the ChatGPT device-code exchange and persists only after confirmation', async () => {

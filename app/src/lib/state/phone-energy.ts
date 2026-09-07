@@ -32,7 +32,7 @@ export interface PhoneEnergyModel {
 function projectMetric(metric: EnergyMetric): PhoneEnergyMetric {
   return {
     label: metric.label,
-    value: metric.value === null ? '—' : fmtKw(metric.value),
+    value: fmtKw(metric.value),
     unit: metric.unit,
   };
 }
@@ -50,7 +50,8 @@ export function projectPhoneEnergy(
 
   return {
     status,
-    live: [panel.primary, ...panel.secondary].map(projectMetric),
+    /* Nur messbare Werte — ein Feld ohne Zahl fällt weg (R3, docs/23). */
+    live: [...(panel.primary ? [panel.primary] : []), ...panel.secondary].map(projectMetric),
     gridDirection: view.grid !== null && view.grid > 0.05
       ? 'Einspeisung'
       : view.grid !== null && view.grid < -0.05

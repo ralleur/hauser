@@ -14,7 +14,7 @@
   import StandbyFab from '../components/StandbyFab.svelte';
   import HomeScreen from '../screens/HomeScreen.svelte';
   import { SCREENS, nav, endTransition, type ScreenId } from '../state/nav.svelte.ts';
-  import { connection, retryConnection } from '../state/connection.svelte.ts';
+  import { connection } from '../state/connection.svelte.ts';
   import { authState } from '../state/auth.svelte.ts';
   import {
     centralClimateEdit, closeCentralClimateEdit,
@@ -205,18 +205,12 @@
 
 <div class="status-scrim" aria-hidden="true"></div>
 
-<!-- Gesperrt, solange keine Verbindung steht — also genau dann, wenn das
-     Banner sichtbar ist (auch beim Reconnect, nicht erst bei harter Trennung). -->
+<!-- Gesperrt, solange keine Verbindung steht (auch beim Reconnect, nicht erst
+     bei harter Trennung). Kein Banner mehr über der Bühne: die Titelleiste
+     trägt Ursache und Wiederverbinden ohnehin schon (R2). -->
 <div class="app" data-shell="panel" class:is-disconnected={conn.banner !== null}>
   <StatusBar />
   <main class="screens">
-    <div class="conn-banner" class:is-visible={conn.banner !== null} role="status" aria-live="polite">
-      <span class="dot {conn.dot}"></span>{conn.banner ?? ''}
-      {#if conn.banner !== null}
-        <button class="conn-retry" type="button" onclick={retryConnection}>{m.conn_retry()}</button>
-      {/if}
-    </div>
-
     {#each visiblePanelScreens as screen (screen.id)}
       <section class="screen" data-screen={screen.id} data-tab={screen.tab}
                class:is-active={nav.screen === screen.id || nav.leaving === screen.id}

@@ -73,6 +73,12 @@ export interface SettingsSection {
   description: string;
   icon: string;
   tint: SettingsTint;
+  /* Gefaltet (R6, docs/23): steht nicht in der Sidebar, bis die versteckte
+     Geste sie aufdeckt (Logo dreimal tippen). Über die Suche bleibt sie
+     jederzeit erreichbar — gefaltet heißt nicht weggenommen. Ein Haushalt
+     soll die Einstellungen auf einem Bildschirm lesen; Werkzeuge für den
+     Notfall und Unfertiges gehören nicht in diese Liste. */
+  hidden?: boolean;
 }
 
 export interface SettingsEntry {
@@ -132,6 +138,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'media', group: 'content',
     get label() { return m.settings_section_media_label(); }, icon: 'i-music-note', tint: 'cool',
     get description() { return m.settings_section_media_desc(); },
+    hidden: true,
   },
   {
     id: 'services', group: 'connectivity',
@@ -147,21 +154,25 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'ai-customizing', group: 'system',
     get label() { return m.settings_section_ai_customizing_label(); }, icon: 'i-creation', tint: 'cool',
     get description() { return m.settings_section_ai_customizing_desc(); },
+    hidden: true,
   },
   {
     id: 'maintenance', group: 'system',
     get label() { return m.settings_section_maintenance_label(); }, icon: 'i-wrench', tint: 'neutral',
     get description() { return m.settings_section_maintenance_desc(); },
+    hidden: true,
   },
   {
     id: 'hotel-mode', group: 'experimental',
     get label() { return m.settings_section_hotel_mode_label(); }, icon: 'i-bed', tint: 'cool',
     get description() { return m.settings_section_hotel_mode_desc(); },
+    hidden: true,
   },
   {
     id: 'hotel-guest-access', group: 'experimental',
     get label() { return m.settings_section_hotel_access_label(); }, icon: 'i-account-key', tint: 'warm',
     get description() { return m.settings_section_hotel_access_desc(); },
+    hidden: true,
   },
 ];
 
@@ -261,8 +272,6 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['sortieren', 'warengruppen', 'laufweg', 'frische', 'kühlung', 'drogerie'] },
   { id: 'library-mode', section: 'media', get label() { return m.settings_entry_library_mode_label(); },
     keywords: ['live', 'demo', 'fake', 'mock', 'automatisch', 'testdaten', 'bibliothek', 'jellyfin'] },
-  ...(!IS_DEMO ? [{ id: 'ai-song-lyrics', section: 'media' as const, get label() { return m.settings_entry_ai_song_lyrics_label(); },
-    keywords: ['songtexte', 'lyrics', 'songwerkstatt', 'musik', 'text', 'generieren', 'llm'] }] : []),
 
   /* ── Verbindungen · Dienste (eine Integrationskarte je Dienst) ── */
   { id: 'connection-status', section: 'services', get label() { return m.settings_entry_connection_status_label(); },
@@ -347,14 +356,20 @@ export function settingsEntry(id: string): SettingsEntry | undefined {
    Gruppe ihre Sektionen in der Reihenfolge von SETTINGS_SECTIONS. Sektionen,
    deren Einträge alle durch abgeschaltete Feature-Flags entfallen sind, werden
    ausgeblendet, damit die Sidebar nie eine leere Überschrift zeigt — genauso
-   wie Gruppen ohne Sektionen herausfallen. */
-export function settingsSidebar(): readonly { group: SettingsGroup; sections: readonly SettingsSection[] }[] {
+   wie Gruppen ohne Sektionen herausfallen. Gefaltete Sektionen (`hidden`)
+   erscheinen erst, wenn die versteckte Geste sie aufdeckt (R6). */
+export function settingsSidebar(revealHidden = false): readonly { group: SettingsGroup; sections: readonly SettingsSection[] }[] {
   const entriesBySection = new Map<SettingsSectionId, number>();
   for (const entry of SETTINGS_ENTRIES) {
     entriesBySection.set(entry.section, (entriesBySection.get(entry.section) ?? 0) + 1);
   }
   return SETTINGS_GROUPS
-    .map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((s) => s.group === group.id && (entriesBySection.get(s.id) ?? 0) > 0) }))
+    .map((group) => ({
+      group,
+      sections: SETTINGS_SECTIONS.filter((s) => s.group === group.id
+        && (entriesBySection.get(s.id) ?? 0) > 0
+        && (revealHidden || !s.hidden)),
+    }))
     .filter((entry) => entry.sections.length > 0);
 }
 

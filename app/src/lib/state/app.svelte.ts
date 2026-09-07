@@ -196,23 +196,6 @@ export function currentRoom(): Room | undefined {
 
 /* ── Energie ── */
 
-/* Deterministischer 24-h-Verlauf als PLATZHALTER für den Tagesverlauf-Chart.
-   Der echte historische Verlauf braucht die HA-Statistics-API
-   (`recorder/statistics_during_period`) — ein separater WS-Request außerhalb
-   des subscribe_entities-Seams — und ist als Folge-Schritt zurückgestellt
-   (BACKLOG). Live-Fluss + Tages-KPIs (state/energy.svelte.ts) sind bereits real.
-   Kein Math.random: der Chart sieht bei jedem Aufbau gleich aus. */
-export const ENERGY_CURVE = Array.from({ length: 24 }, (_, h) => {
-  const wave = (n: number) => Math.abs(Math.sin(h * n + 1.7)) * 0.12; // organisches Rauschen
-  const prod = h < 6 || h > 20 ? 0 : Math.max(0, Math.sin(((h - 6) / 14) * Math.PI) - wave(2.3));
-  const load = Math.min(1,
-    0.22 + wave(3.1)
-    + (h >= 6 && h <= 9 ? 0.4 : 0)
-    + (h >= 17 && h <= 22 ? 0.55 : 0)
-    + (h >= 12 && h <= 13 ? 0.18 : 0));
-  return { prod, load };
-});
-
 /* ── Bibliothek (docs/07 Screens 6–8, docs/08) ── */
 let cwSeq = 100; // Weiterschauen-Reihenfolge: zuletzt gespielt zuerst
 

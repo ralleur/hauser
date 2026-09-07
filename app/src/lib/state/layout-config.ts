@@ -9,16 +9,15 @@ export interface LayoutSlot {
   roomId: string | null;
 }
 
-/* Home und Energie tragen dieselbe Bühnen-Form, aber nicht dieselbe
-   Informationsdichte — ihre Kontrollflächen lassen sich deshalb getrennt
-   breit machen. `panelSize` gehört zu Home, `energyPanelSize` zu Energie. */
-export type LayoutScope = 'home' | 'energy';
+/* Seit R4 hat nur noch Home eine Kontrollfläche: der Energie-Screen trägt
+   seine Zahlen im Bild. Die frühere Energie-Breite (`energyPanelSize`) ist
+   damit eine Einstellung ohne Wirkung und entfällt (R6, docs/23); ältere
+   gespeicherte Stände tragen sie noch, sie wird beim Lesen verworfen. */
 
 export interface LayoutConfig {
   version: 1;
   widthPreset: WidthPresetId;
   panelSize: number;
-  energyPanelSize: number;
   roomsPerRow: number;
   slots: LayoutSlot[];
 }
@@ -49,7 +48,6 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   version: 1,
   widthPreset: 'compact',
   panelSize: 15,
-  energyPanelSize: 15,
   roomsPerRow: 2,
   slots: [{ id: 'slot-1', roomId: null }],
 };
@@ -59,11 +57,6 @@ export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
     version: 1,
     widthPreset: config.widthPreset,
     panelSize: normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset)),
-    // Ältere Stände kennen nur eine Breite: Energie erbt sie, damit sich beim
-    // Aktualisieren nichts verschiebt.
-    energyPanelSize: normalizePanelSize(
-      config.energyPanelSize ?? config.panelSize ?? panelSizeForPreset(config.widthPreset),
-    ),
     roomsPerRow: normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow),
     slots: config.slots.map((slot) => ({ ...slot })),
   };
@@ -96,11 +89,6 @@ export function parseLayoutConfig(raw: string | null): LayoutConfig {
       panelSize: normalizePanelSize(typeof candidate.panelSize === 'number'
         ? candidate.panelSize
         : panelSizeForPreset(candidate.widthPreset)),
-      energyPanelSize: normalizePanelSize(typeof candidate.energyPanelSize === 'number'
-        ? candidate.energyPanelSize
-        : (typeof candidate.panelSize === 'number'
-          ? candidate.panelSize
-          : panelSizeForPreset(candidate.widthPreset))),
       roomsPerRow: normalizeRoomsPerRow(typeof candidate.roomsPerRow === 'number'
         ? candidate.roomsPerRow
         : DEFAULT_LAYOUT_CONFIG.roomsPerRow),
@@ -155,20 +143,16 @@ export function setWidthPreset(config: LayoutConfig, widthPreset: WidthPresetId)
   if (isWidthPreset(widthPreset)) {
     next.widthPreset = widthPreset;
     next.panelSize = panelSizeForPreset(widthPreset);
-    next.energyPanelSize = panelSizeForPreset(widthPreset);
   }
   return next;
 }
 
-export function panelSizeOf(config: LayoutConfig, scope: LayoutScope = 'home'): number {
-  const raw = scope === 'energy'
-    ? (config.energyPanelSize ?? config.panelSize)
-    : config.panelSize;
-  return normalizePanelSize(raw ?? panelSizeForPreset(config.widthPreset));
+export function panelSizeOf(config: LayoutConfig): number {
+  return normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset));
 }
 
-export function widthPreset(config: LayoutConfig, scope: LayoutScope = 'home'): WidthPreset {
-  const size = panelSizeOf(config, scope);
+export function widthPreset(config: LayoutConfig): WidthPreset {
+  const size = panelSizeOf(config);
   const totalPercent = 28 + size * 0.4;
   return {
     id: config.widthPreset,
@@ -179,17 +163,9 @@ export function widthPreset(config: LayoutConfig, scope: LayoutScope = 'home'): 
   };
 }
 
-export function setPanelSize(
-  config: LayoutConfig,
-  panelSize: number,
-  scope: LayoutScope = 'home',
-): LayoutConfig {
+export function setPanelSize(config: LayoutConfig, panelSize: number): LayoutConfig {
   const next = cloneLayoutConfig(config);
   const size = normalizePanelSize(panelSize);
-  if (scope === 'energy') {
-    next.energyPanelSize = size;
-    return next;
-  }
   next.panelSize = size;
   // Das Preset benennt die Home-Breite — es steht in der Zusammenfassung der
   // Einstellungen und bleibt deshalb an ihr hängen.

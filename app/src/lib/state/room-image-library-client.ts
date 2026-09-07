@@ -12,7 +12,7 @@ const IS_DEMO = import.meta.env?.VITE_DEMO === '1';
    Zeichenkette, damit eine neue Art hier keinen Umbau erzwingt. */
 export type RoomImageRegionKind =
   | 'window' | 'floor' | 'seating' | 'table' | 'desk' | 'bed' | 'tv'
-  | 'mirror' | 'bath' | 'appliance' | 'bin' | 'toy';
+  | 'mirror' | 'bath' | 'appliance' | 'bin' | 'toy' | 'solar';
 
 export interface RoomImageRegion {
   kind: RoomImageRegionKind;

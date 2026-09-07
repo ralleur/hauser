@@ -6,7 +6,8 @@
    Wechsel innerhalb der App. Eigene Intervalle der Abfragen bleiben bestehen;
    die Revalidierung ergänzt sie um die Momente, in denen ein Intervall
    typischerweise verpasst wurde (Telefon aus der Tasche, Panel aus dem
-   Standby). */
+   Standby) — und um den Moment, in dem die Verbindung zu Home Assistant
+   steht, weil die erste Abfrage beim Start davor leer ausgeht (R13). */
 
 export interface RevalidationEntry {
   name: string;
@@ -14,7 +15,7 @@ export interface RevalidationEntry {
   revalidate: () => Promise<void> | void;
 }
 
-export type RevalidationReason = 'visible' | 'online' | 'manual';
+export type RevalidationReason = 'visible' | 'online' | 'connected' | 'manual';
 
 const entries = new Map<string, RevalidationEntry>();
 let listening = false;

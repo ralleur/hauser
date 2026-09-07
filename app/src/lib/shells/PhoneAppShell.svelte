@@ -489,13 +489,15 @@
   </div>
 {/snippet}
 
-<div class="phone-shell" data-shell="phone" class:is-disconnected={conn.banner !== null} class:has-connection-banner={conn.banner !== null}>
-  <div class="phone-conn-banner" class:is-visible={conn.banner !== null} role="status" aria-live="polite">
-    <span class="dot {conn.dot}"></span>{conn.banner ?? ''}
-    {#if conn.banner !== null}
-      <button class="phone-conn-retry" type="button" onclick={retryConnection}>{m.conn_retry()}</button>
-    {/if}
-  </div>
+<div class="phone-shell" data-shell="phone" class:is-disconnected={conn.banner !== null}>
+  <!-- Getrennt: eine kleine Marke über der Bühne statt einer Leiste, die den
+       Inhalt nach unten schiebt. Sie ist selbst der Weg zurück (R2). -->
+  {#if conn.banner !== null}
+    <button class="phone-conn-chip" type="button" aria-live="polite"
+            aria-label={`${conn.banner} — ${m.conn_retry()}`} onclick={retryConnection}>
+      <span class="dot {conn.dot}"></span>{conn.banner}
+    </button>
+  {/if}
   <div class="phone-content-frame">
     {#key nav.screen}
       <div class="phone-screen-transition" in:phoneScreenEnter out:phoneScreenExit onoutroend={endTransition}>

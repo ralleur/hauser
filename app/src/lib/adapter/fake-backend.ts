@@ -9,6 +9,9 @@
 
 import type {
   Backend, ConnectionStatus, LightValue, ClimateValue, MediaValue, PersistentNotification, SwitchValue,
+  StatisticsBucket,
+  StatisticsRequest,
+  StatisticsResult,
 } from './types.ts';
 import {
   FAKE_DISCOVERY_CATALOG,
@@ -95,6 +98,30 @@ export class FakeBackend implements Backend {
 
   async listCalendarSources(): Promise<CalendarSource[]> {
     return [{ entityId: 'calendar.familie', name: 'Familie', color: '#67a4ff' }];
+  }
+
+  /* Recorder-Statistik (R21) für die Demo: ein glaubwürdiger Sonnentag als
+     Mittelwerte, Tageszuwächse für die Zähler. Erkennbar erfunden, weil die
+     Demo ohnehin simuliert; im echten Haus kommt es vom Recorder. */
+  async getStatistics(request: StatisticsRequest): Promise<StatisticsResult> {
+    const result: StatisticsResult = {};
+    const stepMs = request.period === '5minute' ? 5 * 60_000 : request.period === 'hour' ? 3_600_000
+      : request.period === 'day' ? 86_400_000 : 30 * 86_400_000;
+    const end = (request.end ?? new Date()).getTime();
+    const from = Math.max(request.start.getTime(), end - 400 * stepMs);
+    for (const id of request.statisticIds) {
+      const buckets: StatisticsBucket[] = [];
+      for (let start = from; start < end; start += stepMs) {
+        const hour = new Date(start).getHours() + new Date(start).getMinutes() / 60;
+        const sun = Math.max(0, Math.sin(((hour - 6) / 13) * Math.PI));
+        const pv = /pv|solar|erzeug|produc/i.test(id) ? 4200 * sun : 0;
+        const load = /pv|solar|erzeug|produc/i.test(id) ? 0 : 320 + 900 * Math.max(0, Math.sin(((hour - 5) / 16) * Math.PI)) + (hour > 18 && hour < 23 ? 700 : 0);
+        const mean = pv || load;
+        buckets.push({ start, end: start + stepMs, mean, change: mean * (stepMs / 3_600_000) / 1000, sum: null });
+      }
+      result[id] = buckets;
+    }
+    return result;
   }
 
   async getCalendarEvents(entityId: string, start: Date, end: Date): Promise<CalendarEvent[]> {

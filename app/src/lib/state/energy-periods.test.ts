@@ -37,8 +37,8 @@ describe('energy period panel data', () => {
     const data = energyPanelData(baseView, 'today', 'consumption');
 
     expect(data.primary).toEqual({ label: 'Erfasste Last', value: 1.8, unit: 'kW' });
+    // Netzbezug fließt gerade nicht — die Kennzahl entfällt, statt „—" (R3).
     expect(data.secondary).toEqual([
-      { label: 'Netzbezug', value: null, unit: 'kW' },
       { label: 'PV-Anteil', value: 1.8, unit: 'kW' },
     ]);
     expect(data.kpis.map((k) => [k.label, k.value])).toEqual([
@@ -66,9 +66,9 @@ describe('energy period panel data', () => {
   ])('uses graceful absence for %s/%s until aggregate statistics exist', (period, page, hint) => {
     const data = energyPanelData(baseView, period, page);
 
-    expect(data.primary.value).toBeNull();
-    expect(data.secondary.every((m) => m.value === null)).toBe(true);
-    expect(data.kpis.every((m) => m.value === null)).toBe(true);
+    expect(data.primary).toBeNull();
+    expect(data.secondary).toEqual([]);
+    expect(data.kpis).toEqual([]);
     expect(data.hint).toBe(hint);
   });
 });

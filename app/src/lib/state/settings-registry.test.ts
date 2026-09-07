@@ -40,7 +40,9 @@ describe('settings registry', () => {
   });
 
   it('jede Sektion ist genau einer Gruppe zugeordnet und keine Gruppe bleibt leer', () => {
-    const sidebar = settingsSidebar();
+    /* Aufgedeckt geprüft: gefaltete Sektionen (R6) fehlen sonst samt ihrer
+       Gruppe, weil eine Gruppe ohne sichtbare Sektion herausfällt. */
+    const sidebar = settingsSidebar(true);
     expect(sidebar.map((s) => s.group.id)).toEqual(SETTINGS_GROUPS.map((g) => g.id));
     /* Nicht gegen SETTINGS_SECTIONS.length prüfen: im öffentlichen Produkt
        fallen Sektionen weg, deren Einträge alle hinter einem Feature-Flag
@@ -51,11 +53,26 @@ describe('settings registry', () => {
   });
 
   it('blendet leere Sektionen aus der Sidebar aus (Feature-Flag-Fall)', () => {
-    const sidebarSectionIds = new Set(settingsSidebar().flatMap((s) => s.sections.map((sec) => sec.id)));
+    const sidebarSectionIds = new Set(settingsSidebar(true).flatMap((s) => s.sections.map((sec) => sec.id)));
     for (const section of SETTINGS_SECTIONS) {
       const hasEntries = SETTINGS_ENTRIES.some((e) => e.section === section.id);
       expect(sidebarSectionIds.has(section.id)).toBe(hasEntries);
     }
+  });
+
+  /* R6: Ein Haushalt liest die Einstellungen auf einem Bildschirm. Wartung,
+     Hotelmodus und KI-Werkstatt stehen erst da, wenn die versteckte Geste sie
+     aufdeckt — die Suche findet sie trotzdem. */
+  it('faltet Wartung, Hotelmodus und Werkstatt aus der Sidebar, bis die Geste sie aufdeckt', () => {
+    const visible = new Set(settingsSidebar().flatMap((s) => s.sections.map((sec) => sec.id)));
+    for (const section of SETTINGS_SECTIONS) {
+      if (section.hidden) expect(visible.has(section.id)).toBe(false);
+    }
+    expect(visible.has('maintenance')).toBe(false);
+    expect(visible.has('hotel-mode')).toBe(false);
+    expect(settingsSidebar().some((s) => s.group.id === 'experimental')).toBe(false);
+    expect(searchSettings('cache').length).toBeGreaterThan(0);
+    expect(searchSettings('hotel').length).toBeGreaterThan(0);
   });
 });
 

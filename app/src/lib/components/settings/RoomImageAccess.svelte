@@ -13,7 +13,12 @@
   } from '../../state/room-image-access.ts';
 
   let { onchange }: { onchange?: (status: RoomImageAccessStatus) => void } = $props();
-  let access = $state<RoomImageAccessStatus>({ configured: false, mode: null, source: null });
+  let access = $state<RoomImageAccessStatus>({ configured: false, mode: null, source: null, valid: null });
+  /* Ein grüner Punkt, der stimmt (R15, docs/23): Eine abgelaufene Anmeldung
+     sieht in der Datei aus wie eine gültige. Sagt der Server, dass sie nicht
+     mehr trägt, sagt es die Karte auch — und zeigt die Anmeldung sofort,
+     statt sie hinter „Zugang ändern" zu verstecken. */
+  const expired = $derived(access.configured && access.valid === false);
   let apiKey = $state('');
   let login = $state<RoomImageChatGptLogin | null>(null);
   let busy = $state(false);
@@ -115,11 +120,15 @@
 <section class="room-image-access" aria-labelledby="room-image-access-title">
   <div>
     <span class="caps-label">{m.rimg_access_label()}</span>
-    <h3 id="room-image-access-title">{access.configured ? m.rimg_access_connected() : m.rimg_access_choose()}</h3>
-    <p>{access.mode === 'chatgpt' ? m.rimg_access_chatgpt_plan() : access.mode === 'api_key' ? m.rimg_access_api_key() : m.rimg_access_intro()}</p>
+    <h3 id="room-image-access-title">
+      {expired ? m.rimg_access_expired() : access.configured ? m.rimg_access_connected() : m.rimg_access_choose()}
+    </h3>
+    <p>{expired ? m.rimg_access_expired_hint()
+      : access.mode === 'chatgpt' ? m.rimg_access_chatgpt_plan()
+      : access.mode === 'api_key' ? m.rimg_access_api_key() : m.rimg_access_intro()}</p>
   </div>
 
-  {#if access.configured}
+  {#if access.configured && !expired}
     <button class="secondary-btn pressable" type="button" disabled={busy} onclick={disconnect}>{m.rimg_access_change()}</button>
   {:else}
     <div class="room-image-access-options">

@@ -26,10 +26,11 @@ export function binaryLabel(deviceClass: string | null | undefined, on: boolean)
   return on ? pair[0] : pair[1];
 }
 
-/* Messwert de-DE mit max. 1 Dezimale (tnum via .num); null = unavailable → „—".
+/* Messwert de-DE mit max. 1 Dezimale (tnum via .num); ohne Wert null — die
+   Zeile entfällt dann ganz, statt einen Strich zu zeigen (R3, docs/23).
    Die Einheit kommt bevorzugt live (SensorValue.unit), sonst aus dem Katalog. */
-export function fmtSensor(value: number | null | undefined, unit?: string | null): string {
-  if (value === null || value === undefined) return '—';
+export function fmtSensor(value: number | null | undefined, unit?: string | null): string | null {
+  if (value === null || value === undefined) return null;
   const num = value.toLocaleString(intlLocale(), { maximumFractionDigits: 1 });
   return unit ? `${num} ${unit}` : num;
 }

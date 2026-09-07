@@ -24,6 +24,7 @@ import type {
   RoomHeroConfig,
   VisibleEntityConfig,
 } from './household-config.ts';
+import { EXTERIOR_HERO_ID } from './household-config.ts';
 
 export type HouseholdDataSource = 'legacy' | 'active';
 export type RuntimeTab = Readonly<{
@@ -70,16 +71,18 @@ const songTargetKeys: readonly SongMediaTargetKey[] = ['wohnzimmer', 'kueche'];
 function projectRoomHeroConfigs(
   model: HouseholdRuntimeModel,
 ): Readonly<Record<string, RoomHeroConfig | null>> {
-  return Object.fromEntries(model.rooms.map((room) => [
-    room.id,
-    room.hero === null ? null : {
-      assetId: room.hero.assetId,
-      focus: {
-        panel: { ...room.hero.focus.panel },
-        phone: { ...room.hero.focus.phone },
-      },
+  const clone = (hero: RoomHeroConfig | null): RoomHeroConfig | null => (hero === null ? null : {
+    assetId: hero.assetId,
+    focus: {
+      panel: { ...hero.focus.panel },
+      phone: { ...hero.focus.phone },
     },
-  ]));
+  });
+  /* Das Außenbild hängt unter seinem reservierten Schlüssel neben den Räumen
+     (R14): dieselbe Projektion, derselbe Zuweisungsweg, kein eigener Pfad. */
+  const entries: Array<[string, RoomHeroConfig | null]> = model.rooms.map((room) => [room.id, clone(room.hero)]);
+  entries.push([EXTERIOR_HERO_ID, clone(model.exteriorHero ?? null)]);
+  return Object.fromEntries(entries);
 }
 
 function projectLaundryEntities(

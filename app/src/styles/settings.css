@@ -145,6 +145,36 @@
 }
 .settings-nav-group:first-child { margin-top: var(--space-1); }
 
+/* R6 (docs/23): Auf dem Panel soll die Liste auf einen Bildschirm passen.
+   Die fünf Zwischenüberschriften kosten mehr Platz, als sie an Ordnung
+   bringen — die Gruppen bleiben als Haarlinie sichtbar und als Vorlesename
+   erhalten. Das Telefon behält seine Überschriften: dort wird gescrollt. */
+.settings:not(.is-phone) .settings-nav-group {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Unten reicht weniger Luft: die Liste endet mit ihrer letzten Zeile. */
+.settings:not(.is-phone) .settings-sidebar {
+  padding-bottom: var(--space-3);
+}
+/* Eine Zeile ist so hoch wie ihr Symbol plus Luft — 44 px bleiben ein
+   sicheres Ziel für den Finger und sparen die Höhe, die die Liste braucht. */
+.settings:not(.is-phone) .settings-nav-btn {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+}
+.settings:not(.is-phone) .settings-nav-section + .settings-nav-section {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 62%, transparent);
+}
+
 .settings-badge {
   min-width: 24px;
   padding: 2px var(--space-2);

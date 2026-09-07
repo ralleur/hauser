@@ -46,6 +46,7 @@ export interface AmbientWeekEvent {
   time: string;
   title: string;
   emphasis: 'now' | 'next' | null;
+  color: string | null; // Papierfarbe der Quelle — dieselbe wie im Kalender (R17)
 }
 
 export interface AmbientWeekDay {
@@ -108,6 +109,7 @@ export interface CalendarMonthWeek {
   days: CalendarMonthDay[];
   bars: CalendarBarSegment[]; // mehrtägige Termine als gespannte Balken
   laneCount: number; // belegte Balken-Reihen — die Tagestermine beginnen darunter
+  isEmpty: boolean; // keine Termine — die Woche faltet sich auf ihre Zahlen (R17)
 }
 
 const dayKeyFormatter = new Intl.DateTimeFormat('sv-SE', {
@@ -308,6 +310,7 @@ export function projectCalendarWeeks(
       days,
       bars,
       laneCount: laneEnds.length,
+      isEmpty: bars.length === 0 && days.every((day) => day.events.length === 0),
     };
   });
 }
@@ -391,6 +394,7 @@ export function projectAmbientWeek(
         time: item.allDay ? m.calendar_all_day() : timeFormatter().format(eventStart(item)),
         title: item.title,
         emphasis: item.id === nextId ? 'next' as const : null,
+        color: item.color ?? null,
       })),
       more: Math.max(0, dayEvents.length - AMBIENT_WEEK_EVENTS_PER_DAY),
     };

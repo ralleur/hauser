@@ -1,16 +1,56 @@
 <script lang="ts">
+  /* Eine Uhr geht nie aus (R2): Fehlt der Haushalt oder das Backend, zeigt das
+     Panel trotzdem Uhrzeit, Datum und die kommenden Tage — im Stil des
+     Standby. Kein nachgebautes Dashboard, keine Zeile über lokale
+     Nutzbarkeit. Unten, klein: die Ursache in einem Satz und der Weg zurück.
+
+     Alles kommt aus der Gerätezeit; diese Shell fragt nichts ab und lädt
+     keine produktiven Module. */
   import { onMount } from 'svelte';
   import './minimal-app-shell.css';
-  import {
-    MINIMAL_SHELL_VIEWS,
-    type MinimalShellView,
-  } from './minimal-shell-navigation.ts';
   import { m } from '../../paraglide/messages.js';
+  import { getLocale, baseLocale } from '../../paraglide/runtime.js';
 
-  let activeView = $state<MinimalShellView>(MINIMAL_SHELL_VIEWS[0]!);
+  const WEEK_DAYS = 7;
+  const TICK_MS = 10_000;
+
+  function locale(): string {
+    try { return getLocale(); } catch { return baseLocale; }
+  }
+
+  function snapshot() {
+    const tag = locale();
+    const now = new Date();
+    return {
+      time: now.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit' }),
+      date: now.toLocaleDateString(tag, { weekday: 'long', day: 'numeric', month: 'long' }),
+      week: Array.from({ length: WEEK_DAYS }, (_, offset) => {
+        const day = new Date(now);
+        day.setDate(day.getDate() + offset);
+        return {
+          key: `${day.getMonth()}-${day.getDate()}`,
+          weekday: day.toLocaleDateString(tag, { weekday: 'short' }).replace('.', ''),
+          dayOfMonth: day.getDate(),
+          today: offset === 0,
+        };
+      }),
+    };
+  }
+
+  let view = $state(snapshot());
+  const refresh = () => { view = snapshot(); };
 
   onMount(() => {
-    void import('./minimal-shell-cache.ts').then(({ hydrateMinimalShellCache }) => hydrateMinimalShellCache(), () => {});
+    const id = setInterval(refresh, TICK_MS);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+    };
   });
 
   /* Der einzige Ausweg aus dieser Ansicht: neu laden. Sie erscheint, wenn die
@@ -21,42 +61,26 @@
   }
 </script>
 
-<div class="minimal-shell" data-shell="minimal" data-view={activeView.id}>
-  <header class="minimal-shell__status" role="status">{m.minimal_status_ready()}</header>
-
-  <main class="minimal-shell__main">
-    <section
-      id="minimal-view"
-      class="minimal-shell__intro"
-      aria-labelledby={`minimal-tab-${activeView.id}`}
-      aria-live="polite"
-    >
-      <h1>{activeView.title}</h1>
-      <span>{activeView.summary}</span>
-      <p class="minimal-shell__details">{activeView.details}</p>
-    </section>
-
-    <!-- Ursache in einem Satz, direkt daneben der Weg zurück. Den Satz
-         ersetzt publishMinimalShellConfigStatus, sobald die Prüfung einen
-         Grund kennt. -->
-    <div class="minimal-shell__recovery">
-      <p class="minimal-shell__cause">{m.minimal_system_summary()}</p>
-      <button class="minimal-shell__reload" type="button" onclick={reload}>{m.minimal_reload()}</button>
-    </div>
+<div class="minimal-shell" data-shell="minimal">
+  <main class="minimal-shell__stage">
+    <div class="minimal-shell__clock num" role="status" aria-live="off">{view.time}</div>
+    <div class="minimal-shell__date">{view.date}</div>
   </main>
 
-  <nav class="minimal-shell__nav" aria-label="Hauptnavigation">
-    {#each MINIMAL_SHELL_VIEWS as view}
-      <button
-        id={`minimal-tab-${view.id}`}
-        type="button"
-        class:is-active={activeView.id === view.id}
-        aria-current={activeView.id === view.id ? 'page' : undefined}
-        aria-controls="minimal-view"
-        onclick={() => { activeView = view; }}
-      >
-        {view.label}
-      </button>
+  <section class="minimal-shell__week" aria-hidden="true">
+    {#each view.week as day (day.key)}
+      <div class="minimal-shell__week-day" class:is-today={day.today}>
+        <span class="minimal-shell__week-name">{day.weekday}</span>
+        <span class="minimal-shell__week-num num">{day.dayOfMonth}</span>
+      </div>
     {/each}
-  </nav>
+  </section>
+
+  <!-- Ursache in einem Satz, direkt daneben der Weg zurück. Den Satz
+       ersetzt publishMinimalShellConfigStatus, sobald die Prüfung einen
+       Grund kennt. -->
+  <footer class="minimal-shell__recovery">
+    <p class="minimal-shell__cause">{m.minimal_cause_unknown()}</p>
+    <button class="minimal-shell__reload" type="button" onclick={reload}>{m.minimal_reload()}</button>
+  </footer>
 </div>

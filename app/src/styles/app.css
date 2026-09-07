@@ -317,6 +317,20 @@ button {
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
+/* Getrennt: derselbe Status wird anfassbar und verbindet neu (R2). */
+.ha-status-retry {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  font: inherit;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 .theme-toggle,
 .standby-btn {
   display: grid;
@@ -1441,49 +1455,9 @@ button.security-bar {
 @keyframes correct-fade { from { opacity: 0.35; } to { opacity: 1; } }
 .is-correct-fade { animation: correct-fade var(--duration-correct) var(--ease-out); }
 
-/* ── Verbindungs-Banner + Offline-Sperre (docs/02 Offline/Reconnect) ──
-   Banner absolut im .screens-Bereich (overflow:hidden clippt es im Ruhezustand
-   nach oben weg); Slide nur über transform/opacity. */
-.conn-banner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: 36px;
-  background: var(--color-surface-2);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: transform var(--duration-normal) var(--ease-out),
-              opacity var(--duration-normal) var(--ease-out);
-  pointer-events: none;
-}
-.conn-banner.is-visible { transform: translateY(0); opacity: 1; }
-
-/* Nur der Retry-Knopf ist anfassbar; das Banner selbst bleibt durchlässig. */
-.conn-retry {
-  margin-left: auto;
-  min-height: var(--touch-min);
-  padding: var(--space-1) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  background: var(--color-surface-3);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  pointer-events: auto;
-}
-
+/* ── Offline-Sperre (docs/02 Offline/Reconnect) ──
+   Kein Banner mehr über der Bühne: die Titelleiste trägt den Zustand, ihr
+   Status-Chip verbindet auf Tipp neu (R2). */
 /* Offline: Controls deaktiviert (keine Commands, docs/02) — Navigation (Tabs,
    Raum-/Player-Auswahl) bleibt bewusst aktiv, das Panel friert nicht ein.
    Das Phone lädt dieselben Regeln, sobald es das Raum-Sheet öffnet. */
@@ -1807,14 +1781,90 @@ button.security-bar {
   font-weight: var(--font-weight-medium);
 }
 
-/* ── Energie (docs/07 Screen 10, docs/06 §12) ──
-   B-13-verwandtes Hero-Layout: feste Nutzinformation links, großer visueller
-   Energy-Eyecatcher rechts. Bewegung bleibt transform/opacity-only. */
+/* ── Energie (docs/07 Screen 10, docs/23 R4) ──
+   Das Balkonbild ist die Bühne: die Zahlen sitzen als Papiermarken im Motiv,
+   der Tagesverlauf ist eine Linie am unteren Bildrand. Keine Kachelspalte.
+   Bewegung bleibt transform/opacity-only. */
 .energy-stage {
   position: absolute;
   inset: 0;
   overflow: hidden;
   background: var(--color-surface-0);
+  /* Größenkontext für das Cover-Rechteck der Marken (cqw/cqh). */
+  container-type: size;
+}
+/* Trefferfläche für den langen Druck (Kontextmenü): unter allem, was bedient
+   wird, damit Zettel, Chips und Linie ihre Tipps behalten. */
+.energy-config-hitarea {
+  position: absolute;
+  inset: 0;
+}
+.energy-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* Modal-Tier wie .room-edit */
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+.energy-menu .overlay-scrim { animation: overlay-scrim-in var(--duration-enter) var(--ease-out) both; }
+.energy-menu-panel {
+  width: min(100%, 420px);
+  outline: none;
+  animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+}
+.energy-menu-actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+/* Anordnen (R19): Zettel und Punkte werden greifbar; der Punkt wächst, damit
+   ein Finger ihn trifft, und die Werkzeugleiste sitzt über der Tab-Leiste. */
+.energy-stage.is-arranging .energy-config-hitarea { pointer-events: none; }
+.energy-mark.is-draggable,
+.mark-point.is-draggable { cursor: grab; touch-action: none; user-select: none; }
+.mark-point.is-draggable {
+  /* Der Rahmen lässt Berührungen durch (die Bühne darunter bleibt bedienbar);
+     beim Anordnen holt sich der Punkt sie zurück — wie der Zettel. Sichtbar
+     bleibt er klein, greifbar ist er fingergroß. */
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  box-shadow: 0 0 0 3px var(--leader-halo), 0 0 0 5px var(--leader-ink);
+  z-index: 2;
+}
+.mark-point.is-draggable::before {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: var(--radius-full);
+}
+.energy-mark.is-draggable { outline: 1px dashed var(--leader-ink); outline-offset: 3px; animation: none; }
+.energy-arrange-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(88px + var(--space-4));
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-xl);
+  background: var(--overlay-panel-background);
+  box-shadow: var(--elevation-overlay-shadow);
+  transform: translateX(-50%);
+}
+.energy-arrange-hint { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.energy-menu-actions .re-row {
+  min-height: var(--touch-min);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+@media (prefers-reduced-motion: reduce) {
+  .energy-menu .overlay-scrim, .energy-menu-panel { animation: none; }
 }
 
 .energy-hero {
@@ -1833,36 +1883,180 @@ button.security-bar {
   opacity: 1;
   transition: opacity var(--duration-enter) var(--ease-out);
 }
+/* Gegenstück im Dämmerungsband (R20): liegt über dem dominanten Bild, seine
+   Deckkraft kommt direkt vom Sonnenstand — keine eigene Transition, sonst
+   liefe sie dem Band hinterher. */
+.energy-hero-img.is-counter { transition: none; }
+/* Die Ecke oben links trägt Chips und Tageszeile, das Band unten die
+   Verlaufslinie. Sonne, Balkon und Stadt bleiben unangetastet — deshalb eine
+   Ecke und keine durchgehende Bahn. */
 .energy-hero-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg,
-    color-mix(in srgb, var(--color-surface-0) 78%, transparent) 0%,
-    color-mix(in srgb, var(--color-surface-0) 45%, transparent) 34%,
-    color-mix(in srgb, var(--color-surface-0) 12%, transparent) 62%,
-    transparent 100%);
+  background:
+    radial-gradient(125% 95% at 0% 0%,
+      color-mix(in srgb, var(--color-surface-0) 88%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface-0) 62%, transparent) 34%,
+      transparent 62%),
+    linear-gradient(0deg,
+      color-mix(in srgb, var(--color-surface-0) 84%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface-0) 46%, transparent) 12%,
+      transparent 30%);
   pointer-events: none;
 }
 
-.energy-panel {
+/* Cover-Rechteck des Hero-Bildes: so groß, wie `background-size: cover` das
+   Motiv rechnet. Die Marken sitzen darin in Bildprozent und wandern beim
+   Zuschnitt mit dem Motiv statt mit der Bühne. */
+.energy-frame {
   position: absolute;
-  inset: var(--space-4) auto var(--space-4) var(--space-4);
-  z-index: 2;
-  /* Breite folgt dem geteilten Layout-Preset (Kontrollflächen anpassen) —
-     dieselbe Formel wie .home-panels mit einer Fläche; Fallbacks = Preset
-     „Ausgewogen", falls die Variablen fehlen. */
-  width: max(var(--slot-min, 378px), min(var(--layout-total, 44%), calc(100% - var(--hero-min, 480px) - var(--space-8))));
-  max-width: calc(100% - var(--hero-min, 480px) - var(--space-8));
+  top: 50%;
+  left: 50%;
+  width: max(100cqw, calc(100cqh * var(--hero-ratio, 1.78)));
+  height: max(100cqh, calc(100cqw / var(--hero-ratio, 1.78)));
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+}
+.energy-marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* Die Tinte der Anheftung folgt dem Motiv, nicht dem Theme: das Tagbild ist
+   hell, das Nachtbild dunkel — unabhängig davon, wie das Panel gerade steht. */
+.energy-stage { --leader-ink: rgb(52 46 36 / 0.55); --leader-halo: rgb(255 255 255 / 0.5); }
+.energy-stage.is-night { --leader-ink: rgb(240 238 231 / 0.5); --leader-halo: rgb(0 0 0 / 0.45); }
+.energy-leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.energy-leaders line {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+.leader-halo line { stroke: var(--leader-halo); stroke-width: 3; }
+.leader-ink line { stroke: var(--leader-ink); stroke-width: 1; }
+/* Der Punkt sitzt im Motiv und bleibt rund — er liegt außerhalb des
+   verzerrten SVG-Koordinatensystems. */
+.mark-point {
+  position: absolute;
+  left: calc(var(--mark-x, 50) * 1%);
+  top: calc(var(--mark-y, 50) * 1%);
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: var(--radius-full);
+  background: var(--leader-ink);
+  box-shadow: 0 0 0 2px var(--leader-halo);
+}
+
+/* Papierstimme für die Zahlen (docs/23 §1): dasselbe Papier wie im Standby,
+   leicht angekippt ins Bild gesteckt. */
+.energy-mark,
+.energy-hint {
+  background: linear-gradient(174deg, #fbf8ef 0%, #f3efe2 100%);
+  color: #33302a;
+  border-radius: 2px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+.energy-mark {
+  position: absolute;
+  left: calc(var(--mark-x, 50) * 1%);
+  top: calc(var(--mark-y, 50) * 1%);
+  transform: translate(-50%, -50%) rotate(var(--mark-tilt, 0deg));
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 108px;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  pointer-events: auto;
+  animation: mark-in var(--duration-enter) var(--ease-out) backwards;
+}
+@keyframes mark-in { from { opacity: 0; } }
+.energy-mark .mark-label { color: #837c6d; }
+.mark-value {
+  font-family: var(--font-family-display);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+.energy-mark.is-warm .mark-value { color: color-mix(in srgb, var(--color-accent-warm) 62%, #33302a); }
+.energy-mark.is-cool .mark-value { color: color-mix(in srgb, var(--color-accent-cool) 62%, #33302a); }
+.mark-value .kpi-unit,
+.ledger-value .kpi-unit,
+.chip-value .kpi-unit {
+  font-family: var(--font-family);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  margin-left: var(--space-1);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-secondary);
+}
+.energy-mark .kpi-unit { color: #837c6d; }
+/* Nach .pressable.is-pressed, damit der Druck die Neigung nicht verwirft. */
+.energy-mark.is-pressed {
+  transform: translate(-50%, -50%) rotate(var(--mark-tilt, 0deg)) scale(0.97);
+}
+
+/* Die freie Wand links: Zeitraum-Chips in der Steuerungsstimme, darunter der
+   Tag in der Papierstimme. Ohne diese Zeile wäre die halbe Bühne leer — und
+   der Screen sähe unfertig aus statt ruhig. */
+.energy-wall {
+  position: absolute;
+  top: var(--space-5);
+  left: var(--space-6);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-5);
-  padding: var(--space-5);
-  border-radius: var(--radius-2xl);
-  background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--elevation-overlay-shadow);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  max-width: min(46%, 640px);
+}
+.energy-story {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.story-label { color: var(--color-text-secondary); }
+.story-value {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: clamp(3.2rem, 7cqw, 6rem);
+  line-height: 0.94;
+  color: var(--color-text-primary);
+}
+.story-unit {
+  margin-left: var(--space-2);
+  font-size: 0.32em;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-secondary);
+}
+.story-rest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-2) 0 0;
+}
+.story-rest-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.story-rest-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.story-rest-value {
+  font-family: var(--font-family-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
 }
 .energy-panel-top {
   display: grid;
@@ -1885,6 +2079,7 @@ button.security-bar {
   border-color: var(--color-surface-inverse);
   color: var(--color-text-on-inverse);
 }
+/* Seitenwechsel gibt es nur noch auf dem Telefon (PhoneEnergy). */
 .energy-page-toggle {
   display: grid;
   place-items: center;
@@ -1904,268 +2099,84 @@ button.security-bar {
   border-color: color-mix(in srgb, var(--color-accent-cool) 45%, var(--color-border));
   background: color-mix(in srgb, var(--color-accent-cool) 13%, var(--color-surface-2));
 }
-.energy-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.energy-hint {
+  margin: 0;
+  max-width: 44ch;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  transform: rotate(-0.5deg);
 }
-
-.energy-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-.energy-primary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.energy-primary .chip-label,
 .value-chip .chip-label {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
-.energy-primary-value {
-  font-size: var(--text-4xl);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--leading-hero);
-  letter-spacing: var(--tracking-tightest);
-}
-.energy-mini-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
 
-.energy-flow {
-  display: grid;
-  grid-template-columns: auto minmax(36px, 1fr) auto minmax(36px, 1fr) auto;
-  align-items: start;
-  gap: var(--space-3);
-  padding: var(--space-1) 0;
-}
-
-/* Ohne Erzeugungssensor fehlen Solar-Knoten und seine Linie; der Fluss läuft
-   dann nur zwischen Haus und Netz (Paket 3, docs/20). */
-.energy-flow.is-no-solar {
-  grid-template-columns: auto minmax(36px, 1fr) auto;
-}
-
-.flow-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.node-circle {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-full);
-  color: var(--color-text-secondary);
-  transition: color var(--duration-normal) var(--ease-out);
-}
-.flow-node.is-warm .node-circle { color: var(--color-accent-warm); }
-.flow-node.is-cool .node-circle { color: var(--color-accent-cool); }
-.node-value {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-.node-value .kpi-unit,
-.chip-value .kpi-unit,
-.energy-primary-value .kpi-unit {
-  font-size: var(--text-2xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  margin-left: var(--space-1);
-  letter-spacing: var(--tracking-wide);
-}
-.node-label {
-  max-width: 80px;
-  text-align: center;
-  line-height: var(--leading-tight);
-}
-
-/* Fluss-Linie: 2px-Haarlinie (ValueSlider-Track-Muster), auf Kreis-Mitte
-   ausgerichtet; Punkte laufen via translateX über die Linienbreite —
-   100cqw = Container-Breite (container-type: inline-size) */
-.flow-line {
-  display: flex;
-  align-items: center;
-  height: 72px; /* = Kreis → Linie mittig auf Knoten-Achse */
-}
-.line-track {
-  position: relative;
-  width: 100%;
-  height: 2px;
-  background: var(--color-border);
-  container-type: inline-size;
-}
-.flow-dot {
+/* Tagesverlauf: eine Linie am unteren Bildrand, darüber die Summen des
+   Zeitraums als Zeile — keine Kacheln, keine Legende. */
+.energy-daycurve {
   position: absolute;
-  top: 50%;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-warm);
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-out);
+  inset: auto 0 0 0;
+  z-index: 2;
+  pointer-events: none;
 }
-.flow-line.is-cool .flow-dot { background: var(--color-accent-cool); }
-.flow-line.is-active .flow-dot {
-  opacity: 1;
-  animation: flow-dot var(--flow-duration, 2s) linear infinite;
-}
-.flow-line.is-reverse .flow-dot { animation-direction: reverse; }
-/* Nach der Shorthand-Regel und spezifischer — sonst setzt die Shorthand
-   das delay implizit auf 0 zurück */
-.flow-line.is-active .flow-dot.dot-2 {
-  animation-delay: calc(var(--flow-duration, 2s) * -0.5);
-}
-@keyframes flow-dot {
-  from { transform: translateX(0); }
-  to   { transform: translateX(100cqw); }
-}
-
-/* KPI-Chips: ValueChip-Anzeige-Variante (docs/06 §0: transparent, nur Anzeige) */
-.energy-kpis {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
-.value-chip.is-plain {
-  background: transparent;
-  border: none;
-  padding: 0;
-  min-width: 0;
-}
-.value-chip.is-plain .chip-value {
-  font-size: var(--text-xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-
-/* Tagesverlauf: 24 Balkenpaare, Entrance via scaleY + Stagger (einmalig) */
-.energy-hint {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
+/* Die Linie beschriftet sich am Anfang, nicht in der Mitte: der Text sitzt
+   über ihr, nicht auf ihr. Die Summen selbst stehen an der Wand. */
+.curve-label {
+  position: absolute;
+  left: var(--space-6);
+  bottom: calc(clamp(44px, 11cqh, 96px) + var(--space-1));
   color: var(--color-text-secondary);
+  text-shadow: 0 0 8px var(--color-surface-0);
 }
-.energy-chart { max-width: 100%; }
-.consumption-card {
+.ledger-item {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 112px;
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--color-surface-2) 84%, transparent);
+  align-items: baseline;
+  gap: var(--space-2);
 }
-.consumption-mark {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-full);
-  color: var(--color-accent-cool);
-  border: 1.5px solid color-mix(in srgb, var(--color-accent-cool) 45%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent-cool) 10%, transparent);
-}
-.consumption-copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.consumption-copy .chip-value {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 120px;
-  border-bottom: 1px solid var(--color-border);
-}
-.chart-hour {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 100%;
-}
-.bar {
-  flex: 1;
-  height: 100%;
-  transform: scaleY(var(--h, 0));
-  transform-origin: bottom;
-  animation: bar-in var(--duration-emphasis) var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 18ms);
-}
-.bar-prod { background: var(--color-accent-warm); }
-.bar-load { background: var(--color-border); }
-@keyframes bar-in { from { transform: scaleY(0); } }
-
-.chart-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: var(--space-2);
-  font-size: var(--text-2xs);
-  color: var(--color-text-tertiary);
-}
-.chart-legend {
-  display: flex;
-  gap: var(--space-5);
-  margin-top: var(--space-4);
+.ledger-label {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
-.chart-legend span { display: flex; align-items: center; gap: var(--space-2); }
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
+.ledger-value {
+  font-family: var(--font-family-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
 }
-.legend-prod { background: var(--color-accent-warm); }
-.legend-load { background: var(--color-border); }
+.energy-curve {
+  display: block;
+  width: 100%;
+  height: clamp(44px, 11cqh, 96px);
+}
+.curve-prod { fill: color-mix(in srgb, var(--color-accent-warm) 22%, transparent); }
+.curve-load {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-mark { animation: none; }
+}
 
 /* ── Last-Overlay (B-19): Touch-Trigger + Kuchen-Overlay ──
    Reuse overlay-scrim/overlay-panel/modal-enter (s. Room-/Licht-Overlay). */
-.flow-node-trigger,
-.consumption-card-trigger {
+.energy-mark-trigger {
   font: inherit;
-  color: inherit;
-  text-align: inherit;
+  text-align: center;
+  border: none;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
 }
-.flow-node-trigger {
-  background: none;
-  border: none;
-  padding: 0;
-  border-radius: var(--radius-lg);
-}
-.consumption-card-trigger { width: 100%; }
 
 .energy-load-overlay {
   position: fixed;
@@ -3147,6 +3158,8 @@ button.security-bar {
   align-content: start;
   gap: var(--space-2);
   min-width: 0;
+  /* Ein leerer Tag behält seine Spalte, aber keinen Gedankenstrich (R3). */
+  min-height: 2lh;
   padding-top: var(--space-2);
   border-top: 1px solid var(--color-border);
 }
@@ -3163,10 +3176,21 @@ button.security-bar {
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
-.ambient-week-num { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
+/* Dieselbe Tageszahl wie im Kalender, nur leiser (R5). */
+.ambient-week-num {
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  color: var(--color-text-tertiary);
+}
 .ambient-week-event { display: grid; gap: 2px; }
-.ambient-week-time { font-size: var(--text-2xs); color: var(--color-text-secondary); }
-.ambient-week-time.is-accent { color: var(--color-accent-cool); }
+.ambient-week-time { font-size: var(--text-2xs); color: var(--postit-muted, var(--color-text-secondary)); }
+/* Papierstimme: „Jetzt" wird betont, nicht eingefärbt — dasselbe wie im
+   Kalender (R5). */
+.ambient-week-time.is-accent {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
 /* Titel brechen um statt abzuschneiden — der Screen hat vertikal Platz,
    und ein halber Terminname ist keine Information. */
 .ambient-week-title {
@@ -3176,8 +3200,7 @@ button.security-bar {
   overflow-wrap: break-word;
   hyphens: auto;
 }
-.ambient-week-more,
-.ambient-week-empty { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
+.ambient-week-more { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
 
 /* ── Post-its: offene Erinnerungen als gelbe Notizzettel in der freien oberen
    rechten Ecke. Am Rand statt im Zentrum — sie ergänzen die Wandtafel, ohne die
@@ -3304,47 +3327,39 @@ button.security-bar {
    Papierfarbe ab, ohne sie durchsichtig zu machen. */
 :root[data-theme='dark'] .ambient-shopping { filter: brightness(0.6); }
 
-/* ── B-10 Kalender: durchscrollbares Monatsraster im Stil des Ambient-Wochenbands.
-   Woche beginnt montags; die klebende Kopfzeile trägt den mitscrollenden Monat. ── */
+/* ── B-10 Kalender (R5, docs/23): durchscrollbares Monatsraster als dieselbe
+   Papierseite wie das Ambient-Wochenband — Haarlinien, Kapitälchen für die
+   Wochentage, Serif für Monat und Tageszahl, Zettelfarben statt hellblauer
+   Balken. Woche beginnt montags; die klebende Kopfzeile trägt den
+   mitscrollenden Monat. ── */
 .calendar-screen {
-  position: relative; /* Bezug für offsetTop der Wochen (Scroll-Spy) */
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  padding: 0 clamp(var(--space-5), 5vw, 72px) calc(88px + var(--space-6));
+  overflow: hidden;
+  padding: 0 clamp(var(--space-5), 5vw, 72px);
   --cal-col-gap: var(--space-4);
 }
 .cal-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: none;
   padding: var(--space-7) 0 var(--space-3);
-  background: var(--color-surface-0);
 }
-.cal-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+/* Das Blatt scrollt unter der stehenden Kopfzeile; offsetTop der Wochen
+   bezieht sich auf diesen Kasten (Scroll-Spy und Sprung zur Woche). */
+.cal-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: calc(88px + var(--space-6));
 }
 .cal-month {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--leading-tight);
   text-transform: capitalize;
 }
-.cal-actions { display: flex; align-items: center; gap: var(--space-4); }
-.cal-updated { color: var(--color-text-secondary); font-size: var(--text-sm); white-space: nowrap; }
-.calendar-refresh {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  background: var(--color-surface-2);
-  color: var(--color-text-primary);
-}
-.calendar-refresh:disabled { opacity: 0.4; }
 .cal-weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3359,7 +3374,7 @@ button.security-bar {
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
-.calendar-error { margin-bottom: var(--space-3); color: var(--color-warning); font-size: var(--text-sm); }
+.calendar-error { margin-bottom: var(--space-3); color: var(--color-text-tertiary); font-size: var(--text-xs); }
 
 .cal-grid { display: grid; gap: 0; }
 /* Wochenzeile als 7-Spalten-Grid: Kopfzeile (Reihe 1), darunter die Balken-Lanes
@@ -3379,7 +3394,8 @@ button.security-bar {
   grid-row: 1;
   min-width: 0;
   padding: var(--space-3) 0 var(--space-1);
-  border-top: 1px solid var(--color-border);
+  /* Haarlinie wie im Wochenband: sie teilt die Seite, sie rahmt sie nicht. */
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 62%, transparent);
 }
 .cal-day-events {
   display: grid;
@@ -3389,6 +3405,16 @@ button.security-bar {
   min-height: 52px;
   padding-bottom: var(--space-4);
 }
+/* Zeilenhöhe nach Inhalt (R17): Eine Woche ohne Termine faltet sich auf ihre
+   Zahlen; die Wochen mit Leben bekommen den Platz. */
+.cal-week.is-empty .cal-day-events { min-height: 0; padding-bottom: var(--space-2); }
+.cal-week.is-empty .cal-day-head { padding-top: var(--space-2); }
+/* Die laufende Woche in voller Größe wie im Standby, die kommenden leiser. */
+.cal-week.is-current .cal-day-num:not(.is-today) { color: var(--color-text-primary); }
+.cal-week.is-current .cal-event-title { font-size: var(--text-sm); }
+.cal-week.is-current .cal-event-time { font-size: var(--text-xs); }
+.cal-week.is-current .cal-bar { height: 24px; }
+.cal-week.is-current .cal-bar-title { font-size: var(--text-xs); }
 .cal-day-head.is-past,
 .cal-day-events.is-past { opacity: 0.5; }
 .cal-day-month {
@@ -3398,24 +3424,48 @@ button.security-bar {
   text-transform: uppercase;
   color: var(--color-text-tertiary);
 }
-.cal-day-num { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.cal-day-num {
+  font-family: var(--font-family-display);
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+  color: var(--color-text-secondary);
+}
+/* Heute ist ein angehefteter Zettel, kein blaues Kästchen (R5). */
 .cal-day-num.is-today {
   display: inline-grid;
   place-items: center;
-  min-width: 1.6em;
-  height: 1.6em;
-  padding: 0 0.35em;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent-cool);
-  color: var(--color-text-on-accent);
-  font-weight: var(--font-weight-semibold);
+  min-width: 1.5em;
+  padding: 0 0.3em;
+  border-radius: 2px;
+  background: #fde68a;
+  color: #3f3406;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+  transform: rotate(-1.2deg);
 }
-.cal-event { display: grid; grid-template-columns: 3px 1fr; gap: var(--space-2); align-items: stretch; }
-.cal-event-mark { border-radius: var(--radius-pill); background: var(--color-accent-cool); }
-.cal-event-body { display: grid; gap: 1px; min-width: 0; }
-.cal-event-time { font-size: var(--text-2xs); color: var(--color-text-secondary); }
-.cal-event.is-accent .cal-event-time { color: var(--color-accent-cool); }
-.cal-event-time.is-now { color: var(--color-accent-cool); font-weight: var(--font-weight-medium); }
+.cal-event { display: grid; gap: 1px; min-width: 0; }
+/* Tinte auf Papier (R17): kein Farbstrich am Rand, die Uhrzeit trägt die Farbe
+   der Quelle — leise, wie eine zweite Tinte. */
+.cal-event-time { font-size: var(--text-2xs); color: var(--postit-muted, var(--color-text-secondary)); }
+.cal-event.is-accent .cal-event-time { color: var(--color-text-primary); }
+.cal-event-time.is-now { color: var(--color-text-primary); font-weight: var(--font-weight-semibold); }
+/* Ganztägig ist ein Zettel: dasselbe Papier wie die mehrtägigen Streifen. */
+.cal-event.is-paper {
+  display: block;
+  padding: 2px var(--space-2);
+  border-radius: 2px;
+  background: var(--postit-paper, #fde68a);
+  color: var(--postit-ink, #3f3406);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+}
+.cal-event.is-paper .cal-event-title { color: inherit; font-weight: var(--font-weight-medium); }
+.cal-event.is-paper.is-now { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), inset 0 0 0 1px var(--postit-muted, #7a6712); }
+:root[data-theme='dark'] .cal-event.is-paper { filter: brightness(0.78); }
+/* Nachts ist die gedämpfte Tinte auf Schwarz nicht zu lesen — dann trägt die
+   Uhrzeit die Papierfarbe, leicht ins Grau gezogen. */
+:root[data-theme='dark'] .cal-event-time:not(.is-now),
+:root[data-theme='dark'] .ambient-week-time:not(.is-accent) {
+  color: color-mix(in srgb, var(--postit-paper, var(--color-text-secondary)) 75%, var(--color-text-secondary));
+}
 .cal-event-title {
   font-size: var(--text-xs);
   line-height: var(--leading-snug);
@@ -3425,41 +3475,42 @@ button.security-bar {
 }
 .cal-day-more { font-size: var(--text-2xs); color: var(--color-text-tertiary); }
 
-/* Mehrtägiger Termin als durchgehender Balken über seine Spalten. Weicher
-   Farbfüllung der Quelle mit farbiger Startkante; an Wochengrenzen läuft der
-   Balken kantig weiter (continues-left/right), sonst rundet er ab. */
+/* Mehrtägiger Termin als Papierstreifen über seine Spalten — dasselbe Papier
+   wie die Zettel, samt Tinte (R5). An Wochengrenzen läuft der Streifen kantig
+   weiter (continues-left/right), sonst rundet er leicht ab. */
 .cal-bar {
-  --bar-color: var(--color-accent-cool);
   display: flex;
   align-items: center;
   min-width: 0;
   height: 20px;
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--bar-color);
-  background: color-mix(in srgb, var(--bar-color) 26%, transparent);
+  border-radius: 2px;
+  background: var(--postit-paper, #fde68a);
+  color: var(--postit-ink, #3f3406);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
 }
 .cal-bar.continues-left {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  border-left: 0;
-  padding-left: var(--space-2);
 }
 .cal-bar.continues-right {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-.cal-bar.is-now { box-shadow: inset 0 0 0 1px var(--bar-color); }
+.cal-bar.is-now { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), inset 0 0 0 1px var(--postit-muted, #7a6712); }
 .cal-bar.is-past { opacity: 0.5; }
 .cal-bar-title {
   overflow: hidden;
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-medium);
   line-height: 1;
-  color: var(--color-text-primary);
+  color: inherit;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* Wie die Zettel im Standby: nachts gedämpft, aber deckend — sonst leuchtet
+   Papier aus einem dunklen Bildschirm heraus. */
+:root[data-theme='dark'] .cal-bar { filter: brightness(0.78); }
 @media (max-width: 760px) {
   .calendar-screen { --cal-col-gap: var(--space-2); }
   .cal-day-events { min-height: 40px; }

@@ -16,17 +16,47 @@ export const ENERGY_PERIODS: EnergyPeriodOption[] = [
   { id: 'total', label: m.period_total() },
 ];
 
+/* Eine Kennzahl existiert nur mit Wert. Was das Haus nicht messen kann, wird
+   nicht gezeigt — kein Gedankenstrich als Wert (R3, docs/23). */
 export interface EnergyMetric {
+  label: string;
+  value: number;
+  unit: 'kW' | 'kWh';
+}
+
+/* Zwischenstand beim Bauen: hier darf ein Wert noch fehlen. */
+interface RawMetric {
   label: string;
   value: number | null;
   unit: 'kW' | 'kWh';
 }
 
 export interface EnergyPanelData {
-  primary: EnergyMetric;
+  /** null, wenn der Leitwert gerade nicht messbar ist. */
+  primary: EnergyMetric | null;
   secondary: EnergyMetric[];
   kpis: EnergyMetric[];
   hint: string | null;
+}
+
+interface RawPanelData {
+  primary: RawMetric;
+  secondary: RawMetric[];
+  kpis: RawMetric[];
+  hint: string | null;
+}
+
+function measured(metrics: RawMetric[]): EnergyMetric[] {
+  return metrics.filter((metric): metric is EnergyMetric => metric.value !== null);
+}
+
+function measuredPanel(raw: RawPanelData): EnergyPanelData {
+  return {
+    primary: raw.primary.value === null ? null : (raw.primary as EnergyMetric),
+    secondary: measured(raw.secondary),
+    kpis: measured(raw.kpis),
+    hint: raw.hint,
+  };
 }
 
 const PERIOD_HINT: Record<Exclude<EnergyPeriod, 'today'>, string> = {
@@ -35,9 +65,36 @@ const PERIOD_HINT: Record<Exclude<EnergyPeriod, 'today'>, string> = {
   total: m.period_missing_total(),
 };
 
-export function energyPanelData(view: EnergyView, period: EnergyPeriod, page: EnergyPage): EnergyPanelData {
+/** Summen eines Zeitraums aus der Statistik (R21); null = noch keine. */
+export interface EnergyPeriodSums {
+  produced: number | null;
+  consumed: number | null;
+  fedIn: number | null;
+  drawn: number | null;
+}
+
+export function energyPanelData(
+  view: EnergyView,
+  period: EnergyPeriod,
+  page: EnergyPage,
+  sums: EnergyPeriodSums | null = null,
+): EnergyPanelData {
   if (period !== 'today') {
-    return historicalPlaceholder(period, page);
+    if (!sums) return historicalPlaceholder(period);
+    /* Zeiträume kennen keine Live-Werte, nur Summen. Die Solarregel gilt
+       wie heute: ohne Erzeugungssensor keine Solarzeile (R3). */
+    const solar = view.hasGeneration;
+    return measuredPanel({
+      primary: { label: '', value: null, unit: 'kWh' },
+      secondary: [],
+      kpis: [
+        ...(solar ? [{ label: m.energy_produced(), value: sums.produced, unit: 'kWh' as const }] : []),
+        { label: m.energy_consumed(), value: sums.consumed, unit: 'kWh' },
+        ...(solar ? [{ label: m.energy_fed_in(), value: sums.fedIn, unit: 'kWh' as const }] : []),
+        { label: m.energy_drawn(), value: sums.drawn, unit: 'kWh' },
+      ],
+      hint: null,
+    });
   }
 
   /* Ohne Erzeugungssensor hat das Haus keine Solarseite (Paket 3, docs/20):
@@ -46,7 +103,7 @@ export function energyPanelData(view: EnergyView, period: EnergyPeriod, page: En
   const solar = view.hasGeneration;
 
   if (page === 'consumption') {
-    return {
+    return measuredPanel({
       primary: { label: m.energy_measured_load(), value: view.load, unit: 'kW' },
       secondary: [
         { label: m.energy_grid_import(), value: view.grid !== null && view.grid < -0.05 ? Math.abs(view.grid) : null, unit: 'kW' },
@@ -65,10 +122,10 @@ export function energyPanelData(view: EnergyView, period: EnergyPeriod, page: En
           : []),
       ],
       hint: liveValueHint(view, m.energy_no_load_sensors(), m.energy_load_sensors_no_value()),
-    };
+    });
   }
 
-  return {
+  return measuredPanel({
     primary: solar
       ? { label: m.energy_solar_now(), value: view.pv, unit: 'kW' }
       : { label: m.energy_measured_load(), value: view.load, unit: 'kW' },
@@ -83,31 +140,13 @@ export function energyPanelData(view: EnergyView, period: EnergyPeriod, page: En
       { label: m.energy_drawn(), value: view.today.drawn, unit: 'kWh' },
     ],
     hint: liveValueHint(view, m.energy_no_sensors(), m.energy_sensors_no_value()),
-  };
+  });
 }
 
-function historicalPlaceholder(period: Exclude<EnergyPeriod, 'today'>, page: EnergyPage): EnergyPanelData {
-  return {
-    primary: { label: page === 'consumption' ? 'Verbrauch' : m.energy_title(), value: null, unit: 'kWh' },
-    secondary: [
-      { label: page === 'consumption' ? m.energy_grid_import() : 'Erzeugung', value: null, unit: 'kWh' },
-      { label: page === 'consumption' ? m.energy_self_use() : m.energy_feed_in(), value: null, unit: 'kWh' },
-    ],
-    kpis: page === 'consumption'
-      ? [
-          { label: m.energy_consumed(), value: null, unit: 'kWh' },
-          { label: m.energy_drawn(), value: null, unit: 'kWh' },
-          { label: m.energy_self_use(), value: null, unit: 'kWh' },
-          { label: m.energy_peak_load(), value: null, unit: 'kW' },
-        ]
-      : [
-          { label: m.energy_produced(), value: null, unit: 'kWh' },
-          { label: m.energy_consumed(), value: null, unit: 'kWh' },
-          { label: m.energy_fed_in(), value: null, unit: 'kWh' },
-          { label: m.energy_drawn(), value: null, unit: 'kWh' },
-        ],
-    hint: PERIOD_HINT[period],
-  };
+/* Woche, Monat und Gesamt kommen erst mit der HA-Statistics-API. Bis dahin
+   steht dort der Hinweissatz — und keine Reihe leerer Kennzahlen (R3). */
+function historicalPlaceholder(period: Exclude<EnergyPeriod, 'today'>): EnergyPanelData {
+  return { primary: null, secondary: [], kpis: [], hint: PERIOD_HINT[period] };
 }
 
 function liveValueHint(view: EnergyView, unconfigured: string, noValue: string): string | null {

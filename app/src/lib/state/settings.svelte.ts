@@ -39,6 +39,11 @@ export const settingsUi = $state({
      liegen bleibt, und keine Zählnummer: Der Ruf kommt an, bevor die Seite
      überhaupt gemountet ist. */
   pendingRoomImageWizard: false,
+  /* Sprungziel von außerhalb der Einstellungen (Kontextmenü des
+     Energie-Screens): Sektion und Zeile, die beim Betreten gelten sollen,
+     statt des üblichen Starts bei Räume & Geräte. Wird beim Betreten
+     verbraucht. */
+  pendingJump: null as { section: SettingsSectionId; highlight: string | null } | null,
 });
 
 /* Ein kurzer Abstecher (Raum nachsehen, Musik lauter) soll die geöffnete
@@ -54,6 +59,22 @@ export function enterSettings(now: number = Date.now()): void {
     settingsUi.query = '';
   }
   leftSettingsAt = null;
+  applyPendingJump();
+}
+
+/** Von außen an eine Stelle der Einstellungen springen; greift beim Betreten. */
+export function jumpToSetting(section: SettingsSectionId, highlight: string | null = null): void {
+  settingsUi.pendingJump = { section, highlight };
+}
+
+export function applyPendingJump(): void {
+  const jump = settingsUi.pendingJump;
+  if (!jump) return;
+  settingsUi.pendingJump = null;
+  settingsUi.section = jump.section;
+  settingsUi.query = '';
+  settingsUi.highlight = jump.highlight;
+  if (jump.highlight) settingsUi.highlightSeq++;
 }
 
 export function leaveSettings(now: number = Date.now()): void {
@@ -108,7 +129,7 @@ export const settingsValues = $state({
   roomOnboardHidden: lsGet('hmi:room-onboard') === 'off',
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
   standbyAfterMinutes: loadStandbyMinutes(),
-  ambientCityMap: lsGet('hmi:ambient-map') === 'on',
+  ambientCityMap: lsGet('hmi:ambient-map') !== 'off',
   presenceWake: lsGet('hmi:presence-wake') === 'on',
   presenceAwayDark: lsGet('hmi:presence-away-dark') === 'on',
   presenceGreeting: lsGet('hmi:presence-greeting') === 'on',
@@ -177,11 +198,18 @@ export function setStandbyAfterMinutes(minutes: number | null): void {
 
 /* Stadtplan-Hintergrund im Standby (docs/18 §3.2). Standort und Asset sind
    zentral, die Sichtbarkeit ist gerätelokal: `hmi:ambient-map` steht nicht in
-   SHARED_CONFIG_KEYS und wandert deshalb nicht in die Household Config. Default
-   aus — ein vorhandenes Asset wird nie ungefragt sichtbar. */
+   SHARED_CONFIG_KEYS und wandert deshalb nicht in die Household Config.
+
+   Default an (Owner-Entscheidung 2026-09-07, ersetzt „Default aus"): Der
+   Standby zeigt die Karte ohnehin nur, wenn der Haushalt einen Ort gesetzt
+   hat und der Server das Asset gerendert hat (`ambientMap.assetUrl`). Wer den
+   Ort einträgt, will die Karte sehen und soll dafür nicht noch einen zweiten
+   Schalter suchen; ohne Ort ändert der Default nichts. Ein neues Gerät zeigt
+   damit dieselbe Wand wie das erste. Gespeichert wird deshalb nur noch das
+   Abschalten — ein alter Wert `on` bleibt gültig. */
 export function setAmbientCityMap(on: boolean): void {
   settingsValues.ambientCityMap = on;
-  lsSet('hmi:ambient-map', on ? 'on' : null);
+  lsSet('hmi:ambient-map', on ? null : 'off');
 }
 
 /* ── Präsenz und Person (Paket 8) ──

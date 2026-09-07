@@ -1222,6 +1222,82 @@ function normalizeEnergySelection(payload) {
   };
 }
 
+/* Zettelplätze des Energie-Screens (R19): je Motiv, alles in Bildprozent.
+   Die Form ist geschlossen; die Prüfung beim Schreiben läuft ohnehin noch
+   einmal über parseHouseholdConfig. */
+function normalizePercentPoint(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const keys = Object.keys(value).sort();
+  if (keys.length !== 2 || keys[0] !== 'x' || keys[1] !== 'y') return null;
+  const ok = (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 100;
+  if (!ok(value.x) || !ok(value.y)) return null;
+  return { x: Math.round(value.x * 10) / 10, y: Math.round(value.y * 10) / 10 };
+}
+
+function normalizeEnergyMarkAnchor(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const keys = Object.keys(value).sort().join(',');
+  if (keys !== 'note,point,tilt') return null;
+  const point = normalizePercentPoint(value.point);
+  const note = normalizePercentPoint(value.note);
+  if (!point || !note || typeof value.tilt !== 'number' || !Number.isFinite(value.tilt) || Math.abs(value.tilt) > 45) return null;
+  return { point, note, tilt: Math.round(value.tilt * 10) / 10 };
+}
+
+export function normalizeEnergyMarks(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return undefined;
+  const keys = Object.keys(payload);
+  if (keys.length !== 1 || keys[0] !== 'marks') return undefined;
+  if (payload.marks === null) return null;
+  const marks = payload.marks;
+  if (!marks || typeof marks !== 'object' || Array.isArray(marks)) return undefined;
+  if (Object.keys(marks).sort().join(',') !== 'assetId,grid,house,sun') return undefined;
+  if (marks.assetId !== null && !(typeof marks.assetId === 'string' && /^[a-z0-9_-]{1,128}$/.test(marks.assetId))) return undefined;
+  const sun = normalizeEnergyMarkAnchor(marks.sun);
+  const house = normalizeEnergyMarkAnchor(marks.house);
+  const grid = normalizeEnergyMarkAnchor(marks.grid);
+  if (!sun || !house || !grid) return undefined;
+  return { assetId: marks.assetId, sun, house, grid };
+}
+
+export async function serveHouseholdEnergyMarks(req, res, context) {
+  try {
+    context.assertSetupRecoveryHealthy();
+    const marks = normalizeEnergyMarks(await readRoomImageJsonBody(req));
+    if (marks === undefined) {
+      return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Die Zettelplätze sind ungültig.' });
+    }
+    const matches = rawHeaderValues(req, 'if-match');
+    if (matches.length !== 1) {
+      return jsonResponse(res, 428, { ok: false, code: 'CONFIG_PRECONDITION_REQUIRED', message: 'Der Household-ETag fehlt.' });
+    }
+    const result = await context.configMutations.run(() => {
+      context.assertSetupRecoveryHealthy();
+      const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
+      if (matches[0] !== snapshot.etag) return { type: 'stale' };
+      const document = snapshot.document;
+      const exterior = { hero: document.exterior?.hero ?? null };
+      if (marks) exterior.marks = marks;
+      document.exterior = exterior;
+      const written = writeRoomImageHousehold(
+        context.householdConfigPath,
+        document,
+        context.publishStep,
+        context.latchSetupRecoveryFailure,
+        context.assertSetupRecoveryHealthy,
+      );
+      return { type: 'written', etag: written.etag, marks: marks ?? null };
+    });
+    if (result.type === 'stale') {
+      return jsonResponse(res, 412, { ok: false, code: 'CONFIG_PRECONDITION_FAILED', message: 'Die Household Config wurde zwischenzeitlich geändert.' });
+    }
+    jsonResponse(res, 200, { ok: true, marks: result.marks, etag: result.etag });
+  } catch (error) {
+    console.warn('[hauser] Zettelplätze fehlgeschlagen:', error?.code ?? error);
+    jsonResponse(res, 500, { ok: false, code: 'ENERGY_MARKS_WRITE_FAILED', message: 'Die Zettelplätze konnten nicht gespeichert werden.' });
+  }
+}
+
 export async function serveHouseholdEnergy(req, res, context) {
   try {
     context.assertSetupRecoveryHealthy();
