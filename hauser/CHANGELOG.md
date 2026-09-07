@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.1 - 2026-09-07
+
+- The project page now tells the story of the panel instead of listing
+  features, with every screenshot retaken from the current default pictures.
+- The demo opens quietly: no wizard card over the room, no empty camera tile,
+  and the scribbled tips wait for the first touch.
+- The demo home has solar on the roof: the energy picture carries all three
+  notes and a day curve for generation and consumption.
+
+## 0.10.0 - 2026-09-07
+
+### Changed
+
+- On the phone, a room tile shows the unlit night picture when no light is on
+  in that room and the lit one as soon as a lamp burns — as the large stage
+  already did. The tiles keep loading the small phone-sized picture.
+
 ## 0.9.1 - 2026-09-07
 
 ### Added

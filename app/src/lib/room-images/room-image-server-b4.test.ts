@@ -146,6 +146,7 @@ async function startB4(options: Record<string, any> = {}) {
     roomImagePhoneDeriver: async (finals: Record<string, Uint8Array>) => ({
       phoneLight: new TextEncoder().encode(`phone:${new TextDecoder().decode(finals.light)}`),
       phoneDark: new TextEncoder().encode(`phone:${new TextDecoder().decode(finals.dark)}`),
+      phoneDarkOff: new TextEncoder().encode(`phone:${new TextDecoder().decode(finals.darkOff)}`),
     }),
     configMutationCoordinator: options.coordinator ?? createConfigMutationCoordinator(),
     ...(options.serverOptions ?? {}),
@@ -206,6 +207,7 @@ function variantSet(prefix: string) {
     darkOff: bytes(`${prefix}dark-off`),
     phoneLight: bytes(`${prefix}phone-light`),
     phoneDark: bytes(`${prefix}phone-dark`),
+    phoneDarkOff: bytes(`${prefix}phone-dark-off`),
   };
 }
 
@@ -521,7 +523,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect(readdirSync(join(app.sandbox, 'assets', 'room-images', first.assetId)).sort())
       .toEqual([
         'dark-off.avif', 'dark.avif', 'light.avif', 'manifest.json',
-        'phone-dark.avif', 'phone-light.avif',
+        'phone-dark-off.avif', 'phone-dark.avif', 'phone-light.avif',
       ]);
     expect(readdirSync(join(app.sandbox, 'config', 'room-images')).sort()).toEqual(['assets.json']);
     expect(app.jobStore.publicJob(app.jobStore.get(app.finalJobId))).toMatchObject({

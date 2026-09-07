@@ -41,8 +41,11 @@
   let libraryOpen = $state(false);
 
   const roomId = $derived(appState.currentRoom);
+  /* In der Demo fehlt die Karte ganz: Besucher sollen zuerst das Bild sehen,
+     nicht ein Panel, das es halb verdeckt. Den Assistenten gibt es dort nicht. */
   const visible = $derived(
     ROOM_IMAGE_WIZARD_ENABLED
+    && import.meta.env?.VITE_DEMO !== '1'
     && !seenBefore
     && !dismissed
     && !!roomId

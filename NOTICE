@@ -7,8 +7,8 @@ documentation. The components below are included or depended upon under their
 own terms.
 
 
-Fonts (bundled in app/public/fonts/)
-------------------------------------
+Fonts (bundled in app/public/fonts/ and, for the project page, website/fonts/)
+------------------------------------------------------------------------------
 
 Inter — SIL Open Font License 1.1
   Copyright (c) The Inter Project Authors

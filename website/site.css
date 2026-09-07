@@ -4,12 +4,23 @@
    stammen aus design-tokens/tokens.css; sie sind hier bewusst dupliziert
    statt importiert, damit die Seite unabhängig vom App-Build ausgeliefert
    werden kann (GitHub Pages serviert dieses Verzeichnis direkt).
+
+   Zwei Stimmen wie im Produkt: Instrument Serif spricht für das Haus und
+   die Haushaltsaussagen (Hauptzeilen, Manifest), Inter für alles, was
+   bedient wird (Knöpfe, Umschalter, Fließtext).
    ============================================ */
 
 @font-face {
   font-family: 'Inter Variable';
   src: url('fonts/InterVariable-subset.woff2') format('woff2');
   font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('fonts/InstrumentSerif-subset.woff2') format('woff2');
+  font-weight: 400;
   font-display: swap;
 }
 
@@ -28,12 +39,11 @@
   --border: #2c353f;
 
   --font-body: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  /* Displaysatz ist dieselbe Familie in einem anderen Register: schwer, eng
-     laufend, kurze Zeilenabstände. Eine zweite Schriftfamilie würde hier nur
-     Ladezeit kosten und den Produktcharakter verwässern. */
-  --font-display: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Instrument Serif', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Die Dämmerung des Produkts, hier als Überblendzeit der Bühne. */
+  --duration-dusk: 1800ms;
 
   --page-max: 1120px;
   --gutter: clamp(20px, 5vw, 48px);
@@ -101,29 +111,38 @@ section {
 
 /* ── Typografie ────────────────────────────────────────────────────────── */
 
-h1, h2, h3 {
+h1, h2 {
   font-family: var(--font-display);
-  font-weight: 680;
-  line-height: 1.04;
-  letter-spacing: -0.035em;
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.012em;
   margin: 0;
   text-wrap: balance;
 }
 
 h1 {
-  font-size: clamp(44px, 8vw, 92px);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.0;
+  font-size: clamp(38px, 5.4vw, 68px);
 }
 
-h2 { font-size: clamp(31px, 5vw, 54px); letter-spacing: -0.04em; }
+h2 { font-size: clamp(34px, 5.2vw, 60px); }
 
 h3 {
+  font-family: var(--font-body);
   font-size: clamp(19px, 2.1vw, 22px);
   font-weight: 650;
   letter-spacing: -0.022em;
   line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.h3-large {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 3.6vw, 40px);
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  margin-bottom: 20px;
 }
 
 p { margin: 0; text-wrap: pretty; }
@@ -163,6 +182,12 @@ p { margin: 0; text-wrap: pretty; }
 }
 
 .body-text + .body-text { margin-top: 20px; }
+
+.fine-print {
+  margin: clamp(28px, 4vw, 40px) auto 0;
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 
@@ -208,21 +233,27 @@ p { margin: 0; text-wrap: pretty; }
 }
 
 .btn-primary {
-  --btn-bg: var(--accent-warm);
+  --btn-bg: #f5b03c;
   --btn-fg: #0b0e12;
-  --btn-border: var(--accent-warm);
+  --btn-border: #f5b03c;
   font-weight: 600;
-}
-
-@media (prefers-color-scheme: light) {
-  .btn-primary { --btn-fg: #ffffff; }
 }
 
 .btn-primary:hover { --btn-bg: #ffc85e; --btn-border: #ffc85e; }
 
-@media (prefers-color-scheme: light) {
-  .btn-primary:hover { --btn-bg: #8d5c02; --btn-border: #8d5c02; }
+/* Auf der Bühne liegt der Text über dem Bild; die zweite Taste bleibt dort
+   hell und halbdurchsichtig, unabhängig vom Farbschema der Seite. */
+.btn-light {
+  --btn-fg: #f4f7fa;
+  --btn-border: rgb(255 255 255 / 0.42);
+  --btn-bg: rgb(11 14 18 / 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
+
+.btn-light:hover { --btn-border: rgb(255 255 255 / 0.7); }
+
+.btn-sm { padding: 9px 20px; font-size: 14px; }
 
 /* ── Navigation ────────────────────────────────────────────────────────── */
 
@@ -266,16 +297,13 @@ p { margin: 0; text-wrap: pretty; }
 }
 
 .nav-link {
+  position: relative;
+  padding-block-end: 2px;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
   transition: color 160ms var(--ease-out);
-}
-
-.nav-link {
-  position: relative;
-  padding-block-end: 2px;
 }
 
 .nav-link::after {
@@ -293,47 +321,273 @@ p { margin: 0; text-wrap: pretty; }
 .nav-link:hover { color: var(--text-primary); }
 .nav-link:hover::after { scale: 1 1; }
 
-.btn-sm { padding: 9px 20px; font-size: 14px; }
+/* ── Die Bühne ─────────────────────────────────────────────────────────────
+   Vier Bilder desselben Raums übereinander; `data-state` am Container
+   entscheidet, welches deckend ist. Die Überblendung dauert die Dämmerung des
+   Produkts. Der Rahmen behält das Seitenverhältnis der Illustration
+   (1696:1200), weil die Fensterpolygone des Regens in Prozent des Bildes
+   angegeben sind — ein zugeschnittenes Bild würde den Regen vom Glas ziehen. */
 
-/* ── Hero ──────────────────────────────────────────────────────────────── */
+.stage-hero {
+  padding-block: clamp(20px, 3vw, 40px) clamp(32px, 5vw, 56px);
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent-warm) 10%, transparent), transparent 60%),
+    var(--surface-0);
+}
 
-.hero {
+.stage-wrap {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.stage {
   position: relative;
-  padding-block: clamp(64px, 11vh, 128px) clamp(56px, 8vw, 96px);
-  text-align: center;
+  aspect-ratio: 1696 / 1200;
+  width: min(100%, calc(84vh * 1.4133));
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: clamp(14px, 2vw, 26px);
+  background: #0b0e12;
+  box-shadow: 0 50px 110px -40px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05) inset;
+  isolation: isolate;
+}
+
+.stage-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-out);
+}
+
+.stage[data-state='light'] .is-light,
+.stage[data-state='overcast'] .is-overcast,
+.stage[data-state='dark'] .is-dark,
+.stage[data-state='dark-off'] .is-dark-off { opacity: 1; }
+
+/* Regen nur im Fenster: drei Scheiben, jede mit ihrem Polygon. Zwei
+   gekachelte Tropfenebenen ziehen schräg durch, wie im Produkt. Die Tinte ist
+   dunkel, weil die trübe Scheibe hell ist. */
+.rain {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-out);
+  pointer-events: none;
+}
+
+.stage[data-state='overcast'] .rain { opacity: 1; }
+
+.rain-pane {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
 
-.hero::before {
+.rain-pane::before,
+.rain-pane::after {
   content: '';
   position: absolute;
-  inset-block-start: -30%;
-  inset-inline-start: 50%;
-  translate: -50% 0;
+  left: -25%;
+  top: -110%;
+  width: 150%;
+  height: 220%;
+  background-image:
+    radial-gradient(ellipse 1.9px 13px at 18% 12%, rgb(24 32 42 / 0.78), transparent),
+    radial-gradient(ellipse 1.7px 15px at 63% 38%, rgb(24 32 42 / 0.66), transparent),
+    radial-gradient(ellipse 1.5px 11px at 41% 71%, rgb(24 32 42 / 0.55), transparent),
+    radial-gradient(ellipse 1.7px 14px at 86% 84%, rgb(24 32 42 / 0.66), transparent);
+  background-size: 52px 66px, 74px 92px, 61px 78px, 87px 104px;
+  transform: rotate(11deg);
+  animation: rain-fall 1.9s linear infinite;
+  will-change: transform;
+}
 
-  inline-size: min(1100px, 130vw);
-  block-size: min(1100px, 130vw);
+.rain-pane::after {
+  opacity: 0.45;
+  animation-duration: 3.2s;
+}
 
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-warm) 13%, transparent) 0%, transparent 62%);
+@keyframes rain-fall {
+  from { transform: rotate(11deg) translateY(0); }
+  to   { transform: rotate(11deg) translateY(104px); }
+}
+
+.stage-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(11 14 18 / 0.28) 0%, transparent 28%),
+    linear-gradient(0deg, rgb(11 14 18 / 0.9) 0%, rgb(11 14 18 / 0.66) 34%, rgb(11 14 18 / 0.2) 62%, transparent 78%);
   pointer-events: none;
-  z-index: 0;
 }
 
-.hero > * { position: relative; z-index: 1; }
-
-.hero h1 { margin-bottom: 28px; }
-
-.hero .lead {
-  margin-inline: auto;
-  max-width: 54ch;
+.stage-copy {
+  position: absolute;
+  inset-inline: clamp(20px, 4vw, 56px);
+  inset-block-end: clamp(20px, 4vw, 56px);
+  max-width: 60ch;
+  color: #f4f7fa;
 }
 
-.hero .actions { justify-content: center; }
+.stage-copy h1 { color: #f7f9fb; margin-bottom: 18px; }
 
-.hero-note {
-  margin-top: 22px;
+.eyebrow-light { color: #ffcf73; }
+
+.lead-light {
+  color: rgb(244 247 250 / 0.82);
+  font-size: clamp(16px, 1.7vw, 20px);
+  max-width: 50ch;
+}
+
+.stage-copy .actions { margin-top: 26px; }
+
+/* Was das Bild gerade zeigt, in einem Satz oben rechts. */
+.stage-label {
+  position: absolute;
+  inset-block-start: clamp(14px, 2.4vw, 26px);
+  inset-inline-end: clamp(14px, 2.4vw, 26px);
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgb(11 14 18 / 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgb(244 247 250 / 0.9);
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.5vw, 18px);
+  line-height: 1.3;
+  max-width: min(60%, 34ch);
+  text-align: end;
+}
+
+.stage-label span { display: none; }
+
+.stage[data-state='light'] .stage-label [data-for='light'],
+.stage[data-state='overcast'] .stage-label [data-for='overcast'],
+.stage[data-state='dark'] .stage-label [data-for='dark'],
+.stage[data-state='dark-off'] .stage-label [data-for='dark-off'] { display: inline; }
+
+.stage-under {
+  max-width: 62ch;
+  margin: 22px auto 0;
+  padding-inline: var(--gutter);
+  text-align: center;
   font-size: 14px;
   color: var(--text-tertiary);
+}
+
+@media (max-width: 720px) {
+  .stage { width: 100%; border-radius: 14px; }
+  .stage-copy { position: static; max-width: none; padding: 20px 18px 22px; background: #0b0e12; }
+  .stage-scrim { display: none; }
+  .stage-label { inset-block-start: 12px; inset-inline-end: 12px; font-size: 13px; max-width: 70%; }
+  .stage-copy .actions { margin-top: 20px; }
+  .stage-copy .lead-light { font-size: 16px; }
+}
+
+/* Die Bühne in der Raum-Sektion trägt ihren Umschalter selbst. */
+.stage-room {
+  width: 100%;
+  max-width: 1296px;
+}
+
+.state-switch-float {
+  position: absolute;
+  inset-block-start: clamp(14px, 2.4vw, 26px);
+  inset-inline-start: clamp(14px, 2.4vw, 26px);
+  z-index: 2;
+  margin: 0;
+  background: rgb(11 14 18 / 0.5);
+  border-color: rgb(255 255 255 / 0.18);
+}
+
+.state-switch-float .state-btn { color: rgb(244 247 250 / 0.72); }
+.state-switch-float .state-btn:hover { color: #f4f7fa; }
+.state-switch-float .state-btn[aria-pressed='true'] { background: rgb(255 255 255 / 0.16); color: #f4f7fa; }
+
+.stage-label-room {
+  inset-block-start: auto;
+  inset-block-end: clamp(14px, 2.4vw, 26px);
+  inset-inline-end: clamp(14px, 2.4vw, 26px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-img, .rain { transition: none; }
+  .rain-pane::before, .rain-pane::after { animation: none; }
+}
+
+/* ── Manifest ──────────────────────────────────────────────────────────── */
+
+.manifesto {
+  max-width: 760px;
+}
+
+.statement {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5.4vw, 64px);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  margin-bottom: 28px;
+  text-wrap: balance;
+}
+
+.moments {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+  margin: clamp(44px, 6vw, 72px) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+@media (min-width: 760px) {
+  .moments { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.moment a {
+  display: block;
+  height: 100%;
+  padding: 28px 26px 30px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-0);
+  text-decoration: none;
+  transition: transform 220ms var(--ease-out), border-color 220ms var(--ease-out);
+}
+
+.moment a:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent-warm) 45%, var(--border));
+}
+
+.moment-num {
+  display: block;
+  margin-bottom: 18px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--accent-warm);
+}
+
+.moment h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.moment p {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moment a:hover { transform: none; }
 }
 
 /* ── Geräterahmen ──────────────────────────────────────────────────────── */
@@ -382,11 +636,10 @@ p { margin: 0; text-wrap: pretty; }
 
 .split-text .eyebrow { margin-bottom: 16px; }
 .split-text h2 { margin-bottom: 22px; }
+.split .device { margin-top: 0; }
+.split-later { margin-top: clamp(72px, 10vw, 128px); }
 
-/* ── Showcase: Text schmal, Bild groß ──────────────────────────────────
-   Ein Dashboard-Screenshot in einer halben Spalte ist Dekoration — man
-   erkennt nichts. Deshalb steht der Text darüber und das Bild bekommt die
-   volle Breite. */
+/* ── Showcase: Text schmal, Bild groß ──────────────────────────────────── */
 
 .showcase-head {
   max-width: 640px;
@@ -395,6 +648,7 @@ p { margin: 0; text-wrap: pretty; }
 
 .showcase-head .eyebrow { margin-bottom: 16px; }
 .showcase-head h2 { margin-bottom: 24px; }
+.showcase-head-later { margin-top: clamp(72px, 10vw, 128px); }
 
 .showcase-wide {
   width: 100%;
@@ -403,7 +657,7 @@ p { margin: 0; text-wrap: pretty; }
   padding-inline: var(--gutter);
 }
 
-/* ── Bildpaare (verwandte Screens nebeneinander) ──────────────────────── */
+/* ── Bildpaare ─────────────────────────────────────────────────────────── */
 
 .pair {
   display: grid;
@@ -417,7 +671,7 @@ p { margin: 0; text-wrap: pretty; }
 
 .pair .device { margin-top: 0; }
 
-/* ── Vorher/Nachher-Beschriftung und nummerierte Schritte ─────────────── */
+/* ── Beschriftungen ────────────────────────────────────────────────────── */
 
 .shot-label {
   display: inline-block;
@@ -435,16 +689,6 @@ p { margin: 0; text-wrap: pretty; }
 .shot-label-out {
   background: color-mix(in srgb, var(--accent-warm) 20%, transparent);
   color: var(--accent-warm);
-}
-
-.step-num {
-  display: inline-block;
-  margin-inline-end: 10px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent-warm);
-  vertical-align: 0.28em;
 }
 
 /* ── Kartenraster ──────────────────────────────────────────────────────── */
@@ -480,28 +724,308 @@ p { margin: 0; text-wrap: pretty; }
   font-size: 16px;
 }
 
-/* ── Kennzahlen ────────────────────────────────────────────────────────── */
+.cards-touch { margin-top: clamp(36px, 5vw, 56px); }
 
-.stats {
+/* ── Notizen (drei kurze Absätze in einer Reihe) ───────────────────────── */
+
+.notes {
   display: grid;
-  gap: clamp(28px, 4vw, 48px);
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin-top: 60px;
-  padding-block: 44px;
-  border-block: 1px solid var(--border);
+  gap: clamp(24px, 4vw, 40px);
+  grid-template-columns: 1fr;
+  margin: clamp(48px, 6vw, 72px) 0 0;
+  padding: clamp(28px, 4vw, 40px) 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
 }
 
-.stat-value {
-  font-family: var(--font-display);
-  font-size: clamp(38px, 5vw, 52px);
-  line-height: 1;
-  color: var(--accent-warm);
+@media (min-width: 760px) {
+  .notes { grid-template-columns: 1fr 1fr 1fr; }
 }
 
-.stat-label {
-  margin-top: 12px;
-  font-size: 15px;
+.notes li {
   color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.notes strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ── Zustandsvorführungen ───────────────────────────────────────────────────
+   Dieselbe Aufnahme in mehreren Lagen; der Umschalter darüber wechselt. Ohne
+   JavaScript steht die erste Lage und der Umschalter ist verborgen. */
+
+.state-demo { position: relative; isolation: isolate; }
+
+.state-switch {
+  display: none;
+  gap: 4px;
+  padding: 4px;
+  margin-inline: auto;
+  margin-bottom: 22px;
+  inline-size: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.has-js .state-switch { display: flex; }
+
+.state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 240ms var(--ease-out), color 240ms var(--ease-out);
+}
+
+.state-btn:hover { color: var(--text-primary); }
+
+.state-btn[aria-pressed='true'] {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.state-btn:focus-visible {
+  outline: 2px solid var(--accent-cool);
+  outline-offset: 2px;
+}
+
+.state-stack { position: relative; margin-top: 0; }
+
+.state-stack .state-shot {
+  opacity: 0;
+  transition: opacity 520ms var(--ease-out);
+}
+
+/* Die erste Aufnahme trägt die Höhe; die übrigen liegen darüber. */
+.state-stack .state-shot:not(:first-of-type) {
+  position: absolute;
+  inset: 12px;
+  inline-size: calc(100% - 24px);
+  block-size: calc(100% - 24px);
+}
+
+.state-demo[data-state='day'] .state-shot[data-for='day'],
+.state-demo[data-state='rain'] .state-shot[data-for='rain'],
+.state-demo[data-state='snow'] .state-shot[data-for='snow'],
+.state-demo[data-state='night'] .state-shot[data-for='night'] { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .state-stack .state-shot { transition: none; }
+}
+
+/* ── 1:1-Ausschnitte ───────────────────────────────────────────────────── */
+
+.details {
+  display: grid;
+  gap: clamp(20px, 3vw, 28px);
+  grid-template-columns: 1fr;
+  margin-top: clamp(28px, 4vw, 40px);
+}
+
+@media (min-width: 760px) {
+  .details { grid-template-columns: 1fr 1fr; }
+}
+
+.details-one { grid-template-columns: 1fr; max-width: 720px; margin-inline: auto; }
+
+.detail {
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+}
+
+.detail img { border-radius: 10px; }
+
+.detail figcaption {
+  padding: 14px 10px 8px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+.detail-wide {
+  max-width: 900px;
+  margin: clamp(36px, 5vw, 56px) auto 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+}
+
+.detail-wide img { border-radius: 10px; }
+
+/* ── Lichtphysik ───────────────────────────────────────────────────────────
+   Eine Lampe, zwei Berührungen, eine Schleife von zehn Sekunden. Beim ersten
+   Tipp ist das Licht in einem Wimpernschlag da; beim zweiten geht es über
+   die Länge der Dämmerung aus. Reine CSS-Keyframes, kein Skript.
+
+   Zeitplan (10 s = 100 %):
+     15 %  Tipp → Licht an in 120 ms (1,2 %)
+     55 %  Tipp → Licht aus über 1,8 s (18 %), fertig bei 73 %
+     bis 100 % Ruhe */
+
+.physics {
+  max-width: 560px;
+  margin: clamp(36px, 5vw, 56px) auto 0;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid color-mix(in srgb, var(--accent-warm) 42%, var(--border));
+  border-radius: 16px;
+  background: var(--surface-1);
+}
+
+.physics-room {
+  position: relative;
+  block-size: clamp(120px, 18vw, 170px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-0);
+  overflow: hidden;
+}
+
+.physics-lamp {
+  position: absolute;
+  inset-block-start: 24%;
+  inset-inline-end: 26%;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.physics-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 74% 30%, color-mix(in srgb, #f5b03c 82%, transparent) 0%, transparent 60%);
+  animation: physics-glow 10s linear infinite;
+}
+
+.physics-tap {
+  position: absolute;
+  inset-block-start: 30%;
+  inset-inline-end: 27%;
+  inline-size: 44px;
+  block-size: 44px;
+  margin: -16px -16px 0 0;
+  border: 2px solid var(--accent-cool);
+  border-radius: 50%;
+  opacity: 0;
+  animation: physics-tap 10s linear infinite;
+}
+
+.physics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.physics-name { font-size: 15px; color: var(--text-secondary); }
+
+.physics-switch {
+  position: relative;
+  flex: none;
+  inline-size: 46px;
+  block-size: 26px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+  animation: physics-track 10s linear infinite;
+}
+
+.physics-knob {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background: #f4f7fa;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  animation: physics-knob 10s var(--ease-out) infinite;
+}
+
+.physics-status {
+  position: relative;
+  min-block-size: 21px;
+  margin-top: 16px;
+}
+
+.physics-line {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  opacity: 0;
+}
+
+.physics-on { animation: physics-on 10s linear infinite; }
+.physics-off { animation: physics-off 10s linear infinite; }
+
+@keyframes physics-glow {
+  0%, 15%     { opacity: 0; }
+  16.2%, 55%  { opacity: 1; }
+  73%, 100%   { opacity: 0; }
+}
+
+@keyframes physics-tap {
+  0%, 14%       { opacity: 0; transform: scale(0.35); }
+  15%           { opacity: 0.85; transform: scale(0.45); }
+  21%           { opacity: 0; transform: scale(1.35); }
+  21.01%, 54%   { opacity: 0; transform: scale(0.35); }
+  55%           { opacity: 0.85; transform: scale(0.45); }
+  61%           { opacity: 0; transform: scale(1.35); }
+  61.01%, 100%  { opacity: 0; transform: scale(0.35); }
+}
+
+@keyframes physics-knob {
+  0%, 15%    { transform: translateX(0); }
+  16.5%, 55% { transform: translateX(20px); }
+  57%, 100%  { transform: translateX(0); }
+}
+
+@keyframes physics-track {
+  0%, 15%    { background-color: color-mix(in srgb, var(--text-tertiary) 40%, transparent); }
+  16.5%, 55% { background-color: #f5b03c; }
+  73%, 100%  { background-color: color-mix(in srgb, var(--text-tertiary) 40%, transparent); }
+}
+
+@keyframes physics-on {
+  0%, 15%    { opacity: 0; }
+  17%, 52%   { opacity: 1; }
+  54%, 100%  { opacity: 0; }
+}
+
+@keyframes physics-off {
+  0%, 55%    { opacity: 0; }
+  57%, 92%   { opacity: 1; }
+  94%, 100%  { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .physics-glow, .physics-tap, .physics-switch, .physics-knob, .physics-on, .physics-off { animation: none; }
+  .physics-glow { opacity: 1; }
+  .physics-switch { background: #f5b03c; }
+  .physics-knob { transform: translateX(20px); }
+  .physics-on { opacity: 1; }
 }
 
 /* ── Ehrlichkeits-Sektion ──────────────────────────────────────────────── */
@@ -550,67 +1074,6 @@ p { margin: 0; text-wrap: pretty; }
 
 .honest-col h3 { margin-bottom: 8px; }
 
-/* ── Feature-Tabelle ───────────────────────────────────────────────────── */
-
-.table-scroll {
-  overflow-x: auto;
-  margin-top: 48px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-  min-width: 520px;
-}
-
-th, td {
-  padding: 15px 20px;
-  text-align: start;
-  border-bottom: 1px solid var(--border);
-}
-
-th {
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  background: var(--surface-1);
-}
-
-tbody tr:last-child td { border-bottom: 0; }
-
-td:first-child { color: var(--text-primary); }
-td { color: var(--text-secondary); }
-
-.tag {
-  display: inline-block;
-  padding: 3px 11px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
-.tag-live {
-  background: color-mix(in srgb, var(--accent-warm) 20%, transparent);
-  color: var(--accent-warm);
-}
-
-.tag-built {
-  background: color-mix(in srgb, var(--accent-cool) 20%, transparent);
-  color: var(--accent-cool);
-}
-
-.tag-planned {
-  background: color-mix(in srgb, var(--text-tertiary) 20%, transparent);
-  color: var(--text-secondary);
-}
-
 /* ── Footer ────────────────────────────────────────────────────────────── */
 
 footer {
@@ -658,138 +1121,6 @@ footer a { color: var(--text-secondary); }
 
 .skip-link:focus { inset-block-start: 0; }
 
-/* ── Handgezogene Markierung in der Hauptzeile ────────────────────────────
-   Der einzige nicht-geometrische Strich der Seite. Er sitzt bewusst unter
-   genau einer Wortgruppe; mehrere davon wären Dekoration statt Betonung. */
-
-.mark {
-  position: relative;
-  display: inline-block;
-  white-space: nowrap;
-}
-
-.mark-line {
-  position: absolute;
-  inset-inline: -0.06em;
-  inset-block-end: -0.14em;
-  inline-size: calc(100% + 0.12em);
-  block-size: 0.22em;
-  overflow: visible;
-  color: var(--accent-warm);
-  pointer-events: none;
-}
-
-.mark-line path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-}
-
-.has-js .mark-line path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: mark-draw 900ms var(--ease-out) 500ms forwards;
-}
-
-@keyframes mark-draw {
-  to { stroke-dashoffset: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .has-js .mark-line path { animation: none; stroke-dashoffset: 0; }
-}
-
-/* ── Tag/Nacht-Vorführung ──────────────────────────────────────────────────
-   Dasselbe Panel, dieselbe Sekunde, einmal hell und einmal dunkel. Ohne
-   JavaScript bleibt die Tagfassung stehen und der Umschalter ist verborgen —
-   eine Sektion, die ohne Skript leer ist, wäre kaputt, nicht interaktiv. */
-
-.theme-demo {
-  position: relative;
-  isolation: isolate;
-}
-
-.theme-demo::before {
-  content: '';
-  position: absolute;
-  inset: -12% -6% 20%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-warm) 16%, transparent) 0%, transparent 66%);
-  transition: background 600ms var(--ease-out);
-  pointer-events: none;
-}
-
-.theme-demo[data-mode='night']::before {
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-cool) 20%, transparent) 0%, transparent 66%);
-}
-
-.theme-switch {
-  display: none;
-  gap: 4px;
-  padding: 4px;
-  margin-inline: auto;
-  inline-size: fit-content;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.has-js .theme-switch { display: flex; }
-
-.theme-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 550;
-  cursor: pointer;
-  transition: background-color 240ms var(--ease-out), color 240ms var(--ease-out);
-}
-
-.theme-btn svg { inline-size: 15px; block-size: 15px; flex: none; }
-
-.theme-btn:hover { color: var(--text-primary); }
-
-.theme-btn[aria-pressed='true'] {
-  background: var(--surface-3);
-  color: var(--text-primary);
-}
-
-.theme-btn:focus-visible {
-  outline: 2px solid var(--accent-cool);
-  outline-offset: 2px;
-}
-
-.theme-stack { position: relative; }
-
-/* `.device img` setzt `width: 100%` und ist spezifischer als eine einzelne
-   Klasse — logische und physische Größenangaben kaskadieren gemeinsam, also
-   muss die Nachtaufnahme hier mitziehen, sonst steht sie 24 px zu breit im
-   Rahmen und ragt über dessen Kanten hinaus. */
-.device img.theme-shot-night {
-  position: absolute;
-  inset: 12px;
-  inline-size: calc(100% - 24px);
-  opacity: 0;
-  transition: opacity 520ms var(--ease-out);
-}
-
-.theme-demo[data-mode='night'] .theme-shot-night { opacity: 1; }
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-shot-night, .theme-demo::before { transition: none; }
-}
-
 /* ── Getönte Sektionsbahn ──────────────────────────────────────────────── */
 
 .band {
@@ -797,11 +1128,12 @@ footer a { color: var(--text-secondary); }
   border-block: 1px solid var(--border);
 }
 
+.band .moment a { background: var(--surface-0); }
+.band .card { background: var(--surface-0); }
+.band .physics { background: var(--surface-0); }
+
 /* ── Scroll-Reveal ─────────────────────────────────────────────────────── */
 
-/* Bewusst an `.has-js` gebunden: Ohne JavaScript — oder wenn das Skript aus
-   irgendeinem Grund nicht läuft — bleibt der Inhalt sichtbar statt unsichtbar.
-   Eine Landing Page, die ohne JS leer ist, ist kaputt, nicht animiert. */
 .has-js .reveal {
   opacity: 0;
   transform: translateY(18px);
@@ -827,301 +1159,7 @@ footer a { color: var(--text-secondary); }
 .centered-lead { margin: 28px auto 0; }
 .centered-actions { justify-content: center; }
 
-/* ── Installations-Kurzinfo unter dem Hero ─────────────────────────────────
-   Vier Wörter, die „Install the beta" entschärfen: was man braucht, bevor
-   man auf den Knopf drückt. */
-
-.badge-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 20px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.badge-row li {
-  padding: 5px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-/* ── Optimistische UI: Split-Screen ────────────────────────────────────────
-   Zwei identische Panels auf einer gemeinsamen 8-Sekunden-Schleife. Beide
-   werden zur selben Zeit angetippt; links wartet die Oberfläche auf das
-   Backend, rechts reagiert sie sofort und lässt die Bestätigung leise
-   nachkommen. Reine CSS-Keyframes — kein Video, kein Skript.
-
-   Zeitplan (8 s = 100 %):
-     12,5 %  Tipp auf beiden Seiten        → rechts sofort an
-     42,5 %  links reagiert (2,4 s später) → rechts kommt die Bestätigung
-     82,5 %  beide zurück auf Aus, kurze Ruhe bis zum nächsten Durchlauf */
-
-.opt {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: 1fr;
-  margin-top: clamp(40px, 6vw, 64px);
-}
-
-@media (min-width: 760px) {
-  .opt { grid-template-columns: 1fr 1fr; gap: clamp(20px, 3vw, 32px); }
-}
-
-.opt-panel {
-  --opt-off: color-mix(in srgb, var(--text-tertiary) 40%, transparent);
-
-  padding: clamp(20px, 3vw, 28px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface-1);
-}
-
-.opt-fast { border-color: color-mix(in srgb, var(--accent-warm) 42%, var(--border)); }
-
-.opt-title {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.opt-title span {
-  font-size: 13px;
-  font-weight: 450;
-  color: var(--text-tertiary);
-}
-
-.opt-stage { margin-top: 20px; }
-
-/* Der Raum: eine Fläche, eine Lampe, ein Lichtkegel. Mehr braucht es nicht,
-   damit „das Zimmer geht an" lesbar ist. */
-
-.opt-room {
-  position: relative;
-  block-size: clamp(88px, 13vw, 116px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-0);
-  overflow: hidden;
-}
-
-.opt-lamp {
-  position: absolute;
-  inset-block-start: 22%;
-  inset-inline-end: 24%;
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-}
-
-.opt-glow {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background:
-    radial-gradient(circle at 76% 26%, color-mix(in srgb, var(--accent-warm) 78%, transparent) 0%, transparent 58%);
-}
-
-.opt-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 18px;
-}
-
-.opt-name { font-size: 15px; color: var(--text-secondary); }
-
-.opt-switch {
-  position: relative;
-  flex: none;
-  inline-size: 46px;
-  block-size: 26px;
-  border-radius: 999px;
-  background: var(--opt-off);
-}
-
-.opt-knob {
-  position: absolute;
-  inset-block-start: 3px;
-  inset-inline-start: 3px;
-  inline-size: 20px;
-  block-size: 20px;
-  border-radius: 50%;
-  /* Bewusst kein Token: der Knopf muss auf der grauen wie auf der warmen
-     Schiene und in beiden Farbschemata hell bleiben. */
-  background: #f4f7fa;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
-}
-
-.opt-tap {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  inline-size: 46px;
-  block-size: 46px;
-  border: 2px solid var(--accent-cool);
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.opt-status {
-  position: relative;
-  min-block-size: 21px;
-  margin-top: 16px;
-}
-
-.opt-line {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  opacity: 0;
-}
-
-.opt-done, .opt-now { color: var(--text-secondary); }
-
-/* Die Backend-Bestätigung sitzt bewusst am rechten Rand: sie kommt leise
-   nach und darf die schon gültige Aussage links nicht überschreiben. */
-.opt-confirm {
-  inset-inline-start: auto;
-  inset-inline-end: 0;
-  color: var(--accent-cool);
-}
-
-.opt-spin {
-  inline-size: 12px;
-  block-size: 12px;
-  border: 2px solid var(--opt-off);
-  border-block-start-color: var(--text-secondary);
-  border-radius: 50%;
-  flex: none;
-}
-
-.opt-note { margin: clamp(28px, 4vw, 40px) auto 0; }
-
-/* Der Ablauf selbst */
-
-.opt-tap { animation: opt-tap 8s linear infinite; }
-.opt-spin { animation: opt-spin 900ms linear infinite; }
-
-.opt-slow .opt-knob   { animation: opt-knob-slow 8s var(--ease-out) infinite; }
-.opt-slow .opt-switch { animation: opt-track-slow 8s var(--ease-out) infinite; }
-.opt-slow .opt-glow   { animation: opt-glow-slow 8s var(--ease-out) infinite; }
-.opt-wait             { animation: opt-wait 8s linear infinite; }
-.opt-done             { animation: opt-done 8s linear infinite; }
-
-.opt-fast .opt-knob   { animation: opt-knob-fast 8s var(--ease-out) infinite; }
-.opt-fast .opt-switch { animation: opt-track-fast 8s var(--ease-out) infinite; }
-.opt-fast .opt-glow   { animation: opt-glow-fast 8s var(--ease-out) infinite; }
-.opt-now              { animation: opt-now 8s linear infinite; }
-.opt-confirm          { animation: opt-confirm 8s linear infinite; }
-
-@keyframes opt-tap {
-  0%, 11.5% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
-  12.5%     { opacity: 0.85; transform: translate(-50%, -50%) scale(0.45); }
-  20%       { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
-  20.01%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
-}
-
-@keyframes opt-spin { to { transform: rotate(360deg); } }
-
-@keyframes opt-knob-fast {
-  0%, 12.5%  { transform: translateX(0); }
-  14%, 82.5% { transform: translateX(20px); }
-  84%, 100%  { transform: translateX(0); }
-}
-
-@keyframes opt-knob-slow {
-  0%, 42.5%  { transform: translateX(0); }
-  44%, 82.5% { transform: translateX(20px); }
-  84%, 100%  { transform: translateX(0); }
-}
-
-@keyframes opt-track-fast {
-  0%, 12.5%  { background-color: var(--opt-off); }
-  14%, 82.5% { background-color: var(--accent-warm); }
-  84%, 100%  { background-color: var(--opt-off); }
-}
-
-@keyframes opt-track-slow {
-  0%, 42.5%  { background-color: var(--opt-off); }
-  44%, 82.5% { background-color: var(--accent-warm); }
-  84%, 100%  { background-color: var(--opt-off); }
-}
-
-@keyframes opt-glow-fast {
-  0%, 12.5%  { opacity: 0; }
-  16%, 82.5% { opacity: 1; }
-  86%, 100%  { opacity: 0; }
-}
-
-@keyframes opt-glow-slow {
-  0%, 42.5%  { opacity: 0; }
-  46%, 82.5% { opacity: 1; }
-  86%, 100%  { opacity: 0; }
-}
-
-@keyframes opt-wait {
-  0%, 12.5%  { opacity: 0; }
-  15%, 41%   { opacity: 1; }
-  43%, 100%  { opacity: 0; }
-}
-
-@keyframes opt-done {
-  0%, 43%    { opacity: 0; }
-  45%, 82.5% { opacity: 1; }
-  84%, 100%  { opacity: 0; }
-}
-
-@keyframes opt-now {
-  0%, 12.5%  { opacity: 0; }
-  14.5%, 82.5% { opacity: 1; }
-  84%, 100%  { opacity: 0; }
-}
-
-@keyframes opt-confirm {
-  0%, 43%   { opacity: 0; }
-  46%, 60%  { opacity: 1; }
-  64%, 100% { opacity: 0; }
-}
-
-/* Ohne Bewegung wird derselbe Vergleich als Standbild gezeigt: links wartet
-   die Oberfläche noch, rechts ist das Licht schon an. */
-@media (prefers-reduced-motion: reduce) {
-  .opt-tap, .opt-spin,
-  .opt-slow .opt-knob, .opt-slow .opt-switch, .opt-slow .opt-glow,
-  .opt-fast .opt-knob, .opt-fast .opt-switch, .opt-fast .opt-glow,
-  .opt-wait, .opt-done, .opt-now, .opt-confirm { animation: none; }
-
-  .opt-slow .opt-glow { opacity: 0; }
-  .opt-wait { opacity: 1; }
-
-  .opt-fast .opt-switch { background: var(--accent-warm); }
-  .opt-fast .opt-knob { transform: translateX(20px); }
-  .opt-fast .opt-glow { opacity: 1; }
-  .opt-now { opacity: 1; }
-}
-
-/* ── Installationswege ────────────────────────────────────────────────────
-   Zwei Karten statt einer Liste: der App-Pfad ist auf Home Assistant OS der
-   kürzere und trägt deshalb den warmen Rand und den Primary-Button, Compose
-   bleibt der Weg für Container-, Docker- und NAS-Installationen. */
+/* ── Installationswege ─────────────────────────────────────────────────── */
 
 .install-paths {
   display: grid;
@@ -1180,36 +1218,9 @@ footer a { color: var(--text-secondary); }
 
 #install > .wrap > .actions { justify-content: center; margin-top: 32px; }
 
-/* Seit „Install" in der Navigation auf die Sektion statt auf GitHub zeigt,
-   gibt es Anker-Sprünge auf dieser Seite. Die Kopfzeile klebt und überlagert
-   den Seitenanfang; auf Telefonen reicht der eigene Innenabstand der Sektion
-   sonst nur um 3 px an ihr vorbei. */
 section[id] { scroll-margin-block-start: 20px; }
 
-/* In einer zweispaltigen Sektion sind die Spalten mittig ausgerichtet — der
-   Vorsprung, den `.device` sonst über sich trägt, verschiebt das Bild dort
-   nach unten statt Luft zu schaffen. */
-.split .device { margin-top: 0; }
-
-/* ── Dreiergruppe (Detailausschnitte nebeneinander) ────────────────────── */
-
-.trio {
-  display: grid;
-  gap: clamp(20px, 3vw, 28px);
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 880px) {
-  .trio { grid-template-columns: 1fr 1fr 1fr; }
-}
-
-.trio .device { margin-top: 0; padding: 8px; }
-.trio .device img { border-radius: 10px; }
-
-/* ── Telefon ──────────────────────────────────────────────────────────────
-   Ein Gerät, kein Kasten: schmale dunkle Blende, große Eckradien, Tasten an
-   den Flanken und ein Hauch Glasreflex. Das Gehäuse bleibt in beiden
-   Farbschemata schwarz — ein Telefon ist ein Objekt, keine Fläche. */
+/* ── Telefon ───────────────────────────────────────────────────────────── */
 
 .phone {
   position: relative;
@@ -1236,7 +1247,6 @@ section[id] { scroll-margin-block-start: 20px; }
   }
 }
 
-/* Tasten: links Stumm, Lauter, Leiser; rechts die Standby-Taste. */
 .phone::before,
 .phone::after {
   content: '';
@@ -1278,37 +1288,4 @@ section[id] { scroll-margin-block-start: 20px; }
   border-radius: inherit;
   background: linear-gradient(118deg, rgb(255 255 255 / 0.09) 0%, rgb(255 255 255 / 0.02) 30%, transparent 46%);
   pointer-events: none;
-}
-
-/* ── Hero: Wandpanel und Telefon nebeneinander ─────────────────────────────
-   Beide Hüllen im ersten Bild, unten bündig. Das Telefon ist dieselbe
-   CSS-Hülle wie weiter unten, nur kleiner; unter 880 px bekommt das Panel
-   die ganze Breite und das Telefon wartet auf seine eigene Sektion. */
-
-.hero-stage {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: end;
-  gap: clamp(20px, 3vw, 36px);
-  margin-top: clamp(48px, 7vw, 88px);
-}
-
-.hero-stage .device { margin-top: 0; }
-
-.hero-phone { display: none; }
-
-@media (min-width: 880px) {
-  .hero-stage { grid-template-columns: 1fr clamp(150px, 17vw, 224px); }
-
-  .hero-phone {
-    display: block;
-    inline-size: 100%;
-    padding: 8px;
-    border-radius: 36px;
-  }
-
-  .hero-phone .phone-screen { border-radius: 28px; }
-
-  .hero-phone::before { inset-block-start: 72px; block-size: 20px; box-shadow: 0 34px 0 0 #2b3138, 0 74px 0 0 #2b3138; }
-  .hero-phone::after { inset-block-start: 112px; block-size: 56px; }
 }

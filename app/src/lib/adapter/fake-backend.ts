@@ -109,14 +109,27 @@ export class FakeBackend implements Backend {
       : request.period === 'day' ? 86_400_000 : 30 * 86_400_000;
     const end = (request.end ?? new Date()).getTime();
     const from = Math.max(request.start.getTime(), end - 400 * stepMs);
+    /* Jede Kennung bekommt ihren Teil desselben Tages: das Dach die Glocke,
+       Einspeisung und Netzbezug die Differenz, der Tageszähler die ganze
+       Last — und die einzelnen Lastsensoren teilen sich die Last, damit ihre
+       Summe die Kurve ergibt statt ihres Vielfachen. */
+    const isPv = (id: string) => /pv|solar|erzeug|produc/i.test(id);
+    const isFedIn = (id: string) => /einspeis|fed_?in/i.test(id);
+    const isDrawn = (id: string) => /netzbezug|drawn/i.test(id);
+    const isTotalLoad = (id: string) => /taeglich|consumed/i.test(id);
+    const loadShare = request.statisticIds.filter((id) => !isPv(id) && !isFedIn(id) && !isDrawn(id) && !isTotalLoad(id)).length || 1;
     for (const id of request.statisticIds) {
       const buckets: StatisticsBucket[] = [];
       for (let start = from; start < end; start += stepMs) {
         const hour = new Date(start).getHours() + new Date(start).getMinutes() / 60;
         const sun = Math.max(0, Math.sin(((hour - 6) / 13) * Math.PI));
-        const pv = /pv|solar|erzeug|produc/i.test(id) ? 4200 * sun : 0;
-        const load = /pv|solar|erzeug|produc/i.test(id) ? 0 : 320 + 900 * Math.max(0, Math.sin(((hour - 5) / 16) * Math.PI)) + (hour > 18 && hour < 23 ? 700 : 0);
-        const mean = pv || load;
+        const pv = 4200 * sun;
+        const load = 320 + 900 * Math.max(0, Math.sin(((hour - 5) / 16) * Math.PI)) + (hour > 18 && hour < 23 ? 700 : 0);
+        const mean = isPv(id) ? pv
+          : isFedIn(id) ? Math.max(0, pv - load)
+          : isDrawn(id) ? Math.max(0, load - pv)
+          : isTotalLoad(id) ? load
+          : load / loadShare;
         buckets.push({ start, end: start + stepMs, mean, change: mean * (stepMs / 3_600_000) / 1000, sum: null });
       }
       result[id] = buckets;

@@ -1,0 +1,4 @@
+# Fremde Lizenztexte liegen unverändert bei, wie es die SIL Open Font License
+# verlangt. Ihr Zeilenend-Whitespace gehört zum Original und wird nicht
+# "repariert"; `git diff --check` soll ihn deshalb nicht als Fehler melden.
+LICENSE-*-OFL.txt -whitespace

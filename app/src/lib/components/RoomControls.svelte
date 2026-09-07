@@ -26,7 +26,11 @@
   const temp = $derived(roomTemperature(room.id));
   const humidity = $derived(roomHumidity(room.id));
   const roomScenes = $derived(scenes(room.id));
-  const cameraDevices = $derived(room.lights.filter((device) => device.category === 'camera' && !cameraPopouts.has(device.entityId)));
+  /* Die Demo hat Kameras ohne Bild. Eine Kachel, die nur „kein Bild" sagt,
+     widerspricht „Schwäche mit Würde" — im Demo-Build fehlt sie. Die
+     Haushaltskonfiguration bleibt unverändert, damit ihre Parität hält. */
+  const IS_DEMO_BUILD = import.meta.env?.VITE_DEMO === '1';
+  const cameraDevices = $derived(IS_DEMO_BUILD ? [] : room.lights.filter((device) => device.category === 'camera' && !cameraPopouts.has(device.entityId)));
   const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'));
 
   /* Klima-Widerspruch (docs/02): Ziel ist ein Stepper (diskret) → 300-ms-

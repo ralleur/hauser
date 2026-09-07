@@ -26,6 +26,7 @@ function bytes(value: string): Uint8Array {
 const derive = async (finals: Record<string, Uint8Array>) => ({
   phoneLight: bytes(`phone:${new TextDecoder().decode(finals.light)}`),
   phoneDark: bytes(`phone:${new TextDecoder().decode(finals.dark)}`),
+  phoneDarkOff: bytes(`phone:${new TextDecoder().decode(finals.darkOff)}`),
 });
 
 /** Ein Assetstore im Zustand vor B-27 D2: drei Finals, Manifest v1. */
@@ -81,14 +82,14 @@ describe('B-27 D3 room image phone variant backfill', () => {
     expect(result).toMatchObject({ status: 'ok', migrated: [assetId], failed: [] });
     expect(readdirSync(directory).sort()).toEqual([
       'dark-off.avif', 'dark.avif', 'light.avif', 'manifest.json',
-      'phone-dark.avif', 'phone-light.avif',
+      'phone-dark-off.avif', 'phone-dark.avif', 'phone-light.avif',
     ]);
     expect(readFileSync(join(directory, 'phone-light.avif'), 'utf8'))
       .toBe(`phone:${assetId}-light`);
     const manifest = JSON.parse(readFileSync(join(directory, 'manifest.json'), 'utf8'));
     expect(manifest.version).toBe(2);
     expect(Object.keys(manifest.files).sort())
-      .toEqual(['dark', 'darkOff', 'light', 'phoneDark', 'phoneLight']);
+      .toEqual(['dark', 'darkOff', 'light', 'phoneDark', 'phoneDarkOff', 'phoneLight']);
 
     // Der Store akzeptiert den migrierten Katalog jetzt vollständig.
     const store = createRoomImageAssetStore({ catalogPath, assetRoot });

@@ -10,7 +10,7 @@ import { join, relative, sep } from 'node:path';
 import { jsonResponse, requestOriginAllowed } from './shared.mjs';
 
 export const APP_ROUTE_PREFIX = '/api/app';
-const PHONE_VARIANT_FILES = new Set(['phone-light.avif', 'phone-dark.avif']);
+const PHONE_VARIANT_FILES = new Set(['phone-light.avif', 'phone-dark.avif', 'phone-dark-off.avif']);
 
 function walk(root, out = []) {
   if (!existsSync(root)) return out;

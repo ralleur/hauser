@@ -16,6 +16,7 @@
   import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
+    phoneHeroVariantForRoom,
     projectPhoneRooms,
     reconcilePhoneRoomLayer,
     resolvePhoneHero,
@@ -371,14 +372,20 @@
   /* Paket 5 (docs/20): Nach dem Antippen liegen die Hero-Bilder der beiden
      Nachbarräume im Cache — die nächste Kachel öffnet ohne Ladepause. */
   function preloadNeighbourHeroes(roomId: string): void {
-    const variant: PhoneHeroVariant = appState.heroSun
+    const base: PhoneHeroVariant = appState.heroSun
       ? (appState.heroSun.day ? 'light' : 'dark')
       : appState.theme;
+    /* Vorgeladen wird, was die Nachbarkachel danach wirklich anfragt — sonst
+       wärmte der Cache abends die falsche Nachtfassung. */
+    const variantFor = (id: string): PhoneHeroVariant => {
+      const summary = roomSummaries.find((candidate) => candidate.id === id);
+      return summary ? phoneHeroVariantForRoom(summary, base) : base;
+    };
     void import('../components/hero-preload.ts').then(async ({ neighbourRoomIds, preloadHeroes }) => {
       const { roomHeroConfig } = await import('../state/room-hero-config.svelte.ts');
       const ids = neighbourRoomIds(appState.rooms.map((room) => room.id), roomId);
       preloadHeroes(ids.map((id) => resolvePhoneHero(
-        import.meta.env.BASE_URL, id, variant, roomHeroConfig(id),
+        import.meta.env.BASE_URL, id, variantFor(id), roomHeroConfig(id),
       )));
     }).catch(() => { /* ohne Vorladen weiter */ });
   }

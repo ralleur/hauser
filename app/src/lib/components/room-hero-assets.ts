@@ -5,7 +5,7 @@ import { roomImagePhoneVariantFile } from '../room-images/room-image-phone-varia
 /* `overcast` ist die trübe Tagvariante (Paket 13). Sie ist optional: nicht
    jedes Bildset hat sie, und der Projekt-Fallback kennt sie gar nicht. */
 export type HeroVariant = 'light' | 'dark' | 'dark-off' | 'overcast';
-export type PhoneHeroVariant = Exclude<HeroVariant, 'dark-off' | 'overcast'>;
+export type PhoneHeroVariant = Exclude<HeroVariant, 'overcast'>;
 export type HeroTarget = 'panel' | 'phone';
 export type UiTheme = 'light' | 'dark';
 
@@ -202,8 +202,8 @@ function userCandidate(
   if (!validFocus(focus)) return null;
   /* Die Phone-Ableitung liegt seit B-27 D2 im selben atomaren Publish-Commit
      wie die Vollfassung; sie kann also nicht fehlen, solange das Asset aktiv
-     ist. Für `dark-off` gibt es keine Phone-Ableitung, weil der Phone-Resolver
-     diese Variante nie anfragt — dann bleibt es bei der Vollfassung. */
+     ist. Nur `overcast` hat keine Ableitung — dort bleibt es bei der
+     Vollfassung, und Phone fragt die Variante ohnehin nicht an. */
   const file = target === 'phone'
     ? roomImagePhoneVariantFile(variant as PhoneHeroVariant) ?? `${variant}.avif`
     : `${variant}.avif`;

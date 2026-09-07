@@ -5,6 +5,34 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-07
+
+### Changed
+
+- **Blick: The project page tells the story of the panel, not a feature list.**
+  The first thing on it is the living room without any controls, moving
+  through sun, rain on the window, evening and night; then the three moments
+  the interface is judged by, the two voices of paper and instruments, and
+  what happens when the house does not answer. Every screenshot was retaken
+  from the current default pictures.
+- **Raum: The demo home has solar on the roof.** The energy picture in the
+  demo carries all three notes — solar, measured load and grid — with a day
+  curve for generation and consumption, and the notes sit where they do not
+  cross the roof.
+- **Blick: The demo opens quietly.** No promotional card for the room-image
+  wizard, no camera tile without a camera image, and the scribbled tips wait
+  until you touch the screen for the first time.
+
+## [0.10.0] - 2026-09-07
+
+### Changed
+
+- **The room tiles on the phone go dark with the room.** In the evening a tile
+  now shows the unlit night picture whenever no light is on in that room, and
+  the lit one as soon as a lamp burns — the same reading the large stage has
+  always had. The tiles still load the small phone-sized picture, so the
+  darkened version costs no more to show than the lit one.
+
 ## [0.9.1] - 2026-09-07
 
 ### Added

@@ -33,7 +33,8 @@ function sandbox(): { assetRoot: string; setsRoot: string; catalogPath: string }
 const FOCUS = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
 const bytes = (seed: number) => new Uint8Array([seed, seed + 1, seed + 2]);
 const VARIANTS = {
-  light: bytes(1), dark: bytes(10), darkOff: bytes(20), phoneLight: bytes(30), phoneDark: bytes(40),
+  light: bytes(1), dark: bytes(10), darkOff: bytes(20),
+  phoneLight: bytes(30), phoneDark: bytes(40), phoneDarkOff: bytes(50),
 };
 
 describe('Optionale Bildvariante nachtragen', () => {
@@ -47,7 +48,7 @@ describe('Optionale Bildvariante nachtragen', () => {
     // Das Verzeichnis trägt genau die Pflichtdateien plus die neue Variante.
     expect(readdirSync(join(setsRoot, 'probe_set')).sort()).toEqual([
       'dark-off.avif', 'dark.avif', 'light.avif', 'manifest.json',
-      'overcast.avif', 'phone-dark.avif', 'phone-light.avif',
+      'overcast.avif', 'phone-dark-off.avif', 'phone-dark.avif', 'phone-light.avif',
     ]);
 
     // Der Katalog bleibt gültig — sonst würde list() werfen.

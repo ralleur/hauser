@@ -2,7 +2,7 @@
   import { onMount, type Component } from 'svelte';
   import RoomSummaryCard from './RoomSummaryCard.svelte';
   import { appState } from '../../state/app.svelte.ts';
-  import type { PhoneHeroVariant, PhoneRoomSummary } from '../../state/phone-home.ts';
+  import { phoneHeroVariantForRoom, type PhoneHeroVariant, type PhoneRoomSummary } from '../../state/phone-home.ts';
 
   import { m } from '../../../paraglide/messages.js';
   import { pluralCategory } from '../../state/locale.svelte.ts';
@@ -60,7 +60,12 @@
       <p class="phone-empty-state">{m.phone_no_rooms()}</p>
     {:else}
       {#each rooms as room (room.id)}
-        <RoomSummaryCard summary={room} active={currentRoom === room.id} {heroVariant} {onopen} />
+        <RoomSummaryCard
+          summary={room}
+          active={currentRoom === room.id}
+          heroVariant={phoneHeroVariantForRoom(room, heroVariant)}
+          {onopen}
+        />
       {/each}
     {/if}
   </section>

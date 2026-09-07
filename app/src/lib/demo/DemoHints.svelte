@@ -25,6 +25,10 @@
   /* Wann die Geste eines nachwirkenden Tipps zuerst als gelungen galt. */
   const doneSince = new Map<string, number>();
   let dismissed = $state(false);
+  /* Die Tour beginnt erst, wenn eine Hand die Oberfläche sucht: Der erste
+     Blick gehört dem Bild, nicht einer Sprechblase. Ein Tipp irgendwohin
+     startet sie; das Badge startet sie neu. */
+  let touched = $state(false);
   let current = $state<Current | null>(null);
   let bubbleWidth = $state(0);
   let bubbleHeight = $state(0);
@@ -46,6 +50,7 @@
   }
 
   function replay(): void {
+    touched = true;
     finished = [];
     doneSince.clear();
     dismissed = false;
@@ -91,7 +96,7 @@
     viewportHeight = window.innerHeight;
     /* Nur im Panel: auf dem Telefon liegen die Ziele in Sheets und Rastern,
        wo Schlaufe und Pfeil mehr verdecken als erklären. */
-    if (dismissed || uiMode.effective !== 'panel') { current = null; return; }
+    if (!touched || dismissed || uiMode.effective !== 'panel') { current = null; return; }
     for (const hint of DEMO_HINTS) {
       if (finished.includes(hint.id)) continue;
       if (hint.when && !hint.when()) continue;
@@ -119,8 +124,11 @@
     badge?.classList.add('has-hints');
     badge?.setAttribute('title', m.demo_hint_replay());
     badge?.addEventListener('click', replay);
+    const wake = () => { touched = true; };
+    document.addEventListener('pointerdown', wake, { once: true, capture: true });
     return () => {
       clearInterval(timer);
+      document.removeEventListener('pointerdown', wake, { capture: true });
       badge?.classList.remove('has-hints');
       badge?.removeEventListener('click', replay);
     };

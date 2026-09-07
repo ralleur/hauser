@@ -81,6 +81,8 @@ third_party_files = {
     Path('app/public/fonts/Caveat-latin.woff2'),
     Path('app/public/fonts/Caveat-latin-ext.woff2'),
     Path('website/fonts/InterVariable-subset.woff2'),
+    # Die Serife der Landingpage: dieselbe Datei wie im Panel, OFL, siehe NOTICE.
+    Path('website/fonts/InstrumentSerif-subset.woff2'),
 }
 
 blueprint_root = Path('app/public/blueprints')

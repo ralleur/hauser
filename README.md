@@ -54,7 +54,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.9.1` is current. The first installation by
+normal installation path; `v0.10.1` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -150,7 +150,7 @@ states that follow the actual lights.
 
 | | |
 |---|---|
-| ![An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.](website/media/wizard-input-raw-1100.webp) | ![The same living room redrawn as a warm Hauser-style illustration, with the balcony door, the grey sofa and the wooden dining table in their original positions.](website/media/wizard-output-room-1100.webp) |
+| ![An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.](website/media/wizard-input-raw-1100.webp) | ![The same living room redrawn as a warm Hauser-style illustration, with the balcony door, the grey sofa and the wooden dining table in their original positions.](website/media/room-light-1100.webp) |
 | **Input** — evening light, a wide-angle lens, toys on the floor | **Output** — the same room, and the image that ships as the living room today |
 
 The illustrations bundled with Hauser are of the author's home, which is no use
@@ -171,10 +171,10 @@ hosted demo.
 
 | | |
 |---|---|
-| ![The notes screen: a shopping list on the left grouped by shop, and reminders as coloured sticky notes grouped per person on the right.](website/media/notes-1100.webp) | ![The calendar screen: a month grid with today highlighted, timed events per day and multi-day events drawn as bars across the week.](website/media/calendar-1100.webp) |
-| **Everyday** — a colour per person, a group per shop | **Calendar** — Home Assistant's calendar entities as one month |
-| ![The library screen with horizontal shelves of titles under the headings Continue watching and Recently added; each tile is a flat colour field standing in for cover art.](website/media/library-1100.webp) | ![The energy screen showing measured load in kilowatts, daily consumption, a live flow diagram and an hourly chart, with solar and grid figures left blank.](website/media/energy-1100.webp) |
-| **Library** — Jellyfin, built in the same design system. The demo invents its titles and draws colour fields instead of real cover art | **Energy** — real sensors, and honest gaps where there is no meter |
+| ![The notes screen: a shopping list on the left grouped by shop, and reminders as coloured sticky notes grouped per person on the right.](website/media/notes-1100.webp) | ![The calendar screen as a sheet: the month name in a serif, small-caps weekdays, hairline rules between the weeks, timed events under their day and multi-day events as bars across the week.](website/media/calendar-1100.webp) |
+| **Everyday** — a colour per person, a group per shop | **Calendar** — Home Assistant's calendar entities as one sheet of paper |
+| ![The energy screen by day: an illustration of a house with solar panels, three paper notes pinned into the picture at the panels, the house and the grid pole, today's figures written top left, and the day's curves drawn along the bottom edge.](website/media/energy-1100.webp) | ![The home screen while Home Assistant is unreachable: the living-room illustration stays, the controls are dimmed, and the status chip in the title bar reads Disconnected.](website/media/offline-home-1100.webp) |
+| **Energy** — the figures live in a picture of the house; what there is no meter for is simply not shown | **Disconnected** — the stage stays lit, the controls dim, one word in the title bar |
 
 ### Two shells, one design system
 
@@ -300,9 +300,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.9.1` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.10.1` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.9.1` tag, which the Home Assistant Supervisor
+publish the plain `0.10.1` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

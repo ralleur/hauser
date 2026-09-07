@@ -30,6 +30,18 @@ export interface PhoneRoomSummary {
 
 export type PhoneHeroVariant = SharedPhoneHeroVariant;
 
+/* Wie auf der grossen Buehne: Brennt nachts im Raum keine bekannte Lampe, zeigt
+   die Kachel die unbeleuchtete Nachtfassung. Kennt Hauser dort gar keine
+   Lampe, bleibt es bei der beleuchteten — „keine bekannte Lampe" heißt nicht
+   „dunkel". Tagsüber ändert sich nichts. */
+export function phoneHeroVariantForRoom(
+  summary: PhoneRoomSummary,
+  base: PhoneHeroVariant,
+): PhoneHeroVariant {
+  if (base !== 'dark') return base;
+  return summary.lightsTotal > 0 && summary.lightsOn === 0 ? 'dark-off' : 'dark';
+}
+
 /** Phone Home keeps its sun-driven light/dark input while delegating all URL,
  * focus and fallback policy to the shared resolver. */
 export async function resolvePhoneHero(

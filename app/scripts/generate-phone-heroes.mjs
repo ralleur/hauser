@@ -16,11 +16,11 @@ const { deriveRoomImagePhoneVariant } = await import(
   join(appRoot, 'src', 'lib', 'room-images', 'room-image-phone-derivation-policy-v1.ts')
 );
 
-/* Der Phone-Resolver fragt weder `all` noch `dark-off` an (siehe
+/* Der Phone-Resolver fragt weder `all` noch `overcast` an (siehe
    PHONE_HERO_ROOMS und PhoneHeroVariant in room-hero-assets.ts). Was nie
    angefordert wird, wird auch nicht erzeugt. */
 const ROOMS = ['bad', 'flur', 'kinderzimmer', 'kueche', 'schlafzimmer', 'wohnzimmer'];
-const VARIANTS = ['light', 'dark'];
+const VARIANTS = ['light', 'dark', 'dark-off'];
 
 let written = 0;
 let skipped = 0;

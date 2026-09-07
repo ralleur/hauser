@@ -59,6 +59,7 @@ describe('Kette der trüben Variante mit echten Bildern', () => {
       darkOff: await avif(18, 20, 28),
       phoneLight: await avif(220, 210, 190),
       phoneDark: await avif(40, 45, 60),
+      phoneDarkOff: await avif(20, 22, 30),
     });
 
     const seen: { phase: string; input: Uint8Array; prompt: string }[] = [];
@@ -101,6 +102,7 @@ describe('Kette der trüben Variante mit echten Bildern', () => {
       darkOff: await avif(18, 20, 28),
       phoneLight: await avif(220, 210, 190),
       phoneDark: await avif(40, 45, 60),
+      phoneDarkOff: await avif(20, 22, 30),
     });
 
     const provider = { available: true, async edit() { return { image: new Uint8Array([1, 2, 3]) }; } };

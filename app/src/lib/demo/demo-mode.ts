@@ -83,8 +83,28 @@ function publicDemoHouseholdConfig() {
     })),
     navigation: demoHouseholdConfig.navigation.filter((item) => item.target.id !== 'songs'),
     enabledModules: demoHouseholdConfig.enabledModules.filter((id) => id !== 'songs'),
+    /* Die Demo hat Sonne auf dem Dach. Der Haushalt, aus dem sie stammt, hat
+       keinen Erzeugungszähler; die Demo zeigt trotzdem alle drei Zettel im
+       Bild — Sonne, Haus und Netz — und eine Tageskurve mit Glocke und
+       Plateau (FakeBackend.getStatistics). Die Werte tragen ihre Erfindung
+       im Namen; die Demo ist ohnehin simuliert. */
+    energy: demoHouseholdConfig.energy ? {
+      ...demoHouseholdConfig.energy,
+      sensors: { ...demoHouseholdConfig.energy.sensors, productionPower: DEMO_PV_POWER_ENTITY },
+      kpis: {
+        ...demoHouseholdConfig.energy.kpis,
+        producedToday: DEMO_PRODUCED_TODAY_ENTITY,
+        fedInToday: DEMO_FED_IN_TODAY_ENTITY,
+        drawnToday: DEMO_DRAWN_TODAY_ENTITY,
+      },
+    } : demoHouseholdConfig.energy,
   };
 }
+
+const DEMO_PV_POWER_ENTITY = 'sensor.demo_pv_power';
+const DEMO_PRODUCED_TODAY_ENTITY = 'sensor.demo_pv_heute';
+const DEMO_FED_IN_TODAY_ENTITY = 'sensor.demo_einspeisung_heute';
+const DEMO_DRAWN_TODAY_ENTITY = 'sensor.demo_netzbezug_heute';
 
 /* Das Personen-Präfix ist Zuordnung, kein Text: es steuert Sektion und
    Post-it-Farbe und wird vor der Anzeige entfernt (reminders.ts). Deshalb
@@ -264,13 +284,52 @@ const DEMO_LOAD_WATTS: Readonly<Record<string, number>> = {
   'sensor.strom_server_power': 24,
 };
 
-const DEMO_CONSUMED_TODAY_KWH = 4.7;
+/* Derselbe Sonnentag wie in FakeBackend.getStatistics: Glocke für das Dach,
+   Plateau mit Abendspitze für die Last. Die Zähler des Tages sind das
+   Integral bis jetzt, damit „heute erzeugt" abends nicht null ist und
+   morgens nicht schon den ganzen Tag trägt. */
+export function demoSolarDay(hour: number): { pvWatts: number; loadWatts: number } {
+  const sun = Math.max(0, Math.sin(((hour - 6) / 13) * Math.PI));
+  return {
+    pvWatts: 4200 * sun,
+    loadWatts: 320 + 900 * Math.max(0, Math.sin(((hour - 5) / 16) * Math.PI)) + (hour > 18 && hour < 23 ? 700 : 0),
+  };
+}
 
-export function demoEnergySeed(): [string, unknown][] {
+export function demoEnergyToday(now: Date): { pvWatts: number; producedKwh: number; consumedKwh: number; fedInKwh: number; drawnKwh: number } {
+  const hourNow = now.getHours() + now.getMinutes() / 60;
+  let produced = 0;
+  let consumed = 0;
+  let fedIn = 0;
+  let drawn = 0;
+  const step = 5 / 60;
+  for (let hour = 0; hour < hourNow; hour += step) {
+    const { pvWatts, loadWatts } = demoSolarDay(hour);
+    produced += pvWatts * step;
+    consumed += loadWatts * step;
+    fedIn += Math.max(0, pvWatts - loadWatts) * step;
+    drawn += Math.max(0, loadWatts - pvWatts) * step;
+  }
+  const kwh = (wh: number) => Math.round(wh / 100) / 10;
+  return {
+    pvWatts: Math.round(demoSolarDay(hourNow).pvWatts),
+    producedKwh: kwh(produced),
+    consumedKwh: kwh(consumed),
+    fedInKwh: kwh(fedIn),
+    drawnKwh: kwh(drawn),
+  };
+}
+
+export function demoEnergySeed(now = new Date()): [string, unknown][] {
   if (!IS_DEMO) return [];
   const entries: [string, unknown][] = Object.entries(DEMO_LOAD_WATTS)
     .map(([id, value]) => [id, { value, unit: 'W' }]);
-  entries.push(['sensor.hmi_erfasste_last_taeglich', { value: DEMO_CONSUMED_TODAY_KWH, unit: 'kWh' }]);
+  const today = demoEnergyToday(now);
+  entries.push([DEMO_PV_POWER_ENTITY, { value: today.pvWatts, unit: 'W' }]);
+  entries.push(['sensor.hmi_erfasste_last_taeglich', { value: today.consumedKwh, unit: 'kWh' }]);
+  entries.push([DEMO_PRODUCED_TODAY_ENTITY, { value: today.producedKwh, unit: 'kWh' }]);
+  entries.push([DEMO_FED_IN_TODAY_ENTITY, { value: today.fedInKwh, unit: 'kWh' }]);
+  entries.push([DEMO_DRAWN_TODAY_ENTITY, { value: today.drawnKwh, unit: 'kWh' }]);
   return entries;
 }
 

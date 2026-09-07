@@ -657,9 +657,9 @@ describe('productive household bootstrap cutover', () => {
       startProductiveApp: start,
     });
     expect(start).toHaveBeenCalledOnce();
-    // Seit die Songwerkstatt geparkt ist, deckt sich die Demo-Konfiguration
-    // mit dem Legacy-Modell — vorher unterschied sie sich genau um dieses Modul.
-    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'match' });
+    // Die Demo hat Sonne auf dem Dach, der Haushalt dahinter nicht: genau um
+    // die Erzeugungssensoren unterscheidet sie sich vom Legacy-Modell.
+    expect(result).toMatchObject({ mode: 'active', status: 'active', parity: 'mismatch' });
     const mode = demoResponse('/api/household-config-mode', 'GET');
     expect(mode?.headers.get('cache-control')).toBe('no-store');
     expect(mode?.headers.get('x-hmi-household-config-mode')).toBe('active');

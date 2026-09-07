@@ -109,7 +109,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHome).toMatch(/const heroVariant = \$derived/);
     expect(phoneHome).toContain('appState.heroSun');
     expect(phoneHome).not.toContain('runtime.merged(SUN_ENTITY)');
-    expect(phoneHome).toMatch(/<RoomSummaryCard[^>]*\{heroVariant\}/);
+    expect(phoneHome).toMatch(/<RoomSummaryCard[\s\S]*?heroVariant=\{phoneHeroVariantForRoom\(room, heroVariant\)\}/);
     expect(phoneHomeState).toContain("from '../components/room-hero-assets.ts'");
     expect(phoneHomeState).toContain('resolveRoomHero');
     expect(roomCard).toContain('roomHeroConfig(summary.id)');
