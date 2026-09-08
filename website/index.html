@@ -61,18 +61,39 @@
   </div>
 </nav>
 
-<!-- ── Hero: die Bühne ───────────────────────────────────────────────────
-     Das Wohnzimmer in seinen vier Zuständen, ohne Kontrollfläche. Die Bilder
-     sind die Illustrationen, die im Produkt ausgeliefert werden; der Regen
-     läuft nur dort, wo das Bildset ein Fenster kennt — dieselben Polygone,
-     die das Panel benutzt. Ohne JavaScript steht der Nachmittag. -->
-<header class="stage-hero" id="main">
+<!-- ── Hero ──────────────────────────────────────────────────────────────
+     Erst der Satz, dann das Bild. Die Kopfzeile lag früher im Bildrahmen und
+     wurde auf dem Telefon von dessen Seitenverhältnis abgeschnitten: Man sah
+     ein Wohnzimmer und keinen einzigen Satz darüber, was Hauser ist. -->
+<header class="hero" id="main">
+  <div class="wrap hero-copy">
+    <p class="eyebrow">A frontend for Home Assistant</p>
+    <h1>A picture of your home.<br>Until you reach for it.</h1>
+    <p class="lead">
+      Hauser turns a wall tablet or your phone into a calm view of your home.
+      Every room is an illustration that follows the real sun, the weather and
+      the lamps that are on. Touch it and the controls come forward — lights,
+      heating, the calendar, the shopping list. Leave it, and only the picture
+      remains.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href="demo/">Open the live demo</a>
+      <a class="btn" href="#install">Install it</a>
+    </div>
+    <ul class="badge-row" aria-label="What installing Hauser involves">
+      <li>Home Assistant add-on</li>
+      <li>or Docker Compose</li>
+      <li>Guided setup</li>
+      <li>No account, no cloud</li>
+    </ul>
+  </div>
+
   <div class="stage-wrap">
     <div class="stage" data-state="light" data-autocycle>
       <img class="stage-img is-light" src="media/room-light.webp"
            srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
            sizes="min(100vw, 1320px)" width="1696" height="1200" fetchpriority="high"
-           alt="A living room drawn as a warm illustration: afternoon sun through a balcony door, a grey sofa with cushions, a wooden dining table, plants, children's toys and a pendant lamp. There is no interface in the picture.">
+           alt="A living room drawn as a warm illustration: afternoon sun through a balcony door, a grey sofa with cushions, a wooden dining table, plants, children's toys and a pendant lamp.">
       <img class="stage-img is-overcast" src="media/room-overcast.webp"
            srcset="media/room-overcast-700.webp 700w, media/room-overcast-1100.webp 1100w, media/room-overcast.webp 1696w"
            sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
@@ -80,7 +101,7 @@
       <img class="stage-img is-dark" src="media/room-dark.webp"
            srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
            sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The same living room in the evening: the pendant lamp and the reading lamp are on, warm pools of light on the table and the sofa, the balcony dark behind the glass.">
+           alt="The same living room in the evening: the pendant lamp and the reading lamp are on, warm pools of light on the table and the sofa.">
       <img class="stage-img is-dark-off" src="media/room-dark-off.webp"
            srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
            sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
@@ -90,30 +111,52 @@
         <span class="rain-pane" style="clip-path: polygon(31.7% 20.7%, 40% 21.4%, 40.2% 42.3%, 31.8% 41.8%)"></span>
         <span class="rain-pane" style="clip-path: polygon(41.3% 21.6%, 48.1% 22.4%, 48% 40.5%, 41.3% 41.3%)"></span>
       </div>
-      <div class="stage-scrim" aria-hidden="true"></div>
-      <div class="stage-copy">
-        <p class="eyebrow eyebrow-light">Hauser · a Home Assistant frontend</p>
-        <h1>A picture of your home.<br>Until you reach for it.</h1>
-        <p class="lead lead-light">
-          Hauser hangs on the wall as an illustration of your rooms that follows
-          the sun and the weather. Touch it, and the controls come forward. A few
-          quiet minutes later, the picture is all that remains.
-        </p>
-        <div class="actions">
-          <a class="btn btn-primary" href="demo/">Open the live demo</a>
-          <a class="btn btn-light" href="#install">Install it</a>
-        </div>
-      </div>
       <p class="stage-label" aria-live="polite">
         <span data-for="light">Afternoon. The sun does the lighting.</span>
-        <span data-for="overcast">Overcast. Rain runs down the window, and only the window.</span>
+        <span data-for="overcast">Rain outside. It runs down the window, and only the window.</span>
         <span data-for="dark">Evening. Two lamps are on, and the picture knows which.</span>
         <span data-for="dark-off">Night. The last lamp went out, slowly.</span>
       </p>
     </div>
   </div>
-  <p class="stage-under">Every frame above ships with the product. It is the living room Hauser draws when it does not know yours yet — until you photograph your own.</p>
+  <p class="stage-under">This is the living-room screen without its controls. All four states ship with Hauser; your own rooms are drawn from a photograph you take with your phone.</p>
 </header>
+
+<!-- ── Was es ist ────────────────────────────────────────────────────────
+     Drei nüchterne Sätze, bevor die Seite poetisch wird. Wer hier landet,
+     soll nach zehn Sekunden wissen, was das Ding tut und wo es läuft. -->
+<section id="what">
+  <div class="wrap">
+    <ul class="facts">
+      <li class="reveal">
+        <h3>It sits on top of Home Assistant</h3>
+        <p>
+          Hauser does not replace your setup, it gives it a face. Install it as
+          an add-on on Home Assistant OS, or with Docker Compose anywhere else.
+          A guided setup reads your areas and devices, proposes rooms and lets
+          you correct the result. No YAML, no source edits.
+        </p>
+      </li>
+      <li class="reveal">
+        <h3>Made for the wall and for the hand</h3>
+        <p>
+          On a wall panel or tablet the room picture fills the screen with one
+          narrow control surface beside it. On a phone the rooms are cards under
+          your thumb. Lights, heating, media, the calendar, the shopping list and
+          the household's notes are all there.
+        </p>
+      </li>
+      <li class="reveal">
+        <h3>Yours, and nobody else's</h3>
+        <p>
+          It runs on your own hardware and talks only to your Home Assistant.
+          No account, no cloud service, no telemetry. Code, design tokens and
+          documentation are open source under the AGPL.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
 
 <!-- ── Manifest: drei Momente ─────────────────────────────────────────── -->
 <section class="band" id="moments">
@@ -540,10 +583,11 @@
     <p class="eyebrow">Technical beta</p>
     <h2 style="max-width:17ch">Built in the open, for one household first.</h2>
     <p class="lead" style="margin-top:26px">
-      Hauser installs and runs today, version 0.10.1. Compatibility with the
-      enormous range of Home Assistant setups is still growing, there is no
-      support SLA, and it is built for trusted deployments on your own network
-      rather than for the public internet.
+      Hauser installs and runs today. Compatibility with the enormous range of
+      Home Assistant setups is still growing, there is no support SLA, and it is
+      built for trusted deployments on your own network rather than for the
+      public internet. Which version is current, and what changed in it, is in
+      the <a href="https://github.com/ralleur/hauser/releases">release notes</a>.
     </p>
 
     <div class="honest-grid">
@@ -702,7 +746,7 @@
   (function () {
     var demos = document.querySelectorAll('.state-demo');
     for (var i = 0; i < demos.length; i++) setupStateDemo(demos[i]);
-    var hero = document.querySelector('.stage-hero .stage');
+    var hero = document.querySelector('.hero .stage');
     if (hero) setupAutocycle(hero);
   })();
 </script>

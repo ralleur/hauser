@@ -241,18 +241,6 @@ p { margin: 0; text-wrap: pretty; }
 
 .btn-primary:hover { --btn-bg: #ffc85e; --btn-border: #ffc85e; }
 
-/* Auf der Bühne liegt der Text über dem Bild; die zweite Taste bleibt dort
-   hell und halbdurchsichtig, unabhängig vom Farbschema der Seite. */
-.btn-light {
-  --btn-fg: #f4f7fa;
-  --btn-border: rgb(255 255 255 / 0.42);
-  --btn-bg: rgb(11 14 18 / 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.btn-light:hover { --btn-border: rgb(255 255 255 / 0.7); }
-
 .btn-sm { padding: 9px 20px; font-size: 14px; }
 
 /* ── Navigation ────────────────────────────────────────────────────────── */
@@ -328,11 +316,58 @@ p { margin: 0; text-wrap: pretty; }
    (1696:1200), weil die Fensterpolygone des Regens in Prozent des Bildes
    angegeben sind — ein zugeschnittenes Bild würde den Regen vom Glas ziehen. */
 
-.stage-hero {
-  padding-block: clamp(20px, 3vw, 40px) clamp(32px, 5vw, 56px);
+.hero {
+  padding-block: clamp(40px, 7vw, 84px) clamp(32px, 5vw, 56px);
   background:
     radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent-warm) 10%, transparent), transparent 60%),
     var(--surface-0);
+}
+
+/* Der Satz steht vor dem Bild, auf jeder Breite. Vorher lag er im Bildrahmen
+   und wurde von dessen Seitenverhältnis abgeschnitten — auf dem Telefon war
+   die Kopfzeile dadurch unsichtbar. */
+.hero-copy {
+  max-width: 760px;
+  margin-inline: auto;
+  text-align: center;
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+
+.hero-copy h1 { margin-bottom: 24px; }
+
+.hero-copy .lead {
+  margin-inline: auto;
+  max-width: 58ch;
+}
+
+.hero-copy .actions { justify-content: center; }
+
+/* Mittig gesetzt trägt die Augenbraue keinen Punkt: bei zwei Zeilen bliebe er
+   allein am linken Rand stehen. */
+.hero-copy .eyebrow::before { display: none; }
+.hero-copy .eyebrow { gap: 0; }
+
+/* Vier Wörter, die „Install it" entschärfen: was man braucht, bevor man
+   darauf drückt. */
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge-row li {
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .stage-wrap {
@@ -416,35 +451,6 @@ p { margin: 0; text-wrap: pretty; }
   to   { transform: rotate(11deg) translateY(104px); }
 }
 
-.stage-scrim {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgb(11 14 18 / 0.28) 0%, transparent 28%),
-    linear-gradient(0deg, rgb(11 14 18 / 0.9) 0%, rgb(11 14 18 / 0.66) 34%, rgb(11 14 18 / 0.2) 62%, transparent 78%);
-  pointer-events: none;
-}
-
-.stage-copy {
-  position: absolute;
-  inset-inline: clamp(20px, 4vw, 56px);
-  inset-block-end: clamp(20px, 4vw, 56px);
-  max-width: 60ch;
-  color: #f4f7fa;
-}
-
-.stage-copy h1 { color: #f7f9fb; margin-bottom: 18px; }
-
-.eyebrow-light { color: #ffcf73; }
-
-.lead-light {
-  color: rgb(244 247 250 / 0.82);
-  font-size: clamp(16px, 1.7vw, 20px);
-  max-width: 50ch;
-}
-
-.stage-copy .actions { margin-top: 26px; }
-
 /* Was das Bild gerade zeigt, in einem Satz oben rechts. */
 .stage-label {
   position: absolute;
@@ -482,11 +488,7 @@ p { margin: 0; text-wrap: pretty; }
 
 @media (max-width: 720px) {
   .stage { width: 100%; border-radius: 14px; }
-  .stage-copy { position: static; max-width: none; padding: 20px 18px 22px; background: #0b0e12; }
-  .stage-scrim { display: none; }
-  .stage-label { inset-block-start: 12px; inset-inline-end: 12px; font-size: 13px; max-width: 70%; }
-  .stage-copy .actions { margin-top: 20px; }
-  .stage-copy .lead-light { font-size: 16px; }
+  .stage-label { inset-block-start: 10px; inset-inline-end: 10px; font-size: 12px; max-width: 74%; padding: 5px 11px; }
 }
 
 /* Die Bühne in der Raum-Sektion trägt ihren Umschalter selbst. */
@@ -519,6 +521,30 @@ p { margin: 0; text-wrap: pretty; }
   .stage-img, .rain { transition: none; }
   .rain-pane::before, .rain-pane::after { animation: none; }
 }
+
+/* ── Was es ist: drei nüchterne Absätze ────────────────────────────────── */
+
+.facts {
+  display: grid;
+  gap: clamp(28px, 4vw, 44px);
+  grid-template-columns: 1fr;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 880px) {
+  .facts { grid-template-columns: repeat(3, 1fr); }
+}
+
+.facts h3 { margin-bottom: 12px; }
+
+.facts p {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+#what { padding-block: clamp(56px, 8vw, 96px); }
 
 /* ── Manifest ──────────────────────────────────────────────────────────── */
 
