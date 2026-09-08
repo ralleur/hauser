@@ -491,32 +491,6 @@ p { margin: 0; text-wrap: pretty; }
   .stage-label { inset-block-start: 10px; inset-inline-end: 10px; font-size: 12px; max-width: 74%; padding: 5px 11px; }
 }
 
-/* Die Bühne in der Raum-Sektion trägt ihren Umschalter selbst. */
-.stage-room {
-  width: 100%;
-  max-width: 1296px;
-}
-
-.state-switch-float {
-  position: absolute;
-  inset-block-start: clamp(14px, 2.4vw, 26px);
-  inset-inline-start: clamp(14px, 2.4vw, 26px);
-  z-index: 2;
-  margin: 0;
-  background: rgb(11 14 18 / 0.5);
-  border-color: rgb(255 255 255 / 0.18);
-}
-
-.state-switch-float .state-btn { color: rgb(244 247 250 / 0.72); }
-.state-switch-float .state-btn:hover { color: #f4f7fa; }
-.state-switch-float .state-btn[aria-pressed='true'] { background: rgb(255 255 255 / 0.16); color: #f4f7fa; }
-
-.stage-label-room {
-  inset-block-start: auto;
-  inset-block-end: clamp(14px, 2.4vw, 26px);
-  inset-inline-end: clamp(14px, 2.4vw, 26px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .stage-img, .rain { transition: none; }
   .rain-pane::before, .rain-pane::after { animation: none; }
@@ -845,56 +819,60 @@ p { margin: 0; text-wrap: pretty; }
   block-size: calc(100% - 24px);
 }
 
-.state-demo[data-state='day'] .state-shot[data-for='day'],
-.state-demo[data-state='rain'] .state-shot[data-for='rain'],
-.state-demo[data-state='snow'] .state-shot[data-for='snow'],
-.state-demo[data-state='night'] .state-shot[data-for='night'] { opacity: 1; }
+/* Ohne Skript steht die erste Aufnahme; mit Skript entscheidet `is-shown`. */
+.state-stack .state-shot:first-of-type { opacity: 1; }
+.has-js .state-stack .state-shot { opacity: 0; }
+.has-js .state-stack .state-shot.is-shown { opacity: 1; }
+
+/* Beschriftungen, die mit dem Zustand oder dem Ort wechseln. */
+.state-demo span[data-for],
+.state-demo span[data-city] { display: none; }
+.state-demo span[data-for].is-shown,
+.state-demo span[data-city].is-shown { display: inline; }
+html:not(.has-js) .state-demo span[data-for]:first-child,
+html:not(.has-js) .state-demo span[data-city]:first-child { display: inline; }
 
 @media (prefers-reduced-motion: reduce) {
   .state-stack .state-shot { transition: none; }
 }
 
-/* ── 1:1-Ausschnitte ───────────────────────────────────────────────────── */
+/* ── Instrumente: zwei Bedienfelder, die ihre Stufen durchlaufen ─────────── */
 
-.details {
+.instruments {
   display: grid;
-  gap: clamp(20px, 3vw, 28px);
+  gap: clamp(20px, 3vw, 32px);
   grid-template-columns: 1fr;
-  margin-top: clamp(28px, 4vw, 40px);
+  max-width: 960px;
+  margin-inline: auto;
 }
 
-@media (min-width: 760px) {
-  .details { grid-template-columns: 1fr 1fr; }
+@media (min-width: 720px) {
+  .instruments { grid-template-columns: 1fr 1fr; }
 }
 
-.details-one { grid-template-columns: 1fr; max-width: 720px; margin-inline: auto; }
-
-.detail {
+.instrument {
   margin: 0;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
-}
-
-.detail img { border-radius: 10px; }
-
-.detail figcaption {
-  padding: 14px 10px 8px;
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-.detail-wide {
-  max-width: 900px;
-  margin: clamp(36px, 5vw, 56px) auto 0;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
 }
 
-.detail-wide img { border-radius: 10px; }
+.instrument .state-stack { position: relative; }
+.instrument .state-shot { border-radius: 10px; width: 100%; }
+.instrument .state-stack .state-shot:not(:first-of-type) {
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.instrument figcaption {
+  padding: 12px 8px 6px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+  text-align: center;
+  min-block-size: 1.6em;
+}
 
 /* ── Lichtphysik ───────────────────────────────────────────────────────────
    Eine Lampe, zwei Berührungen, eine Schleife von zehn Sekunden. Beim ersten

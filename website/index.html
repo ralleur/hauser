@@ -89,7 +89,7 @@
   </div>
 
   <div class="stage-wrap">
-    <div class="stage" data-state="light" data-autocycle>
+    <div class="stage" data-state="light" data-cycle="light,overcast,dark,dark-off" data-interval="5200">
       <img class="stage-img is-light" src="media/room-light.webp"
            srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
            sizes="min(100vw, 1320px)" width="1696" height="1200" fetchpriority="high"
@@ -114,7 +114,7 @@
       <p class="stage-label" aria-live="polite">
         <span data-for="light">Afternoon. The sun does the lighting.</span>
         <span data-for="overcast">Rain outside. It runs down the window, and only the window.</span>
-        <span data-for="dark">Evening. Two lamps are on, and the picture knows which.</span>
+        <span data-for="dark">Evening. Lights are on.</span>
         <span data-for="dark-off">Night. The last lamp went out, slowly.</span>
       </p>
     </div>
@@ -205,50 +205,94 @@
       <h2>Most of the day, the panel is a picture on the wall. So the picture got the most care.</h2>
       <p class="body-text">
         After a few idle minutes the panel settles into standby: a large clock,
-        the week ahead, the household's post-its, the shopping list, and behind
-        all of it, faintly, the streets of your own neighbourhood, drawn once
-        from OpenStreetMap around the place Home Assistant already knows.
+        the week ahead, the household's post-its, the shopping list. And behind
+        all of it, faintly, the streets of your own neighbourhood.
       </p>
       <p class="body-text">
-        The picture lives with the day. Snow drifts across it in a few flakes
-        at a time; rain is drawn as ink traces in the text colour, quiet enough
-        to stay behind the clock. Deep at night everything but a dimmed red
-        clock goes away. Switch below.
+        The map is not a texture. It is drawn once from OpenStreetMap around
+        the place Home Assistant already knows, and the radius picks itself: a
+        city centre gets its grid, a village its handful of lanes. Six places,
+        the same wall.
       </p>
     </div>
   </div>
   <div class="showcase-wide">
-    <div class="state-demo" data-state="day">
-      <div class="state-switch" role="group" aria-label="Show the standby screen in different weather">
+    <div class="state-demo city-demo" data-state="day" data-city="cologne"
+         data-cycle-city="cologne,paris,barcelona,new-york,amsterdam,petting" data-interval="4200">
+      <div class="state-switch" role="group" aria-label="Show the standby screen by day or by night">
         <button type="button" class="state-btn" data-state="day" aria-pressed="true">Day</button>
         <button type="button" class="state-btn" data-state="night" aria-pressed="false">Night</button>
-        <button type="button" class="state-btn" data-state="snow" aria-pressed="false">Snow at night</button>
       </div>
       <div class="device state-stack reveal">
-        <img class="state-shot" data-for="day" src="media/lockscreen.webp"
+        <img class="state-shot" data-for="day" data-city="cologne" src="media/lockscreen.webp"
              srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
              width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day: a large clock and date in the centre, outdoor and indoor temperature beneath, the week's appointments along the bottom, coloured reminder post-its on the right and the shopping list on the left, all over a faint street map of the neighbourhood.">
-        <img class="state-shot" data-for="night" src="media/lockscreen-dark.webp"
+             alt="The Hauser standby screen by day in Cologne: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Ring around the old town and the bend of the Rhine.">
+        <img class="state-shot" data-for="night" data-city="cologne" src="media/lockscreen-dark.webp"
              srcset="media/lockscreen-dark-700.webp 700w, media/lockscreen-dark-1100.webp 1100w, media/lockscreen-dark.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
              width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The same standby screen at night: dimmed text on a black background, the same street map now drawn in faint light grey, post-its and the shopping list muted.">
-        <img class="state-shot" data-for="snow" src="media/lockscreen-snow.webp"
-             srcset="media/lockscreen-snow-700.webp 700w, media/lockscreen-snow-1100.webp 1100w, media/lockscreen-snow.webp 1696w"
+             alt="The Hauser standby screen at night in Cologne: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Ring around the old town and the bend of the Rhine.">
+        <img class="state-shot" data-for="day" data-city="paris" src="media/standby-paris-day.webp"
+             srcset="media/standby-paris-day-700.webp 700w, media/standby-paris-day-1100.webp 1100w, media/standby-paris-day.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
              width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The same standby screen on a snowy night: small white flakes drift across the dark map behind the clock, the post-its muted.">
+             alt="The Hauser standby screen by day in Paris: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the avenues meeting at the Étoile.">
+        <img class="state-shot" data-for="night" data-city="paris" src="media/standby-paris-night.webp"
+             srcset="media/standby-paris-night-700.webp 700w, media/standby-paris-night-1100.webp 1100w, media/standby-paris-night.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen at night in Paris: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the avenues meeting at the Étoile.">
+        <img class="state-shot" data-for="day" data-city="barcelona" src="media/standby-barcelona-day.webp"
+             srcset="media/standby-barcelona-day-700.webp 700w, media/standby-barcelona-day-1100.webp 1100w, media/standby-barcelona-day.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen by day in Barcelona: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Eixample grid cut by the Diagonal.">
+        <img class="state-shot" data-for="night" data-city="barcelona" src="media/standby-barcelona-night.webp"
+             srcset="media/standby-barcelona-night-700.webp 700w, media/standby-barcelona-night-1100.webp 1100w, media/standby-barcelona-night.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen at night in Barcelona: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Eixample grid cut by the Diagonal.">
+        <img class="state-shot" data-for="day" data-city="new-york" src="media/standby-new-york-day.webp"
+             srcset="media/standby-new-york-day-700.webp 700w, media/standby-new-york-day-1100.webp 1100w, media/standby-new-york-day.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen by day in New York: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Manhattan grid with Broadway across it.">
+        <img class="state-shot" data-for="night" data-city="new-york" src="media/standby-new-york-night.webp"
+             srcset="media/standby-new-york-night-700.webp 700w, media/standby-new-york-night-1100.webp 1100w, media/standby-new-york-night.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen at night in New York: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the Manhattan grid with Broadway across it.">
+        <img class="state-shot" data-for="day" data-city="amsterdam" src="media/standby-amsterdam-day.webp"
+             srcset="media/standby-amsterdam-day-700.webp 700w, media/standby-amsterdam-day-1100.webp 1100w, media/standby-amsterdam-day.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen by day in Amsterdam: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the canal rings drawn by their quays.">
+        <img class="state-shot" data-for="night" data-city="amsterdam" src="media/standby-amsterdam-night.webp"
+             srcset="media/standby-amsterdam-night-700.webp 700w, media/standby-amsterdam-night-1100.webp 1100w, media/standby-amsterdam-night.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen at night in Amsterdam: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing the canal rings drawn by their quays.">
+        <img class="state-shot" data-for="day" data-city="petting" src="media/standby-petting-day.webp"
+             srcset="media/standby-petting-day-700.webp 700w, media/standby-petting-day-1100.webp 1100w, media/standby-petting-day.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen by day in Petting, Bavaria: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing a village: a handful of lanes.">
+        <img class="state-shot" data-for="night" data-city="petting" src="media/standby-petting-night.webp"
+             srcset="media/standby-petting-night-700.webp 700w, media/standby-petting-night-1100.webp 1100w, media/standby-petting-night.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="1060" loading="lazy" decoding="async"
+             alt="The Hauser standby screen at night in Petting, Bavaria: clock, date, the week's appointments, post-its and the shopping list over a faint street map showing a village: a handful of lanes.">
       </div>
-      <p class="device-caption">Real captures of the demo. The same minute of the same day, once with the sun up and once with snow falling after dark.</p>
-    </div>
-    <div class="details details-one reveal">
-      <figure class="detail">
-        <img src="media/lockscreen-snow-detail.webp" width="1200" height="800" loading="lazy" decoding="async"
-             alt="A one-to-one detail of the standby screen on a snowy night: small white flakes with a faint cool edge drift over the grey map lines beside the clock.">
-        <figcaption><span class="shot-label">Snow, 1:1</span> A few flakes at a time, never a blizzard. Rain is drawn even finer, as ink traces in the text colour.</figcaption>
-      </figure>
+      <p class="device-caption city-caption">
+        <span data-city="cologne">Cologne. The Ring around the old town, the Rhine as a gap.</span>
+        <span data-city="paris">Paris. Twelve avenues meeting at the Étoile.</span>
+        <span data-city="barcelona">Barcelona. The Eixample grid, cut by the Diagonal.</span>
+        <span data-city="new-york">New York. Midtown Manhattan, Broadway crossing the grid.</span>
+        <span data-city="amsterdam">Amsterdam. The canal rings, drawn by their quays.</span>
+        <span data-city="petting">Petting, Bavaria. A village: a handful of lanes, and that is the map.</span>
+      </p>
     </div>
   </div>
   <div class="wrap">
@@ -268,85 +312,49 @@
       <h2>The illustration is the state.</h2>
       <p class="body-text">
         Every room carries an illustration of itself, and the picture is the
-        reading. When the sun sets, the room's evening picture fades in over
-        the length of dusk. When a lamp is on, it is on in the picture. When
-        the last one goes out, the room goes dark.
+        reading. When the sun sets, the evening picture fades in over the length
+        of dusk. When a lamp is on, it is on in the picture. When the last one
+        goes out, the room goes dark. When it rains outside, the window light
+        turns grey and the rain runs down exactly where the glass is.
       </p>
       <p class="body-text">
-        When it rains outside, the window light turns grey and the rain runs
-        down exactly where the glass is: the picture set knows its windows,
-        so the weather never falls on the sofa. Try the four states.
+        Beside the picture sits one narrow control surface: rooms, scenes, the
+        lamps, the room's climate. It follows the sun too, so nobody in the
+        household ever reaches for a theme setting. Try the four states.
       </p>
     </div>
   </div>
   <div class="showcase-wide">
-    <div class="stage stage-room state-demo" data-state="light">
-      <div class="state-switch state-switch-float" role="group" aria-label="Show the living room in different states">
-        <button type="button" class="state-btn" data-state="light" aria-pressed="true">Sun</button>
-        <button type="button" class="state-btn" data-state="overcast" aria-pressed="false">Rain</button>
-        <button type="button" class="state-btn" data-state="dark" aria-pressed="false">Evening</button>
-        <button type="button" class="state-btn" data-state="dark-off" aria-pressed="false">Lights off</button>
-      </div>
-      <img class="stage-img is-light" src="media/room-light.webp"
-           srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The living room illustration in afternoon sun.">
-      <img class="stage-img is-overcast" src="media/room-overcast.webp"
-           srcset="media/room-overcast-700.webp 700w, media/room-overcast-1100.webp 1100w, media/room-overcast.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The living room illustration under an overcast sky, rain running down the balcony door.">
-      <img class="stage-img is-dark" src="media/room-dark.webp"
-           srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The living room illustration in the evening with two lamps on.">
-      <img class="stage-img is-dark-off" src="media/room-dark-off.webp"
-           srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The living room illustration at night with every lamp off.">
-      <div class="rain" aria-hidden="true">
-        <span class="rain-pane" style="clip-path: polygon(22.3% 19.9%, 30.1% 20.5%, 30.4% 47.3%, 22.7% 47.8%)"></span>
-        <span class="rain-pane" style="clip-path: polygon(31.7% 20.7%, 40% 21.4%, 40.2% 42.3%, 31.8% 41.8%)"></span>
-        <span class="rain-pane" style="clip-path: polygon(41.3% 21.6%, 48.1% 22.4%, 48% 40.5%, 41.3% 41.3%)"></span>
-      </div>
-      <p class="stage-label stage-label-room" aria-live="polite">
-        <span data-for="light">Sun. Golden window light, the lamps rest.</span>
-        <span data-for="overcast">Rain. The set's overcast picture, and rain clipped to the three panes.</span>
-        <span data-for="dark">Evening. The picture shows which lamps are on.</span>
-        <span data-for="dark-off">Lights off. Faded over the length of dusk, never switched.</span>
-      </p>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="showcase-head showcase-head-later">
-      <h3 class="h3-large">The controls, when you want them.</h3>
-      <p class="body-text">
-        A hand reaches for the panel and finds one narrow control surface
-        beside the picture: rooms, scenes, the lamps, the room's climate.
-        Nothing covers the room. The interface follows the sun through Home
-        Assistant, so nobody in the household ever reaches for a theme setting.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="state-demo" data-state="day">
-      <div class="state-switch" role="group" aria-label="Show the panel by day or by night">
-        <button type="button" class="state-btn" data-state="day" aria-pressed="true">Day</button>
-        <button type="button" class="state-btn" data-state="night" aria-pressed="false">Night</button>
+    <div class="state-demo" data-state="sun">
+      <div class="state-switch" role="group" aria-label="Show the room screen in different states">
+        <button type="button" class="state-btn" data-state="sun" aria-pressed="true">Sun</button>
+        <button type="button" class="state-btn" data-state="rain" aria-pressed="false">Rain</button>
+        <button type="button" class="state-btn" data-state="evening" aria-pressed="false">Evening</button>
+        <button type="button" class="state-btn" data-state="off" aria-pressed="false">Lights off</button>
       </div>
       <div class="device state-stack reveal">
-        <img class="state-shot" data-for="day" src="media/hero-home.webp"
+        <img class="state-shot" data-for="sun" src="media/hero-home.webp"
              srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
              width="1696" height="960" loading="lazy" decoding="async"
-             alt="The Hauser home screen by day: a compact control panel on the left with rooms, scenes, lamps and the room's climate, and the sunlit living-room illustration filling the rest of the screen.">
-        <img class="state-shot" data-for="night" src="media/home-dark.webp"
+             alt="The room screen by day: a compact control surface on the left with rooms, scenes, lamps and the room's climate, and the sunlit living-room illustration filling the rest.">
+        <img class="state-shot" data-for="rain" src="media/home-rain.webp"
+             srcset="media/home-rain-700.webp 700w, media/home-rain-1100.webp 1100w, media/home-rain.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
+             alt="The same screen on a rainy day: the room in flat grey window light with rain on the balcony door, the control surface unchanged.">
+        <img class="state-shot" data-for="evening" src="media/home-dark.webp"
              srcset="media/home-dark-700.webp 700w, media/home-dark-1100.webp 1100w, media/home-dark.webp 1696w"
              sizes="(min-width: 1360px) 1296px, 100vw"
              width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same home screen after dark: identical layout on dark surfaces, and the living room lit only by its own lamps.">
+             alt="The same screen after dark: dark surfaces on the control side, the living room lit by its own lamps.">
+        <img class="state-shot" data-for="off" src="media/home-off.webp"
+             srcset="media/home-off-700.webp 700w, media/home-off-1100.webp 1100w, media/home-off.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
+             alt="The same screen at night with every lamp off: the room illustration has gone dark, only a faint glow from the balcony door, all lamp tiles unlit.">
       </div>
-      <p class="device-caption">The same panel, the same second. Only the sun moved.</p>
+      <p class="device-caption">Real captures of the same panel. Sun and rain by day, evening and lights off after dark; the controls change with it.</p>
     </div>
   </div>
 
@@ -502,6 +510,53 @@
         </div>
         <p class="device-caption">The calendar is the paper of the week band, only larger. Your Home Assistant calendars, one sheet.</p>
       </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="showcase-head showcase-head-later">
+      <h3 class="h3-large">The instruments.</h3>
+      <p class="body-text">
+        Hold a lamp and its panel comes up: a tick scale for brightness, warm
+        to cool, the colours it can take. Hold a fan and the panel shows what
+        that fan can do and nothing it cannot: speed, presets, oscillation,
+        direction. Every device gets the same hand, the same scale, the same
+        weight under the finger.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="instruments">
+      <figure class="instrument state-demo reveal" data-state="a" data-cycle="a,b,c" data-interval="2600">
+        <div class="state-stack">
+          <img class="state-shot" data-for="a" src="media/lamp-100.webp" width="1016" height="1620" loading="lazy" decoding="async"
+               alt="The lamp panel: a large vertical tick scale for brightness at one hundred per cent, a warm-to-cool scale beneath it and a row of colour swatches.">
+          <img class="state-shot" data-for="b" src="media/lamp-60.webp" width="1016" height="1620" loading="lazy" decoding="async"
+               alt="The same lamp panel with the brightness scale at sixty per cent.">
+          <img class="state-shot" data-for="c" src="media/lamp-25.webp" width="1016" height="1620" loading="lazy" decoding="async"
+               alt="The same lamp panel with the brightness scale at twenty-five per cent.">
+        </div>
+        <figcaption>
+          <span data-for="a">Dining table, 100 %</span>
+          <span data-for="b">Dining table, 60 %</span>
+          <span data-for="c">Dining table, 25 %</span>
+        </figcaption>
+      </figure>
+      <figure class="instrument state-demo reveal" data-state="a" data-cycle="a,b,c" data-interval="2600">
+        <div class="state-stack">
+          <img class="state-shot" data-for="a" src="media/fan-low.webp" width="1016" height="1668" loading="lazy" decoding="async"
+               alt="The fan panel: a vertical tick scale for speed at thirty-five per cent, four preset cards, and two-way switches for oscillation and direction.">
+          <img class="state-shot" data-for="b" src="media/fan-turbo.webp" width="1016" height="1668" loading="lazy" decoding="async"
+               alt="The same fan panel in turbo with oscillation switched on.">
+          <img class="state-shot" data-for="c" src="media/fan-breeze.webp" width="1016" height="1668" loading="lazy" decoding="async"
+               alt="The same fan panel in breeze mode with the direction reversed.">
+        </div>
+        <figcaption>
+          <span data-for="a">Ceiling fan, 35 %</span>
+          <span data-for="b">Turbo, oscillating</span>
+          <span data-for="c">Breeze, reversed</span>
+        </figcaption>
+      </figure>
     </div>
   </div>
 
@@ -700,59 +755,72 @@
 </footer>
 
 <script>
-  // Zustandsvorführungen: eine Gruppe von Knöpfen schaltet `data-state` auf
-  // ihrem Container; Bilder und Bildunterschriften mit passendem `data-for`
-  // werden sichtbar. Ohne JavaScript steht der erste Zustand, die Knöpfe
-  // bleiben verborgen — eine leere Sektion wäre kaputt, nicht interaktiv.
-  function setupStateDemo(demo) {
-    var buttons = demo.querySelectorAll('.state-btn');
+  // Zustandsvorführungen. Ein Container trägt `data-state`; Bilder und
+  // Beschriftungen mit passendem `data-for` bekommen `is-shown`. Ohne
+  // JavaScript steht das erste Bild, die Knöpfe bleiben verborgen — eine
+  // leere Sektion wäre kaputt, nicht interaktiv.
+  document.documentElement.classList.add('has-js');
 
-    function apply(state) {
-      demo.dataset.state = state;
-      for (var i = 0; i < buttons.length; i++) {
-        buttons[i].setAttribute('aria-pressed', String(buttons[i].dataset.state === state));
-      }
-      var shots = demo.querySelectorAll('.state-shot');
-      for (var j = 0; j < shots.length; j++) {
-        shots[j].setAttribute('aria-hidden', String(shots[j].dataset.for !== state));
-      }
+  function inView(el) {
+    var box = el.getBoundingClientRect();
+    return box.bottom > 0 && box.top < (window.innerHeight || 0);
+  }
+
+  function refresh(demo) {
+    var state = demo.dataset.state;
+    var city = demo.dataset.city;
+    var items = demo.querySelectorAll('[data-for], [data-city]');
+    for (var i = 0; i < items.length; i++) {
+      var el = items[i];
+      var forOk = !el.hasAttribute('data-for') || el.dataset.for === state;
+      var cityOk = !el.hasAttribute('data-city') || el.dataset.city === city;
+      var shown = forOk && cityOk;
+      el.classList.toggle('is-shown', shown);
+      if (el.tagName === 'IMG') el.setAttribute('aria-hidden', String(!shown));
     }
-
-    for (var k = 0; k < buttons.length; k++) {
-      buttons[k].addEventListener('click', function (event) {
-        demo.removeAttribute('data-autocycle');
-        apply(event.currentTarget.dataset.state);
-      });
+    var buttons = demo.querySelectorAll('.state-btn');
+    for (var j = 0; j < buttons.length; j++) {
+      buttons[j].setAttribute('aria-pressed', String(buttons[j].dataset.state === state));
     }
   }
 
-  // Die Bühne im Kopf der Seite wandert selbst durch den Tag: Nachmittag,
-  // Regen, Abend, Nacht. Bei reduzierter Bewegung bleibt der Nachmittag stehen.
-  //
-  // Bewusst ohne Abbruch bei Berührung: Die Bühne trägt keinen Umschalter, den
-  // eine Hand übernehmen könnte, und auf dem Telefon beginnt jedes Scrollen mit
-  // einem Fingerdruck auf genau dieses Bild — der Lauf stand danach für immer.
-  function setupAutocycle(stage) {
-    var order = ['light', 'overcast', 'dark', 'dark-off'];
-    var index = 0;
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) return;
+  function setupStateDemo(demo) {
+    var buttons = demo.querySelectorAll('.state-btn');
+    for (var k = 0; k < buttons.length; k++) {
+      buttons[k].addEventListener('click', function (event) {
+        demo.dataset.state = event.currentTarget.dataset.state;
+        refresh(demo);
+      });
+    }
+    refresh(demo);
+  }
+
+  // Schleifen: `data-cycle` zählt den Zustand weiter, `data-cycle-city` den
+  // Ort. Nur solange das Bild im Blick ist, und nie bei reduzierter Bewegung.
+  // Bewusst ohne Abbruch bei Berührung: auf dem Telefon beginnt jedes Scrollen
+  // mit einem Fingerdruck, und ein Umschalter für Tag und Nacht soll die
+  // Städte nicht anhalten.
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setupCycle(el, attr, key) {
+    var order = (el.getAttribute(attr) || '').split(',').filter(Boolean);
+    if (reduceMotion || order.length < 2) return;
+    var interval = parseInt(el.dataset.interval, 10) || 5200;
     setInterval(function () {
-      if (document.hidden) return;
-      // Nur weiterzählen, solange das Bild im Blick ist: Wer zurückscrollt,
-      // findet den Zustand vor, den er verlassen hat.
-      var box = stage.getBoundingClientRect();
-      if (box.bottom < 0 || box.top > (window.innerHeight || 0)) return;
-      index = (index + 1) % order.length;
-      stage.dataset.state = order[index];
-    }, 5200);
+      if (document.hidden || !inView(el)) return;
+      var index = order.indexOf(el.dataset[key]);
+      el.dataset[key] = order[(index + 1) % order.length];
+      if (el.classList.contains('state-demo')) refresh(el);
+    }, interval);
   }
 
   (function () {
     var demos = document.querySelectorAll('.state-demo');
     for (var i = 0; i < demos.length; i++) setupStateDemo(demos[i]);
-    var hero = document.querySelector('.hero .stage');
-    if (hero) setupAutocycle(hero);
+    var cycled = document.querySelectorAll('[data-cycle]');
+    for (var j = 0; j < cycled.length; j++) setupCycle(cycled[j], 'data-cycle', 'state');
+    var cities = document.querySelectorAll('[data-cycle-city]');
+    for (var k = 0; k < cities.length; k++) setupCycle(cities[k], 'data-cycle-city', 'city');
   })();
 </script>
 
