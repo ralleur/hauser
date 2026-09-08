@@ -727,20 +727,25 @@
   }
 
   // Die Bühne im Kopf der Seite wandert selbst durch den Tag: Nachmittag,
-  // Regen, Abend, Nacht. Wer sie berührt, hält sie an. Bei reduzierter
-  // Bewegung bleibt der Nachmittag stehen.
+  // Regen, Abend, Nacht. Bei reduzierter Bewegung bleibt der Nachmittag stehen.
+  //
+  // Bewusst ohne Abbruch bei Berührung: Die Bühne trägt keinen Umschalter, den
+  // eine Hand übernehmen könnte, und auf dem Telefon beginnt jedes Scrollen mit
+  // einem Fingerdruck auf genau dieses Bild — der Lauf stand danach für immer.
   function setupAutocycle(stage) {
     var order = ['light', 'overcast', 'dark', 'dark-off'];
     var index = 0;
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) return;
-    var timer = setInterval(function () {
-      if (!stage.hasAttribute('data-autocycle')) { clearInterval(timer); return; }
+    setInterval(function () {
       if (document.hidden) return;
+      // Nur weiterzählen, solange das Bild im Blick ist: Wer zurückscrollt,
+      // findet den Zustand vor, den er verlassen hat.
+      var box = stage.getBoundingClientRect();
+      if (box.bottom < 0 || box.top > (window.innerHeight || 0)) return;
       index = (index + 1) % order.length;
       stage.dataset.state = order[index];
     }, 5200);
-    stage.addEventListener('pointerdown', function () { stage.removeAttribute('data-autocycle'); }, { once: true });
   }
 
   (function () {
