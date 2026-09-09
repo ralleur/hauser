@@ -8,6 +8,14 @@ import {
   haToSensor,
   haToLaundryState,
   haToFan,
+  haToCover,
+  haToVacuum,
+  haToLock,
+  haToHumidifier,
+  haToWaterHeater,
+  haToAlarm,
+  haToNumber,
+  haToSelect,
   haToValue,
   miredToKelvin,
   rgbToHex,
@@ -231,6 +239,52 @@ describe('haToFan', () => {
   });
 });
 
+describe('R28: weitere steuerbare Domänen', () => {
+  it('cover: Position, Neigung und Fähigkeiten aus der Bitmaske', () => {
+    expect(haToCover({ state: 'opening', attributes: { supported_features: 143, current_position: 40.4, current_tilt_position: 10 } }))
+      .toEqual({
+        on: true, position: 40, tilt: 10, moving: 'opening',
+        supportsOpen: true, supportsClose: true, supportsStop: true, supportsPosition: true, supportsTilt: true,
+      });
+    // Ohne Maske: Auf/Zu gelten als gegeben, Position nur mit Attribut.
+    expect(haToCover({ state: 'closed', attributes: {} })).toMatchObject({ on: false, position: 0, supportsOpen: true, supportsPosition: false, supportsTilt: false });
+  });
+  it('vacuum: Zustand, Akku, Saugstufen', () => {
+    expect(haToVacuum({ state: 'cleaning', attributes: { supported_features: 8252, battery_level: 87, fan_speed: 'turbo', fan_speed_list: ['quiet', 'turbo'] } }))
+      .toMatchObject({ on: true, state: 'cleaning', battery: 87, fanSpeed: 'turbo', fanSpeeds: ['quiet', 'turbo'], supportsStart: true, supportsPause: true, supportsReturn: true, supportsFanSpeed: true, supportsLocate: false });
+  });
+  it('lock: locking zählt als verriegelt, OPEN-Feature = Türöffner', () => {
+    expect(haToLock({ state: 'locking', attributes: { supported_features: 1 } })).toEqual({ locked: true, state: 'locking', supportsOpen: true });
+    expect(haToLock({ state: 'jammed', attributes: {} })).toEqual({ locked: false, state: 'jammed', supportsOpen: false });
+  });
+  it('humidifier und water_heater tragen Grenzen und Modi vom Gerät', () => {
+    expect(haToHumidifier({ state: 'on', attributes: { humidity: 55, current_humidity: 41, min_humidity: 30, max_humidity: 80, available_modes: ['auto', 'sleep'], mode: 'auto' } }))
+      .toEqual({ on: true, target: 55, mode: 'auto', current: 41, modes: ['auto', 'sleep'], minHumidity: 30, maxHumidity: 80, supportsModes: true });
+    expect(haToWaterHeater({ state: 'eco', attributes: { supported_features: 11, temperature: 55, current_temperature: 52, min_temp: 35, max_temp: 70, operation_list: ['eco', 'off'], operation_mode: 'eco' } }))
+      .toEqual({ on: true, target: 55, mode: 'eco', current: 52, modes: ['eco', 'off'], minTemp: 35, maxTemp: 70, supportsTarget: true, supportsModes: true, supportsOnOff: true });
+  });
+  it('alarm: Scharfschaltarten und Codepflicht', () => {
+    expect(haToAlarm({ state: 'armed_home', attributes: { supported_features: 7, code_format: 'number', code_arm_required: false } }))
+      .toEqual({ state: 'armed_home', codeFormat: 'number', codeArmRequired: false, supportsArmHome: true, supportsArmAway: true, supportsArmNight: true, supportsArmVacation: false, supportsArmCustom: false });
+  });
+  it('number und select: Wert mit Grenzen, Option aus Liste', () => {
+    expect(haToNumber({ state: '21.5', attributes: { min: 5, max: 30, step: 0.5, unit_of_measurement: '°C' } })).toEqual({ value: 21.5, min: 5, max: 30, step: 0.5, unit: '°C' });
+    expect(haToNumber({ state: 'unknown', attributes: {} })).toEqual({ value: null, min: 0, max: 100, step: 1, unit: null });
+    expect(haToSelect({ state: 'Party', attributes: { options: ['Normal', 'Party'] } })).toEqual({ option: 'Party', options: ['Normal', 'Party'] });
+  });
+  it('climate: Zusatzmodi und Grenzen nur, wenn das Thermostat sie meldet', () => {
+    expect(haToClimate({ state: 'heat_cool', attributes: { temperature: 21, hvac_modes: ['off', 'heat_cool', 'bogus'], fan_modes: ['low', 'high'], fan_mode: 'low', min_temp: 7, max_temp: 35 } }))
+      .toEqual({ target: 21, hvac: 'heat_cool', hvacModes: ['off', 'heat_cool'], fanModes: ['low', 'high'], fanMode: 'low', minTemp: 7, maxTemp: 35 });
+    expect(haToClimate({ state: 'heat', attributes: { temperature: 20 } })).toEqual({ target: 20, hvac: 'heat' });
+  });
+  it('haToValue routet die neuen Domänen', () => {
+    expect(haToValue('lock.tuer', { state: 'locked', attributes: {} })).toEqual({ locked: true, state: 'locked', supportsOpen: false });
+    expect(haToValue('siren.x', { state: 'on', attributes: {} })).toEqual({ on: true });
+    expect(haToValue('input_button.x', { state: '2026-09-07T10:00:00+00:00', attributes: {} })).toEqual({ pressedAt: Date.parse('2026-09-07T10:00:00+00:00') });
+    expect(haToValue('lawn_mower.x', { state: 'mowing', attributes: { supported_features: 7 } })).toEqual({ on: true, state: 'mowing', supportsStart: true, supportsPause: true, supportsDock: true });
+  });
+});
+
 describe('haToValue (Domänen-Routing)', () => {
   it('routet nach entity_id-Präfix', () => {
     expect(haToValue('light.x', { state: 'on', attributes: { brightness: 255 } })).toEqual({ on: true, brightness: 100 });
@@ -251,18 +305,18 @@ describe('haToValue (Domänen-Routing)', () => {
       entityPicture: '/api/camera_proxy/camera.balkon?token=test',
     });
   });
-  it('schaltbare Zusatz-Domänen: cover/binary_sensor → on/off-Shape', () => {
+  it('binary_sensor → on/off-Shape, cover → Rollo-Shape mit on-Feld', () => {
     expect(haToValue('binary_sensor.fenster', { state: 'off', attributes: {} })).toEqual({ on: false });
-    expect(haToValue('cover.x', { state: 'open', attributes: {} })).toEqual({ on: true });
-    expect(haToValue('cover.x', { state: 'opening', attributes: {} })).toEqual({ on: true });
-    expect(haToValue('cover.x', { state: 'closed', attributes: {} })).toEqual({ on: false });
+    expect(haToValue('cover.x', { state: 'open', attributes: {} })).toMatchObject({ on: true, moving: null });
+    expect(haToValue('cover.x', { state: 'opening', attributes: {} })).toMatchObject({ on: true, moving: 'opening' });
+    expect(haToValue('cover.x', { state: 'closed', attributes: {} })).toMatchObject({ on: false, position: 0 });
   });
   it('fan → Ventilator-Shape statt Schalter', () => {
     expect(haToValue('fan.x', { state: 'on', attributes: { supported_features: 3, percentage: 40 } }))
       .toMatchObject({ on: true, percentage: 40, supportsSpeed: true, supportsOscillate: true });
   });
   it('ungemappte Domäne → undefined', () => {
-    expect(haToValue('select.x', { state: 'running', attributes: {} })).toBeUndefined();
+    expect(haToValue('scene.x', { state: 'running', attributes: {} })).toBeUndefined();
     expect(haToValue('automation.x', { state: 'on', attributes: {} })).toBeUndefined();
   });
 });

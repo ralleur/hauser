@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../../styles/settings.css';
   import { onMount, tick, type Component } from 'svelte';
+  import { createLatestLazyLoader } from '../state/lazy-loader.ts';
   import Icon from '../components/Icon.svelte';
   import { hauserUpdates, systemStatus, refreshSystemStatus } from '../state/system-status.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
@@ -21,21 +22,7 @@
     openSetting,
   } from '../state/settings.svelte.ts';
 
-  import RoomsDevicesSection from '../components/settings/RoomsDevicesSection.svelte';
-  import SecuritySensorsSection from '../components/settings/SecuritySensorsSection.svelte';
-  import NotificationsSection from '../components/settings/NotificationsSection.svelte';
-  import HotelModeSection from '../components/settings/HotelModeSection.svelte';
-  import HotelAllowlistSection from '../components/settings/HotelAllowlistSection.svelte';
-  import ServicesSection from '../components/settings/ServicesSection.svelte';
-  import InterfaceSection from '../components/settings/InterfaceSection.svelte';
-  import AmbientSection from '../components/settings/AmbientSection.svelte';
-  import CalendarSection from '../components/settings/CalendarSection.svelte';
-  import ShoppingSection from '../components/settings/ShoppingSection.svelte';
-  import MediaSection from '../components/settings/MediaSection.svelte';
-  import StatusSection from '../components/settings/StatusSection.svelte';
   import { pairingUi } from '../state/pairing.svelte.ts';
-  import AiCustomizingSection from '../components/settings/AiCustomizingSection.svelte';
-  import MaintenanceSection from '../components/settings/MaintenanceSection.svelte';
 
   let { phone = false, titleAnchor = $bindable() }: { phone?: boolean; titleAnchor?: HTMLHeadingElement } = $props();
   let phoneSectionOpen = $state(false);
@@ -58,28 +45,41 @@
     if (connection().status === 'connected') void refreshSystemStatus();
   });
 
-  /* Sektions-Id → Komponente. Die Registry bestimmt Reihenfolge und
-     Gruppierung, diese Tabelle nur, was im Detailbereich gerendert wird.
-     Der Record-Typ erzwingt, dass jede Sektion der Registry eine Ansicht hat
-     — eine neue Sektion ohne Komponente fällt beim Typecheck auf. */
-  const SECTION_VIEWS: Record<SettingsSectionId, Component> = {
-    'rooms-devices': RoomsDevicesSection,
-    'security-sensors': SecuritySensorsSection,
-    'notifications': NotificationsSection,
-    'hotel-mode': HotelModeSection,
-    'hotel-guest-access': HotelAllowlistSection,
-    'appearance': InterfaceSection,
-    'ambient': AmbientSection,
-    'calendar': CalendarSection,
-    'shopping': ShoppingSection,
-    'media': MediaSection,
-    'services': ServicesSection,
-    'status': StatusSection,
-    'ai-customizing': AiCustomizingSection,
-    'maintenance': MaintenanceSection,
-  } as const;
+  /* Sektions-Id → Baustein, einzeln geladen. Statisch gebündelt trug der
+     System-Screen 416 KB — davon rund 195 KB Zeichenketten, weil praktisch der
+     gesamte Einstellungs-Wortschatz in sechs Sprachen mitkam, und der Chunk
+     in der App gar nicht mehr lud. Geladen wird jetzt nur die sichtbare
+     Sektion; der Record-Typ erzwingt weiterhin, dass jede Sektion der
+     Registry einen Baustein hat. */
+  const sectionLoaders: Record<SettingsSectionId, () => Promise<{ default: Component }>> = {
+    'rooms-devices': () => import('../components/settings/RoomsDevicesSection.svelte'),
+    'security-sensors': () => import('../components/settings/SecuritySensorsSection.svelte'),
+    'notifications': () => import('../components/settings/NotificationsSection.svelte'),
+    'hotel-mode': () => import('../components/settings/HotelModeSection.svelte'),
+    'hotel-guest-access': () => import('../components/settings/HotelAllowlistSection.svelte'),
+    'appearance': () => import('../components/settings/InterfaceSection.svelte'),
+    'ambient': () => import('../components/settings/AmbientSection.svelte'),
+    'calendar': () => import('../components/settings/CalendarSection.svelte'),
+    'shopping': () => import('../components/settings/ShoppingSection.svelte'),
+    'media': () => import('../components/settings/MediaSection.svelte'),
+    'services': () => import('../components/settings/ServicesSection.svelte'),
+    'status': () => import('../components/settings/StatusSection.svelte'),
+    'ai-customizing': () => import('../components/settings/AiCustomizingSection.svelte'),
+    'maintenance': () => import('../components/settings/MaintenanceSection.svelte'),
+  };
+  const sectionLoader = createLatestLazyLoader(sectionLoaders);
 
-  const SectionView = $derived(SECTION_VIEWS[settingsUi.section]);
+  let SectionView = $state<Component | null>(null);
+  let sectionFailed = $state(false);
+
+  function loadSection(id: SettingsSectionId): void {
+    sectionFailed = false;
+    void sectionLoader.load(id, (module) => { SectionView = module.default; })
+      .catch(() => { sectionFailed = true; });
+  }
+
+  $effect(() => { loadSection(settingsUi.section); });
+
 
   function openPairing(): void {
     pairingUi.autoStart = true;
@@ -226,7 +226,15 @@
         </div>
       {/if}
 
-      <SectionView />
+      {#if SectionView}
+        <SectionView />
+      {:else if sectionFailed}
+        <p class="settings-section-state" role="status">
+          {m.sys_section_failed()}
+          <button class="secondary-btn pressable" type="button"
+                  onclick={() => loadSection(settingsUi.section)}>{m.library_retry()}</button>
+        </p>
+      {/if}
     </div>
   </section>
 </div>

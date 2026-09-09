@@ -5,6 +5,112 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-09
+
+### Added
+
+- **Telefon: The quick action next to the temperature can carry any device.**
+  A long press on the vacation button opens an editor: pick any switchable
+  device and it sits behind the button from then on. Its icon is suggested from
+  the device itself, unless you deliberately choose your own from the icon
+  catalogue.
+- **Telefon: The bottom bar can be arranged from the More menu.** Two groups —
+  the four slots of the bar and everything else. Drag a category upwards past
+  the heading to pin it below, or use plus and minus. "More" holds the last
+  slot as long as something sits behind it.
+- **Raum: The house hands its room pictures to devices without AVIF.**
+  `GET /api/app/hero/:roomId/:variant?w=` returns the room's picture as JPEG in
+  the requested width — the same picture the wall shows, for the watch.
+- **Raum: The demo has a ceiling fan.** It hangs in the bedroom and shows the
+  fan panel with speed, presets, oscillation and direction.
+
+### Changed
+
+- **Blick: The day theme stands on a warm ground.** The light surfaces move
+  from a cool grey to a warm off-white, and cards, overlays and borders follow
+  the same undertone so the surfaces no longer look patchy against each other.
+  The night theme is untouched.
+
+- **Telefon: The More menu shows every category, not only the hidden ones.**
+  It carries a grip, a subtitle and one button that leads to arranging the bar.
+  Whoever looks here should not have to know where something hangs first.
+
+- **Telefon: A swipe down closes a room from anywhere in it.** The gesture used
+  to hang on the sheet's head alone; it now works across the whole surface,
+  and the room editor has it too. While the content is scrolled, the downward
+  movement belongs to the list again.
+
+- **Telefon: The device search lifts itself above the keyboard.** Tapping the
+  search field in a room's device list moves it to the top of the panel, so the
+  suggestions stand above the keyboard instead of behind it.
+
+- **Telefon: Energy reads as a page.** Four periods sit in two rows with the
+  active one marked, the switch between flow and consumption says in plain
+  words where it leads, and the readings fill their row instead of standing
+  narrow at the edge.
+
+- **Telefon: The shopping list fits a phone again.** Title and tools shared one
+  line and pushed the page sideways on a 390 pixel screen; they now wrap and the
+  page can no longer be scrolled horizontally.
+
+- **System: The settings list sits evenly again.** The hairline between two
+  groups carried eight pixels of air that fell to one side, so the last entry of
+  a group sat visibly too high and the first of the next too low.
+
+- **System: Without a Hauser server, the settings only show what works.** On the
+  Apple Home path there is no Home Assistant, Jellyfin, Paperless, family data
+  or room picture assistant — those sections and entries now stay out of the
+  list and out of the search instead of reaching into nothing.
+
+- **System: The settings load one section at a time.** The screen used to bundle
+  all fourteen sections into a single 416 KB chunk that the companion app could
+  not load at all; it is now 17 KB plus the section you open.
+
+- **Steuerung: The first tap after opening the app arrives.** Until the socket
+  stood, every command was dropped — exactly the window the first grab falls
+  into. Commands are now accepted and sent as soon as the connection is up.
+
+- **Panel: The iPad's own status bar steps aside.** Hauser draws its own header
+  with clock, date and connection, so the system clock no longer stands above
+  it twice. It returns as soon as the view switches to the phone shell.
+
+- **Blick: The project page shows the standby in six places.** Cologne, Paris,
+  Barcelona, New York, Amsterdam and a Bavarian village take turns behind the
+  clock, by day or by night, to show that the map is your own streets and that
+  the radius picks itself. The room section switches the real screen through
+  sun, rain, evening and lights off, controls included, and the two voices
+  section shows the lamp and fan panels stepping through their states.
+
+- **Blick: The project page says what Hauser is, in the first sentence.** The
+  headline used to sit inside the picture frame and was cut off on phones, so
+  the first screen showed a living room and not one word about the product.
+  Headline, a plain description and the install facts now come before the
+  picture, followed by three sober paragraphs: what it sits on, what it runs
+  on, and who owns the data.
+
+### Fixed
+
+- **Blick: Rain and snow fill the whole screen.** The drifting layer began each
+  pass with its lower edge on the top of the screen, so it only snowed in the
+  upper part of the picture until the pass was nearly over — in standby as well
+  as in the window of a room. The movement now runs downwards out of its
+  resting position and covers the surface at every moment.
+
+## [0.11.0] - 2026-09-07
+
+### Added
+
+- **Steuerung: Every device Home Assistant can control has its own second
+  level.** Blinds and valves get open, stop and close plus position and tilt;
+  vacuums start, pause, return to the dock and choose their suction; locks
+  lock, unlock and open the door; humidifiers and water heaters carry their
+  target and operating mode; lawn mowers mow, pause and dock; alarm panels arm
+  and disarm, asking for a code only when the device requires one; numbers,
+  selections and buttons can be set, chosen and pressed. Thermostats show
+  every mode they report, along with fan, preset and swing, and their scale
+  follows the device's own limits. As with the fan: what the device does not
+  report does not appear.
+
 ## [0.10.1] - 2026-09-07
 
 ### Changed
@@ -30,8 +136,10 @@ Semantic Versioning for its public release line.
 - **The room tiles on the phone go dark with the room.** In the evening a tile
   now shows the unlit night picture whenever no light is on in that room, and
   the lit one as soon as a lamp burns — the same reading the large stage has
-  always had. The tiles still load the small phone-sized picture, so the
-  darkened version costs no more to show than the lit one.
+  always had, and the change fades in the same way: when the last light in a
+  room goes out, its tile sinks slowly into the dark instead of flipping.
+  The tiles still load the small phone-sized picture, so the darkened version
+  costs no more to show than the lit one.
 
 ## [0.9.1] - 2026-09-07
 

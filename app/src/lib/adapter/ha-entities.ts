@@ -6,7 +6,11 @@
    Ohne WebSocket-/Framework-Bezug → per Unit-Test abgesichert (ha-entities.test).
    ============================================ */
 
-import type { CameraValue, FanValue, LightValue, ClimateValue, MediaValue, PersonValue, SunValue, SensorValue, SwitchValue } from './types.ts';
+import type {
+  AlarmValue, ButtonValue, CameraValue, CoverValue, FanValue, HumidifierValue, HvacMode, LightValue, LockValue,
+  ClimateValue, MediaValue, MowerValue, NumberValue, PersonValue, SelectValue, SunValue, SensorValue, SwitchValue,
+  VacuumValue, WaterHeaterValue,
+} from './types.ts';
 
 /* Roher HA-Entity-Zustand, wie ihn `subscribe_entities` transportiert. */
 export interface RawEntity {
@@ -134,19 +138,42 @@ export function haToLight(raw: RawEntity, prev?: Partial<LightValue>): LightValu
   return v;
 }
 
+const HVAC_MODES = new Set<HvacMode>(['heat', 'cool', 'off', 'heat_cool', 'auto', 'dry', 'fan_only']);
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+function num(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+function features(raw: RawEntity): number {
+  const f = raw.attributes.supported_features;
+  return typeof f === 'number' ? f : 0;
+}
+
 export function haToClimate(raw: RawEntity): ClimateValue {
-  const t = raw.attributes.temperature;
+  const a = raw.attributes;
+  const t = a.temperature;
   const target = typeof t === 'number' ? t : 20;
-  const hvac: ClimateValue['hvac'] =
-    raw.state === 'heat' || raw.state === 'cool' || raw.state === 'off'
-      ? raw.state
-      : 'off';
+  const hvac: ClimateValue['hvac'] = HVAC_MODES.has(raw.state as HvacMode) ? (raw.state as HvacMode) : 'off';
   const v: ClimateValue = { target, hvac };
   // Ist-Temperatur (read-only): nur übernehmen, wenn die Entität sie meldet —
   // sonst bleibt `current` undefined und die Anzeige greift auf den nächsten
   // Fallback zurück (roomTemperature()).
-  const c = raw.attributes.current_temperature;
+  const c = a.current_temperature;
   if (typeof c === 'number') v.current = c;
+  // Zusatzmodi und Grenzen (R28): nur, was das Thermostat selbst meldet.
+  const hvacModes = stringList(a.hvac_modes).filter((mode): mode is HvacMode => HVAC_MODES.has(mode as HvacMode));
+  if (hvacModes.length) v.hvacModes = hvacModes;
+  const fanModes = stringList(a.fan_modes);
+  if (fanModes.length) { v.fanModes = fanModes; v.fanMode = typeof a.fan_mode === 'string' ? a.fan_mode : null; }
+  const presetModes = stringList(a.preset_modes);
+  if (presetModes.length) { v.presetModes = presetModes; v.presetMode = typeof a.preset_mode === 'string' ? a.preset_mode : null; }
+  const swingModes = stringList(a.swing_modes);
+  if (swingModes.length) { v.swingModes = swingModes; v.swingMode = typeof a.swing_mode === 'string' ? a.swing_mode : null; }
+  const minTemp = num(a.min_temp);
+  const maxTemp = num(a.max_temp);
+  if (minTemp !== null && maxTemp !== null && minTemp < maxTemp) { v.minTemp = minTemp; v.maxTemp = maxTemp; }
   return v;
 }
 
@@ -165,17 +192,185 @@ export function haToLaundryState(raw: RawEntity): LaundryRawState {
   };
 }
 
-/* cover.* trägt open/opening/closed/closing — für die Switch-Kategorie
-   (Stufe 1: cover läuft als Toggle) zählt „nicht zu" als an. */
-export function haToCover(raw: RawEntity): SwitchValue {
-  return { on: raw.state === 'open' || raw.state === 'opening' };
+/* cover.* (R28): open/opening/closed/closing plus Position und Neigung.
+   Bitmaske CoverEntityFeature: OPEN=1, CLOSE=2, SET_POSITION=4, STOP=8,
+   OPEN_TILT=16, CLOSE_TILT=32, STOP_TILT=64, SET_TILT_POSITION=128. Ohne
+   Maske verrät sich die Fähigkeit über das Attribut (Oder-Fallback wie fan). */
+export function haToCover(raw: RawEntity): CoverValue {
+  const a = raw.attributes;
+  const f = features(raw);
+  const position = num(a.current_position);
+  const tilt = num(a.current_tilt_position);
+  const hasMask = f !== 0;
+  return {
+    on: raw.state === 'open' || raw.state === 'opening',
+    position: position !== null ? Math.min(100, Math.max(0, Math.round(position))) : (raw.state === 'closed' || raw.state === 'closing' ? 0 : 100),
+    tilt: tilt !== null ? Math.min(100, Math.max(0, Math.round(tilt))) : 0,
+    moving: raw.state === 'opening' || raw.state === 'closing' ? raw.state : null,
+    supportsOpen: !hasMask || (f & 1) !== 0,
+    supportsClose: !hasMask || (f & 2) !== 0,
+    supportsStop: (f & 8) !== 0,
+    supportsPosition: (f & 4) !== 0 || position !== null,
+    supportsTilt: (f & 128) !== 0 || tilt !== null,
+  };
 }
 
-/* vacuum.* trägt state cleaning/returning/paused/docked/idle/error — für die
-   Switch-Kategorie (Stufe 1: Start/Rückkehr-zur-Basis als Toggle) zählt
-   „aktiv unterwegs" als an. */
-export function haToVacuum(raw: RawEntity): SwitchValue {
-  return { on: raw.state === 'cleaning' || raw.state === 'returning' };
+/* valve.* (R28): dieselbe Form wie cover, ohne Neigung. ValveEntityFeature:
+   OPEN=1, CLOSE=2, SET_POSITION=4, STOP=8. */
+export function haToValve(raw: RawEntity): CoverValue {
+  const a = raw.attributes;
+  const f = features(raw);
+  const position = num(a.current_position);
+  const hasMask = f !== 0;
+  return {
+    on: raw.state === 'open' || raw.state === 'opening',
+    position: position !== null ? Math.min(100, Math.max(0, Math.round(position))) : (raw.state === 'closed' || raw.state === 'closing' ? 0 : 100),
+    tilt: 0,
+    moving: raw.state === 'opening' || raw.state === 'closing' ? raw.state : null,
+    supportsOpen: !hasMask || (f & 1) !== 0,
+    supportsClose: !hasMask || (f & 2) !== 0,
+    supportsStop: (f & 8) !== 0,
+    supportsPosition: (f & 4) !== 0 || position !== null,
+    supportsTilt: false,
+  };
+}
+
+/* vacuum.* (R28): state cleaning/returning/paused/docked/idle/error.
+   VacuumEntityFeature: PAUSE=4, STOP=8, RETURN_HOME=16, FAN_SPEED=32,
+   BATTERY=64, LOCATE=512, START=8192 (TURN_ON/OFF=1/2 sind veraltet). */
+export function haToVacuum(raw: RawEntity): VacuumValue {
+  const a = raw.attributes;
+  const f = features(raw);
+  const fanSpeeds = stringList(a.fan_speed_list);
+  const battery = num(a.battery_level);
+  const hasMask = f !== 0;
+  return {
+    on: raw.state === 'cleaning' || raw.state === 'returning',
+    state: raw.state,
+    fanSpeed: typeof a.fan_speed === 'string' ? a.fan_speed : null,
+    battery: battery !== null ? Math.min(100, Math.max(0, Math.round(battery))) : null,
+    fanSpeeds,
+    supportsStart: !hasMask || (f & 8192) !== 0 || (f & 1) !== 0,
+    supportsPause: (f & 4) !== 0,
+    supportsStop: (f & 8) !== 0,
+    supportsReturn: !hasMask || (f & 16) !== 0,
+    supportsLocate: (f & 512) !== 0,
+    supportsFanSpeed: (f & 32) !== 0 || fanSpeeds.length > 0,
+  };
+}
+
+/* lock.* (R28): locked/unlocked/locking/unlocking/jammed/open.
+   LockEntityFeature.OPEN=1 = Türöffner. */
+export function haToLock(raw: RawEntity): LockValue {
+  return {
+    locked: raw.state === 'locked' || raw.state === 'locking',
+    state: raw.state,
+    supportsOpen: (features(raw) & 1) !== 0,
+  };
+}
+
+/* humidifier.* (R28): HumidifierEntityFeature.MODES=1. */
+export function haToHumidifier(raw: RawEntity): HumidifierValue {
+  const a = raw.attributes;
+  const modes = stringList(a.available_modes);
+  const min = num(a.min_humidity) ?? 0;
+  const max = num(a.max_humidity) ?? 100;
+  return {
+    on: raw.state === 'on',
+    target: num(a.humidity) ?? 50,
+    mode: typeof a.mode === 'string' ? a.mode : null,
+    current: num(a.current_humidity),
+    modes,
+    minHumidity: min < max ? min : 0,
+    maxHumidity: min < max ? max : 100,
+    supportsModes: (features(raw) & 1) !== 0 || modes.length > 0,
+  };
+}
+
+/* water_heater.* (R28): WaterHeaterEntityFeature TARGET_TEMPERATURE=1,
+   OPERATION_MODE=2, AWAY_MODE=4, ON_OFF=8. Der state ist die Betriebsart. */
+export function haToWaterHeater(raw: RawEntity): WaterHeaterValue {
+  const a = raw.attributes;
+  const f = features(raw);
+  const modes = stringList(a.operation_list);
+  const min = num(a.min_temp) ?? 30;
+  const max = num(a.max_temp) ?? 70;
+  const mode = typeof a.operation_mode === 'string' ? a.operation_mode : raw.state || null;
+  return {
+    on: raw.state !== 'off' && raw.state !== 'unavailable' && raw.state !== 'unknown',
+    target: num(a.temperature) ?? 50,
+    mode,
+    current: num(a.current_temperature),
+    modes,
+    minTemp: min < max ? min : 30,
+    maxTemp: min < max ? max : 70,
+    supportsTarget: (f & 1) !== 0 || num(a.temperature) !== null,
+    supportsModes: (f & 2) !== 0 || modes.length > 0,
+    supportsOnOff: (f & 8) !== 0,
+  };
+}
+
+/* lawn_mower.* (R28): mowing/docked/paused/error. LawnMowerEntityFeature
+   START_MOWING=1, PAUSE=2, DOCK=4. */
+export function haToMower(raw: RawEntity): MowerValue {
+  const f = features(raw);
+  const hasMask = f !== 0;
+  return {
+    on: raw.state === 'mowing',
+    state: raw.state,
+    supportsStart: !hasMask || (f & 1) !== 0,
+    supportsPause: (f & 2) !== 0,
+    supportsDock: !hasMask || (f & 4) !== 0,
+  };
+}
+
+/* alarm_control_panel.* (R28): AlarmControlPanelEntityFeature ARM_HOME=1,
+   ARM_AWAY=2, ARM_NIGHT=4, ARM_CUSTOM_BYPASS=16, ARM_VACATION=32. */
+export function haToAlarm(raw: RawEntity): AlarmValue {
+  const a = raw.attributes;
+  const f = features(raw);
+  return {
+    state: raw.state,
+    codeFormat: a.code_format === 'number' || a.code_format === 'text' ? a.code_format : null,
+    codeArmRequired: a.code_arm_required !== false,
+    supportsArmHome: (f & 1) !== 0,
+    supportsArmAway: (f & 2) !== 0,
+    supportsArmNight: (f & 4) !== 0,
+    supportsArmVacation: (f & 32) !== 0,
+    supportsArmCustom: (f & 16) !== 0,
+  };
+}
+
+/* number.* / input_number.* (R28): Wert im state, Grenzen in den Attributen. */
+export function haToNumber(raw: RawEntity): NumberValue {
+  const a = raw.attributes;
+  const min = num(a.min) ?? 0;
+  const max = num(a.max) ?? 100;
+  const step = num(a.step);
+  const n = Number(raw.state);
+  return {
+    value: raw.state === '' || raw.state === 'unavailable' || raw.state === 'unknown' || Number.isNaN(n) ? null : n,
+    min: min < max ? min : 0,
+    max: min < max ? max : 100,
+    step: step !== null && step > 0 ? step : 1,
+    unit: typeof a.unit_of_measurement === 'string' ? a.unit_of_measurement : null,
+  };
+}
+
+/* select.* / input_select.* (R28): Option im state, Liste in `options`. */
+export function haToSelect(raw: RawEntity): SelectValue {
+  const options = stringList(raw.attributes.options);
+  return {
+    option: options.includes(raw.state) ? raw.state : null,
+    options,
+  };
+}
+
+/* button.* / input_button.* (R28): der state ist der Zeitstempel des letzten
+   Drucks (ISO), `unknown` vor dem ersten. */
+export function haToButton(raw: RawEntity): ButtonValue {
+  const ts = Date.parse(raw.state);
+  return { pressedAt: Number.isNaN(ts) ? null : ts };
 }
 
 /* fan.* (docs/04): Ventilatoren tragen neben an/aus bis zu vier steuerbare
@@ -278,9 +473,19 @@ export function haToValue(entityId: string, raw: RawEntity, prev?: unknown): unk
   if (entityId.startsWith('fan.')) {
     return haToFan(raw);
   }
-  if (entityId.startsWith('switch.') || entityId.startsWith('input_boolean.')) {
+  if (entityId.startsWith('switch.') || entityId.startsWith('input_boolean.')
+      || entityId.startsWith('siren.') || entityId.startsWith('remote.')) {
     return haToSwitch(raw);
   }
+  if (entityId.startsWith('valve.')) return haToValve(raw);
+  if (entityId.startsWith('lock.')) return haToLock(raw);
+  if (entityId.startsWith('humidifier.')) return haToHumidifier(raw);
+  if (entityId.startsWith('water_heater.')) return haToWaterHeater(raw);
+  if (entityId.startsWith('lawn_mower.')) return haToMower(raw);
+  if (entityId.startsWith('alarm_control_panel.')) return haToAlarm(raw);
+  if (entityId.startsWith('number.') || entityId.startsWith('input_number.')) return haToNumber(raw);
+  if (entityId.startsWith('select.') || entityId.startsWith('input_select.')) return haToSelect(raw);
+  if (entityId.startsWith('button.') || entityId.startsWith('input_button.')) return haToButton(raw);
   if (entityId.startsWith('binary_sensor.')) {
     return haToSwitch(raw); // on/off-Zustand, read-only (info-Kategorie)
   }

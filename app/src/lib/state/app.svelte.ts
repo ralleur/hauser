@@ -176,6 +176,17 @@ export const HVAC_MODES = [
   { id: 'off', get label() { return m.climate_mode_off(); }, icon: 'i-power' },
 ] as const;
 
+/* Alle HVAC-Modi, die Home Assistant kennt (R28): die Detail-Ebene zeigt
+   davon nur die, die das Thermostat in `hvac_modes` meldet; die Raum-Pille
+   bleibt bei den drei Grundmodi oben. */
+export const HVAC_MODES_ALL = [
+  ...HVAC_MODES,
+  { id: 'heat_cool', get label() { return m.climate_mode_heat_cool(); }, icon: 'i-sun-snowflake-variant' },
+  { id: 'auto', get label() { return m.climate_mode_auto(); }, icon: 'i-thermostat-auto' },
+  { id: 'dry', get label() { return m.climate_mode_dry(); }, icon: 'i-water-percent' },
+  { id: 'fan_only', get label() { return m.climate_mode_fan_only(); }, icon: 'i-fan' },
+] as const;
+
 /* Fake-Command-Dispatch: loggt nur; die Anbindungs-Session ersetzt das durch
    CommandQueue → WebSocket (ADR-015). Der optimistische UI-Update ist zu
    diesem Zeitpunkt bereits passiert. */

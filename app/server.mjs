@@ -1,7 +1,7 @@
 import { existsSync, renameSync } from 'node:fs';
 import http from 'node:http';
 import { dirname, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createHaSupervisorClient,
   parseHaConnectionMode,
@@ -43,6 +43,9 @@ import {
   REQUIRED_WRITABLE_DIRS,
   PAIRING_DEVICES_PATH,
   REMOTE_URL,
+  TUNNEL_BIN,
+  TUNNEL_CONTROL,
+  TUNNEL_STATE_DIR,
   ROOM_IMAGE_ASSET_ROOT,
   ROOM_IMAGE_CREDENTIAL_PATH,
   ROOM_IMAGE_TEMP_ROOT,
@@ -50,7 +53,12 @@ import {
   ROOM_IMAGE_CODEX_VISION_MODEL,
   ROOM_IMAGE_VISION_MODEL,
   deriveRoomImagePhoneVariants,
+  sharp,
+  sharpAvailable,
 } from './server/runtime-env.mjs';
+
+/* Mitgelieferte Raumbilder liegen im Build unter dist/hero, in der Werkstatt unter public/hero. */
+const PUBLIC_ROOT = fileURLToPath(new URL('./public', import.meta.url));
 import {
   ambientRequestAllowed,
   configRequestAllowed,
@@ -113,8 +121,11 @@ import { createFamilyDataStore, serveFamilyData } from './server/family-data.mjs
 import { notionShoppingRoute, serveNotionShopping } from './server/shopping-notion.mjs';
 import { createMomentsService, MOMENT_HOLIDAYS_CONFIG_KEY, serveMoments } from './server/moments.mjs';
 import { createWeatherService, serveWeather } from './server/weather.mjs';
-import { authenticateRequest, createDeviceStore, PAIRING_ROUTE_PREFIX, remoteGateAllows, remoteGateReject, servePairing } from './server/pairing.mjs';
-import { APP_ROUTE_PREFIX, createFileIndex, serveAppBundle } from './server/app-bundle.mjs';
+import { applyAppCors, authenticateRequest, CLAIM_LIMIT_PER_MINUTE, createDeviceStore, createRateLimiter, PAIRING_ROUTE_PREFIX, remoteGateAllows, remoteGateReject, servePairing, TOKEN_FAILURE_LIMIT_PER_MINUTE } from './server/pairing.mjs';
+import { APP_ROUTE_PREFIX, createFileIndex, readTextIfExists, serveAppBundle } from './server/app-bundle.mjs';
+import { createTunnelSupervisor, REMOTE_ROUTE_PREFIX, serveRemote } from './server/remote.mjs';
+import { createAppCommandService, serveAppCommands } from './server/app-commands.mjs';
+import { APP_HERO_ROUTE_PREFIX, createAppHeroService, serveAppHero } from './server/app-hero.mjs';
 import {
   haCameraProxyRoute,
   haRestUrl,
@@ -309,6 +320,11 @@ export function createHmiServer(
     pairingDevicesPath = PAIRING_DEVICES_PATH,
     deviceStore = null,
     remoteUrl = REMOTE_URL,
+    tunnelBinary = TUNNEL_BIN,
+    tunnelStateDir = TUNNEL_STATE_DIR,
+    tunnelControl = TUNNEL_CONTROL,
+    tunnelTarget = `http://127.0.0.1:${PORT}`,
+    tunnel = null,
     momentsService = null,
     weatherService = null,
     configMutationCoordinator = null,
@@ -441,7 +457,10 @@ export function createHmiServer(
     assertSetupRecoveryHealthy,
     preflight: hotelActivationPreflight,
   });
-  const hotelCheckouts = hotelCheckoutService || createHotelCheckoutService({
+  /* Gäste-Tokens (Plan 21, Stufe 7) erlöschen mit dem Checkout; der Geräte-
+     speicher entsteht erst später, daher über einen Verweis. */
+  let revokeGuestDevices = () => 0;
+  const hotelCheckoutsInner = hotelCheckoutService || createHotelCheckoutService({
     stays: hotelStays,
     store: hotelStore,
     guests: hotelGuestStates,
@@ -452,6 +471,14 @@ export function createHmiServer(
     eventClientFactory: hotelEventClientFactory,
     commandClientFactory: hotelCommandClientFactory,
   });
+  const hotelCheckouts = {
+    ...hotelCheckoutsInner,
+    async checkout(...args) {
+      const result = await hotelCheckoutsInner.checkout(...args);
+      if (result?.ok) revokeGuestDevices();
+      return result;
+    },
+  };
   const library = songLibrary || createSongLibrary();
   const roomImageUploads = setupRecoveryResult.ok ? (roomImageUploadStore || roomImageUploadStoreFactory({
     root: roomImageUploadRoot, now: roomImageNow, assertSetupRecoveryHealthy,
@@ -706,15 +733,15 @@ export function createHmiServer(
   });
   const notificationsService = {
     store: notificationRulesStore ?? createNotificationRulesStore(notificationRulesPath),
-    async sync(rules) {
-      if (notificationSync) return notificationSync(rules);
+    async sync(rules, push = { service: null }) {
+      if (notificationSync) return notificationSync(rules, push);
       const credentials = resolveServerHaAccess(configStore, haConnectionMode);
       if (!credentials) {
         throw createNotificationError('NOTIFICATIONS_HOME_ASSISTANT_NOT_CONFIGURED', 503, 'Home Assistant ist serverseitig nicht konfiguriert.');
       }
       const client = laundryClientFactory(credentials);
       try {
-        return await syncNotificationAutomations(client, rules, notificationBlueprintDir);
+        return await syncNotificationAutomations(client, rules, notificationBlueprintDir, push);
       } finally {
         client.close();
       }
@@ -737,7 +764,29 @@ export function createHmiServer(
   /* Companion-App (Plan 21): gekoppelte Geräte und die Dateilisten, mit
      denen die App Bundle und Raumbilder spiegelt. */
   const devices = deviceStore ?? createDeviceStore(pairingDevicesPath);
+  revokeGuestDevices = () => devices.revokeGuests();
   const appFileIndex = createFileIndex();
+  const appCommands = createAppCommandService({ resolveAccess: () => resolveServerHaAccess(configStore, haConnectionMode) });
+  /* Raumbild als JPEG für Geräte ohne AVIF (Uhr): eigenes Set aus dem
+     Assetstore, sonst der mitgelieferte Satz aus dist/ oder public/. */
+  const appHero = createAppHeroService({
+    readHousehold: () => householdConfigReader.read(), assetStore: roomImageAssets,
+    staticRoots: [staticRoot, PUBLIC_ROOT], sharp: sharpAvailable ? sharp : null,
+  });
+  const claimLimiter = createRateLimiter(CLAIM_LIMIT_PER_MINUTE);
+  const tokenFailureLimiter = createRateLimiter(TOKEN_FAILURE_LIMIT_PER_MINUTE);
+  /* Fernadresse im QR-Code: eigene Adresse aus der Konfiguration zuerst,
+     sonst die Umgebungsvariable (später der Tunnel-Sidecar). */
+  const tunnelSupervisor = tunnel ?? createTunnelSupervisor({
+    binary: tunnelBinary, stateDir: tunnelStateDir, control: tunnelControl,
+    target: tunnelTarget,
+  });
+  tunnelSupervisor.start();
+  const ownRemoteUrl = () => {
+    const own = configStore.read()['hmi:remote-url'];
+    return (typeof own === 'string' && own.trim()) ? own.trim().replace(/\/+$/, '') : null;
+  };
+  const resolveRemoteUrl = () => ownRemoteUrl() || tunnelSupervisor.url() || remoteUrl || null;
   /* B-08E11: Der Live-Kanal des App-Modus. Im direkten Modus existiert er
      nicht — dort spricht der Browser weiterhin selbst mit Home Assistant. */
   const haGateway = haGatewayFactory({
@@ -786,9 +835,10 @@ export function createHmiServer(
   const httpServer = http.createServer((req, res) => {
     /* Gerätetoken vor allem anderen: er ersetzt die Origin-Grenze und ist
        über den Tunnel Pflicht. */
-    authenticateRequest(req, devices);
+    if (applyAppCors(req, res)) return;
+    authenticateRequest(req, devices, { failures: tokenFailureLimiter });
     if (!remoteGateAllows(req)) {
-      remoteGateReject(res);
+      remoteGateReject(res, req);
       return;
     }
     /* Paket 11: Jede Leseroute des Vertrags bekommt ETag und Cache-Control,
@@ -1007,9 +1057,26 @@ export function createHmiServer(
         notReady: ambientMapNotReady(effectiveMigrationResult, readiness, setupIsRequired),
       });
     } else if ((req.url || '').startsWith(PAIRING_ROUTE_PREFIX)) {
-      servePairing(req, res, { store: devices, allowedOrigins, remoteUrl });
+      servePairing(req, res, {
+        store: devices, allowedOrigins, remoteUrl: resolveRemoteUrl, claims: claimLimiter,
+        /* Gäste (Stufe 7): Ablauf = Checkout des laufenden Aufenthalts. */
+        guestExpiry: async () => {
+          const state = await hotelStays.resolve();
+          return state?.status === 'active' && state.stay?.checkOut ? state.stay.checkOut : null;
+        },
+      });
+    } else if ((req.url || '').startsWith(REMOTE_ROUTE_PREFIX)) {
+      void serveRemote(req, res, { tunnel: tunnelSupervisor, allowedOrigins, ownUrl: ownRemoteUrl });
+    } else if ((req.url || '').startsWith(`${APP_HERO_ROUTE_PREFIX}/`)) {
+      void serveAppHero(req, res, { service: appHero, allowedOrigins });
+    } else if ((req.url || '').startsWith('/api/app/command') || (req.url || '').startsWith('/api/app/states') || (req.url || '').startsWith('/api/app/persons')) {
+      void serveAppCommands(req, res, { service: appCommands, allowedOrigins });
     } else if ((req.url || '').startsWith(`${APP_ROUTE_PREFIX}/`)) {
-      serveAppBundle(req, res, { staticRoot, roomImageAssetRoot, buildInfo, allowedOrigins, index: appFileIndex });
+      serveAppBundle(req, res, {
+        staticRoot, roomImageAssetRoot, buildInfo, allowedOrigins, index: appFileIndex,
+        /* Icons aus Geräte-, Raum- und Szenenkonfiguration gehören ins Bundle. */
+        configTexts: () => [JSON.stringify(configStore.read()), readTextIfExists(householdConfigPath)],
+      });
     } else if ((req.url || '') === '/api/weather') {
       if (!requestOriginAllowed(req, allowedOrigins)) {
         jsonResponse(res, 403, {
@@ -1154,7 +1221,7 @@ export function createHmiServer(
       return;
     }
     /* Der WebSocket der App trägt den Gerätetoken als Query-Parameter. */
-    authenticateRequest(req, devices);
+    authenticateRequest(req, devices, { failures: tokenFailureLimiter });
     if (!remoteGateAllows(req)) {
       socket.destroy();
       return;
@@ -1163,6 +1230,7 @@ export function createHmiServer(
   });
   httpServer.on('close', () => {
     haGateway.close();
+    tunnelSupervisor.close();
     /* Kartenjob und sein kurzlebiger Worker enden mit dem Server. */
     void Promise.resolve(ambientMap?.close?.()).catch(() => {});
     stopNightly();

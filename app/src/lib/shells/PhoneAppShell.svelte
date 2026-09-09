@@ -25,10 +25,12 @@
     type PhoneRoomLayer,
     type PhoneRoomSummary,
   } from '../state/phone-home.ts';
-  import { endTransition, nav, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
+  import { endTransition, nav, normalizeScreen, projectPhoneTarget, showScreen, SCREENS } from '../state/nav.svelte.ts';
+  import { isNativeApp, NAVIGATE_EVENT, type NavigateDetail } from '../native/bridge.ts';
   import { mediaAreaLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../state/phone-nav-order.svelte.ts';
   import {
-    centralClimateEdit, closeCentralClimateEdit, closeRoomEdit, roomEdit,
+    centralClimateEdit, closeCentralClimateEdit, closePhoneActionEdit, closeRoomEdit,
+    phoneActionEdit, roomEdit,
   } from '../state/overlay.svelte.ts';
   import {
     createPhoneModalLifecycle,
@@ -73,8 +75,10 @@
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
   type PhoneFeatureId = 'calendar' | 'media' | 'library-detail' | 'library' | 'energy'
-    | 'shopping' | 'reminders' | 'ablage' | 'room' | 'room-edit' | 'central-climate';
-  type PhoneScreenFeatureId = Exclude<PhoneFeatureId, 'room' | 'room-edit' | 'central-climate'>;
+    | 'shopping' | 'reminders' | 'ablage' | 'room' | 'room-edit' | 'central-climate'
+    | 'phone-action';
+  type PhoneScreenFeatureId = Exclude<PhoneFeatureId,
+    'room' | 'room-edit' | 'central-climate' | 'phone-action'>;
   type PhoneFeatureModule = { default: Component<any> };
   const PHONE_SCREEN_LOADERS: Record<PhoneScreenFeatureId, () => Promise<PhoneFeatureModule>> = {
     calendar: () => import('../components/phone/PhoneCalendar.svelte'),
@@ -87,10 +91,11 @@
     ablage: () => import('../components/AblageScreen.svelte'),
   };
   const phoneScreenLoader = createLatestPhoneLoader(PHONE_SCREEN_LOADERS);
-  const phoneFeatureLoader = createLatestPhoneLoader<'room' | 'room-edit' | 'central-climate', PhoneFeatureModule>({
+  const phoneFeatureLoader = createLatestPhoneLoader<'room' | 'room-edit' | 'central-climate' | 'phone-action', PhoneFeatureModule>({
     room: () => import('../components/phone/RoomControlSheet.svelte'),
     'room-edit': () => import('../components/RoomEdit.svelte'),
     'central-climate': () => import('../components/CentralClimateEdit.svelte'),
+    'phone-action': () => import('../components/PhoneActionEdit.svelte'),
   });
   const featureStyleLoader = createLatestPhoneLoader({
     styles: () => import('../../styles/app.css'),
@@ -158,7 +163,7 @@
   }
 
   function loadPhoneFeature(
-    id: 'room' | 'room-edit' | 'central-climate',
+    id: 'room' | 'room-edit' | 'central-climate' | 'phone-action',
     _retryVersion: number,
   ): Promise<PhoneFeatureModule> {
     return phoneFeatureLoader.loadValue(id);
@@ -278,7 +283,8 @@
 
   $effect(() => {
     if (target.area !== 'home' || activeLayer !== null
-      || roomEdit.mode !== 'hidden' || centralClimateEdit.mode !== 'hidden') {
+      || roomEdit.mode !== 'hidden' || centralClimateEdit.mode !== 'hidden'
+      || phoneActionEdit.mode !== 'hidden') {
       ensureFeatureStyles();
     }
   });
@@ -428,6 +434,17 @@
       });
     };
     window.addEventListener('hauser:scene-edit-open', handleSceneEditOpen);
+    /* Companion-App (Plan 21, Stufe 4): Navigation von außen (Widget, Push)
+       und der Widget-Schnappschuss — beides nur, wenn die Native-Brücke da ist. */
+    const handleNavigate = (event: Event) => {
+      const detail = (event as CustomEvent<NavigateDetail>).detail ?? {};
+      if (detail.screen) showScreen(normalizeScreen(detail.screen));
+    };
+    window.addEventListener(NAVIGATE_EVENT, handleNavigate);
+    let stopSnapshots: (() => void) | null = null;
+    if (isNativeApp()) {
+      void import('../state/widget-snapshot.ts').then((module) => { stopSnapshots = module.startWidgetSnapshots(); });
+    }
     const browser = {
       get state() { return history.state; },
       pushState: (data: unknown, unused?: string, url?: string | URL | null) => history.pushState(data, unused ?? '', url),
@@ -446,6 +463,8 @@
     });
     return () => {
       window.removeEventListener('hauser:scene-edit-open', handleSceneEditOpen);
+      window.removeEventListener(NAVIGATE_EVENT, handleNavigate);
+      stopSnapshots?.();
       cancelPrewarm();
       unregister();
       clearTimeout(modalReleaseTimer);
@@ -617,6 +636,24 @@
         {@render phoneLayerError('room', 'Raum bearbeiten', retryFeatureStyles, () => closeRoomEdit(true))}
       {:else}
         {@render phoneLayerLoading('room', 'Raum bearbeiten')}
+      {/if}
+    {/if}
+  {/if}
+  {#if phoneActionEdit.mode !== 'hidden'}
+    {#if featureStylesReady}
+      {#await loadPhoneFeature('phone-action', phoneFeatureRetries['phone-action'] ?? 0)}
+        {@render phoneLayerLoading('room', 'Schnellzugriff')}
+      {:then loaded}
+        {@const PhoneActionEdit = loaded.default}
+        <PhoneActionEdit />
+      {:catch}
+        {@render phoneLayerError('room', 'Schnellzugriff', () => retryPhoneFeature('phone-action'), () => closePhoneActionEdit(true))}
+      {/await}
+    {:else}
+      {#if featureStylesFailed}
+        {@render phoneLayerError('room', 'Schnellzugriff', retryFeatureStyles, () => closePhoneActionEdit(true))}
+      {:else}
+        {@render phoneLayerLoading('room', 'Schnellzugriff')}
       {/if}
     {/if}
   {/if}

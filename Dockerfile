@@ -59,8 +59,18 @@ RUN npm run build && \
       --noEmitOnError true && \
     npm prune --omit=dev
 
+# Fernzugriff (Plan 21, Stufe 2): der tsnet-Sidecar ist ein statisches
+# Go-Binary; Userspace-Netz, keine Rechte, kein TUN. Fehlt es, läuft Hauser
+# im LAN unverändert.
+FROM golang:1.26-alpine AS tunnel
+WORKDIR /build/tunnel
+COPY tools/tunnel/go.mod tools/tunnel/go.sum ./
+RUN go mod download
+COPY tools/tunnel/ ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/hauser-tunnel .
+
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.10.1
+ARG HAUSER_VERSION=0.12.0
 ARG HAUSER_REVISION=""
 ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \
@@ -82,7 +92,9 @@ ENV NODE_ENV=production \
     HMI_FAMILY_DATA_PATH=/data/family-data.json \
     HMI_SONG_LIBRARY_DIR=/data/songs \
     HMI_REQUIRED_WRITABLE_DIRS=/config,/data,/assets \
-    HMI_SERVER_CONTRACT=compiled
+    HMI_SERVER_CONTRACT=compiled \
+    HMI_TUNNEL_BIN=/opt/hauser/bin/hauser-tunnel \
+    HMI_TUNNEL_STATE=/data/tunnel
 
 WORKDIR /opt/hauser
 COPY --from=build --chown=node:node /build/app/dist ./dist
@@ -92,6 +104,7 @@ COPY --from=build --chown=node:node /build/room-image-contract ./room-image-cont
 COPY --chown=node:node app/server.mjs app/package.json ./
 COPY --chown=node:node app/server/ ./server/
 COPY --chown=node:node container/healthcheck.mjs container/start.mjs ./container/
+COPY --from=tunnel --chown=node:node /out/hauser-tunnel ./bin/hauser-tunnel
 RUN mkdir -p /config /data/songs /assets && chown -R node:node /opt/hauser /config /data /assets
 
 VOLUME ["/config", "/data", "/assets"]

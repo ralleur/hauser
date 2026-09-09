@@ -24,9 +24,25 @@
     onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
   } = $props();
 
-  let shownHero = $state<HeroImageCandidate | null>(null);
+  /* Doppelpuffer wie auf der grossen Buehne: das neue Bild kommt in die
+     hintere Ebene, danach tauscht nur die Deckkraft. Ein Wechsel ist damit
+     eine Ueberblendung statt eines Umschlags. */
+  let layerA = $state<HeroImageCandidate | null>(null);
+  let layerB = $state<HeroImageCandidate | null>(null);
+  let front = $state<'a' | 'b'>('a');
+  const shownHero = $derived(front === 'a' ? layerA : layerB);
   let request = 0;
   let requested = '';
+
+  /* Nachdimmen: geht im Raum das letzte Licht aus, sinkt die Kachel ueber
+     `--duration-dusk` in die unbeleuchtete Fassung, statt umzuklappen. Der
+     umgekehrte Weg bleibt kurz — Licht an ist ein Schaltvorgang. Die Klasse
+     raeumt sich selbst wieder ab, damit ein spaeterer Wechsel wieder im
+     normalen Tempo laeuft. */
+  const DIM_RESET_MS = 1300;
+  let dimming = $state(false);
+  let dimmingTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastVariant: PhoneHeroVariant | null = null;
 
   $effect(() => {
     const key = [
@@ -37,6 +53,8 @@
     if (key === requested) return;
     requested = key;
     const currentRequest = ++request;
+    const dimNow = heroVariant === 'dark-off' && lastVariant === 'dark';
+    lastVariant = heroVariant;
 
     void Promise.all([
       resolvePhoneHero(
@@ -50,25 +68,44 @@
     ]).then(([resolution, { loadRoomHero }, { decodeHeroImageOffThread }]) => (
       loadRoomHero(resolution, decodeHeroImageOffThread, () => request === currentRequest)
     )).then((candidate) => {
-      if (candidate && request === currentRequest) shownHero = candidate;
+      if (!candidate || request !== currentRequest) return;
+      clearTimeout(dimmingTimer);
+      dimming = dimNow;
+      if (dimNow) dimmingTimer = setTimeout(() => { dimming = false; }, DIM_RESET_MS);
+      if (front === 'a') {
+        layerB = candidate;
+        front = 'b';
+      } else {
+        layerA = candidate;
+        front = 'a';
+      }
     }).catch(() => {
-      if (request === currentRequest) shownHero = null;
+      if (request !== currentRequest) return;
+      layerA = null;
+      layerB = null;
     });
   });
+
+  $effect(() => () => clearTimeout(dimmingTimer));
 </script>
 
 <button
   class="phone-room-card pressable"
   class:is-active={active}
   class:has-hero={shownHero !== null}
+  class:is-dimming={dimming}
   type="button"
-  style:--phone-room-hero={shownHero ? `url("${shownHero.url}")` : undefined}
-  style:--phone-room-focus={shownHero?.position}
   aria-label={accessibleRoomSummary(summary)}
   aria-pressed={active}
   use:longpress={{ onLongPress: whenEditable(() => openRoomEdit(summary.id)) }}
   onclick={(event) => onopen(summary, event.currentTarget)}
 >
+  <span class="phone-room-hero-layer" class:is-front={front === 'a'} aria-hidden="true"
+        style:--phone-room-hero={layerA ? `url("${layerA.url}")` : undefined}
+        style:--phone-room-focus={layerA?.position}></span>
+  <span class="phone-room-hero-layer" class:is-front={front === 'b'} aria-hidden="true"
+        style:--phone-room-hero={layerB ? `url("${layerB.url}")` : undefined}
+        style:--phone-room-focus={layerB?.position}></span>
   <span class="phone-room-card-info">
     <!-- Status steht über dem Namen: der Raumname bleibt so in jeder Kachel auf
          derselben Höhe, egal ob es etwas zu melden gibt. -->

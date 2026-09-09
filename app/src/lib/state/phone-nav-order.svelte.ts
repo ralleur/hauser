@@ -3,8 +3,10 @@ import { IS_DEMO } from '../demo/demo-mode.ts';
 import { m } from '../../paraglide/messages.js';
 import { HOUSEHOLD_DATA_SOURCE, NAV_SCREENS, NAV_TABS } from '../config/household-runtime-data.ts';
 
-/* ── Reihenfolge aller Phone-Ziele: Die ersten drei landen direkt in der
-   Bottom-Nav, alle weiteren hinter dem festen vierten Punkt „Mehr". ── */
+/* ── Reihenfolge aller Phone-Ziele: Die unterste Leiste hat vier Plätze. Die
+   ersten drei Ziele der Reihenfolge belegen sie direkt, den vierten hält
+   „Mehr", solange dahinter noch etwas liegt. Passen alle Ziele in die Leiste,
+   entfällt „Mehr" und der vierte Platz gehört dem vierten Ziel. ── */
 
 const STORAGE_KEY = 'hmi:phone-nav-order.v2';
 
@@ -102,6 +104,50 @@ function loadOrder(): PhoneNavTarget[] {
 
 export const phoneNavOrder = $state({ order: loadOrder() });
 
+/* Plätze in der unteren Leiste — „Mehr" belegt einen davon, sobald es etwas zu
+   zeigen hat. */
+export const PHONE_NAV_SLOTS = 4;
+
+/* Wie viele Ziele direkt unten stehen: bleibt etwas übrig, hält „Mehr" den
+   letzten Platz frei. */
+export function phoneNavPinnedCount(visibleCount: number): number {
+  return visibleCount > PHONE_NAV_SLOTS - 1 ? PHONE_NAV_SLOTS - 1 : visibleCount;
+}
+
+function persist(order: PhoneNavTarget[]): void {
+  phoneNavOrder.order = order;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  } catch { /* Storage blockiert: Reihenfolge gilt für die Sitzung. */ }
+}
+
+/* Zielposition aus der Ziehgeste (actions/dragreorder) — der Index zählt in der
+   angezeigten Reihenfolge, die abgeschaltete Module bereits ausblendet. Die
+   gespeicherte Reihenfolge kennt sie weiterhin und behält ihren Platz. */
+export function reorderNavTarget(id: PhoneNavTarget, targetIndex: number, visible: readonly PhoneNavTarget[]): void {
+  if (!PHONE_NAV_REORDERABLE) return;
+  const from = visible.indexOf(id);
+  const to = Math.max(0, Math.min(visible.length - 1, targetIndex));
+  if (from < 0 || from === to) return;
+  const shown = [...visible];
+  shown.splice(to, 0, ...shown.splice(from, 1));
+  const rest = phoneNavOrder.order.filter((entry) => !visible.includes(entry));
+  persist([...shown, ...rest]);
+}
+
+/* Ein Ziel nach unten holen: es nimmt den letzten festen Platz ein, das dort
+   stehende rückt eine Stelle weiter. Kein Knopf ist je gesperrt — die Leiste
+   ist immer voll, es zieht nur jemand anders nach. */
+export function pinNavTarget(id: PhoneNavTarget, visible: readonly PhoneNavTarget[]): void {
+  reorderNavTarget(id, phoneNavPinnedCount(visible.length) - 1, visible);
+}
+
+/* Und wieder heraus: das Ziel setzt sich vor die übrigen, alles darunter
+   rutscht nach. */
+export function unpinNavTarget(id: PhoneNavTarget, visible: readonly PhoneNavTarget[]): void {
+  reorderNavTarget(id, phoneNavPinnedCount(visible.length), visible);
+}
+
 export function moveNavTarget(id: PhoneNavTarget, delta: -1 | 1): void {
   if (!PHONE_NAV_REORDERABLE) return;
   const index = phoneNavOrder.order.indexOf(id);
@@ -109,10 +155,12 @@ export function moveNavTarget(id: PhoneNavTarget, delta: -1 | 1): void {
   if (index < 0 || next < 0 || next >= phoneNavOrder.order.length) return;
   const order = [...phoneNavOrder.order];
   [order[index], order[next]] = [order[next], order[index]];
-  phoneNavOrder.order = order;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-  } catch { /* Storage blockiert: Reihenfolge gilt für die Sitzung. */ }
+  persist(order);
+}
+
+/* Abbrechen im Editor: der Stand von vorhin gilt wieder. */
+export function restoreNavOrder(order: readonly PhoneNavTarget[]): void {
+  persist([...order]);
 }
 
 export function navTargetLabel(id: PhoneNavTarget): string {

@@ -2,11 +2,14 @@
   import { tokenDuration } from '../../motion/index.ts';
   import { onMount } from 'svelte';
   import type { ScreenId } from '../../state/nav.svelte.ts';
-  import { PHONE_NAV_REORDERABLE, moveNavTarget, navTargetLabel, navTargetForScreen, phoneNavOrder, type PhoneNavTarget } from '../../state/phone-nav-order.svelte.ts';
+  import {
+    PHONE_NAV_REORDERABLE, navTargetLabel, navTargetForScreen, phoneNavOrder,
+    type PhoneNavTarget,
+  } from '../../state/phone-nav-order.svelte.ts';
   import { phoneTargetVisible } from '../../state/module-config.svelte.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
-  import { swipedown } from '../../actions/swipedown.ts';
+  import { SHEET_SWIPE_IGNORE, swipedown } from '../../actions/swipedown.ts';
   import { m } from '../../../paraglide/messages.js';
 
   let {
@@ -26,12 +29,13 @@
   const visibleOrder = $derived(phoneNavOrder.order.filter((id) => phoneTargetVisible(id)));
 
   let dialog: HTMLElement;
-  let firstTarget = $state<HTMLButtonElement>();
   let arranging = $state(false);
+  /* Der Editor kommt erst auf Zuruf: er waere sonst Teil des Startpfads. */
+  let ArrangeComponent = $state<typeof import('./PhoneNavArrange.svelte').default | null>(null);
 
-  function rememberFirstTarget(node: HTMLButtonElement) {
-    if (!firstTarget) firstTarget = node;
-    return { destroy: () => { if (firstTarget === node) firstTarget = undefined; } };
+  async function startArranging(): Promise<void> {
+    arranging = true;
+    ArrangeComponent ??= (await import('./PhoneNavArrange.svelte')).default;
   }
 
   function scrimExit(node: HTMLElement) {
@@ -99,33 +103,46 @@
     onouteroutroend();
   }
 
+  /* Der Fokus landet auf dem Dialog selbst, nicht auf der ersten Zeile: sonst
+     legt der Browser seinen Fokusrahmen um einen Eintrag, den niemand
+     ausgewählt hat. Die Tab-Falle unten hält ihn trotzdem im Sheet. */
   onMount(() => {
-    firstTarget?.focus({ preventScroll: true });
+    dialog?.focus({ preventScroll: true });
   });
 </script>
 
 <div class="more-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
-  <div class="more-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="more-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
-    <!-- Wie im Raum-Sheet: Wischen am Kopf zieht das Sheet nach unten zu. -->
-    <header use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog }}>
-      <h2 id="more-sheet-title">{m.nav_more()}</h2>
-      <div class="more-sheet-header-actions">
+  <div class="more-sheet" class:is-arranging={arranging} bind:this={dialog} role="dialog" aria-modal="true"
+       aria-labelledby="more-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit
+       use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog,
+                        atTop: (t) => Boolean(t?.closest('.more-sheet-grip, .more-sheet header'))
+                                      || (dialog?.scrollTop ?? 0) <= 0,
+                        ignore: SHEET_SWIPE_IGNORE }}>
+    <!-- Der Griff sagt, wohin das Sheet geht: nach unten weg. Wischen gilt auf
+         der ganzen Fläche, solange die Liste oben steht. -->
+    <span class="more-sheet-grip" aria-hidden="true"></span>
+
+    {#if !arranging}
+      <header>
+        <div class="more-sheet-heading">
+          <h2 id="more-sheet-title">{m.nav_more()}</h2>
+          <p class="more-sheet-subtitle">{m.phone_more_subtitle()}</p>
+        </div>
         {#if PHONE_NAV_REORDERABLE}
-          <button class="more-sheet-action more-arrange-toggle pressable" type="button"
-                  aria-label={arranging ? m.phone_arrange_end() : m.phone_arrange_start()}
-                  aria-pressed={arranging} onclick={() => (arranging = !arranging)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5-5 5 5M17 15l-5 5-5-5" /></svg>
+          <button class="more-sheet-action pressable" type="button"
+                  aria-label={m.phone_arrange_start()} onclick={startArranging}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9m4 0h3M4 17h3m4 0h9" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></svg>
           </button>
         {/if}
-        <button class="more-sheet-action more-sheet-close pressable" type="button" aria-label={m.phone_more_close()} onclick={() => onclose('close')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg>
-        </button>
-      </div>
-    </header>
-    {#if !arranging}
+      </header>
+
+      <!-- Alles an einem Ort: die Liste zeigt auch, was unten schon steht —
+           wer hier sucht, will nicht erst wissen, wo etwas hängt. -->
       <div class="more-sheet-list">
-        {#each visibleOrder.slice(3) as id (id)}
-          <button use:rememberFirstTarget class="more-sheet-target pressable" type="button" aria-current={navTargetForScreen(current) === id ? 'page' : undefined} onclick={() => onselect(id)}>
+        {#each visibleOrder as id (id)}
+          <button class="more-sheet-target pressable" type="button"
+                  aria-current={navTargetForScreen(current) === id ? 'page' : undefined}
+                  onclick={() => onselect(id)}>
             <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
             <span>{navTargetLabel(id)}</span>
             <svg class="more-sheet-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
@@ -133,22 +150,12 @@
         {/each}
       </div>
     {:else}
-      <div class="more-sheet-list" aria-label={m.phone_nav_order()}>
-        {#each visibleOrder as id, index (id)}
-          <div class="more-arrange-row">
-            <span class="more-sheet-target-icon"><PhoneNavIcon {id} /></span>
-            <span>{navTargetLabel(id)}</span>
-            <span class="more-arrange-actions">
-              <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach oben" disabled={index === 0} onclick={() => moveNavTarget(id, -1)}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6" /></svg>
-              </button>
-              <button class="more-arrange-btn pressable" type="button" aria-label="{navTargetLabel(id)} nach unten" disabled={index === visibleOrder.length - 1} onclick={() => moveNavTarget(id, 1)}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6" /></svg>
-              </button>
-            </span>
-          </div>
-        {/each}
-      </div>
+      {#if ArrangeComponent}
+        {@const Arrange = ArrangeComponent}
+        <Arrange visibleOrder={visibleOrder} ondone={() => (arranging = false)} />
+      {:else}
+        <p class="more-arrange-loading" role="status">{m.phone_view_preparing()}</p>
+      {/if}
     {/if}
   </div>
 </div>

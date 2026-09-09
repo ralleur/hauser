@@ -1,8 +1,18 @@
 import { FakeBackend, type FakeBackendCatalogItem } from '../adapter/fake-backend.ts';
 import type {
+  AlarmValue,
+  ButtonValue,
   CameraValue,
   ClimateValue,
+  CoverValue,
   FanValue,
+  HumidifierValue,
+  LockValue,
+  MowerValue,
+  NumberValue,
+  SelectValue,
+  VacuumValue,
+  WaterHeaterValue,
   LightValue,
   MediaValue,
   SensorValue,
@@ -241,8 +251,40 @@ function syntheticValue(
       supportsDirection: false,
     } satisfies FanValue;
   }
+  if (domain === 'cover' || domain === 'valve') {
+    return {
+      on: false, position: 0, tilt: 0, moving: null,
+      supportsOpen: true, supportsClose: true, supportsStop: false, supportsPosition: false, supportsTilt: false,
+    } satisfies CoverValue;
+  }
+  if (domain === 'vacuum') {
+    return {
+      on: false, state: 'docked', fanSpeed: null, battery: null, fanSpeeds: [],
+      supportsStart: true, supportsPause: false, supportsStop: false, supportsReturn: true, supportsLocate: false, supportsFanSpeed: false,
+    } satisfies VacuumValue;
+  }
+  if (domain === 'lock') return { locked: true, state: 'locked', supportsOpen: false } satisfies LockValue;
+  if (domain === 'humidifier') {
+    return { on: false, target: 50, mode: null, current: null, modes: [], minHumidity: 0, maxHumidity: 100, supportsModes: false } satisfies HumidifierValue;
+  }
+  if (domain === 'water_heater') {
+    return {
+      on: false, target: 50, mode: null, current: null, modes: [], minTemp: 30, maxTemp: 70,
+      supportsTarget: true, supportsModes: false, supportsOnOff: false,
+    } satisfies WaterHeaterValue;
+  }
+  if (domain === 'lawn_mower') return { on: false, state: 'docked', supportsStart: true, supportsPause: false, supportsDock: true } satisfies MowerValue;
+  if (domain === 'alarm_control_panel') {
+    return {
+      state: 'disarmed', codeFormat: null, codeArmRequired: false,
+      supportsArmHome: false, supportsArmAway: false, supportsArmNight: false, supportsArmVacation: false, supportsArmCustom: false,
+    } satisfies AlarmValue;
+  }
+  if (domain === 'number' || domain === 'input_number') return { value: 0, min: 0, max: 100, step: 1, unit: null } satisfies NumberValue;
+  if (domain === 'select' || domain === 'input_select') return { option: null, options: [] } satisfies SelectValue;
+  if (domain === 'button' || domain === 'input_button') return { pressedAt: null } satisfies ButtonValue;
   if (context.role === 'presence' || context.role === 'window'
-      || ['switch', 'binary_sensor', 'input_boolean', 'cover', 'vacuum'].includes(domain)) {
+      || ['switch', 'binary_sensor', 'input_boolean', 'siren', 'remote'].includes(domain)) {
     return { on: false } satisfies SwitchValue;
   }
   return { state: 'synthetic' };

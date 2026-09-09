@@ -155,6 +155,11 @@ export const HOUSEHOLD_CONFIG_PATH = process.env.HMI_HOUSEHOLD_CONFIG_PATH || nu
 export const PAIRING_DEVICES_PATH = process.env.HMI_PAIRING_DEVICES_PATH
   || resolve(dirname(CONFIG_PATH), 'devices.json');
 export const REMOTE_URL = process.env.HMI_REMOTE_URL || null;
+/* tsnet-Sidecar (tools/tunnel): im Container unter /opt/hauser/bin, lokal
+   nur, wenn gesetzt. State neben der Konfiguration. */
+export const TUNNEL_BIN = process.env.HMI_TUNNEL_BIN || null;
+export const TUNNEL_STATE_DIR = process.env.HMI_TUNNEL_STATE || resolve(dirname(CONFIG_PATH), 'tunnel');
+export const TUNNEL_CONTROL = process.env.HMI_TUNNEL_CONTROL || '127.0.0.1:4174';
 export const HOUSEHOLD_CONFIG_BODY_MAX = 1024 * 1024;
 export const HOUSEHOLD_CONFIG_MODE_HEADER = 'x-hmi-household-config-mode';
 export const SETUP_TRANSACTION_VERSION = 1;

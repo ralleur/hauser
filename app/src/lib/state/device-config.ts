@@ -1,3 +1,4 @@
+import { m } from '../../paraglide/messages.js';
 import { iconForDevice } from './light-icons.ts';
 import type { LightSeed, RoomSeed, Room } from './app.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
@@ -10,6 +11,7 @@ import {
 export {
   FAKE_DISCOVERY_CATALOG,
   FAKE_FAN_SEED,
+  fakeSeedFor,
   MANAGED_DOMAINS,
   type EntityCatalogItem,
   type ManagedDomain,
@@ -20,27 +22,55 @@ export {
    (categoryOf), nicht an der Domäne — neue Domänen brauchen hier nur einen
    Eintrag + eine Kategorie-Zuordnung. */
 /* Overlay-/Kachel-Kategorien: light = volles Licht-Detail, switch = Ein/Aus
-   (auch cover, bis eigene Overlays existieren), fan = Stufe/Modus/Oszillation/
-   Richtung, temp = Solltemp+Modus, info = read-only Wert/Zustand,
-   media = Play/Pause+Lautstärke (Stufe 1). */
-export type DeviceCategory = 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera';
+   (auch siren/remote), fan = Stufe/Modus/Oszillation/Richtung, temp = Solltemp+
+   Modi, info = read-only Wert/Zustand, media = Play/Pause+Lautstärke, cover/
+   valve = Auf/Zu/Stopp+Position, vacuum = Start/Pause/Basis+Saugstufe, lock =
+   Ver-/Entriegeln, humidifier = Zielfeuchte+Modus, water_heater = Solltemp+
+   Betriebsart, mower = Mähen/Pause/Andocken, alarm = Scharfschaltung, number =
+   Wert, select = Option, button = Druck (R28). */
+export type DeviceCategory =
+  | 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera'
+  | 'cover' | 'valve' | 'vacuum' | 'lock' | 'humidifier' | 'water_heater' | 'mower' | 'alarm'
+  | 'number' | 'select' | 'button';
 
-/* Anzeige-Label je Kategorie (RoomEdit-Vorschläge, a11y). */
+/* Anzeige-Label je Kategorie (RoomEdit-Vorschläge, a11y) — übersetzt. */
 export const CATEGORY_LABELS: Record<DeviceCategory, string> = {
-  light: 'Licht',
-  switch: 'Schalter',
-  fan: 'Ventilator',
-  temp: 'Klima',
-  info: 'Sensor',
-  media: 'Media',
-  camera: 'Kamera',
+  get light() { return m.cat_light(); },
+  get switch() { return m.cat_switch(); },
+  get fan() { return m.cat_fan(); },
+  get temp() { return m.cat_temp(); },
+  get info() { return m.cat_info(); },
+  get media() { return m.cat_media(); },
+  get camera() { return m.cat_camera(); },
+  get cover() { return m.cat_cover(); },
+  get valve() { return m.cat_valve(); },
+  get vacuum() { return m.cat_vacuum(); },
+  get lock() { return m.cat_lock(); },
+  get humidifier() { return m.cat_humidifier(); },
+  get water_heater() { return m.cat_water_heater(); },
+  get mower() { return m.cat_mower(); },
+  get alarm() { return m.cat_alarm(); },
+  get number() { return m.cat_number(); },
+  get select() { return m.cat_select(); },
+  get button() { return m.cat_button(); },
 };
 
 export function categoryOf(domain: ManagedDomain): DeviceCategory {
   switch (domain) {
     case 'light': return 'light';
     case 'fan': return 'fan';
-    case 'switch': case 'cover': case 'input_boolean': case 'vacuum': return 'switch';
+    case 'switch': case 'input_boolean': case 'siren': case 'remote': return 'switch';
+    case 'cover': return 'cover';
+    case 'valve': return 'valve';
+    case 'vacuum': return 'vacuum';
+    case 'lock': return 'lock';
+    case 'humidifier': return 'humidifier';
+    case 'water_heater': return 'water_heater';
+    case 'lawn_mower': return 'mower';
+    case 'alarm_control_panel': return 'alarm';
+    case 'number': case 'input_number': return 'number';
+    case 'select': case 'input_select': return 'select';
+    case 'button': case 'input_button': return 'button';
     case 'climate': return 'temp';
     case 'sensor': case 'binary_sensor': return 'info';
     case 'media_player': return 'media';

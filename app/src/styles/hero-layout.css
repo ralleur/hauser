@@ -581,3 +581,178 @@
   width: 100%;
   justify-content: center;
 }
+
+/* ── Panel im Hochformat (Plan 21 §12) ──
+   Das Panel-Layout ist für Querformat gebaut: Kontrollfläche links, Hero
+   füllt den Rest. Hochkant fehlt dafür die Breite — die Karte drängt das
+   Bild auf einen Streifen und eine zweite Fläche läuft aus dem Bild.
+
+   Hochkant wird deshalb gestapelt, aber nicht flach: das Hero bekommt das
+   obere Drittel bis zur Hälfte, die Raumauswahl schwebt als schmale Spalte
+   darüber (wie die Karte im Querformat), und darunter liegt die Steuerung
+   des gewählten Raums über die volle Breite. Szenen (Flex-Umbruch), Geräte
+   (auto-fit) und der Klimablock (Container-Abfrage bei 500 px) ordnen sich
+   in der breiteren Fläche von selbst — dafür braucht es hier nichts.
+
+   Die Abfrage gilt der Form, nicht dem Gerät: ein hochkant montiertes
+   Wandpanel bekommt dasselbe Layout wie ein iPad in der Hand. */
+@media (orientation: portrait) {
+  [data-shell="panel"] .home-stage {
+    --panel-hero-band: 54%;
+    /* Bezugsgröße für die Höhe der schwebenden Raumspalte (cqh). */
+    container-type: size;
+  }
+
+  /* Das Bildband endete hart auf der Bühnenfarbe — eine Kante quer über den
+     Schirm, die es im Querformat nie gab (dort füllt das Bild alles). Die
+     Maske löst die untere Kante über anderthalb Zeilenhöhen auf; darunter
+     liegt ohnehin dieselbe Fläche, auf die das Bild ausblendet.
+
+     Maske statt Verlaufs-Overlay: sie wirkt auf alle Ebenen des Heros —
+     Bild, Wetter, Immersionslicht — statt nur eine Farbe darüberzulegen, die
+     bei Themewechsel oder Wetterschicht danebenläge. Statisch, also kein
+     Kompositor-Nachteil gegenüber dem Crossfade. */
+  [data-shell="panel"] .room-hero {
+    inset: 0 0 auto 0;
+    height: var(--panel-hero-band);
+    /* Mindestens 64 px, auf großen Tablets anteilig mehr. Der Zwischenhalt
+       bei 0,38 lässt das Bild zuerst zügig und zum Schluss lange ausklingen —
+       eine reine Gerade endet sichtbar abrupt. */
+    --hero-band-fade: max(var(--space-8), 12%);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 calc(100% - var(--hero-band-fade)),
+      rgb(0 0 0 / 0.38) calc(100% - var(--hero-band-fade) * 0.45),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 calc(100% - var(--hero-band-fade)),
+      rgb(0 0 0 / 0.38) calc(100% - var(--hero-band-fade) * 0.45),
+      transparent 100%
+    );
+  }
+
+  /* Die freie Trefferfläche für den Layout-Long-Press gehört zum Bild. Bliebe
+     sie über der ganzen Bühne, läge sie hinter der Karte und finge Gesten ab,
+     die den Kontrollflächen gehören. */
+  [data-shell="panel"] .hero-config-hitarea {
+    bottom: auto;
+    height: var(--panel-hero-band);
+  }
+
+  [data-shell="panel"] .home-panels,
+  [data-shell="panel"] .home-stage.has-two-slots .home-panels {
+    inset: calc(var(--panel-hero-band) + var(--space-3)) var(--space-4) var(--space-4) var(--space-4);
+    width: auto;
+    max-width: none;
+    overflow-x: visible;
+  }
+
+  /* Ohne Mindestbreite je Fläche: hochkant teilen sich zwei Flächen die Breite
+     der Bühne, statt sie zu überschreiten und waagerecht zu scrollen. */
+  [data-shell="panel"] .home-stage.has-two-slots .home-panel {
+    min-width: 0;
+  }
+
+  /* Die Raumauswahl verlässt die Karte und schwebt über dem Bild. Damit sie
+     nach oben ausbrechen darf, gibt die Karte ihr Clipping ab — die
+     Steuerfläche darunter klippt sich selbst und erbt dafür den Radius. */
+  [data-shell="panel"] .home-panel {
+    overflow: visible;
+  }
+
+  [data-shell="panel"] .panel-controls {
+    border-top: 0;
+    border-radius: inherit;
+  }
+
+  [data-shell="panel"] .room-selector {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + var(--space-3));
+    width: clamp(232px, 30%, 320px);
+    /* Eine Seite fasst höchstens sechs Räume (PANEL_ROOMS_PER_PAGE); auf
+       kleineren Tablets passen die nicht immer in das Bildband, deshalb der
+       Deckel und der senkrechte Auslauf statt eines Anschnitts. */
+    max-height: calc(var(--panel-hero-band) * 1cqh / 1% - var(--space-6));
+    border-radius: var(--radius-2xl);
+    background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--elevation-overlay-shadow);
+    overflow: hidden;
+  }
+
+  [data-shell="panel"] .room-page-viewport {
+    overflow-y: auto;
+  }
+
+  /* Eine Spalte: die Räume stehen als Liste neben dem Bild, nicht als Raster.
+     Enger gesetzt als im Querformat, damit eine volle Seite (sechs Räume) in
+     das Bildband passt, statt zu scrollen. Die Mindesthöhe bleibt die
+     Touch-Größe. */
+  [data-shell="panel"] .room-page {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+
+  [data-shell="panel"] .room-btn {
+    min-height: var(--touch-preferred);
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+
+  /* Die Onboarding-Karte für Raumbilder gehört zum Bild, nicht zur Bühne:
+     über die volle Höhe gelegt verdeckte sie hochkant die halbe Steuerung.
+     Sie bleibt rechts, aber innerhalb des Bildbands neben der Raumspalte. */
+  [data-shell="panel"] .room-onboard {
+    inset: var(--space-4) var(--space-4) auto auto;
+    width: min(420px, 52%);
+    max-height: calc(var(--panel-hero-band) * 1cqh / 1% - var(--space-6));
+  }
+
+}
+
+/* ── Statuspille in der Bottom-Leiste ──
+   Neben sieben Tabs bleibt auf einem Tablet so wenig Rand, dass „Alles ruhig"
+   zu „A." verstümmelt. Statt einer Breiten-Schwelle (die Tab-Anzahl hängt am
+   Haushalt) entscheidet der Rand selbst: wird er zu schmal, bleibt das
+   Symbol. Titel und aria-label tragen die Aussage weiter. */
+.tab-edge-end {
+  container-type: inline-size;
+}
+
+@container (max-width: 132px) {
+  .security-bar > span {
+    display: none;
+  }
+
+  .security-bar {
+    padding: 0 var(--space-3);
+  }
+}
+
+/* ── Bottom-Leiste auf schmalen Panels ──
+   Zwei feste 296-px-Ränder und sechs Tabs brauchen rund 1360 px. Das hat am
+   Wandpanel immer gereicht, auf einem Tablet nicht — quer wie hochkant. Das
+   Klima-Dock weicht deshalb unterhalb dieser Breite: der Raum hat seinen
+   Klimablock auf dem Home-Screen, die zentrale Steuerung bleibt über die
+   Klimakachel erreichbar. Der rechte Rand (Benachrichtigungen) bleibt und
+   darf schrumpfen. Eine Breiten-, keine Ausrichtungsfrage — deshalb steht
+   das hier und nicht im Hochformat-Block. */
+@media (max-width: 1399px) {
+  [data-shell="panel"] .tab-edge-start {
+    display: none;
+  }
+
+  [data-shell="panel"] .tab-edge {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  [data-shell="panel"] .tab-bar {
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+  }
+}

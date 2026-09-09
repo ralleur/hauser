@@ -5,6 +5,7 @@ import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 
 import bottomNav from '../components/phone/PhoneBottomNav.svelte?raw';
 import moreSheet from '../components/phone/MoreSheet.svelte?raw';
+import navArrange from '../components/phone/PhoneNavArrange.svelte?raw';
 import phoneNavIcon from '../components/phone/PhoneNavIcon.svelte?raw';
 import mainEntry from '../../main.ts?raw';
 import {
@@ -560,7 +561,7 @@ describe('phone source and accessibility boundaries', () => {
     expect((phoneShell.match(/\{:catch\}/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders three ordered targets plus fixed More and puts every remaining target in the sheet', () => {
+  it('renders three ordered targets plus fixed More and lists every target in the sheet', () => {
     // Abgeschaltete Module fallen vorher heraus; die gespeicherte Reihenfolge
     // bleibt die Quelle der ersten drei Ziele.
     expect(bottomNav).toMatch(/phoneNavOrder\.order\.filter\(\(id\) => phoneTargetVisible\(id\)\)/);
@@ -570,18 +571,33 @@ describe('phone source and accessibility boundaries', () => {
     expect(moreSheet).toMatch(/role="dialog"/);
     expect(moreSheet).toMatch(/aria-modal="true"/);
     expect(moreSheet).toMatch(/event\.target\s*!==\s*event\.currentTarget/);
-    // Auch hier zählt die sichtbare Reihenfolge: abgeschaltete Module fallen
-    // heraus, die gespeicherte Reihenfolge bleibt bestehen.
-    expect(moreSheet).toMatch(/visibleOrder\.slice\(3\)/);
-    expect(moreSheet).toMatch(/\{#each visibleOrder as id, index \(id\)\}/);
+    // Das Sheet ist der eine Ort, an dem alles steht — auch was unten schon
+    // sichtbar ist. Abgeschaltete Module fallen heraus.
+    expect(moreSheet).toMatch(/\{#each visibleOrder as id \(id\)\}/);
     expect(moreSheet).toMatch(/phoneNavOrder\.order\.filter\(\(id\) => phoneTargetVisible\(id\)\)/);
-    expect(moreSheet).toContain('m.phone_arrange_end() : m.phone_arrange_start()');
     expect(bottomNav).toContain('<PhoneNavIcon {id} />');
     expect(moreSheet).toContain('<PhoneNavIcon {id} />');
-    expect(moreSheet).toMatch(/<header[^>]*>[\s\S]*more-arrange-toggle[\s\S]*more-sheet-close[\s\S]*<\/header>/);
-    expect(moreSheet).not.toContain('more-sheet-target more-arrange-toggle');
-    expect(moreSheet).toMatch(/moveNavTarget\(id, -1\)/);
-    expect(moreSheet).toMatch(/moveNavTarget\(id, 1\)/);
+  });
+
+  it('splits the arrange editor into pinned and remaining targets', () => {
+    // Der Editor haengt nicht am Startpfad: er kommt erst, wenn jemand ihn
+    // oeffnet (ADR-033).
+    expect(moreSheet).toMatch(/await import\('\.\/PhoneNavArrange\.svelte'\)/);
+    expect(moreSheet).not.toMatch(/use:dragreorder=\{\{/);
+    // Die Leiste hat vier Plätze; „Mehr" hält den letzten, solange dahinter
+    // etwas liegt, und ist deshalb nicht entfernbar.
+    expect(navArrange).toMatch(/phoneNavPinnedCount\(visibleOrder\.length\)/);
+    expect(navArrange).toMatch(/visibleOrder\.slice\(0, pinnedCount\)/);
+    expect(navArrange).toMatch(/visibleOrder\.slice\(pinnedCount\)/);
+    expect(navArrange).toContain('m.phone_nav_more_fixed()');
+    // Umsortieren geht mit dem Griff und ohne ihn: Plus und Minus tun dasselbe
+    // wie das Ziehen über die Bereichsgrenze.
+    expect(navArrange).toMatch(/use:dragreorder=\{\{/);
+    expect(navArrange).toMatch(/reorderNavTarget\(target as PhoneNavTarget, index, visibleOrder\)/);
+    expect(navArrange).toMatch(/pinNavTarget\(id, visibleOrder\)/);
+    expect(navArrange).toMatch(/unpinNavTarget\(id, visibleOrder\)/);
+    // Abbrechen stellt den Stand von vor dem Öffnen wieder her.
+    expect(navArrange).toMatch(/restoreNavOrder\(orderBefore\)/);
   });
 
   it('keeps the conditional sheet mounted for token-driven scrim and sheet exit motion', () => {

@@ -221,8 +221,11 @@ function projectRooms(model: HouseholdRuntimeModel): {
       lights: [
         ...room.visibleEntities.filter(({ role }) => role === 'light').map(projectLight),
         ...room.visibleEntities
-          .filter(({ role }) => role === 'switch' || role === 'vacuum')
+          .filter(({ role }) => role === 'switch')
           .map((entity) => projectManagedDevice(entity, 'switch')),
+        ...room.visibleEntities
+          .filter(({ role }) => role === 'vacuum')
+          .map((entity) => projectManagedDevice(entity, 'vacuum')),
       ],
       ...(climate ? { climateEntityId: climate.entityId, target: 20, hvac: 'off' as const } : {}),
       ...(temperature ? { tempSensorId: temperature.entityId } : {}),

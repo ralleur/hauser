@@ -17,7 +17,10 @@ import {
   VACATION_MODE_ENTITY,
   windowEntityIds,
 } from './entities.ts';
-import type { FanValue, LightValue, ClimateValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue } from '../adapter/types.ts';
+import type {
+  AlarmValue, CoverValue, FanValue, LightValue, ClimateValue, LockValue, MediaValue, ReconcileEvent, SwitchValue, SensorValue,
+  VacuumValue,
+} from '../adapter/types.ts';
 import { appState, type Light } from './app.svelte.ts';
 
 type RoomMetric = 'temperature' | 'humidity';
@@ -170,17 +173,30 @@ export function toggleLight(roomId: string, lightId: string): void {
 
 export function toggleDevice(roomId: string, device: Light): void {
   if (device.domain === 'light' || !device.domain) return toggleLight(roomId, device.id);
+  const domain = device.domain;
+  // Domänen mit eigenem Service-Satz (R28): der Tap auf die Kachel ist die
+  // Hauptaktion, die Detail-Ebene kennt den Rest.
+  if (domain === 'cover' || domain === 'valve') {
+    const cur = runtime.merged(device.entityId) as CoverValue | undefined;
+    return coverCommand(device.entityId, domain, cur?.on ? 'close' : 'open');
+  }
+  if (domain === 'vacuum') {
+    const cur = runtime.merged(device.entityId) as VacuumValue | undefined;
+    return vacuumCommand(device.entityId, cur?.on ? 'return_to_base' : 'start');
+  }
+  if (domain === 'lawn_mower') {
+    const cur = runtime.merged(device.entityId) as { on?: boolean } | undefined;
+    return mowerCommand(device.entityId, cur?.on ? 'dock' : 'start_mowing');
+  }
+  if (domain === 'lock') {
+    const cur = runtime.merged(device.entityId) as LockValue | undefined;
+    return lockCommand(device.entityId, cur?.locked ? 'unlock' : 'lock');
+  }
+  if (domain === 'button' || domain === 'input_button') return pressButton(device.entityId, domain);
   const cur = runtime.merged(device.entityId) as SwitchValue | undefined;
   const next: SwitchValue = { on: !cur?.on };
-  // cover kennt kein turn_on/off — HA-Service ist open/close; vacuum nutzt das
-  // moderne Service-Set (start/return_to_base) statt turn_on/off (docs/04-Semantik).
-  const service = device.domain === 'cover'
-    ? (next.on ? 'open_cover' : 'close_cover')
-    : device.domain === 'vacuum'
-      ? (next.on ? 'start' : 'return_to_base')
-      : (next.on ? 'turn_on' : 'turn_off');
   runtime.dispatch(
-    { entityId: device.entityId, domain: device.domain, service, data: {}, queuedAt: Date.now() },
+    { entityId: device.entityId, domain, service: next.on ? 'turn_on' : 'turn_off', data: {}, queuedAt: Date.now() },
     next,
   );
 }
@@ -335,6 +351,150 @@ export function setFanDirection(entityId: string, direction: FanValue['direction
   );
 }
 
+/* ── Klima-Zusatzmodi (R28): Lüfterstufe, Preset, Schwenken ── */
+export function setClimateFanMode(entityId: string, fanMode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'climate', service: 'set_fan_mode', data: { fan_mode: fanMode }, queuedAt: Date.now() },
+    { fanMode },
+  );
+}
+export function setClimatePreset(entityId: string, presetMode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'climate', service: 'set_preset_mode', data: { preset_mode: presetMode }, queuedAt: Date.now() },
+    { presetMode },
+  );
+}
+export function setClimateSwing(entityId: string, swingMode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'climate', service: 'set_swing_mode', data: { swing_mode: swingMode }, queuedAt: Date.now() },
+    { swingMode },
+  );
+}
+
+/* ── Rollo/Jalousie und Ventil (R28) ──
+   Auf/Zu/Stopp sind Fahrbefehle: optimistisch wird nur die Richtung
+   angenommen, die Endlage meldet das Gerät. */
+export function coverCommand(entityId: string, domain: 'cover' | 'valve', action: 'open' | 'close' | 'stop'): void {
+  const noun = domain === 'cover' ? 'cover' : 'valve';
+  const service = `${action}_${noun}`;
+  // Nur die Richtung wird angenommen; ob das Gerät „opening" meldet oder
+  // gleich „open", entscheidet es selbst — sonst bliebe der Intent hängen.
+  const patch: Partial<CoverValue> = action === 'stop' ? {} : { on: action === 'open' };
+  runtime.dispatch({ entityId, domain, service, data: {}, queuedAt: Date.now() }, patch);
+}
+export function setCoverPosition(entityId: string, domain: 'cover' | 'valve', pct: number): void {
+  const position = Math.min(100, Math.max(0, Math.round(pct)));
+  const service = domain === 'cover' ? 'set_cover_position' : 'set_valve_position';
+  runtime.dispatch(
+    { entityId, domain, service, data: { position }, queuedAt: Date.now() },
+    { position, on: position > 0 },
+  );
+}
+export function setCoverTilt(entityId: string, pct: number): void {
+  const tilt_position = Math.min(100, Math.max(0, Math.round(pct)));
+  runtime.dispatch(
+    { entityId, domain: 'cover', service: 'set_cover_tilt_position', data: { tilt_position }, queuedAt: Date.now() },
+    { tilt: tilt_position },
+  );
+}
+
+/* ── Staubsauger (R28) ── */
+export type VacuumAction = 'start' | 'pause' | 'stop' | 'return_to_base' | 'locate';
+export function vacuumCommand(entityId: string, action: VacuumAction): void {
+  const patch: Partial<VacuumValue> = action === 'start' ? { on: true, state: 'cleaning' }
+    : action === 'pause' ? { state: 'paused' }
+    : action === 'stop' ? { on: false }
+    : action === 'return_to_base' ? { state: 'returning' }
+    : {};
+  runtime.dispatch({ entityId, domain: 'vacuum', service: action, data: {}, queuedAt: Date.now() }, patch);
+}
+export function setVacuumFanSpeed(entityId: string, fanSpeed: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'vacuum', service: 'set_fan_speed', data: { fan_speed: fanSpeed }, queuedAt: Date.now() },
+    { fanSpeed },
+  );
+}
+
+/* ── Schloss (R28): `open` ist der Türöffner, kein Dauerzustand. ── */
+export function lockCommand(entityId: string, action: 'lock' | 'unlock' | 'open'): void {
+  const patch: Partial<LockValue> = action === 'lock' ? { locked: true }
+    : action === 'unlock' ? { locked: false }
+    : {};
+  runtime.dispatch({ entityId, domain: 'lock', service: action, data: {}, queuedAt: Date.now() }, patch);
+}
+
+/* ── Befeuchter (R28) ── */
+export function setHumidifierTarget(entityId: string, pct: number): void {
+  const humidity = Math.round(pct);
+  runtime.dispatch(
+    { entityId, domain: 'humidifier', service: 'set_humidity', data: { humidity }, queuedAt: Date.now() },
+    { target: humidity },
+  );
+}
+export function setHumidifierMode(entityId: string, mode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'humidifier', service: 'set_mode', data: { mode }, queuedAt: Date.now() },
+    { mode },
+  );
+}
+
+/* ── Warmwasser (R28) ── */
+export function setWaterHeaterTarget(entityId: string, value: number): void {
+  const temperature = Math.round(value * 2) / 2;
+  runtime.dispatch(
+    { entityId, domain: 'water_heater', service: 'set_temperature', data: { temperature }, queuedAt: Date.now() },
+    { target: temperature },
+  );
+}
+export function setWaterHeaterMode(entityId: string, mode: string): void {
+  runtime.dispatch(
+    { entityId, domain: 'water_heater', service: 'set_operation_mode', data: { operation_mode: mode }, queuedAt: Date.now() },
+    { mode, on: mode !== 'off' },
+  );
+}
+export function setWaterHeaterOn(entityId: string, on: boolean): void {
+  runtime.dispatch(
+    { entityId, domain: 'water_heater', service: on ? 'turn_on' : 'turn_off', data: {}, queuedAt: Date.now() },
+    { on },
+  );
+}
+
+/* ── Mähroboter (R28) ── */
+export function mowerCommand(entityId: string, action: 'start_mowing' | 'pause' | 'dock'): void {
+  const patch = action === 'start_mowing' ? { on: true, state: 'mowing' }
+    : action === 'pause' ? { state: 'paused' }
+    : { on: false };
+  runtime.dispatch({ entityId, domain: 'lawn_mower', service: action, data: {}, queuedAt: Date.now() }, patch);
+}
+
+/* ── Alarmanlage (R28): der Code geht mit, wenn das Gerät einen verlangt. ── */
+export type AlarmAction = 'disarm' | 'arm_home' | 'arm_away' | 'arm_night' | 'arm_vacation' | 'arm_custom_bypass';
+export function alarmCommand(entityId: string, action: AlarmAction, code: string | null): void {
+  const target = action === 'disarm' ? 'disarmed' : `armed_${action.slice(4)}`;
+  const patch: Partial<AlarmValue> = { state: target };
+  runtime.dispatch(
+    { entityId, domain: 'alarm_control_panel', service: `alarm_${action}`, data: code ? { code } : {}, queuedAt: Date.now() },
+    patch,
+  );
+}
+
+/* ── Zahl, Auswahl, Taster (R28) ── */
+export function setNumberValue(entityId: string, domain: 'number' | 'input_number', value: number): void {
+  runtime.dispatch(
+    { entityId, domain, service: 'set_value', data: { value }, queuedAt: Date.now() },
+    { value },
+  );
+}
+export function selectOption(entityId: string, domain: 'select' | 'input_select', option: string): void {
+  runtime.dispatch(
+    { entityId, domain, service: 'select_option', data: { option }, queuedAt: Date.now() },
+    { option },
+  );
+}
+export function pressButton(entityId: string, domain: 'button' | 'input_button'): void {
+  runtime.dispatch({ entityId, domain, service: 'press', data: {}, queuedAt: Date.now() }, {});
+}
+
 export function shouldConfirmHomeOff(now: Date, before: string | null): boolean {
   if (!before) return false;
   const [hours, minutes] = before.split(':').map(Number);
@@ -356,7 +516,7 @@ export function switchableHomeEntityIds(): string[] {
   return appState.rooms.flatMap((room) => room.lights
     .filter((device) => {
       const category = device.category ?? 'light';
-      return category === 'light' || category === 'switch' || category === 'fan';
+      return category === 'light' || category === 'switch' || category === 'fan' || category === 'humidifier';
     })
     .map((device) => device.entityId ?? lightEntityId(room.id, device.id)));
 }

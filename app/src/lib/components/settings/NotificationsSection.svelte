@@ -306,6 +306,18 @@
     {/each}
   </div>
 
+  <div class="settings-group">
+    <div class="settings-row is-stacked" data-setting-id="notification-push">
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.sys_notifications_push_label()}</span>
+        <span class="settings-row-sub">{m.sys_notifications_push_hint()}</span>
+      </div>
+      <input class="settings-input" type="text" placeholder="notify.mobile_app_…"
+             aria-label={m.sys_notifications_push_label()} autocomplete="off" spellcheck="false"
+             bind:value={notificationRules.draftPushService} />
+    </div>
+  </div>
+
   <div class="settings-group notif-detail" role="tabpanel">
     <header class="notif-detail-head">
       <SettingsCardHead icon={category.icon} tint="warm" title={category.label} sub={category.description} />

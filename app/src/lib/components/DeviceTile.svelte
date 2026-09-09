@@ -14,15 +14,26 @@
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { fmtTemp } from '../format.ts';
   import type { Light } from '../state/app.svelte.ts';
-  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue } from '../adapter/types.ts';
-  import { fanSpinDuration } from '../state/fan-presets.ts';
+  import type {
+    LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue, CoverValue, LockValue, AlarmValue,
+    WaterHeaterValue, NumberValue, SelectValue,
+  } from '../adapter/types.ts';
+  import { fanSpinDuration, fanPresetLabel } from '../state/fan-presets.ts';
+  import { alarmStateLabel, coverStateLabel, lockStateLabel } from '../state/device-labels.ts';
   import { lightLevel } from '../state/light-presets.ts';
 
   interface Props { roomId: string; device: Light }
   const { roomId, device }: Props = $props();
 
   const category = $derived(device.category ?? 'light');
-  const toggles = $derived(category === 'light' || category === 'switch' || category === 'fan');
+  /* Tap = Hauptaktion (R28): Licht/Schalter/Ventilator/Befeuchter schalten,
+     Rollo fährt auf oder zu, Sauger und Mäher starten oder kehren heim, der
+     Taster drückt. Schloss, Ventil und Alarm öffnen bewusst nur das Detail —
+     ein versehentlicher Tap darf keine Tür entriegeln. */
+  const toggles = $derived(
+    category === 'light' || category === 'switch' || category === 'fan' || category === 'humidifier'
+    || category === 'cover' || category === 'vacuum' || category === 'mower' || category === 'button',
+  );
 
   const cur = $derived(mergedDevice(roomId, device));
   const pending = $derived(devicePending(device.entityId));
@@ -33,6 +44,9 @@
     if (category === 'temp') return (cur as ClimateValue).hvac !== 'off';
     if (category === 'media') return (cur as MediaValue).playing;
     if (category === 'info' && device.domain === 'sensor') return false;
+    if (category === 'lock') return (cur as LockValue).locked;
+    if (category === 'alarm') return (cur as AlarmValue).state !== 'disarmed';
+    if (category === 'number' || category === 'select' || category === 'button') return false;
     return !!(cur as SwitchValue).on;
   });
 
@@ -61,6 +75,31 @@
       const media = cur as MediaValue | undefined;
       if (!media) return null;
       return media.playing ? (media.track ?? m.dev_playing()) : m.dev_paused();
+    }
+    if (category === 'lock') {
+      const lock = cur as LockValue | undefined;
+      return lock ? lockStateLabel(lock.state) : null;
+    }
+    if (category === 'valve') {
+      const valve = cur as CoverValue | undefined;
+      return valve ? coverStateLabel(valve.on, valve.moving) : null;
+    }
+    if (category === 'alarm') {
+      const alarm = cur as AlarmValue | undefined;
+      return alarm ? alarmStateLabel(alarm.state) : null;
+    }
+    if (category === 'water_heater') {
+      const heater = cur as WaterHeaterValue | undefined;
+      if (!heater) return null;
+      return heater.mode ? `${fmtTemp(heater.target)}° ${fanPresetLabel(heater.mode)}` : `${fmtTemp(heater.target)}°`;
+    }
+    if (category === 'number') {
+      const n = cur as NumberValue | undefined;
+      return fmtSensor(n?.value, n?.unit);
+    }
+    if (category === 'select') {
+      const sel = cur as SelectValue | undefined;
+      return sel?.option ?? null;
     }
     if (device.domain === 'binary_sensor') {
       const s = cur as SwitchValue | undefined;

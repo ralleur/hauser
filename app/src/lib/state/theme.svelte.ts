@@ -103,7 +103,7 @@ function applyThemeDom(theme: Theme, animate: boolean, dusk: boolean): void {
   }
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', theme === 'dark' ? '#0b0e12' : '#ececec');
+    ?.setAttribute('content', theme === 'dark' ? '#0b0e12' : '#f2f0ec');
 }
 
 /* `syncInterfaceTheme` läuft in einem Effekt, der an jeder Entity-Änderung

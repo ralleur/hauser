@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2026 Hauser contributors
-# Version: 1
+# Version: 2
 blueprint:
   name: Hauser state notification v1
   description: >-
@@ -39,6 +39,20 @@ blueprint:
       name: Message
       selector:
         text: {}
+    notify_service:
+      name: Push service
+      description: >-
+        Optional notify service of the Home Assistant Companion app, e.g.
+        notify.mobile_app_my_phone. Empty means no push.
+      default: ""
+      selector:
+        text: {}
+    notify_url:
+      name: Push link
+      description: Deep link the push opens in the Hauser app.
+      default: "hauser://open?screen=notifications"
+      selector:
+        text: {}
 
 triggers:
   - trigger: state
@@ -47,10 +61,25 @@ triggers:
     for:
       minutes: !input hold_minutes
 
+variables:
+  notify_service: !input notify_service
+  notify_url: !input notify_url
+
 actions:
   - action: persistent_notification.create
     data:
       notification_id: !input notification_id
       title: !input title
       message: !input message
+  - if:
+      - condition: template
+        value_template: "{{ notify_service | default('') != '' }}"
+    then:
+      - action: "{{ notify_service }}"
+        data:
+          title: !input title
+          message: !input message
+          data:
+            url: "{{ notify_url }}"
+            clickAction: "{{ notify_url }}"
 mode: restart

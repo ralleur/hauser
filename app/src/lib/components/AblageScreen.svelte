@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { nativeBridge } from '../native/bridge.ts';
   import { m } from '../../paraglide/messages.js';
   import { intlLocale } from '../state/locale.svelte.ts';
   import '../../styles/ablage.css';
@@ -47,6 +48,21 @@
   onMount(async () => {
     if (!phone) return;
     await enterAblage();
+    /* Companion-App (Plan 21, Stufe 4): FaceID statt PIN. Die PIN liegt nach
+       der ersten Eingabe im Schlüsselbund; Biometrie gibt sie frei. */
+    const biometrics = nativeBridge().biometrics;
+    if (biometrics && !ablage.unlocked) {
+      const stored = await biometrics.secretGet('ablage-pin');
+      if (stored && await biometrics.authenticate(m.abl_biometric_reason())) {
+        if (await unlockAblage(stored)) {
+          await searchAblage('', 1, dateRange);
+          await tick();
+          searchInput?.focus();
+          return;
+        }
+        await biometrics.secretSet('ablage-pin', null);
+      }
+    }
     await tick();
     pinInput?.focus();
   });
@@ -89,6 +105,7 @@
     event.preventDefault();
     if (!pin || ablage.loading) return;
     const unlocked = await unlockAblage(pin);
+    if (unlocked) void nativeBridge().biometrics?.secretSet('ablage-pin', pin);
     pin = '';
     if (!unlocked) {
       await tick();
@@ -154,6 +171,23 @@
     dateRange = undefined;
     closeDateDialog();
     void searchAblage(query);
+  }
+
+  /* Companion-App (Plan 21, Stufe 5): Brief → Kamera → Paperless. Der
+     Scanner liefert JPEG-Seiten; sie gehen denselben Weg wie ausgewählte
+     Dateien. */
+  const canScan = !!nativeBridge().documents;
+
+  async function scanDocuments() {
+    const pages = await nativeBridge().documents?.scan() ?? [];
+    if (pages.length === 0) return;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const files = pages.map((base64, index) => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      return new File([bytes], `${m.abl_scan_page({ index: index + 1 })} ${stamp}.jpg`, { type: 'image/jpeg' });
+    });
+    const imported = await importAblageFiles(files);
+    if (imported > 0 && ablage.unlocked) await searchAblage(query, 1, dateRange);
   }
 
   async function importFiles(event: Event) {
@@ -229,6 +263,11 @@
             ? m.abl_import_progress({ done: ablage.importCompleted, total: ablage.importTotal })
             : m.abl_import_pick()}
         </button>
+        {#if canScan}
+          <button class="ablage-import-button pressable" type="button" disabled={ablage.importing} onclick={() => void scanDocuments()}>
+            {m.abl_scan_button()}
+          </button>
+        {/if}
       </section>
       {#if ablage.importMessage}<p class="ablage-import-status" role="status">{ablage.importMessage}</p>{/if}
 

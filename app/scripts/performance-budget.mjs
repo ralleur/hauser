@@ -8,14 +8,15 @@ import { gzipSync } from 'node:zlib';
 import { ImportType, init, parse } from 'es-module-lexer';
 
 /* ADR-022/ADR-027: Der kombinierte Phone-Startup hat ein eigenes, höheres Limit
-   als die Initialroute; ADR-029 setzte es auf 92 KiB, ADR-031 hebt es mit
-   Messwerten auf 96 KiB. Die Initialroute steht weiter auf den dokumentierten
-   80 KiB — sie hat dort reichlich Luft, und ein Gate, das großzügiger ist als
-   sein Dokument, ist kein Gate. */
+   als die Initialroute; ADR-029 setzte es auf 92 KiB, ADR-031 auf 96 KiB,
+   ADR-032 auf 100 KiB, ADR-033 hebt es mit Messwerten auf 110 KiB. Die
+   Initialroute steht weiter auf den dokumentierten 80 KiB — sie hat dort
+   reichlich Luft, und ein Gate, das großzügiger ist als sein Dokument, ist kein
+   Gate. */
 export const DEFAULT_BUDGETS = Object.freeze({
   initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
-  combinedPhoneStartupJsGzipBytes: 100 * 1024,
+  combinedPhoneStartupJsGzipBytes: 110 * 1024,
 });
 
 function emptyReport(budgets) {

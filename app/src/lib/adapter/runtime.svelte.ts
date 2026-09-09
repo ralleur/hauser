@@ -5,10 +5,13 @@
    `merged()` (lesen) und `dispatch()` (schreiben) — nie das Backend direkt.
    ============================================ */
 
+import { nativeBridge } from '../native/bridge.ts';
 import { m } from '../../paraglide/messages.js';
 import { SvelteMap } from 'svelte/reactivity';
 import { EntityStore } from './entity-store.svelte.ts';
 import { FakeBackend } from './fake-backend.ts';
+import { LazyPlatformBackend } from './platform-backend-lazy.ts';
+import '../native/bridge.ts';
 import { demoEnergySeed, demoTodoSeed } from '../demo/demo-mode.ts';
 import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS, CONFIDENCE_TIMEOUT_MS } from './overlay.ts';
@@ -26,7 +29,7 @@ import { themeFromLocalTime } from '../state/appearance-mode.ts';
 import { buildEntitySeed, buildMediaSeed, LAUNDRY_ENTITIES } from '../state/entities.ts';
 import { HOUSEHOLD_RUNTIME_MODEL } from '../config/household-runtime-data.ts';
 import { FAKE_DISCOVERY_CATALOG } from '../state/device-config.ts';
-import { FAKE_FAN_SEED } from '../state/fake-discovery-catalog.ts';
+import { fakeSeedFor } from '../state/fake-discovery-catalog.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 
@@ -44,6 +47,10 @@ export class AdapterRuntime {
   #catalogSubscriber: ((items: unknown[]) => void) | null = null;
   #equals: (a: unknown, b: unknown) => boolean;
   #connection = $state<ConnectionStatus>('connected');
+  /* Befehle, die angenommen wurden, bevor der Kanal stand (B-27 E1). Sie
+     warten hier und gehen beim `connected` in einem Rutsch raus. Dedup pro
+     Entität wie in der normalen Queue — der letzte Griff gewinnt. */
+  #pending: Command[] = [];
   /* Seit wann steht dieser Verbindungszustand? Die versteckte Diagnose
      (Paket 10) zeigt daraus das Verbindungsalter. */
   #connectionSince = $state(Date.now());
@@ -78,12 +85,20 @@ export class AdapterRuntime {
       /* B-27 E1: Ab hier verwirft dispatch() keinen Command mehr — das ist der
          Moment, den docs/03 als „reagierend" begrenzt. */
       if (status === 'connected') {
+        this.#flushPending();
         markOperable();
         markResumeOperable();
         /* R13 (docs/23): Leseabfragen, die vor der Verbindung leer ausgingen
            (Kalender, Erinnerungen), laufen jetzt nach — nicht erst mit dem
            nächsten Intervall in fünf Minuten. */
         void revalidateStaleQueries('connected');
+      }
+      /* Endgültig getrennt: die Wartenden werden nie zugestellt. Optimistische
+         Zustände zurücknehmen, statt sie stehen zu lassen. */
+      if (status === 'disconnected' && this.#pending.length > 0) {
+        const waiting = this.#pending;
+        this.#pending = [];
+        for (const cmd of waiting) this.#onCommandFailed(cmd.entityId);
       }
     });
     // Service-Error (docs/02, Funktionsumfang 6): der Command wurde abgelehnt —
@@ -256,7 +271,12 @@ export class AdapterRuntime {
      ohne Intent — media_next/prev, analog scene.turn_on. Läuft durch dieselbe
      Sende-Dedup, reconciled aber nichts. */
   send(cmd: Command): void {
-    if (this.#connection !== 'connected') return; // offline (docs/02)
+    if (this.#connection === 'disconnected') return; // offline (docs/02)
+    nativeBridge().haptic('impact');
+    if (this.#connection !== 'connected') {
+      this.#pending = enqueue(this.#pending, cmd);
+      return;
+    }
     this.#queue = enqueue(this.#queue, cmd);
     this.#scheduleFlush();
   }
@@ -265,22 +285,50 @@ export class AdapterRuntime {
      Der optimistische UI-Update ist mit dem gesetzten Intent bereits sichtbar
      (ADR-005). `optimistic` ist der erwartete Zielwert für die Reconciliation. */
   dispatch(cmd: Command, optimistic: unknown): void {
-    // Offline (docs/02): keine Commands möglich — kein optimistischer Intent, der
-    // nie bestätigt würde. Die UI deaktiviert die Controls zusätzlich sichtbar.
-    if (this.#connection !== 'connected') return;
+    /* Endgültig getrennt (docs/02): kein Command und kein optimistischer
+       Intent, der nie bestätigt würde — die UI sperrt die Controls sichtbar.
+       Während `connecting`/`reconnecting` wird dagegen angenommen: das ist der
+       Zustand direkt nach dem App-Start, und dort greift der Nutzer zuerst zu
+       (B-27 E1). Der Befehl wartet, bis der Kanal steht. */
+    if (this.#connection === 'disconnected') return;
     this.#intents.set(cmd.entityId, {
       entityId: cmd.entityId, value: optimistic, sentAt: Date.now(), status: 'inflight',
     });
     // Dedup pro Entität (docs/02): der letzte Command überschreibt den pending
+    nativeBridge().haptic('impact');
+    if (this.#connection !== 'connected') {
+      this.#pending = enqueue(this.#pending, cmd);
+      /* Ohne Kanal keine Uhren: Konfidenz und Timeout messen die Antwort von
+         Home Assistant, nicht die Wartezeit auf die Verbindung. Sie starten in
+         #flushPending, wenn der Command wirklich rausgeht. */
+      this.#clearTimers(cmd.entityId);
+      return;
+    }
     this.#queue = enqueue(this.#queue, cmd);
     this.#scheduleFlush();
+    this.#startCommandTimers(cmd.entityId);
+  }
 
-    this.#clearTimers(cmd.entityId);
+  /* Wartende Befehle beim Verbindungsaufbau zustellen — in derselben
+     Reihenfolge, mit denselben Uhren wie ein frischer Griff. */
+  #flushPending(): void {
+    if (this.#pending.length === 0) return;
+    const waiting = this.#pending;
+    this.#pending = [];
+    for (const cmd of waiting) {
+      this.#queue = enqueue(this.#queue, cmd);
+      if (this.#intents.get(cmd.entityId)) this.#startCommandTimers(cmd.entityId);
+    }
+    this.#scheduleFlush();
+  }
+
+  #startCommandTimers(entityId: string): void {
+    this.#clearTimers(entityId);
     this.#confidenceTimers.set(
-      cmd.entityId,
-      setTimeout(() => this.#onUnconfirmed(cmd.entityId), CONFIDENCE_TIMEOUT_MS),
+      entityId,
+      setTimeout(() => this.#onUnconfirmed(entityId), CONFIDENCE_TIMEOUT_MS),
     );
-    this.#timers.set(cmd.entityId, setTimeout(() => this.#onTimeout(cmd.entityId), COMMAND_TIMEOUT_MS));
+    this.#timers.set(entityId, setTimeout(() => this.#onTimeout(entityId), COMMAND_TIMEOUT_MS));
   }
 
   /* Sende-Dedup: rapide Doppelklicks innerhalb eines Ticks kollabieren zu
@@ -360,10 +408,7 @@ export class AdapterRuntime {
    Schichttausch nur hier: FakeBackend ↔ HaBackend hinter demselben Interface. */
 export const seed = new Map<string, unknown>([
   ...buildEntitySeed(ROOM_SEED),
-  ...FAKE_DISCOVERY_CATALOG.map((item) => [
-    item.entityId,
-    item.domain === 'fan' ? { ...FAKE_FAN_SEED } : { on: false },
-  ] as const),
+  ...FAKE_DISCOVERY_CATALOG.map((item) => [item.entityId, fakeSeedFor(item.domain)] as const),
   ...buildMediaSeed(MEDIA_SEED),
   // Read-only-Ambient: sun.sun-Fallback (Nacht) bis zum ersten echten Push —
   // deckt sich mit dem Default-Theme 'dark'. Energie-Sensoren haben keinen
@@ -441,7 +486,17 @@ function useFake(): boolean {
   return false;
 }
 
-export let backend: Backend = useFake()
+/* Plattform-Weg (Plan 21, Stufe 3): die App setzt `hmi:backend=platform` und
+   stellt `window.HauserNative.home` bereit — dann kommt das Zuhause aus
+   Apple Home / Google Home, ohne Server. */
+export function usePlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  try { return localStorage.getItem('hmi:backend') === 'platform' && !!window.HauserNative?.home; } catch { return false; }
+}
+
+export let backend: Backend = usePlatform()
+  ? new LazyPlatformBackend(window.HauserNative!.home!)
+  : useFake()
   ? new FakeBackend(seed, undefined, undefined, demoTodoSeed())
   : new HaBackend({
       // Erst in start() nach dem Shared-Config-Sync auflösen; der Modulimport

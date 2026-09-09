@@ -92,9 +92,14 @@ class NotificationRulesStore {
     this.#fetch = fetchImpl;
   }
 
+  /* Push an das Telefon (Plan 21, Stufe 4): notify-Dienst der Companion-App. */
+  pushService = $state<string | null>(null);
+  draftPushService = $state('');
+
   get dirty(): boolean {
     return JSON.stringify(this.rules) !== JSON.stringify(this.draft)
-      || JSON.stringify(this.colors) !== JSON.stringify(this.draftColors);
+      || JSON.stringify(this.colors) !== JSON.stringify(this.draftColors)
+      || (this.pushService ?? '') !== this.draftPushService.trim();
   }
 
   /** Solange keine Wäsche-Regel gespeichert ist, bleibt der lokale Wäsche-Pfad aktiv. */
@@ -111,9 +116,10 @@ class NotificationRulesStore {
       try {
         const response = await this.#fetch('/api/notifications/rules');
         if (response.ok) {
-          const payload = await response.json() as { rules?: unknown; colors?: unknown };
+          const payload = await response.json() as { rules?: unknown; colors?: unknown; push?: { service?: unknown } };
           rules = parseNotificationRules(payload?.rules) ?? [];
           colors = parseNotificationColors(payload?.colors) ?? {};
+          this.pushService = typeof payload?.push?.service === 'string' ? payload.push.service : null;
         }
       } catch { /* Offline oder Demo: leere Liste, Wäsche kommt aus der Konfiguration. */ }
       /* Der Entwurf gehört dem Nutzer: hat er seit dem Snapshot schon etwas
@@ -124,6 +130,7 @@ class NotificationRulesStore {
       if (!keepDraft) {
         this.draft = withLaundryRules(snapshot(rules));
         this.draftColors = { ...colors };
+        this.draftPushService = this.pushService ?? '';
       }
       this.loaded = true;
       void rulesSnapshot.save({ rules: snapshot(rules), colors: { ...colors } });
@@ -244,7 +251,7 @@ class NotificationRulesStore {
       response = await this.#fetch('/api/notifications/rules', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ rules, colors }),
+        body: JSON.stringify({ rules, colors, push: { service: this.draftPushService.trim() || null } }),
       });
       try { payload = await response.json(); } catch { payload = null; }
     } catch {
@@ -260,6 +267,7 @@ class NotificationRulesStore {
     this.rules = saved;
     this.draft = withLaundryRules(snapshot(saved));
     this.colors = savedColors;
+    this.pushService = this.draftPushService.trim() || null;
     this.draftColors = { ...savedColors };
     void rulesSnapshot.save({ rules: snapshot(saved), colors: { ...savedColors } });
     if (payload.syncError) {

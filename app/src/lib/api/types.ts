@@ -21,6 +21,7 @@ export interface BuildInfoResponse {
 export interface PairingStartResponse {
   ok: true;
   code: string;
+  guest?: boolean;
   expiresAt: number;
   lan: string | null;
   remote: string | null;
@@ -42,11 +43,30 @@ export interface PairedDevice {
   createdAt: string;
   lastSeenAt: string | null;
   lastSeenVia: 'lan' | 'remote' | null;
+  guest: boolean;
+  expiresAt: string | null;
 }
 
 export interface PairingDevicesResponse {
   ok: true;
   devices: PairedDevice[];
+}
+
+export interface RemoteStatusResponse {
+  ok: true;
+  enabled: boolean;
+  state: 'unavailable' | 'starting' | 'needs-login' | 'running' | 'funnel-error' | 'stopped' | 'unreachable';
+  authUrl?: string;
+  hostname?: string;
+  url?: string;
+  error?: string;
+  tailnet?: string;
+  ownUrl: string | null;
+}
+
+export interface AppStatesResponse {
+  ok: true;
+  states: Array<{ entityId: string; state: string | null; attributes: Record<string, unknown>; changedAt: string | null }>;
 }
 
 export interface AppFileListResponse {

@@ -137,11 +137,20 @@ describe('phone home source, command and modal boundaries', () => {
     );
   });
 
-  it('keeps the mobile vacation action enabled as a bidirectional toggle', () => {
-    expect(phoneQuickActions).toMatch(/onclick=\{toggleVacationMode\}/);
+  it('keeps the mobile quick action enabled as a bidirectional toggle', () => {
+    expect(phoneQuickActions).toMatch(/onclick=\{togglePhoneAction\}/);
     expect(phoneQuickActions).toMatch(/disabled=\{!online\}/);
-    expect(phoneQuickActions).not.toMatch(/disabled=\{!online \|\| vacationActive\}/);
-    expect(phoneQuickActions).toContain('vacationActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()');
+    expect(phoneQuickActions).not.toMatch(/disabled=\{!online \|\| actionActive\}/);
+    expect(phoneQuickActions).toContain('actionActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()');
+  });
+
+  it('opens the quick-action editor on long press, locked in operate mode', () => {
+    // Gleicher Griff wie auf der Raum-Kachel: konfigurieren nur im
+    // Bearbeiten-Modus, der kurze Tipp bleibt das Schalten.
+    expect(phoneQuickActions).toMatch(
+      /use:longpress=\{\{ onLongPress: whenEditable\(openPhoneActionEdit\) \}\}/,
+    );
+    expect(phoneShell).toMatch(/<PhoneActionEdit\s*\/>/);
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {

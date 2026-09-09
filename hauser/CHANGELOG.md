@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+## 0.12.0 - 2026-09-09
+
+- The quick action next to the temperature can carry any device: hold it to
+  pick one, and its icon is suggested from the device.
+- The bottom bar can be arranged from the More menu, which now lists every
+  category instead of only the hidden ones.
+- A swipe down closes a room and its editor from anywhere in it, and the
+  device search lifts itself above the keyboard.
+- The day theme stands on a warm off-white ground instead of a cool grey.
+- Energy reads as a page, and the shopping list fits a 390 pixel phone again.
+- The settings list sits evenly, loads one section at a time, and hides what
+  cannot work without a Hauser server.
+- The first tap after opening the app arrives instead of being dropped.
+- The iPad's own status bar steps aside where Hauser draws its own header.
+- The house hands its room pictures to devices without AVIF (`/api/app/hero`),
+  so a watch can show the same picture as the wall.
+- Rain and snow now fill the whole screen instead of only its upper part.
+- The project page names what Hauser is before it shows the picture.
+- The demo has a ceiling fan in the bedroom, so the fan panel can be tried.
+
+## 0.11.0 - 2026-09-07
+
+- Every device Home Assistant can control has its own second level: blinds
+  and valves, vacuums, locks, humidifiers, water heaters, lawn mowers, alarm
+  panels, numbers, selections and buttons. Thermostats show every mode they
+  report. What the device does not report does not appear.
+
 ## 0.10.1 - 2026-09-07
 
 - The project page now tells the story of the panel instead of listing
@@ -15,7 +44,8 @@
 
 - On the phone, a room tile shows the unlit night picture when no light is on
   in that room and the lit one as soon as a lamp burns — as the large stage
-  already did. The tiles keep loading the small phone-sized picture.
+  already did, with the same slow fade when the last light goes out. The tiles
+  keep loading the small phone-sized picture.
 
 ## 0.9.1 - 2026-09-07
 

@@ -125,9 +125,15 @@ export const API_ROUTES = [
   { id: 'pairingStart', methods: ['POST'], path: '/api/pairing/start', area: 'app', access: 'origin', purpose: 'Einmalcode für die Kopplung eines Telefons (nur im LAN).', response: 'PairingStartResponse' },
   { id: 'pairingClaim', methods: ['POST'], path: '/api/pairing/claim', area: 'app', access: 'public', purpose: 'Code einlösen, Gerätetoken erhalten (nur im LAN).', response: 'PairingClaimResponse' },
   { id: 'pairingDevices', methods: ['GET'], path: '/api/pairing/devices', area: 'app', access: 'origin', purpose: 'Gekoppelte Geräte.', response: 'PairingDevicesResponse' },
-  { id: 'pairingDeviceRevoke', methods: ['DELETE'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin', purpose: 'Gerät widerrufen.' },
+  { id: 'pairingDeviceRevoke', methods: ['DELETE', 'PATCH'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin', purpose: 'Gerät widerrufen oder seine Person setzen.' },
+  { id: 'appPersons', methods: ['GET'], path: '/api/app/persons', area: 'app', access: 'origin', purpose: 'Bewohner aus Home Assistant für die Personen-Kopplung.' },
   { id: 'appBundle', methods: ['GET', 'HEAD'], path: '/api/app/bundle', area: 'app', access: 'origin', purpose: 'Dateiliste des Phone-Bundles mit Hashes (ETag).', response: 'AppFileListResponse' },
+  { id: 'remoteStatus', methods: ['GET'], path: '/api/remote', area: 'app', access: 'origin', purpose: 'Zustand des Fernzugriffs (tsnet-Sidecar) und eigene Adresse.', response: 'RemoteStatusResponse' },
+  { id: 'remoteReset', methods: ['POST'], path: '/api/remote/reset', area: 'app', access: 'origin', purpose: 'Tunnel-Knoten neu anmelden.' },
+  { id: 'appCommand', methods: ['POST'], path: '/api/app/command', area: 'app', access: 'origin', purpose: 'Geräteaktion für Widgets und Kurzbefehle (HA-Service über REST).' },
+  { id: 'appStates', methods: ['GET'], path: '/api/app/states', area: 'app', access: 'origin', purpose: 'Zustände ausgewählter Entitäten für Widgets.', response: 'AppStatesResponse' },
   { id: 'appManifest', methods: ['GET', 'HEAD'], path: '/api/app/manifest', area: 'app', access: 'origin', purpose: 'Phone-Varianten der Raumbilder mit Hashes (ETag).', response: 'AppFileListResponse' },
+  { id: 'appHero', methods: ['GET', 'HEAD'], path: '/api/app/hero/:roomId/:variant', area: 'app', access: 'origin', purpose: 'Raumbild eines Raums (light, dark, dark-off, overcast) als JPEG in Wunschbreite (?w=) für Geräte ohne AVIF, etwa die Uhr.', cacheable: true },
   { id: 'hotelTouch', methods: ['POST'], path: '/api/hotel-mode/touch', area: 'hotel', access: 'guest', purpose: 'Adminsitzung verlängern.' },
 
   /* ── Ablage (Paperless) ── */

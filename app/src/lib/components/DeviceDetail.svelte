@@ -9,23 +9,32 @@
   import Icon from './Icon.svelte';
 
   import TickScale from './TickScale.svelte';
-  import { appState, COLOR_TEMP_MIN, COLOR_TEMP_MAX, HVAC_MODES, ROOM_SEED, type Light } from '../state/app.svelte.ts';
+  import { appState, COLOR_TEMP_MIN, COLOR_TEMP_MAX, HVAC_MODES, HVAC_MODES_ALL, ROOM_SEED, type Light } from '../state/app.svelte.ts';
   import {
     mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile,
     toggleDevice, setBrightness, setColorTemp, setColor,
-    setClimateTarget, setClimateHvac, toggleMediaEntity, setMediaVolume,
+    setClimateTarget, setClimateHvac, setClimateFanMode, setClimatePreset, setClimateSwing,
+    toggleMediaEntity, setMediaVolume,
     setFanPercentage, setFanPreset, setFanOscillating, setFanDirection,
+    coverCommand, setCoverPosition, setCoverTilt, vacuumCommand, setVacuumFanSpeed, lockCommand,
+    setHumidifierTarget, setHumidifierMode, setWaterHeaterTarget, setWaterHeaterMode, setWaterHeaterOn,
+    mowerCommand, alarmCommand, setNumberValue, selectOption, pressButton, type AlarmAction,
   } from '../state/commands.ts';
   import { deviceDetail, closeDeviceDetail, finishDeviceDetailClose } from '../state/overlay.svelte.ts';
   import { pulse } from '../actions/pulse.ts';
   import { LIGHT_COLOR_SWATCHES, tempTint, climateTint, lightLevel } from '../state/light-presets.ts';
   import { fanPresetIcon, fanPresetLabel, fanSpinDuration } from '../state/fan-presets.ts';
+  import { alarmStateLabel, coverStateLabel, lockStateLabel, modeIcon, mowerStateLabel, vacuumStateLabel } from '../state/device-labels.ts';
+  import { intlLocale } from '../state/locale.svelte.ts';
   import { defaultIconFor, iconForDevice, persistLightIconOverride, resetLightIconOverride } from '../state/light-icons.ts';
 
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
   import { renameDevice } from '../state/device-manager.svelte.ts';
   import { fmtTemp } from '../format.ts';
-  import type { LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue } from '../adapter/types.ts';
+  import type {
+    LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue, CoverValue, VacuumValue, LockValue,
+    HumidifierValue, WaterHeaterValue, MowerValue, AlarmValue, NumberValue, SelectValue, ButtonValue,
+  } from '../adapter/types.ts';
 
   import { m } from '../../paraglide/messages.js';
   const roomId = $derived(deviceDetail.roomId);
@@ -45,6 +54,54 @@
   const sensor = $derived(category === 'info' && device?.domain === 'sensor' ? (cur as SensorValue | undefined) : undefined);
   const media = $derived(category === 'media' ? (cur as MediaValue | undefined) : undefined);
   const fan = $derived(category === 'fan' ? (cur as FanValue | undefined) : undefined);
+  /* R28: die übrigen steuerbaren Domänen, je eine gemergte Sicht. */
+  const cover = $derived(category === 'cover' || category === 'valve' ? (cur as CoverValue | undefined) : undefined);
+  const coverDomain = $derived<'cover' | 'valve'>(category === 'valve' ? 'valve' : 'cover');
+  const vacuum = $derived(category === 'vacuum' ? (cur as VacuumValue | undefined) : undefined);
+  const lock = $derived(category === 'lock' ? (cur as LockValue | undefined) : undefined);
+  const humidifier = $derived(category === 'humidifier' ? (cur as HumidifierValue | undefined) : undefined);
+  const heater = $derived(category === 'water_heater' ? (cur as WaterHeaterValue | undefined) : undefined);
+  const mower = $derived(category === 'mower' ? (cur as MowerValue | undefined) : undefined);
+  const alarm = $derived(category === 'alarm' ? (cur as AlarmValue | undefined) : undefined);
+  const numberValue = $derived(category === 'number' ? (cur as NumberValue | undefined) : undefined);
+  const select = $derived(category === 'select' ? (cur as SelectValue | undefined) : undefined);
+  const button = $derived(category === 'button' ? (cur as ButtonValue | undefined) : undefined);
+  const numberDomain = $derived<'number' | 'input_number'>(device?.domain === 'input_number' ? 'input_number' : 'number');
+  const selectDomain = $derived<'select' | 'input_select'>(device?.domain === 'input_select' ? 'input_select' : 'select');
+  const buttonDomain = $derived<'button' | 'input_button'>(device?.domain === 'input_button' ? 'input_button' : 'button');
+  /* Klima: Modi und Grenzen kommen vom Thermostat; ohne Meldung die Grundmodi
+     und 16–26 °C wie bisher. */
+  const hvacModes = $derived.by(() => {
+    const reported = climate?.hvacModes;
+    return reported?.length ? HVAC_MODES_ALL.filter((mode) => reported.includes(mode.id)) : HVAC_MODES;
+  });
+  const climateRange = $derived({ min: climate?.minTemp ?? 16, max: climate?.maxTemp ?? 26 });
+  /* Alarm: der Code wird nur abgefragt, wenn das Gerät einen verlangt. */
+  let alarmCode = $state('');
+  const alarmActions = $derived.by((): Array<{ id: AlarmAction; label: string; icon: string; state: string }> => {
+    if (!alarm) return [];
+    const list: Array<{ id: AlarmAction; label: string; icon: string; state: string }> = [
+      { id: 'disarm', label: m.dev_disarm(), icon: 'i-shield-off', state: 'disarmed' },
+    ];
+    if (alarm.supportsArmHome) list.push({ id: 'arm_home', label: m.dev_arm_home(), icon: 'i-shield-home', state: 'armed_home' });
+    if (alarm.supportsArmAway) list.push({ id: 'arm_away', label: m.dev_arm_away(), icon: 'i-shield-lock', state: 'armed_away' });
+    if (alarm.supportsArmNight) list.push({ id: 'arm_night', label: m.dev_arm_night(), icon: 'i-weather-night', state: 'armed_night' });
+    if (alarm.supportsArmVacation) list.push({ id: 'arm_vacation', label: m.dev_arm_vacation(), icon: 'i-palm-tree', state: 'armed_vacation' });
+    if (alarm.supportsArmCustom) list.push({ id: 'arm_custom_bypass', label: m.dev_arm_custom(), icon: 'i-shield-half-full', state: 'armed_custom_bypass' });
+    return list;
+  });
+  function onAlarm(action: AlarmAction) {
+    const needsCode = alarm?.codeFormat !== null && (action === 'disarm' || alarm?.codeArmRequired);
+    alarmCommand(entityId, action, needsCode ? alarmCode || null : null);
+    alarmCode = '';
+  }
+  const pressedAtLabel = $derived(
+    button?.pressedAt ? new Date(button.pressedAt).toLocaleString(intlLocale(), { dateStyle: 'short', timeStyle: 'short' }) : null,
+  );
+  function fmtUnit(value: number, unit: string | null | undefined, digits = 1): string {
+    const num = value.toLocaleString(intlLocale(), { maximumFractionDigits: digits });
+    return unit ? `${num} ${unit}` : num;
+  }
   /* null = kein Messwert; dann bleibt die Zeile weg (R3, docs/23). */
   const reading = $derived(fmtSensor(sensor?.value, sensor?.unit ?? device?.unit));
   const pending = $derived(!!device && devicePending(entityId));
@@ -86,6 +143,13 @@
     if (sw) return sw.on;
     if (climate) return climate.hvac !== 'off';
     if (media) return media.playing;
+    if (cover) return cover.on;
+    if (vacuum) return vacuum.on;
+    if (lock) return lock.locked;
+    if (humidifier) return humidifier.on;
+    if (heater) return heater.on;
+    if (mower) return mower.on;
+    if (alarm) return alarm.state !== 'disarmed';
     return false;
   });
 
@@ -105,6 +169,36 @@
   let dragTarget = $state<number | null>(null);
   let dragVol = $state<number | null>(null);
   let dragFanSpeed = $state<number | null>(null);
+  let dragPosition = $state<number | null>(null);
+  let dragTilt = $state<number | null>(null);
+  let dragHumidity = $state<number | null>(null);
+  let dragHeater = $state<number | null>(null);
+  let dragNumber = $state<number | null>(null);
+  const positionDisplay = $derived(dragPosition ?? cover?.position ?? 0);
+  const tiltDisplay = $derived(dragTilt ?? cover?.tilt ?? 0);
+  const humidityDisplay = $derived(dragHumidity ?? humidifier?.target ?? 50);
+  const heaterDisplay = $derived(dragHeater ?? heater?.target ?? 50);
+  const numberDisplay = $derived(dragNumber ?? numberValue?.value ?? numberValue?.min ?? 0);
+  function onPosition(val: number, final: boolean) {
+    dragPosition = final ? null : val;
+    if (final) setCoverPosition(entityId, coverDomain, val);
+  }
+  function onTilt(val: number, final: boolean) {
+    dragTilt = final ? null : val;
+    if (final) setCoverTilt(entityId, val);
+  }
+  function onHumidity(val: number, final: boolean) {
+    dragHumidity = final ? null : val;
+    if (final) setHumidifierTarget(entityId, val);
+  }
+  function onHeater(val: number, final: boolean) {
+    dragHeater = final ? null : val;
+    if (final) setWaterHeaterTarget(entityId, val);
+  }
+  function onNumber(val: number, final: boolean) {
+    dragNumber = final ? null : val;
+    if (final) setNumberValue(entityId, numberDomain, val);
+  }
   let brightnessIntro = $state(0);
   let previousDetailMode = deviceDetail.mode;
   const briDisplay = $derived(dragBri ?? (light?.on ? light.brightness : 0));
@@ -148,10 +242,14 @@
   }
 
   // Primäraktion im Header: light/switch = Schalten, media = Play/Pause.
-  const hasPower = $derived(category === 'light' || category === 'switch' || category === 'fan' || category === 'media');
+  const hasPower = $derived(
+    category === 'light' || category === 'switch' || category === 'fan' || category === 'media'
+    || category === 'humidifier' || (category === 'water_heater' && !!heater?.supportsOnOff),
+  );
   function onPower() {
     if (!device) return;
     if (category === 'media') toggleMediaEntity(entityId);
+    else if (category === 'water_heater') setWaterHeaterOn(entityId, !heater?.on);
     else toggleDevice(roomId, device);
   }
 
@@ -402,23 +500,352 @@
             <section class="ld-section">
               <span class="caps-label">{m.dev_target_temp()}</span>
               <TickScale ariaLabel={m.dev_target_temp()} orientation="horizontal" mode="gradient"
-                         value={targetDisplay} min={16} max={26} step={0.5} keyStep={1}
+                         value={Math.min(climateRange.max, Math.max(climateRange.min, targetDisplay))}
+                         min={climateRange.min} max={climateRange.max} step={0.5} keyStep={1}
                          tint={climateTint}
                          onInput={onTarget} format={(v) => `${fmtTemp(v)} °C`} />
-              <div class="ld-scale-ends"><span>16°</span><span>26°</span></div>
+              <div class="ld-scale-ends"><span>{fmtTemp(climateRange.min)}°</span><span>{fmtTemp(climateRange.max)}°</span></div>
             </section>
             <section class="ld-section">
               <span class="caps-label">{m.dev_mode()}</span>
               <div class="mode-pill" role="radiogroup" aria-label={m.dev_mode()}>
-                {#each HVAC_MODES as m (m.id)}
-                  <button class="mode-seg pressable" type="button" role="radio" data-mode={m.id}
-                          aria-label={m.label} aria-checked={climate?.hvac === m.id}
-                          class:is-active={climate?.hvac === m.id}
-                          onclick={() => setClimateHvac(entityId, m.id)}>
-                    <Icon name={m.icon} cls="icon icon-md" />
+                {#each hvacModes as mode (mode.id)}
+                  <button class="mode-seg pressable" type="button" role="radio" data-mode={mode.id}
+                          aria-label={mode.label} aria-checked={climate?.hvac === mode.id}
+                          class:is-active={climate?.hvac === mode.id}
+                          onclick={() => setClimateHvac(entityId, mode.id)}>
+                    <Icon name={mode.icon} cls="icon icon-md" />
                   </button>
                 {/each}
               </div>
+            </section>
+            {#if climate?.fanModes?.length}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_fan_mode()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_fan_mode()}>
+                  {#each climate.fanModes as mode (mode)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={climate.fanMode === mode}
+                            onclick={() => setClimateFanMode(entityId, mode)}>
+                      <Icon name={modeIcon(mode, 'i-fan')} cls="icon icon-md" />
+                      <span class="choice-label">{fanPresetLabel(mode)}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+            {#if climate?.presetModes?.length}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_preset()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_preset()}>
+                  {#each climate.presetModes as mode (mode)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={climate.presetMode === mode}
+                            onclick={() => setClimatePreset(entityId, mode)}>
+                      <Icon name={modeIcon(mode, 'i-thermometer')} cls="icon icon-md" />
+                      <span class="choice-label">{fanPresetLabel(mode)}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+            {#if climate?.swingModes?.length}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_swing()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_swing()}>
+                  {#each climate.swingModes as mode (mode)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={climate.swingMode === mode}
+                            onclick={() => setClimateSwing(entityId, mode)}>
+                      <Icon name={modeIcon(mode, 'i-arrow-oscillating')} cls="icon icon-md" />
+                      <span class="choice-label">{fanPresetLabel(mode)}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+          {:else if category === 'cover' || category === 'valve'}
+            {#if cover}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{coverStateLabel(cover.on, cover.moving)}</p>
+              </section>
+              <section class="ld-section">
+                <div class="action-row" role="group" aria-label={device.name}>
+                  {#if cover.supportsOpen}
+                    <button class="action-btn pressable" type="button" onclick={() => coverCommand(entityId, coverDomain, 'open')}>
+                      <Icon name="i-arrow-up" cls="icon icon-md" /><span>{m.dev_open()}</span>
+                    </button>
+                  {/if}
+                  {#if cover.supportsStop}
+                    <button class="action-btn pressable" type="button" onclick={() => coverCommand(entityId, coverDomain, 'stop')}>
+                      <Icon name="i-stop" cls="icon icon-md" /><span>{m.dev_stop()}</span>
+                    </button>
+                  {/if}
+                  {#if cover.supportsClose}
+                    <button class="action-btn pressable" type="button" onclick={() => coverCommand(entityId, coverDomain, 'close')}>
+                      <Icon name="i-arrow-down" cls="icon icon-md" /><span>{m.dev_close()}</span>
+                    </button>
+                  {/if}
+                </div>
+              </section>
+              {#if cover.supportsPosition}
+                <section class="ld-section ld-brightness">
+                  <span class="caps-label">{m.dev_position()}</span>
+                  {#key `${deviceId}-${brightnessIntro}`}
+                    <TickScale ariaLabel={m.dev_position()} orientation="vertical" mode="fill" intro
+                               value={positionDisplay} min={0} max={100} step={1} keyStep={5}
+                               onInput={onPosition} format={(v) => `${Math.round(v)}%`} />
+                  {/key}
+                </section>
+              {/if}
+              {#if cover.supportsTilt}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_tilt()}</span>
+                  <TickScale ariaLabel={m.dev_tilt()} orientation="horizontal" mode="fill"
+                             value={tiltDisplay} min={0} max={100} step={1} keyStep={5}
+                             onInput={onTilt} format={(v) => `${Math.round(v)}%`} />
+                </section>
+              {/if}
+            {/if}
+          {:else if category === 'vacuum'}
+            {#if vacuum}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{vacuumStateLabel(vacuum.state)}</p>
+                {#if vacuum.battery !== null}<p class="ld-meta num">{m.dev_battery()} {vacuum.battery} %</p>{/if}
+              </section>
+              <section class="ld-section">
+                <div class="action-row" role="group" aria-label={device.name}>
+                  {#if vacuum.supportsStart}
+                    <button class="action-btn pressable" type="button" onclick={() => vacuumCommand(entityId, 'start')}>
+                      <Icon name="i-play" cls="icon icon-md" /><span>{m.dev_start()}</span>
+                    </button>
+                  {/if}
+                  {#if vacuum.supportsPause}
+                    <button class="action-btn pressable" type="button" onclick={() => vacuumCommand(entityId, 'pause')}>
+                      <Icon name="i-pause" cls="icon icon-md" /><span>{m.dev_pause()}</span>
+                    </button>
+                  {/if}
+                  {#if vacuum.supportsStop}
+                    <button class="action-btn pressable" type="button" onclick={() => vacuumCommand(entityId, 'stop')}>
+                      <Icon name="i-stop" cls="icon icon-md" /><span>{m.dev_stop()}</span>
+                    </button>
+                  {/if}
+                  {#if vacuum.supportsReturn}
+                    <button class="action-btn pressable" type="button" onclick={() => vacuumCommand(entityId, 'return_to_base')}>
+                      <Icon name="i-home-import-outline" cls="icon icon-md" /><span>{m.dev_return_home()}</span>
+                    </button>
+                  {/if}
+                  {#if vacuum.supportsLocate}
+                    <button class="action-btn pressable" type="button" onclick={() => vacuumCommand(entityId, 'locate')}>
+                      <Icon name="i-crosshairs-gps" cls="icon icon-md" /><span>{m.dev_locate()}</span>
+                    </button>
+                  {/if}
+                </div>
+              </section>
+              {#if vacuum.supportsFanSpeed && vacuum.fanSpeeds.length}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_suction()}</span>
+                  <div class="choice-grid" role="radiogroup" aria-label={m.dev_suction()}>
+                    {#each vacuum.fanSpeeds as speed (speed)}
+                      <button class="choice-card pressable" type="button" role="radio"
+                              aria-checked={vacuum.fanSpeed === speed}
+                              onclick={() => setVacuumFanSpeed(entityId, speed)}>
+                        <Icon name={modeIcon(speed, 'i-fan')} cls="icon icon-md" />
+                        <span class="choice-label">{fanPresetLabel(speed)}</span>
+                        <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                      </button>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
+            {/if}
+          {:else if category === 'lock'}
+            {#if lock}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{lockStateLabel(lock.state)}</p>
+              </section>
+              <section class="ld-section">
+                <div class="choice-pill" role="radiogroup" aria-label={m.dev_state()}>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={lock.locked}
+                          onclick={() => lockCommand(entityId, 'lock')}>
+                    <Icon name="i-lock" cls="icon icon-md" />
+                    <span>{m.dev_lock()}</span>
+                  </button>
+                  <button class="choice-seg pressable" type="button" role="radio"
+                          aria-checked={!lock.locked}
+                          onclick={() => lockCommand(entityId, 'unlock')}>
+                    <Icon name="i-lock-open-variant" cls="icon icon-md" />
+                    <span>{m.dev_unlock()}</span>
+                  </button>
+                </div>
+              </section>
+              {#if lock.supportsOpen}
+                <section class="ld-section">
+                  <div class="action-row" role="group" aria-label={device.name}>
+                    <button class="action-btn pressable" type="button" onclick={() => lockCommand(entityId, 'open')}>
+                      <Icon name="i-door-open" cls="icon icon-md" /><span>{m.dev_unlatch()}</span>
+                    </button>
+                  </div>
+                </section>
+              {/if}
+            {/if}
+          {:else if category === 'humidifier'}
+            {#if humidifier}
+              <section class="ld-section ld-brightness">
+                <span class="caps-label">{m.dev_target_humidity()}</span>
+                {#key `${deviceId}-${brightnessIntro}`}
+                  <TickScale ariaLabel={m.dev_target_humidity()} orientation="vertical" mode="fill" intro
+                             value={Math.min(humidifier.maxHumidity, Math.max(humidifier.minHumidity, humidityDisplay))}
+                             min={humidifier.minHumidity} max={humidifier.maxHumidity} step={1} keyStep={5}
+                             onInput={onHumidity} format={(v) => `${Math.round(v)}%`} />
+                {/key}
+                {#if humidifier.current !== null}<p class="ld-meta num">{m.dev_current_humidity()} {fmtUnit(humidifier.current, '%', 0)}</p>{/if}
+              </section>
+              {#if humidifier.supportsModes && humidifier.modes.length}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_mode()}</span>
+                  <div class="choice-grid" role="radiogroup" aria-label={m.dev_mode()}>
+                    {#each humidifier.modes as mode (mode)}
+                      <button class="choice-card pressable" type="button" role="radio"
+                              aria-checked={humidifier.mode === mode}
+                              onclick={() => setHumidifierMode(entityId, mode)}>
+                        <Icon name={modeIcon(mode, 'i-air-humidifier')} cls="icon icon-md" />
+                        <span class="choice-label">{fanPresetLabel(mode)}</span>
+                        <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                      </button>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
+            {/if}
+          {:else if category === 'water_heater'}
+            {#if heater}
+              {#if heater.supportsTarget}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_target_temp()}</span>
+                  <TickScale ariaLabel={m.dev_target_temp()} orientation="horizontal" mode="gradient"
+                             value={Math.min(heater.maxTemp, Math.max(heater.minTemp, heaterDisplay))}
+                             min={heater.minTemp} max={heater.maxTemp} step={0.5} keyStep={1}
+                             tint={climateTint}
+                             onInput={onHeater} format={(v) => `${fmtTemp(v)} °C`} />
+                  <div class="ld-scale-ends"><span>{fmtTemp(heater.minTemp)}°</span><span>{fmtTemp(heater.maxTemp)}°</span></div>
+                  {#if heater.current !== null}<p class="ld-meta num">{m.climate_current_temperature()} {fmtTemp(heater.current)} °C</p>{/if}
+                </section>
+              {/if}
+              {#if heater.supportsModes && heater.modes.length}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_operation_mode()}</span>
+                  <div class="choice-grid" role="radiogroup" aria-label={m.dev_operation_mode()}>
+                    {#each heater.modes as mode (mode)}
+                      <button class="choice-card pressable" type="button" role="radio"
+                              aria-checked={heater.mode === mode}
+                              onclick={() => setWaterHeaterMode(entityId, mode)}>
+                        <Icon name={modeIcon(mode, 'i-water-boiler')} cls="icon icon-md" />
+                        <span class="choice-label">{fanPresetLabel(mode)}</span>
+                        <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                      </button>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
+            {/if}
+          {:else if category === 'mower'}
+            {#if mower}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{mowerStateLabel(mower.state)}</p>
+              </section>
+              <section class="ld-section">
+                <div class="action-row" role="group" aria-label={device.name}>
+                  {#if mower.supportsStart}
+                    <button class="action-btn pressable" type="button" onclick={() => mowerCommand(entityId, 'start_mowing')}>
+                      <Icon name="i-play" cls="icon icon-md" /><span>{m.dev_mow()}</span>
+                    </button>
+                  {/if}
+                  {#if mower.supportsPause}
+                    <button class="action-btn pressable" type="button" onclick={() => mowerCommand(entityId, 'pause')}>
+                      <Icon name="i-pause" cls="icon icon-md" /><span>{m.dev_pause()}</span>
+                    </button>
+                  {/if}
+                  {#if mower.supportsDock}
+                    <button class="action-btn pressable" type="button" onclick={() => mowerCommand(entityId, 'dock')}>
+                      <Icon name="i-home-import-outline" cls="icon icon-md" /><span>{m.dev_dock()}</span>
+                    </button>
+                  {/if}
+                </div>
+              </section>
+            {/if}
+          {:else if category === 'alarm'}
+            {#if alarm}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_state()}</span>
+                <p class="ld-big-value">{alarmStateLabel(alarm.state)}</p>
+              </section>
+              {#if alarm.codeFormat !== null}
+                <section class="ld-section">
+                  <label class="caps-label" for="alarm-code">{m.dev_alarm_code()}</label>
+                  <input id="alarm-code" class="ld-code-input num" type="password" autocomplete="one-time-code"
+                         inputmode={alarm.codeFormat === 'number' ? 'numeric' : 'text'}
+                         bind:value={alarmCode} />
+                </section>
+              {/if}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_mode()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_mode()}>
+                  {#each alarmActions as action (action.id)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={alarm.state === action.state}
+                            onclick={() => onAlarm(action.id)}>
+                      <Icon name={action.icon} cls="icon icon-md" />
+                      <span class="choice-label">{action.label}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+          {:else if category === 'number'}
+            {#if numberValue}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_value()}</span>
+                <TickScale ariaLabel={m.dev_value()} orientation="horizontal" mode="fill"
+                           value={Math.min(numberValue.max, Math.max(numberValue.min, numberDisplay))}
+                           min={numberValue.min} max={numberValue.max} step={numberValue.step} keyStep={numberValue.step}
+                           onInput={onNumber} format={(v) => fmtUnit(v, numberValue?.unit, 2)} />
+                <div class="ld-scale-ends"><span>{fmtUnit(numberValue.min, numberValue.unit, 2)}</span><span>{fmtUnit(numberValue.max, numberValue.unit, 2)}</span></div>
+              </section>
+            {/if}
+          {:else if category === 'select'}
+            {#if select}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_option()}</span>
+                <div class="choice-grid" role="radiogroup" aria-label={m.dev_option()}>
+                  {#each select.options as option (option)}
+                    <button class="choice-card pressable" type="button" role="radio"
+                            aria-checked={select.option === option}
+                            onclick={() => selectOption(entityId, selectDomain, option)}>
+                      <span class="choice-label">{option}</span>
+                      <span class="choice-check" aria-hidden="true"><Icon name="i-check" /></span>
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+          {:else if category === 'button'}
+            <section class="ld-section">
+              <div class="action-row" role="group" aria-label={device.name}>
+                <button class="action-btn pressable" type="button" onclick={() => pressButton(entityId, buttonDomain)}>
+                  <Icon name="i-gesture-tap" cls="icon icon-md" /><span>{m.dev_press()}</span>
+                </button>
+              </div>
+              {#if pressedAtLabel}<p class="ld-meta num">{m.dev_last_pressed()} {pressedAtLabel}</p>{/if}
             </section>
           {:else if category === 'info'}
             <section class="ld-section">

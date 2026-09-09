@@ -153,7 +153,7 @@ runtime user and only then serves.
 ## Versions and updates
 
 The App carries the same version as the Hauser release it packages — this
-documentation describes `0.10.1`. The Supervisor resolves the image as
+documentation describes `0.12.0`. The Supervisor resolves the image as
 `ghcr.io/ralleur/hauser:<version>` from the manifest, and the release gate
 refuses a manifest version without a matching published image. Updates arrive
 through Home Assistant's normal App update flow; the changelog shipped with the

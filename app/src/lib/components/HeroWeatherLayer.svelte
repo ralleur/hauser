@@ -141,10 +141,16 @@
   }
 
   /* Neigung und Fall in einem Transform: der Compositor bekommt eine einzige
-     Eigenschaft, und die Kachel schließt über die halbe Höhe nahtlos. */
+     Eigenschaft, und die Kachel schließt über die halbe Höhe nahtlos.
+
+     Die Bewegung läuft von 0 nach unten, nicht von oben nach 0. Andersherum
+     stand die Ebene zu Beginn jedes Durchlaufs mit ihrer Unterkante genau auf
+     der Oberkante der Bühne: Es schneite dann nur im oberen Teil des Bildes
+     und die untere Hälfte blieb leer, bis der Durchlauf fast vorbei war. So
+     herum deckt die Ebene die Fläche zu jedem Zeitpunkt ganz ab. */
   @keyframes hero-weather-fall {
-    from { transform: rotate(var(--hero-weather-tilt, 0deg)) translate3d(0, -50%, 0); }
-    to { transform: rotate(var(--hero-weather-tilt, 0deg)) translate3d(0, 0, 0); }
+    from { transform: rotate(var(--hero-weather-tilt, 0deg)) translate3d(0, 0, 0); }
+    to { transform: rotate(var(--hero-weather-tilt, 0deg)) translate3d(0, 50%, 0); }
   }
 
   /* Ohne Bewegung bleibt der Schleier — die Schicht selbst entfällt bereits

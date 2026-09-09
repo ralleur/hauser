@@ -79,6 +79,10 @@ export interface SettingsSection {
      soll die Einstellungen auf einem Bildschirm lesen; Werkzeuge für den
      Notfall und Unfertiges gehören nicht in diese Liste. */
   hidden?: boolean;
+  /* Braucht den Hauser-Server (und damit Home Assistant). Im Apple-Home-Weg
+     gibt es ihn nicht — solche Sektionen entfallen samt Einträgen, statt
+     Bedienelemente zu zeigen, die ins Leere greifen. */
+  needsServer?: boolean;
 }
 
 export interface SettingsEntry {
@@ -87,6 +91,9 @@ export interface SettingsEntry {
   label: string;
   /* Synonyme/Begriffe, unter denen jemand die Einstellung sucht */
   keywords: readonly string[];
+  /* Einzelner Eintrag, der den Server braucht — für Sektionen, die sonst
+     ohne ihn nutzbar bleiben (Raumliste, Ambient, Status). */
+  needsServer?: boolean;
 }
 
 export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
@@ -110,7 +117,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_security_desc(); },
   },
   {
-    id: 'notifications', group: 'home',
+    id: 'notifications', needsServer: true, group: 'home',
     get label() { return m.settings_section_notifications_label(); }, icon: 'i-bell', tint: 'warm',
     get description() { return m.settings_section_notifications_desc(); },
   },
@@ -125,23 +132,23 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_ambient_desc(); },
   },
   {
-    id: 'calendar', group: 'content',
+    id: 'calendar', needsServer: true, group: 'content',
     get label() { return m.settings_section_calendar_label(); }, icon: 'i-calendar', tint: 'cool',
     get description() { return m.settings_section_calendar_desc(); },
   },
   {
-    id: 'shopping', group: 'content',
+    id: 'shopping', needsServer: true, group: 'content',
     get label() { return m.settings_section_shopping_label(); }, icon: 'i-cart', tint: 'success',
     get description() { return m.settings_section_shopping_desc(); },
   },
   {
-    id: 'media', group: 'content',
+    id: 'media', needsServer: true, group: 'content',
     get label() { return m.settings_section_media_label(); }, icon: 'i-music-note', tint: 'cool',
     get description() { return m.settings_section_media_desc(); },
     hidden: true,
   },
   {
-    id: 'services', group: 'connectivity',
+    id: 'services', needsServer: true, group: 'connectivity',
     get label() { return m.settings_section_services_label(); }, icon: 'i-lan-connect', tint: 'success',
     get description() { return m.settings_section_services_desc(); },
   },
@@ -151,7 +158,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     get description() { return m.settings_section_status_desc(); },
   },
   {
-    id: 'ai-customizing', group: 'system',
+    id: 'ai-customizing', needsServer: true, group: 'system',
     get label() { return m.settings_section_ai_customizing_label(); }, icon: 'i-creation', tint: 'cool',
     get description() { return m.settings_section_ai_customizing_desc(); },
     hidden: true,
@@ -163,13 +170,13 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     hidden: true,
   },
   {
-    id: 'hotel-mode', group: 'experimental',
+    id: 'hotel-mode', needsServer: true, group: 'experimental',
     get label() { return m.settings_section_hotel_mode_label(); }, icon: 'i-bed', tint: 'cool',
     get description() { return m.settings_section_hotel_mode_desc(); },
     hidden: true,
   },
   {
-    id: 'hotel-guest-access', group: 'experimental',
+    id: 'hotel-guest-access', needsServer: true, group: 'experimental',
     get label() { return m.settings_section_hotel_access_label(); }, icon: 'i-account-key', tint: 'warm',
     get description() { return m.settings_section_hotel_access_desc(); },
     hidden: true,
@@ -180,10 +187,10 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
    auch wenn sich die Sektionszuordnung ändert. */
 const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   /* ── Zuhause · Räume & Geräte ── */
-  { id: 'household-setup', section: 'rooms-devices', get label() { return m.settings_entry_household_setup_label(); },
+  { id: 'household-setup', needsServer: true, section: 'rooms-devices', get label() { return m.settings_entry_household_setup_label(); },
     keywords: ['räume', 'raum', 'zimmer', 'geräte', 'sortieren', 'umbenennen', 'löschen'] },
   ...(ROOM_IMAGE_WIZARD_ENABLED && !IS_DEMO ? [{
-    id: 'room-image-wizard', section: 'rooms-devices' as const,
+    id: 'room-image-wizard', needsServer: true, section: 'rooms-devices' as const,
     get label() { return m.settings_entry_room_image_wizard_label(); },
     keywords: ['raumbild', 'raumfoto', 'openai', 'hintergrund', 'bild', 'wizard', 'generieren'],
   }] : []),
@@ -254,7 +261,7 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['nacht', 'nachts', 'uhr', 'rot', 'dunkel', 'standby', 'lockscreen', '22', '06', 'iphone'] },
   { id: 'ambient-hero-text', section: 'ambient', get label() { return m.settings_entry_ambient_hero_text_label(); },
     keywords: ['llm', 'ki', 'ai', 'tageskommentar', 'hero', 'lockscreen', 'standby', 'abschalten'] },
-  { id: 'ambient-city-map', section: 'ambient', get label() { return m.settings_entry_ambient_city_map_label(); },
+  { id: 'ambient-city-map', needsServer: true, section: 'ambient', get label() { return m.settings_entry_ambient_city_map_label(); },
     keywords: ['stadtplan', 'karte', 'map', 'straßen', 'strassen', 'hintergrund', 'standort',
       'ort', 'koordinaten', 'lockscreen', 'standby', 'openstreetmap', 'osm'] },
 
@@ -299,9 +306,9 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['modell', 'model', 'gpt', 'luna', 'codex', 'llm', 'welches'] },
 
   /* ── System ── */
-  { id: 'service-health', section: 'status', get label() { return m.settings_entry_service_health_label(); },
+  { id: 'service-health', needsServer: true, section: 'status', get label() { return m.settings_entry_service_health_label(); },
     keywords: ['zigbee', 'mqtt', 'broker', 'tunnel', 'cloudflared', 'adguard', 'services', 'gesundheit'] },
-  { id: 'update-list', section: 'status', get label() { return m.settings_entry_update_list_label(); },
+  { id: 'update-list', needsServer: true, section: 'status', get label() { return m.settings_entry_update_list_label(); },
     keywords: ['aktualisierung', 'version', 'software', 'core', 'os', 'esphome', 'matter'] },
   { id: 'license-source', section: 'status', get label() { return m.settings_entry_license_source_label(); },
     keywords: ['lizenz', 'license', 'agpl', 'quellcode', 'source', 'open source', 'commit', 'revision', 'version', 'copyright'] },
@@ -318,9 +325,9 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     get label() { return m.settings_entry_ai_debug_label(); },
     keywords: ['debug', 'diagnose', 'werkzeugschritte', 'rohtext', 'fehler', 'details'],
   }] : []),
-  { id: 'cache-ha', section: 'maintenance', get label() { return m.settings_entry_cache_ha_label(); },
+  { id: 'cache-ha', needsServer: true, section: 'maintenance', get label() { return m.settings_entry_cache_ha_label(); },
     keywords: ['home assistant', 'zustand', 'states', 'zwischenspeicher', 'cache'] },
-  { id: 'cache-calendar', section: 'maintenance', get label() { return m.settings_entry_cache_calendar_label(); },
+  { id: 'cache-calendar', needsServer: true, section: 'maintenance', get label() { return m.settings_entry_cache_calendar_label(); },
     keywords: ['termine', 'familie', 'events', 'zwischenspeicher', 'cache'] },
   { id: 'cache-icons', section: 'maintenance', get label() { return m.settings_entry_cache_icons_label(); },
     keywords: ['zuletzt verwendet', 'symbole', 'picker', 'zwischenspeicher', 'cache'] },
@@ -330,7 +337,19 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['neustart', 'refresh', 'reload', 'browser', 'kiosk'] },
 ];
 
-export const SETTINGS_ENTRIES: readonly SettingsEntry[] = ALL_SETTINGS_ENTRIES;
+/* Ohne Hauser-Server (Apple-Home-Weg, `hmi:backend=platform`) fallen alle
+   serverabhängigen Einträge weg. Die Sidebar blendet Sektionen ohne Einträge
+   ohnehin aus — eine Sektion muss deshalb nicht doppelt gefiltert werden. */
+function hasHauserServer(): boolean {
+  if (typeof localStorage === 'undefined') return true;
+  try { return localStorage.getItem('hmi:backend') !== 'platform'; } catch { return true; }
+}
+
+const sectionNeedsServer = new Map(SETTINGS_SECTIONS.map((s) => [s.id, !!s.needsServer]));
+
+export const SETTINGS_ENTRIES: readonly SettingsEntry[] = hasHauserServer()
+  ? ALL_SETTINGS_ENTRIES
+  : ALL_SETTINGS_ENTRIES.filter((entry) => !entry.needsServer && !sectionNeedsServer.get(entry.section));
 
 export interface SettingsMatch {
   entry: SettingsEntry;

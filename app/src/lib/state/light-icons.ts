@@ -5,6 +5,17 @@ import { sharedStorage } from './shared-config.ts';
 
 const DEFAULT_ICONS_BY_CATEGORY: Record<DeviceCategory, string> = {
   light: 'i-bulb', switch: 'i-bolt', fan: 'i-fan', temp: 'i-thermometer', info: 'i-gauge', media: 'i-playlist-music', camera: 'i-camera',
+  cover: 'i-window-shutter',
+  valve: 'i-valve',
+  vacuum: 'i-robot-vacuum',
+  lock: 'i-lock',
+  humidifier: 'i-air-humidifier',
+  water_heater: 'i-water-boiler',
+  mower: 'i-robot-mower',
+  alarm: 'i-shield-home',
+  number: 'i-tune',
+  select: 'i-format-list-bulleted',
+  button: 'i-gesture-tap',
 };
 
 export const DEFAULT_LAMP_ICON = DEFAULT_ICONS_BY_CATEGORY.light;

@@ -77,3 +77,23 @@ export function closeCentralClimateEdit(instant = false): void {
 export function finishCentralClimateEditClose(): void {
   if (centralClimateEdit.mode === 'closing') centralClimateEdit.mode = 'hidden';
 }
+
+/* ── Schnellzugriff der Telefonleiste: Long-Press auf den Urlaubsknopf ──
+   Dieselbe Zustandsmaschine, eigener Stack-Slot. Was dahinter liegt, hält
+   `phone-action.svelte.ts`; hier steht nur, ob der Editor offen ist. */
+export const phoneActionEdit = $state({
+  mode: 'hidden' as 'hidden' | 'open' | 'closing',
+});
+
+export function openPhoneActionEdit(): void {
+  phoneActionEdit.mode = 'open';
+}
+
+export function closePhoneActionEdit(instant = false): void {
+  if (phoneActionEdit.mode === 'hidden' || phoneActionEdit.mode === 'closing') return;
+  phoneActionEdit.mode = instant ? 'hidden' : 'closing';
+}
+
+export function finishPhoneActionEditClose(): void {
+  if (phoneActionEdit.mode === 'closing') phoneActionEdit.mode = 'hidden';
+}

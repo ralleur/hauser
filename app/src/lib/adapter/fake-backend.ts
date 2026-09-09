@@ -8,7 +8,9 @@
    ============================================ */
 
 import type {
-  Backend, ConnectionStatus, FanValue, LightValue, ClimateValue, MediaValue, PersistentNotification, SwitchValue,
+  AlarmValue, Backend, ButtonValue, ConnectionStatus, CoverValue, FanValue, HumidifierValue, LightValue, ClimateValue,
+  LockValue, MediaValue, MowerValue, NumberValue, PersistentNotification, SelectValue, SwitchValue, VacuumValue,
+  WaterHeaterValue,
   StatisticsBucket,
   StatisticsRequest,
   StatisticsResult,
@@ -320,28 +322,123 @@ export class FakeBackend implements Backend {
       }
       return v;
     }
-    if (domain === 'switch' || domain === 'input_boolean' || domain === 'vacuum') {
+    if (domain === 'switch' || domain === 'input_boolean' || domain === 'siren' || domain === 'remote') {
       const v = { ...(cur as SwitchValue) };
       const wasOn = v.on;
-      if (service === 'turn_off' || service === 'return_to_base' || service === 'stop') v.on = false;
-      else if (service === 'turn_on' || service === 'start') v.on = true;
+      if (service === 'turn_off') v.on = false;
+      else if (service === 'turn_on') v.on = true;
       else if (service === 'toggle') v.on = !v.on;
       if (contradict) v.on = !v.on;
       if (v.on !== wasOn) v.changedAt = Date.now();
       return v;
     }
-    if (domain === 'cover') {
-      const v = { ...(cur as SwitchValue) };
-      if (service === 'open_cover') v.on = true;
-      else if (service === 'close_cover') v.on = false;
+    if (domain === 'vacuum') {
+      const v = { ...(cur as VacuumValue) };
+      if (service === 'start') { v.state = 'cleaning'; v.on = true; }
+      else if (service === 'pause') { v.state = 'paused'; v.on = false; }
+      else if (service === 'stop') { v.state = 'idle'; v.on = false; }
+      else if (service === 'return_to_base') { v.state = 'docked'; v.on = false; }
+      else if (service === 'set_fan_speed' && typeof data.fan_speed === 'string') v.fanSpeed = data.fan_speed;
+      if (contradict) {
+        if (service === 'set_fan_speed') v.fanSpeed = v.fanSpeeds[0] ?? null;
+        else { v.state = 'error'; v.on = false; }
+      }
+      return v;
+    }
+    if (domain === 'cover' || domain === 'valve') {
+      const v = { ...(cur as CoverValue) };
+      if (service === 'open_cover' || service === 'open_valve') { v.on = true; v.position = 100; v.moving = null; }
+      else if (service === 'close_cover' || service === 'close_valve') { v.on = false; v.position = 0; v.moving = null; }
+      else if (service === 'stop_cover' || service === 'stop_valve') v.moving = null;
+      else if ((service === 'set_cover_position' || service === 'set_valve_position') && typeof data.position === 'number') {
+        v.position = data.position;
+        v.on = data.position > 0;
+      } else if (service === 'set_cover_tilt_position' && typeof data.tilt_position === 'number') v.tilt = data.tilt_position;
+      else if (service === 'toggle') { v.on = !v.on; v.position = v.on ? 100 : 0; }
+      if (contradict) {
+        if (service === 'set_cover_tilt_position') v.tilt = Math.max(0, v.tilt - 25);
+        else if (service.startsWith('set_')) { v.position = Math.max(0, v.position - 25); v.on = v.position > 0; }
+        else { v.on = !v.on; v.position = v.on ? 100 : 0; }
+      }
+      return v;
+    }
+    if (domain === 'lock') {
+      const v = { ...(cur as LockValue) };
+      if (service === 'lock') { v.locked = true; v.state = 'locked'; }
+      else if (service === 'unlock') { v.locked = false; v.state = 'unlocked'; }
+      else if (service === 'open') { v.locked = false; v.state = 'open'; }
+      if (contradict) { v.state = 'jammed'; v.locked = !v.locked; }
+      return v;
+    }
+    if (domain === 'humidifier') {
+      const v = { ...(cur as HumidifierValue) };
+      if (service === 'turn_on') v.on = true;
+      else if (service === 'turn_off') v.on = false;
       else if (service === 'toggle') v.on = !v.on;
-      if (contradict) v.on = !v.on;
+      else if (service === 'set_humidity' && typeof data.humidity === 'number') v.target = data.humidity;
+      else if (service === 'set_mode' && typeof data.mode === 'string') v.mode = data.mode;
+      if (contradict) {
+        if (service === 'set_humidity') v.target = Math.max(v.minHumidity, v.target - 10);
+        else if (service === 'set_mode') v.mode = v.modes[0] ?? null;
+        else v.on = !v.on;
+      }
+      return v;
+    }
+    if (domain === 'water_heater') {
+      const v = { ...(cur as WaterHeaterValue) };
+      if (service === 'turn_on') { v.on = true; if (v.mode === 'off') v.mode = v.modes.find((mode) => mode !== 'off') ?? null; }
+      else if (service === 'turn_off') { v.on = false; if (v.modes.includes('off')) v.mode = 'off'; }
+      else if (service === 'set_temperature' && typeof data.temperature === 'number') v.target = data.temperature;
+      else if (service === 'set_operation_mode' && typeof data.operation_mode === 'string') {
+        v.mode = data.operation_mode;
+        v.on = data.operation_mode !== 'off';
+      }
+      if (contradict) {
+        if (service === 'set_temperature') v.target = Math.max(v.minTemp, v.target - 5);
+        else if (service === 'set_operation_mode') v.mode = v.modes[0] ?? null;
+        else v.on = !v.on;
+      }
+      return v;
+    }
+    if (domain === 'lawn_mower') {
+      const v = { ...(cur as MowerValue) };
+      if (service === 'start_mowing') { v.state = 'mowing'; v.on = true; }
+      else if (service === 'pause') { v.state = 'paused'; v.on = false; }
+      else if (service === 'dock') { v.state = 'docked'; v.on = false; }
+      if (contradict) { v.state = 'error'; v.on = false; }
+      return v;
+    }
+    if (domain === 'alarm_control_panel') {
+      const v = { ...(cur as AlarmValue) };
+      if (service === 'alarm_disarm') v.state = 'disarmed';
+      else if (service.startsWith('alarm_arm_')) v.state = `armed_${service.slice('alarm_arm_'.length)}`;
+      if (contradict) v.state = 'disarmed';
+      return v;
+    }
+    if (domain === 'number' || domain === 'input_number') {
+      const v = { ...(cur as NumberValue) };
+      if (service === 'set_value' && typeof data.value === 'number') v.value = Math.min(v.max, Math.max(v.min, data.value));
+      if (contradict) v.value = v.min;
+      return v;
+    }
+    if (domain === 'select' || domain === 'input_select') {
+      const v = { ...(cur as SelectValue) };
+      if (service === 'select_option' && typeof data.option === 'string' && v.options.includes(data.option)) v.option = data.option;
+      if (contradict) v.option = v.options[0] ?? null;
+      return v;
+    }
+    if (domain === 'button' || domain === 'input_button') {
+      const v = { ...(cur as ButtonValue) };
+      if (service === 'press') v.pressedAt = Date.now();
       return v;
     }
     if (domain === 'climate') {
       const v = { ...(cur as ClimateValue) };
       if (service === 'set_temperature' && typeof data.temperature === 'number') v.target = data.temperature;
       if (service === 'set_hvac_mode' && typeof data.hvac_mode === 'string') v.hvac = data.hvac_mode as ClimateValue['hvac'];
+      if (service === 'set_fan_mode' && typeof data.fan_mode === 'string') v.fanMode = data.fan_mode;
+      if (service === 'set_preset_mode' && typeof data.preset_mode === 'string') v.presetMode = data.preset_mode;
+      if (service === 'set_swing_mode' && typeof data.swing_mode === 'string') v.swingMode = data.swing_mode;
       if (contradict) v.target = Math.min(26, v.target + 1);
       return v;
     }

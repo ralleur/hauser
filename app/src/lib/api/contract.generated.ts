@@ -1,7 +1,7 @@
 /* GENERIERT aus server/api-contract.mjs — nicht von Hand ändern.
    Neu erzeugen mit: node scripts/generate-api-contract.mjs */
 
-import type { AppFileListResponse, BuildInfoResponse, HaConnectionResponse, HealthResponse, HouseholdConfigModeResponse, MomentsResponse, NotificationRulesResponse, PairingClaimResponse, PairingDevicesResponse, PairingStartResponse, RemindersResponse, SharedConfigResponse, ShoppingResponse } from './types.ts';
+import type { AppFileListResponse, AppStatesResponse, BuildInfoResponse, HaConnectionResponse, HealthResponse, HouseholdConfigModeResponse, MomentsResponse, NotificationRulesResponse, PairingClaimResponse, PairingDevicesResponse, PairingStartResponse, RemindersResponse, RemoteStatusResponse, SharedConfigResponse, ShoppingResponse } from './types.ts';
 
 export const API_CONTRACT_VERSION = 1;
 
@@ -90,9 +90,15 @@ export const API_ROUTES = {
   pairingStart: { methods: ['POST'], path: '/api/pairing/start', area: 'app', access: 'origin' },
   pairingClaim: { methods: ['POST'], path: '/api/pairing/claim', area: 'app', access: 'public' },
   pairingDevices: { methods: ['GET'], path: '/api/pairing/devices', area: 'app', access: 'origin' },
-  pairingDeviceRevoke: { methods: ['DELETE'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin' },
+  pairingDeviceRevoke: { methods: ['DELETE', 'PATCH'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin' },
+  appPersons: { methods: ['GET'], path: '/api/app/persons', area: 'app', access: 'origin' },
   appBundle: { methods: ['GET', 'HEAD'], path: '/api/app/bundle', area: 'app', access: 'origin' },
+  remoteStatus: { methods: ['GET'], path: '/api/remote', area: 'app', access: 'origin' },
+  remoteReset: { methods: ['POST'], path: '/api/remote/reset', area: 'app', access: 'origin' },
+  appCommand: { methods: ['POST'], path: '/api/app/command', area: 'app', access: 'origin' },
+  appStates: { methods: ['GET'], path: '/api/app/states', area: 'app', access: 'origin' },
   appManifest: { methods: ['GET', 'HEAD'], path: '/api/app/manifest', area: 'app', access: 'origin' },
+  appHero: { methods: ['GET', 'HEAD'], path: '/api/app/hero/:roomId/:variant', area: 'app', access: 'origin' },
   hotelTouch: { methods: ['POST'], path: '/api/hotel-mode/touch', area: 'hotel', access: 'guest' },
   ablageStatus: { methods: ['GET'], path: '/api/ablage/status', area: 'ablage', access: 'origin' },
   ablageUnlock: { methods: ['POST'], path: '/api/ablage/unlock', area: 'ablage', access: 'origin' },
@@ -129,6 +135,8 @@ export interface ApiResponses {
   pairingClaim: PairingClaimResponse;
   pairingDevices: PairingDevicesResponse;
   appBundle: AppFileListResponse;
+  remoteStatus: RemoteStatusResponse;
+  appStates: AppStatesResponse;
   appManifest: AppFileListResponse;
 }
 

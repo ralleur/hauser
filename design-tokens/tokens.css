@@ -197,10 +197,10 @@
    Phase 3: sun.sun-Automatik mit Crossfade — docs/07, Screen 9).
    Das OS-Theme des Kiosk-Geraets ist bewusst irrelevant. */
 :root[data-theme='light'] {
-    --color-surface-0: #ececec;
-    --color-surface-1: #f5f5f5;
-    --color-surface-2: #fafafa;
-    --color-surface-3: #ffffff;
+    --color-surface-0: #f2f0ec;
+    --color-surface-1: #f5f3ef;
+    --color-surface-2: #faf8f4;
+    --color-surface-3: #fffdf9;
     --color-surface-inverse: #212121;
 
     --color-accent-warm: #f5a81c;
@@ -224,11 +224,11 @@
     --color-text-on-accent: #212121;
     --color-text-on-inverse: #fafafa;
 
-    --color-border: #d5d5d5;
+    --color-border: #d5d3cf;
 
     /* Light Mode darf echte Schatten (weiße Cards mit Soft-Shadow) */
     --elevation-overlay-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    --overlay-scrim: rgba(236, 236, 236, 0.55);
+    --overlay-scrim: rgba(242, 240, 236, 0.55);
     --overlay-panel-background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-3) 90%, transparent), color-mix(in srgb, var(--color-surface-1) 82%, transparent));
     --overlay-control-background: color-mix(in srgb, var(--color-surface-0) 94%, transparent);
     --overlay-border: color-mix(in srgb, var(--color-text-primary) 20%, transparent);

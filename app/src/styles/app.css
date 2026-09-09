@@ -38,7 +38,17 @@ html {
 /* ── App-Shell: Status-Bar / Screens / Tab-Bar ── */
 .app {
   display: grid;
-  grid-template-rows: 48px 1fr 72px;
+  /* Sichere Bereiche gehören in die Leisten, nicht in die Bühne: am Wandpanel
+     im Kiosk sind die env()-Werte 0, auf einem iPad hält die Kopfzeile so
+     Abstand zur Systemuhr und die Tab-Leiste zum Home-Indikator. */
+  grid-template-rows:
+    calc(48px + env(safe-area-inset-top, 0px))
+    1fr
+    calc(72px + env(safe-area-inset-bottom, 0px));
+  /* Ohne diese Spur wächst die implizite Spalte auf die Mindestbreite ihres
+     breitesten Kindes — auf einem hochkanten Tablet zog die Bottom-Leiste die
+     ganze App auf 1360 px und schob Bühne und Leisten aus dem Bild. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100dvh;
   background: var(--color-surface-0);
 }
@@ -87,9 +97,15 @@ button {
   /* Drei Spuren statt space-between: der Modus-Knopf steht damit wirklich in
      der Mitte der Leiste und nicht zwischen zwei ungleich breiten Gruppen. */
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0, …) statt 1fr: die Randgruppen dürfen schmaler werden als ihr
+     Inhalt, statt die Leiste zu verbreitern. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  padding: 0 var(--space-6);
+  padding:
+    env(safe-area-inset-top, 0px)
+    max(var(--space-6), env(safe-area-inset-right, 0px))
+    0
+    max(var(--space-6), env(safe-area-inset-left, 0px));
   background: var(--color-surface-0);
   border-bottom: 1px solid var(--color-border);
 }
@@ -582,6 +598,8 @@ body.theme-fade.is-dusk { --duration-theme-fade: var(--duration-dusk); }
   background: var(--color-surface-0);
   border-top: 1px solid var(--color-border);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 .tab {
   position: relative;
@@ -1430,6 +1448,46 @@ button.security-bar {
 .choice-seg[aria-checked='true'] {
   background: var(--accent-light-on-fill);
   color: var(--accent-light-on-icon);
+}
+
+/* ── Aktionsreihe (R28): Fahr- und Startbefehle ohne Dauerzustand
+   (Auf/Stopp/Zu, Start/Pause/Basis, Türöffner, Taster). Gleiche Fläche wie
+   die Auswahlkarten, aber kein Häkchen — ein Befehl hat keinen Zustand. */
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--space-2);
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--duration-normal) var(--ease-out);
+}
+.action-btn:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+/* Code-Feld der Alarmanlage: nur wenn das Gerät einen Code verlangt. */
+.ld-code-input {
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  letter-spacing: 0.3em;
 }
 
 /* ── Farb-Swatches (kuratierte Palette) ── */

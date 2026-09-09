@@ -116,14 +116,14 @@ export function createNotificationRulesStore(path = NOTIFICATION_RULES_PATH) {
       const rules = data?.version === 1 ? parseNotificationRules(data.rules) : null;
       const colors = rules ? parseNotificationColors(data.colors) : null;
       if (rules && colors) {
-        return { version: 1, updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null, rules, colors };
+        return { version: 1, updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null, rules, colors, push: parseNotificationPush(data.push) };
       }
     } catch { /* erster Start oder unlesbar: leere Liste */ }
-    return { version: 1, updatedAt: null, rules: [], colors: {} };
+    return { version: 1, updatedAt: null, rules: [], colors: {}, push: { service: null } };
   }
 
-  function write(rules, colors = {}) {
-    const data = { version: 1, updatedAt: new Date().toISOString(), rules, colors };
+  function write(rules, colors = {}, push = { service: null }) {
+    const data = { version: 1, updatedAt: new Date().toISOString(), rules, colors, push };
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     const temporary = `${path}.${process.pid}.tmp`;
     writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
@@ -140,7 +140,18 @@ function notificationHaSafe(value) {
 }
 
 /** Welche Automationen die Regelliste in Home Assistant verlangt. */
-export function notificationAutomationSpecs(rules) {
+/* Push an das Telefon (Plan 21, Stufe 4): der notify-Dienst der Companion-App
+   und der Deep-Link, den der Push in Hauser öffnet. Kein eigener Push-Server. */
+const NOTIFY_SERVICE = /^notify\.[a-z0-9_]{1,64}$/;
+export const NOTIFICATION_PUSH_URL = 'hauser://open?screen=notifications';
+
+export function parseNotificationPush(value) {
+  const raw = notificationObject(value);
+  const service = typeof raw?.service === 'string' && NOTIFY_SERVICE.test(raw.service) ? raw.service : null;
+  return { service };
+}
+
+export function notificationAutomationSpecs(rules, push = { service: null }) {
   const specs = [];
   for (const rule of rules) {
     if (!rule.enabled) continue;
@@ -154,6 +165,7 @@ export function notificationAutomationSpecs(rules) {
         title: rule.name,
         message: trigger.label,
         ...(trigger.kind === 'state' ? { to_states: trigger.to } : { threshold: trigger.value }),
+        ...(push?.service ? { notify_service: push.service, notify_url: NOTIFICATION_PUSH_URL } : {}),
       };
       specs.push({
         id: `${NOTIFICATION_AUTOMATION_PREFIX}${notificationHaSafe(rule.id)}__${notificationHaSafe(trigger.key)}`,
@@ -178,20 +190,24 @@ function sameNotificationAutomation(body, expected) {
     && laundryFingerprint(body.use_blueprint.input) === laundryFingerprint(expected.use_blueprint.input));
 }
 
-export async function syncNotificationAutomations(client, rules, blueprintDir = NOTIFICATION_BLUEPRINT_DIR) {
-  const specs = notificationAutomationSpecs(rules);
+export async function syncNotificationAutomations(client, rules, blueprintDir = NOTIFICATION_BLUEPRINT_DIR, push = { service: null }) {
+  const specs = notificationAutomationSpecs(rules, push);
   const summary = { created: 0, updated: 0, deleted: 0, unchanged: 0 };
 
   const neededBlueprints = new Set(specs.map((spec) => spec.config.use_blueprint.path));
   if (neededBlueprints.size) {
     const blueprints = await client.ws('blueprint/list', { domain: 'automation' });
     for (const blueprint of Object.values(NOTIFICATION_BLUEPRINTS)) {
-      if (!neededBlueprints.has(blueprint.path) || blueprintExists(blueprints, blueprint.path)) continue;
+      if (!neededBlueprints.has(blueprint.path)) continue;
+      const exists = blueprintExists(blueprints, blueprint.path);
+      /* Push braucht die Blueprint-Version 2 (Eingaben notify_service/notify_url):
+         eine ältere installierte Fassung wird dann überschrieben. */
+      if (exists && !push?.service) continue;
       let yaml;
       try { yaml = readFileSync(join(blueprintDir, blueprint.file), 'utf8'); } catch {
         throw createNotificationError('NOTIFICATIONS_BLUEPRINT_MISSING', 500, `Der mitgelieferte Blueprint ${blueprint.file} fehlt.`);
       }
-      await client.ws('blueprint/save', { domain: 'automation', path: blueprint.path, yaml, allow_override: false });
+      await client.ws('blueprint/save', { domain: 'automation', path: blueprint.path, yaml, allow_override: exists });
     }
   }
 
@@ -227,7 +243,7 @@ export function serveNotifications(req, res, service) {
   if (req.method === 'GET') {
     const data = service.store.read();
     jsonResponse(res, 200, {
-      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {},
+      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {}, push: data.push ?? { service: null },
     });
     return;
   }
@@ -238,22 +254,23 @@ export function serveNotifications(req, res, service) {
   readSmallJson(req, res, async (payload) => {
     const rules = parseNotificationRules(payload?.rules);
     const colors = parseNotificationColors(payload?.colors);
+    const push = parseNotificationPush(payload?.push);
     if (!rules || !colors) {
       jsonResponse(res, 422, { ok: false, code: 'NOTIFICATIONS_INVALID_RULES', message: 'Die Regelliste ist ungültig.' });
       return;
     }
     let data;
-    try { data = service.store.write(rules, colors); } catch {
+    try { data = service.store.write(rules, colors, push); } catch {
       jsonResponse(res, 500, { ok: false, code: 'NOTIFICATIONS_WRITE_FAILED', message: 'Die Regeln konnten nicht gespeichert werden.' });
       return;
     }
     let sync = null;
     let syncError = null;
-    try { sync = await service.sync(rules); } catch (error) {
+    try { sync = await service.sync(rules, push); } catch (error) {
       syncError = notificationPublicError(error).payload;
     }
     jsonResponse(res, 200, {
-      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {}, sync, syncError,
+      ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {}, push: data.push ?? { service: null }, sync, syncError,
     });
   });
 }

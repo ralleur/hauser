@@ -1,8 +1,8 @@
 {
   "policy": "room-image-transform-policy-v1",
   "developmentPlatform": "darwin-arm64",
-  "sharp": "0.35.3",
-  "libvips": "8.18.3",
+  "sharp": "0.35.4",
+  "libvips": "8.18.6",
   "fixtures": {
     "animated-two-frame.webp": "4b2e07b2aaac757738f60b0bcdece03d5915c68647e1c5f172b7fddab9229a3d",
     "neutral-alpha.png": "31ca33680e6a6c0289f798179e8058bdc7378699a75b5bc9f87fc0afcd500677",

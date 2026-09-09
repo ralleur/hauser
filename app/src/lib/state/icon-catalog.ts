@@ -11,6 +11,17 @@ export const DEFAULT_ICONS_BY_CATEGORY: Record<DeviceCategory, string> = {
   temp: 'i-thermometer',
   info: 'i-gauge',
   media: 'i-playlist-music',
+  cover: 'i-window-shutter',
+  valve: 'i-valve',
+  vacuum: 'i-robot-vacuum',
+  lock: 'i-lock',
+  humidifier: 'i-air-humidifier',
+  water_heater: 'i-water-boiler',
+  mower: 'i-robot-mower',
+  alarm: 'i-shield-home',
+  number: 'i-tune',
+  select: 'i-format-list-bulleted',
+  button: 'i-gesture-tap',
   camera: 'i-camera',
 };
 

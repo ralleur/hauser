@@ -29,32 +29,37 @@
     <p class:phone-energy-unavailable={model.status.kind !== 'available'} role="status">{model.status.text}</p>
   </header>
 
-  <div class="energy-panel-top phone-energy-toolbar">
-    <div class="energy-period-row" role="radiogroup" aria-label={m.phone_energy_period()}>
-      {#each ENERGY_PERIODS as option (option.id)}
-        <button
-          class="scene-btn energy-period-btn pressable"
-          class:is-active={period === option.id}
-          type="button"
-          role="radio"
-          aria-checked={period === option.id}
-          onclick={() => (period = option.id)}
-        >
-          {option.label}
-        </button>
-      {/each}
-    </div>
-    <button
-      class="energy-page-toggle pressable"
-      class:is-consumption={page === 'consumption'}
-      type="button"
-      aria-label={pageSwitchLabel}
-      title={pageSwitchLabel}
-      onclick={() => (page = page === 'flow' ? 'consumption' : 'flow')}
-    >
-      <Icon name={page === 'flow' ? 'i-home' : 'i-bolt'} cls="icon icon-md" />
-    </button>
+  <!-- Vier Zeitraeume in zwei Reihen: nebeneinander passt „Letzter Monat" auf
+       keinem Telefon in die Zeile, und eine Leiste, die seitlich wegrutscht,
+       ist keine Loesung. -->
+  <div class="phone-energy-periods" role="radiogroup" aria-label={m.phone_energy_period()}>
+    {#each ENERGY_PERIODS as option (option.id)}
+      <button
+        class="phone-energy-period pressable"
+        class:is-active={period === option.id}
+        type="button"
+        role="radio"
+        aria-checked={period === option.id}
+        onclick={() => (period = option.id)}
+      >
+        {option.label}
+      </button>
+    {/each}
   </div>
+
+  <!-- Der Wechsel zwischen Fluss und Verbrauch sagt jetzt, wohin er fuehrt:
+       ein Symbol allein liess offen, was das Haus oder der Blitz bedeutet. -->
+  <button
+    class="phone-energy-mode pressable"
+    type="button"
+    onclick={() => (page = page === 'flow' ? 'consumption' : 'flow')}
+  >
+    <span class="phone-energy-mode-icon" aria-hidden="true">
+      <Icon name={page === 'flow' ? 'i-home' : 'i-bolt'} cls="icon icon-md" />
+    </span>
+    <span>{pageSwitchLabel}</span>
+    <svg class="phone-energy-mode-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+  </button>
 
   <section class="phone-energy-section" aria-labelledby="phone-energy-live-title">
     <h2 id="phone-energy-live-title">{m.phone_energy_now()}</h2>
@@ -66,7 +71,7 @@
         </div>
       {/each}
     </dl>
-    <p class="phone-energy-direction">Netzrichtung: {model.gridDirection}.</p>
+    <p class="phone-energy-direction"><span class="phone-energy-dot" aria-hidden="true"></span>Netzrichtung: {model.gridDirection}.</p>
   </section>
 
   <section class="phone-energy-section" aria-labelledby="phone-energy-today-title">

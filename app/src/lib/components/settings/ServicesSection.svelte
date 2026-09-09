@@ -32,6 +32,7 @@
   import { setModuleEnabled } from '../../state/module-config-write.ts';
   import DeviceAddress from '../DeviceAddress.svelte';
   import PairingCard from './PairingCard.svelte';
+  import RemoteCard from './RemoteCard.svelte';
 
   const conn = $derived(connection());
 
@@ -145,6 +146,8 @@
   </div>
 
   <PairingCard />
+
+  <RemoteCard />
 
   {#if !managedByApp}
   <div class="settings-row is-stacked" data-setting-id="ha-url">

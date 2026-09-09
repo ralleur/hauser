@@ -3,7 +3,7 @@
   import { m } from '../../../paraglide/messages.js';
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
-  import { swipedown } from '../../actions/swipedown.ts';
+  import { SHEET_SWIPE_IGNORE, swipedown } from '../../actions/swipedown.ts';
   import type { Room } from '../../state/app.svelte.ts';
   import { closeDeviceDetail, deviceDetail } from '../../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../../state/scene-edit-overlay.svelte.ts';
@@ -21,6 +21,7 @@
   } = $props();
 
   let dialog: HTMLElement;
+  let scrollEl = $state<HTMLElement>();
   let title: HTMLHeadingElement;
   type NestedLayerId = 'device' | 'scene';
   const nestedLayerLoader = createRetryableLazyLoader({
@@ -122,10 +123,16 @@
 {/snippet}
 
 <div class="room-sheet-scrim" role="presentation" onclick={scrim} onoutroend={outerOutroEnd} out:scrimExit>
-  <div class="room-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="room-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit>
-    <!-- Wischen am Kopf zieht das Sheet nach unten und schließt es ab einem
-         Viertel seiner Höhe — dieselbe Geste wie zum Öffnen, nur zurück. -->
-    <header class="room-sheet-header" use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog }}>
+  <!-- Wischen zieht das Sheet nach unten und schließt es ab einem Viertel
+       seiner Höhe — dieselbe Geste wie zum Öffnen, nur zurück. Sie gilt auf der
+       ganzen Fläche, nicht nur am Kopf: solange die Liste oben steht, gehört
+       die Abwärtsbewegung dem Sheet, danach wieder dem Scrollen. -->
+  <div class="room-sheet" bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby="room-sheet-title" tabindex="-1" onkeydown={onkeydown} out:sheetExit
+       use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog,
+                        atTop: (t) => Boolean(t?.closest('.room-sheet-header'))
+                                      || (scrollEl?.scrollTop ?? 0) <= 0,
+                        ignore: SHEET_SWIPE_IGNORE }}>
+    <header class="room-sheet-header">
       <div>
         <p class="phone-home-kicker">{m.phone_room_control()}</p>
         <h2 bind:this={title} id="room-sheet-title" tabindex="-1">{room.name}</h2>
@@ -135,7 +142,7 @@
       </button>
     </header>
 
-    <div class="room-sheet-scroll">
+    <div class="room-sheet-scroll" bind:this={scrollEl}>
       <!-- 1:1 die Tablet-Seitenleiste: gleiche Controls, gleiche Long-Press-
            Gesten und Overlays (Geräte-Detail, Szenen-Editor) — eine Erfahrung
            aus einem Guss auf beiden Shells. -->

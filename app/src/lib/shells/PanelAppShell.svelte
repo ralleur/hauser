@@ -9,6 +9,7 @@
   import '../../styles/demo.css';
   import { onMount, type Component } from 'svelte';
   import StatusBar from '../components/StatusBar.svelte';
+  import { nativeBridge } from '../native/bridge.ts';
   import TabBar from '../components/TabBar.svelte';
   import LoginScreen from '../components/LoginScreen.svelte';
   import StandbyFab from '../components/StandbyFab.svelte';
@@ -162,6 +163,15 @@
       window.clearTimeout(timer);
       stop?.();
     };
+  });
+
+  /* Das Panel zeichnet Uhr, Datum, Modus und Verbindung selbst — in einer App
+     stünde die Systemleiste mit derselben Uhrzeit direkt darüber. Sie weicht,
+     solange diese Shell läuft, und kommt zurück, wenn die Ansicht auf die
+     Telefon-Shell wechselt (etwa im Split View), die keine eigene Uhr hat. */
+  onMount(() => {
+    nativeBridge().statusBar?.setHidden(true);
+    return () => nativeBridge().statusBar?.setHidden(false);
   });
 
   onMount(() => {

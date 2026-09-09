@@ -4,7 +4,18 @@
      wie in DeviceAddress erst hier nachgeladen. */
   import { onMount } from 'svelte';
   import { m } from '../../../paraglide/messages.js';
-  import { loadDevices, pairingUi, revokeDevice, startPairing, stopPairing } from '../../state/pairing.svelte.ts';
+  import { loadDevices, pairingUi, revokeDevice, startPairing, stopPairing, writeRoomTag } from '../../state/pairing.svelte.ts';
+  import { nativeBridge } from '../../native/bridge.ts';
+  import { ROOM_SEED } from '../../config/household-runtime-data.ts';
+
+  const canWriteTags = !!nativeBridge().nfc;
+  let tagRoom = $state(ROOM_SEED[0]?.id ?? '');
+  let tagState = $state<'idle' | 'writing' | 'done' | 'failed'>('idle');
+  async function writeTag() {
+    if (!tagRoom) return;
+    tagState = 'writing';
+    tagState = (await writeRoomTag(tagRoom)) ? 'done' : 'failed';
+  }
   import { getLocale } from '../../../paraglide/runtime.js';
 
   let qrMarkup = $state('');
@@ -79,11 +90,38 @@
     {#if pairingUi.error}
       <p class="pairing-expires">{m.sys_app_pairing_error()}</p>
     {/if}
-    <button type="button" class="pairing-button pressable" disabled={pairingUi.loading} onclick={() => void startPairing()}>
-      {m.sys_app_pair_button()}
-    </button>
+    {#if pairingUi.noStay}
+      <p class="pairing-expires">{m.sys_app_pairing_no_stay()}</p>
+    {/if}
+    <div class="pairing-actions">
+      <button type="button" class="pairing-button pressable" disabled={pairingUi.loading} onclick={() => void startPairing()}>
+        {m.sys_app_pair_button()}
+      </button>
+      <button type="button" class="pairing-button pressable" disabled={pairingUi.loading} onclick={() => void startPairing(true)}>
+        {m.sys_app_pair_guest_button()}
+      </button>
+    </div>
   {/if}
 </div>
+
+{#if canWriteTags && ROOM_SEED.length}
+  <div class="settings-row is-stacked" data-setting-id="app-nfc">
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_app_nfc_title()}</span>
+      <span class="settings-row-sub">{m.sys_app_nfc_hint()}</span>
+    </div>
+    <div class="pairing-actions">
+      <select class="settings-input" bind:value={tagRoom} aria-label={m.sys_app_nfc_room()}>
+        {#each ROOM_SEED as room (room.id)}
+          <option value={room.id}>{room.name}</option>
+        {/each}
+      </select>
+      <button type="button" class="pairing-button pressable" disabled={tagState === 'writing'} onclick={() => void writeTag()}>
+        {tagState === 'done' ? m.sys_app_nfc_done() : tagState === 'failed' ? m.sys_app_nfc_failed() : m.sys_app_nfc_write()}
+      </button>
+    </div>
+  </div>
+{/if}
 
 <div class="settings-row is-stacked" data-setting-id="app-devices">
   <div class="settings-row-text">
@@ -97,7 +135,7 @@
         <li class="pairing-device">
           <div class="pairing-device-text">
             <span class="pairing-device-name">{device.name}</span>
-            <span class="pairing-device-sub">{device.platform} · {seenLabel(device)}</span>
+            <span class="pairing-device-sub">{device.guest ? m.sys_app_pairing_guest_badge() : device.platform} · {seenLabel(device)}</span>
           </div>
           <button type="button" class="pairing-button pressable" onclick={() => void revokeDevice(device.id)}>{m.sys_app_pairing_revoke()}</button>
         </li>
@@ -115,6 +153,7 @@
   .pairing-code { font-family: var(--font-family-mono); font-size: var(--font-size-xl); letter-spacing: 0.12em; color: var(--color-text-primary); }
   .pairing-button { min-height: var(--touch-preferred); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-4); background: var(--color-surface-0); color: var(--color-text-primary); font: inherit; font-weight: var(--font-weight-semibold); cursor: pointer; justify-self: start; }
   .pairing-button:disabled { opacity: 0.5; cursor: default; }
+  .pairing-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .pairing-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .pairing-device { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .pairing-device-text { display: grid; }

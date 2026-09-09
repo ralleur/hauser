@@ -108,13 +108,17 @@ describe('phone energy shell, source and accessibility boundaries', () => {
     expect(phoneShell).toContain('m.phone_view_preparing()');
   });
 
-  it('binds only the shared read-only energy projections and mirrors the panel toolbar', () => {
+  it('binds only the shared read-only energy projections and owns its phone toolbar', () => {
     expect(phoneEnergy).toMatch(/energyView\(\)/);
     expect(phoneEnergy).toMatch(/energyPanelData\(e,\s*period,\s*page\)/);
     expect(phoneEnergy).toMatch(/loadBreakdown\(\)/);
-    expect(phoneEnergy).toContain('class="energy-panel-top phone-energy-toolbar"');
-    expect(phoneEnergy).toContain('class="energy-period-row"');
-    expect(phoneEnergy).toContain('class="energy-page-toggle pressable"');
+    // Zeitraum und Betriebsart tragen eigene Phone-Klassen: die Leiste des
+    // Panels rutschte auf einem 390er Telefon aus der Zeile und ihr aktives
+    // Feld war ein heller Kasten im dunklen Bild.
+    expect(phoneEnergy).toContain('class="phone-energy-periods"');
+    expect(phoneEnergy).toMatch(/role="radiogroup"/);
+    expect(phoneEnergy).toContain('class="phone-energy-mode pressable"');
+    expect(phoneEnergy).toContain('{pageSwitchLabel}');
 
     for (const forbidden of [
       'EnergyScreen', 'PanelAppShell', 'EnergyLoadOverlay', 'energy-hero-assets',
@@ -136,7 +140,7 @@ describe('phone energy shell, source and accessibility boundaries', () => {
 
   it('owns a bounded vertical scrollport, prevents horizontal overflow and removes motion when requested', () => {
     expect(phoneShellCss).toMatch(/\.phone-energy\s*\{[^}]*height:\s*100%;[^}]*overflow-y:\s*auto;[^}]*overflow-x:\s*hidden;/s);
-    expect(phoneShellCss).toMatch(/\.phone-energy-drilldown\s*\{[^}]*min-height:\s*var\(--touch-min\);/s);
+    expect(phoneShellCss).toMatch(/\.phone-energy-drilldown\s*\{[^}]*min-height:\s*var\(--touch-preferred\);/s);
     expect(phoneShellCss).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.phone-energy-breakdown/s);
   });
 });

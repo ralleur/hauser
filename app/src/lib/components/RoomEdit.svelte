@@ -7,6 +7,7 @@
   import '../../styles/room-images.css';
   import { longpress } from '../actions/longpress.ts';
   import { dragreorder } from '../actions/dragreorder.ts';
+  import { SHEET_SWIPE_IGNORE, swipedown } from '../actions/swipedown.ts';
   import { appState } from '../state/app.svelte.ts';
   import { roomEdit, closeRoomEdit, finishRoomEditClose } from '../state/overlay.svelte.ts';
   import { openSceneEdit, scenes } from '../state/scene-manager.svelte.ts';
@@ -247,6 +248,52 @@
   function onKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && roomEdit.mode === 'open') closeRoomEdit();
   }
+
+  /* Die Wischgeste gehört dem Telefon: am Wandpanel steht dasselbe Overlay
+     mittig im Bild, dort wäre ein Zug nach unten sinnlos. */
+  let onPhone = $state(false);
+  $effect(() => {
+    onPhone = typeof document !== 'undefined'
+      && document.querySelector('[data-shell="phone"]') !== null;
+  });
+
+  /* Suchen heißt tippen, und die Tastatur nimmt die untere Hälfte des Bildes.
+     Beim Fokus rückt das Suchfeld deshalb an den oberen Rand des Panels —
+     darunter bleibt genug Platz für die Vorschläge. Fehlt dem Panel dafür
+     Auslauf (die Liste ist noch leer), bekommt es ihn vorübergehend. */
+  /* Während der Suche ist „oben" nicht mehr null, sondern die Stelle, an die
+     das Suchfeld gehoben wurde: von dort führt ein Wisch nach unten wieder
+     hinaus, ohne dass man erst zurückscrollen muss. Was hinzugefügt wurde,
+     steht ohnehin schon im Raum — Schließen übernimmt, nichts geht verloren. */
+  let searchAnchor = $state(0);
+
+  function liftSearchField(): void {
+    const panel = panelEl;
+    const field = searchEl;
+    if (!panel || !field) return;
+    /* Erst den geliehenen Auslauf zurückgeben, dann neu rechnen: sonst misst
+       der zweite Anlauf gegen den Platz, den der erste schon geschaffen hat,
+       und kürzt ihn auf die verbliebene Reststrecke zusammen. */
+    panel.style.paddingBottom = '';
+    const distance = field.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+    if (distance <= 0) return;
+    const rest = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+    if (distance > rest) panel.style.paddingBottom = `${distance - rest}px`;
+    panel.scrollTop += distance;
+    searchAnchor = panel.scrollTop;
+  }
+
+  function onSearchFocus(): void {
+    liftSearchField();
+    // Zweiter Anlauf, wenn die eingeblendete Tastatur den sichtbaren Bereich
+    // verkleinert hat — vorher stimmt die gerechnete Strecke noch nicht.
+    setTimeout(liftSearchField, 300);
+  }
+
+  function onSearchBlur(): void {
+    if (panelEl) panelEl.style.paddingBottom = '';
+    searchAnchor = 0;
+  }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -258,6 +305,10 @@
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
   <div class="room-edit-panel overlay-panel" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
        aria-label={m.room_edit_devices_label({ room: room?.name ?? '' })} tabindex="-1" bind:this={panelEl}
+       use:swipedown={{ onSwipe: () => closeRoomEdit(), surface: () => panelEl,
+                        atTop: (t) => Boolean(t?.closest('.ld-header'))
+                                      || (panelEl?.scrollTop ?? 0) <= searchAnchor,
+                        ignore: SHEET_SWIPE_IGNORE, enabled: onPhone }}
        onanimationend={(e) => { if (roomEdit.mode === 'closing' && e.target === e.currentTarget) finishRoomEditClose(); }}>
     {#if room}
       {#key room.id}
@@ -358,6 +409,7 @@
             <span class="caps-label">{m.room_add_device()}</span>
             <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
                    placeholder={m.room_search_placeholder()}
+                   onfocus={onSearchFocus} onblur={onSearchBlur}
                    aria-label={m.room_search_device()} autocomplete="off" spellcheck="false" />
             {#if query.trim()}
               {#if suggestions.length === 0}

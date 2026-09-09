@@ -14,8 +14,25 @@ export type LegacyManagedDomain =
   | 'fan'
   | 'input_boolean'
   | 'vacuum'
-  | 'camera';
-export type LegacyDeviceCategory = 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera';
+  | 'camera'
+  | 'valve'
+  | 'lock'
+  | 'humidifier'
+  | 'water_heater'
+  | 'lawn_mower'
+  | 'alarm_control_panel'
+  | 'siren'
+  | 'remote'
+  | 'number'
+  | 'input_number'
+  | 'select'
+  | 'input_select'
+  | 'button'
+  | 'input_button';
+export type LegacyDeviceCategory =
+  | 'light' | 'switch' | 'fan' | 'temp' | 'info' | 'media' | 'camera'
+  | 'cover' | 'valve' | 'vacuum' | 'lock' | 'humidifier' | 'water_heater' | 'mower' | 'alarm'
+  | 'number' | 'select' | 'button';
 
 export interface Light {
   id: string;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { nativeBridge } from '../../native/bridge.ts';
   import { onDestroy, tick } from 'svelte';
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
@@ -210,6 +211,26 @@
     const input = event.currentTarget as HTMLInputElement;
     const selected = input.files?.[0] ?? null;
     input.value = '';
+    await useSelectedFile(selected);
+  }
+
+  /* Companion-App: geführte Aufnahme im Querformat mit Overlay und
+     Wasserwaage — liefert ein JPEG, das denselben Weg geht wie eine Datei. */
+  const guidedCamera = nativeBridge().camera;
+  const roomName = $derived(appState.rooms.find((room) => room.id === assignRoomId)?.name ?? '');
+  async function captureGuided() {
+    if (!guidedCamera || uploadBusy || !capabilityEnabled) return;
+    const photo = await guidedCamera.captureRoom(
+      roomName,
+      [m.rimg_guide_hint_door(), m.rimg_guide_hint_height(), m.rimg_guide_hint_edges()],
+      { rotate: m.rimg_guide_rotate(), cancel: m.rimg_guide_cancel() },
+    );
+    if (!photo) return;
+    const bytes = Uint8Array.from(atob(photo), (c) => c.charCodeAt(0));
+    await useSelectedFile(new File([bytes], `${roomName || 'raum'}.jpg`, { type: 'image/jpeg' }));
+  }
+
+  async function useSelectedFile(selected: File | null) {
     if (!selected || uploadBusy || !capabilityEnabled) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
       localError = m.rimg_err_format();
@@ -429,7 +450,12 @@
                     <Icon name="i-tray-arrow-up" cls="icon icon-sm" />
                     {uploadBusy ? m.rimg_photo_preparing() : file ? m.rimg_photo_other() : m.rimg_photo_choose()}
                   </button>
-                  {#if canCapture}
+                  {#if guidedCamera}
+                    <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => void captureGuided()}>
+                      <Icon name="i-camera-outline" cls="icon icon-sm" />
+                      {m.rimg_guided_capture()}
+                    </button>
+                  {:else if canCapture}
                     <input hidden bind:this={captureInput} type="file" accept="image/*" capture="environment" onchange={chooseFile} />
                     <button class="secondary-btn pressable" type="button" disabled={uploadBusy || !capabilityEnabled} onclick={() => captureInput?.click()}>
                       <Icon name="i-camera-outline" cls="icon icon-sm" />

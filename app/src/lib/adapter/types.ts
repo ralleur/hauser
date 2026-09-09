@@ -232,7 +232,135 @@ export interface FanValue {
    read-only). Optional: nicht jede climate-Entität meldet sie. Dient als
    Fallback-Quelle der Raum-Temperaturanzeige, wenn KEIN dedizierter Raum-
    Sensor gemappt ist (roomTemperature(), state/commands.ts). */
-export interface ClimateValue { target: number; hvac: 'heat' | 'cool' | 'off'; current?: number }
+export type HvacMode = 'heat' | 'cool' | 'off' | 'heat_cool' | 'auto' | 'dry' | 'fan_only';
+export interface ClimateValue {
+  target: number;
+  hvac: HvacMode;
+  current?: number;
+  /* Optimistisch überlagerte Zusatzmodi (nur wenn das Gerät sie meldet). */
+  fanMode?: string | null;
+  presetMode?: string | null;
+  swingMode?: string | null;
+  /* Server-Wahrheit (read-only): was das Thermostat laut Attributen kann.
+     Fehlt die Liste, zeigt die Detail-Ebene die Grundmodi heat/cool/off. */
+  hvacModes?: HvacMode[];
+  fanModes?: string[];
+  presetModes?: string[];
+  swingModes?: string[];
+  minTemp?: number;
+  maxTemp?: number;
+}
+
+/* ── Weitere steuerbare Domänen (R28) ──
+   Dasselbe Muster wie FanValue: optimistisch überlagert werden nur die
+   Felder, die ein Service setzt; Fähigkeiten (`supports*`), Listen und
+   Grenzen sind Server-Wahrheit aus `supported_features` und den Attributen
+   und werden nie geraten. Was das Gerät nicht kann, zeigt das Overlay nicht. */
+
+/* cover.* und valve.*: `on` = offen oder öffnend (Kachel-Aktivzustand),
+   Position 0 = zu … 100 = offen, Neigung nur bei Jalousien. */
+export interface CoverValue {
+  on: boolean;
+  position: number;
+  tilt: number;
+  moving: 'opening' | 'closing' | null;
+  supportsOpen: boolean;
+  supportsClose: boolean;
+  supportsStop: boolean;
+  supportsPosition: boolean;
+  supportsTilt: boolean;
+}
+
+/* vacuum.*: `on` = unterwegs (cleaning/returning), `state` roh aus HA. */
+export interface VacuumValue {
+  on: boolean;
+  state: string;
+  fanSpeed: string | null;
+  battery: number | null;
+  fanSpeeds: string[];
+  supportsStart: boolean;
+  supportsPause: boolean;
+  supportsStop: boolean;
+  supportsReturn: boolean;
+  supportsLocate: boolean;
+  supportsFanSpeed: boolean;
+}
+
+/* lock.*: locked/unlocked/locking/unlocking/jammed/open. `supportsOpen`
+   = Türöffner (Falle ziehen) laut LockEntityFeature.OPEN. */
+export interface LockValue {
+  locked: boolean;
+  state: string;
+  supportsOpen: boolean;
+}
+
+/* humidifier.*: Zielfeuchte in %, Modi als freie Gerätestrings. */
+export interface HumidifierValue {
+  on: boolean;
+  target: number;
+  mode: string | null;
+  current: number | null;
+  modes: string[];
+  minHumidity: number;
+  maxHumidity: number;
+  supportsModes: boolean;
+}
+
+/* water_heater.*: Solltemperatur und Betriebsart (`operation_mode`). */
+export interface WaterHeaterValue {
+  on: boolean;
+  target: number;
+  mode: string | null;
+  current: number | null;
+  modes: string[];
+  minTemp: number;
+  maxTemp: number;
+  supportsTarget: boolean;
+  supportsModes: boolean;
+  supportsOnOff: boolean;
+}
+
+/* lawn_mower.*: mowing/docked/paused/error. */
+export interface MowerValue {
+  on: boolean;
+  state: string;
+  supportsStart: boolean;
+  supportsPause: boolean;
+  supportsDock: boolean;
+}
+
+/* alarm_control_panel.*: Scharfschaltung. Verlangt das Gerät einen Code,
+   trägt `codeFormat` das Eingabeformat; ohne Code bleibt das Feld weg. */
+export interface AlarmValue {
+  state: string;
+  codeFormat: 'number' | 'text' | null;
+  codeArmRequired: boolean;
+  supportsArmHome: boolean;
+  supportsArmAway: boolean;
+  supportsArmNight: boolean;
+  supportsArmVacation: boolean;
+  supportsArmCustom: boolean;
+}
+
+/* number.* und input_number.*: ein Wert mit Grenzen und Schrittweite. */
+export interface NumberValue {
+  value: number | null;
+  min: number;
+  max: number;
+  step: number;
+  unit: string | null;
+}
+
+/* select.* und input_select.*: eine Option aus einer Liste. */
+export interface SelectValue {
+  option: string | null;
+  options: string[];
+}
+
+/* button.* und input_button.*: kein Zustand, nur der letzte Druck. */
+export interface ButtonValue {
+  pressedAt: number | null;
+}
 
 /* ── Read-only-Value-Shapes (ADR-018): kein Overlay, keine optimistische
    Überlagerung. Sie fließen durch denselben `subscribe_entities`-Kanal, landen

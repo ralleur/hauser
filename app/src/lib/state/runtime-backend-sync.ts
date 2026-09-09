@@ -1,5 +1,7 @@
 import { FakeBackend } from '../adapter/fake-backend.ts';
 import { HaBackend } from '../adapter/ha-backend.ts';
+import { LazyPlatformBackend } from '../adapter/platform-backend-lazy.ts';
+import '../native/bridge.ts';
 import {
   seed,
   backend,
@@ -26,11 +28,14 @@ function forgetBrowserHaCredentials(): void {
 export function configuredBackendKind(
   storage: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage,
   envBackend: string | undefined = import.meta.env?.VITE_BACKEND as string | undefined,
-): 'fake' | 'ha' {
+): 'fake' | 'ha' | 'platform' {
   if (envBackend === 'fake') return 'fake';
   if (!storage) return typeof window === 'undefined' ? 'fake' : 'ha';
   try {
-    return storage?.getItem('hmi:backend') === 'fake' ? 'fake' : 'ha';
+    const kind = storage?.getItem('hmi:backend');
+    if (kind === 'fake') return 'fake';
+    if (kind === 'platform' && typeof window !== 'undefined' && window.HauserNative?.home) return 'platform';
+    return 'ha';
   } catch {
     return 'ha';
   }
@@ -40,6 +45,9 @@ export function configuredBackendKind(
  * irgendein externer Verbindungsaufbau beginnt. */
 export function syncConfiguredBackend(): void {
   const kind = configuredBackendKind();
+  /* Das Plattform-Backend entsteht nur beim Start (die App setzt den Schalter
+     vor dem ersten Skript); ein Wechsel im laufenden Betrieb ist kein Fall. */
+  if (kind === 'platform' || backend instanceof LazyPlatformBackend) return;
   if ((kind === 'fake') === (backend instanceof FakeBackend)) return;
   setBackend(kind === 'fake'
     ? new FakeBackend(seed)

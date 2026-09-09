@@ -379,8 +379,34 @@ function demoDiscoverySnapshot() {
   return { areas, devices: [], entities, states };
 }
 
+/* Der Deckenventilator der Demo. Die Haushaltskonfiguration kennt nur Lampen,
+   Schalter und Sauger als Kacheln; alles andere kommt über die Gerätesichtbarkeit
+   ins Zimmer, die sonst jemand im Gerätemanager setzt. Die Demo belegt sie
+   einmal vor, damit der Ventilator aus dem Fake-Katalog im Schlafzimmer hängt
+   und seine Steuerung (Stufe, Modus, Schwenken, Drehrichtung) zu sehen ist.
+   Wer in der Demo selbst Geräte umsortiert, behält seinen Stand: vorbelegt
+   wird nur, solange noch nichts gespeichert ist. */
+const DEMO_FAN_ENTITY = 'fan.demo_ventilator_wohnzimmer';
+/* Der Schlüssel aus state/device-config.ts, hier als Text: ein Import zöge den
+   Gerätemanager samt Katalog in den Startpfad, den der Cutover-Test klein
+   hält. Der Test in demo-mode.test.ts hält beide Fassungen zusammen. */
+export const DEMO_DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
+
+export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
+  if (!IS_DEMO || !storage) return;
+  try {
+    if (storage.getItem(DEMO_DEVICE_CONFIG_KEY) !== null) return;
+    storage.setItem(DEMO_DEVICE_CONFIG_KEY, JSON.stringify({
+      version: 1,
+      devices: { [DEMO_FAN_ENTITY]: { visible: true, roomId: 'schlafzimmer', name: 'Ceiling fan' } },
+      order: {},
+    }));
+  } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }
+}
+
 export function installDemoApi(): void {
   if (!IS_DEMO || typeof globalThis.fetch !== 'function') return;
+  installDemoDevices();
 
   const original = globalThis.fetch.bind(globalThis);
 
