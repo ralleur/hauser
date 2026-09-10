@@ -141,11 +141,12 @@
   background: var(--color-surface-1);
 }
 
-/* Unter 500 px bleibt für zwei Spalten nichts übrig: die Zelle des Sollwerts
-   fiele auf wenige Pixel zusammen, der Wert liefe hinter die Tasten, und in
-   der linken Spalte bräche „Aktuelle Temperatur" um. Dann stehen Istwert und
-   Bedienebene untereinander — die Zeile bekommt so die volle Breite. */
-@container (max-width: 500px) {
+/* Erst unter 420 px bleibt für zwei Spalten nichts übrig: darunter fiele die
+   Zelle des Sollwerts auf wenige Pixel zusammen und der Wert liefe hinter die
+   Tasten. Bis dahin bleiben Istwert und Bedienebene nebeneinander — der
+   Istwert wird kleiner, statt dass die Karte umbricht (Owner-Entscheidung
+   2026-09-10). */
+@container (max-width: 420px) {
   .panel-controls .climate-card {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -164,6 +165,13 @@
   min-width: 0;
 }
 
+/* Eigener Messbezug für den Istwert: Zahl und Beschriftung skalieren mit der
+   Breite ihrer Spalte, nicht mit der der ganzen Karte. Nur so wird der Wert
+   genau dann kleiner, wenn seine Zelle enger wird. */
+.panel-controls .climate-current {
+  container-type: inline-size;
+}
+
 .climate-current-label,
 .climate-current-room-label {
   display: none;
@@ -177,7 +185,7 @@
    Auf `.panel-controls` eingegrenzt, weil das Raum-Sheet des Phones seine
    eigene, engere Fassung mitbringt. */
 .panel-controls .climate-temp {
-  font-size: clamp(var(--text-xl), 14cqi, var(--text-4xl));
+  font-size: clamp(var(--text-lg), 36cqi, var(--text-4xl));
 }
 
 /* Die Einheit hängt am Wert, nicht an einer eigenen Stufe. */
@@ -189,17 +197,21 @@
    Blieb das Zeichen bei 32 px, brach „Aktuelle Temperatur" in der schmalen
    Spalte um, obwohl die Zahl darüber längst kleiner war. */
 .panel-controls .climate-current-meta {
-  gap: clamp(var(--space-2), 1.5cqi, var(--space-3));
+  gap: clamp(var(--space-2), 4cqi, var(--space-3));
 }
 
 .panel-controls .climate-current-meta .icon {
-  width: clamp(var(--icon-sm), 6cqi, var(--icon-xl));
-  height: clamp(var(--icon-sm), 6cqi, var(--icon-xl));
+  width: clamp(var(--icon-sm), 14cqi, var(--icon-xl));
+  height: clamp(var(--icon-sm), 14cqi, var(--icon-xl));
 }
 
 .panel-controls .climate-current-meta strong {
-  font-size: clamp(var(--text-3xs), 2.9cqi, var(--text-sm));
+  font-size: clamp(var(--text-3xs), 7cqi, var(--text-sm));
   line-height: var(--leading-tight);
+}
+
+.panel-controls .climate-current-meta small {
+  font-size: clamp(var(--text-3xs), 6cqi, var(--text-xs));
 }
 
 .panel-controls .climate-controller-label {

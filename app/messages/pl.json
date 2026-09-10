@@ -1851,5 +1851,6 @@
   "phone_nav_more_fixed": "Zostaje na dole",
   "phone_nav_pin": "Przypnij {name} na dole",
   "phone_nav_unpin": "Usuń {name} z dolnej nawigacji",
-  "phone_nav_drag": "Przenieś {name}"
+  "phone_nav_drag": "Przenieś {name}",
+  "sys_app_pairing_open_here": "Otwórz w aplikacji na tym urządzeniu"
 }

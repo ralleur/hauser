@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-09-10
+
+- The device search in a room offers pills for the device types it can take,
+  each with a count; one pill lists that type without typing anything.
+- The stage now fades softly from room to room, not only when a room's last
+  light goes out.
+- The picture assistant and the picture catalogue carry new, drawn symbols that
+  follow the light and dark themes.
+- Scrollbars are gone everywhere; scrolling itself is unchanged.
+- The climate card keeps target and current temperature side by side and
+  shrinks the current value instead of breaking into two rows.
+- The first tap on a device suggestion arrives instead of landing beside it.
+- On a phone, the pairing card can open the app on the same device.
+
 ## 0.12.1 - 2026-09-10
 
 - One damaged picture set no longer keeps the house from starting: the room

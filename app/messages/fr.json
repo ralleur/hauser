@@ -1851,5 +1851,6 @@
   "phone_nav_more_fixed": "Reste en bas",
   "phone_nav_pin": "Épingler {name} en bas",
   "phone_nav_unpin": "Retirer {name} de la navigation du bas",
-  "phone_nav_drag": "Déplacer {name}"
+  "phone_nav_drag": "Déplacer {name}",
+  "sys_app_pairing_open_here": "Ouvrir dans l’app sur cet appareil"
 }

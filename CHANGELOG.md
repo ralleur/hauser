@@ -5,6 +5,44 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-10
+
+### Added
+
+- **Raum: The device search offers the types a room can take.** A tap into the
+  search field brings up pills — Light, Switch, Climate, Sensor, Media and the
+  rest — each with the number of devices behind it. One pill lists that type
+  without typing a word; the first thirty, with the remainder named below. As
+  soon as a letter is typed the pills step aside and the name search takes over.
+- **Telefon: The pairing card opens the app on the same device.** Whoever
+  reached Hauser from their phone's browser cannot scan a QR code that sits on
+  the same screen. The card now offers "Open in the app on this device" — the
+  same link the code carries, as a handle. The wall panel does not show it.
+
+### Changed
+
+- **Raum: The stage fades softly from room to room.** The slow dissolve that
+  used to happen only when the last light in a room went out now carries every
+  room change, whatever time of day it is. Switching a light on inside a room
+  stays instant — that is a switch, not evening light.
+- **Einstellungen: New symbols for the picture assistant and the catalogue.**
+  Both are drawn now instead of pixelled: no background, crisp at any size, and
+  they follow the theme like the Hauser mark — light on dark, dark on light,
+  with the spark and the sun staying gold.
+- **Everywhere: No more scrollbars.** Hauser is swiped and scrolled, not dragged
+  by a bar; with a mouse attached the system used to draw fixed bars through
+  cards and glass surfaces. Scrolling is unchanged, only invisible.
+
+### Fixed
+
+- **Raum: The climate card no longer breaks into two rows when the column gets
+  narrow.** The current temperature, its symbol and its label shrink instead, so
+  the target temperature stays beside them.
+- **Raum: The first tap on a suggestion in the device search arrives.** Leaving
+  the search field gave back the room the sheet had borrowed for the keyboard
+  and moved the section between press and release, so the tap landed beside its
+  target.
+
 ## [0.12.1] - 2026-09-10
 
 ### Fixed

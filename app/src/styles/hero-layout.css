@@ -72,10 +72,10 @@
 }
 .hero-layer.is-front { opacity: 1; }
 
-/* Nachdimmen: das letzte Licht im Raum geht aus, das Bild sinkt hörbar langsam
-   in den unbeleuchteten Zustand. Gilt für beide Puffer-Ebenen, weil ein- und
-   ausgehendes Bild dieselbe Bewegung machen müssen. */
-.room-hero.is-dimming .hero-layer {
+/* Weicher Wechsel: Nachdimmen (letztes Licht im Raum geht aus) und Raumwechsel
+   sinken langsam ineinander, statt umzuklappen. Gilt für beide Puffer-Ebenen,
+   weil ein- und ausgehendes Bild dieselbe Bewegung machen müssen. */
+.room-hero.is-soft-swap .hero-layer {
   transition: opacity var(--duration-dusk) var(--ease-in-out);
 }
 
@@ -115,7 +115,7 @@
   .hero-layer, .immersion-light-layer, .immersion-light-layer circle { transition: none; }
   /* Hartschnitt statt Bewegung: kein Nachdimmen, kein Parallax. Die
      Dämmerungsebene bleibt, sie ist ein Zustand und keine Animation. */
-  .room-hero.is-dimming .hero-layer { transition: none; }
+  .room-hero.is-soft-swap .hero-layer { transition: none; }
   .room-hero > .hero-layer { transform: none; }
 }
 

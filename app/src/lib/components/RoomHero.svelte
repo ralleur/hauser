@@ -31,7 +31,7 @@
 
   const base = import.meta.env.BASE_URL;
   /* Spiegelt `--duration-dusk` mit etwas Luft: nur zum Abräumen der Klasse. */
-  const DIM_RESET_MS = 1300;
+  const SOFT_SWAP_RESET_MS = 1300;
 
   // Herozuweisungen leben getrennt von den Device-Manager-Raumobjekten. Diese
   // bleiben ausschließlich für Licht-/Immersionsdaten zuständig.
@@ -124,14 +124,18 @@
   let counterRequest = 0;
   let counterRequested = '';
 
-  /* Nachdimmen (Paket 4): geht das letzte Licht im Raum aus, sinkt das Bild
-     über `--duration-dusk` in den unbeleuchteten Zustand, statt umzuklappen.
-     Der umgekehrte Weg bleibt kurz — Licht an ist ein Schaltvorgang, kein
-     Abendlicht. Die Klasse räumt sich selbst wieder ab, damit ein späterer
-     Raumwechsel wieder im normalen Tempo läuft. */
-  let dimming = $state(false);
-  let dimmingTimer: ReturnType<typeof setTimeout> | undefined;
+  /* Weicher Wechsel: das Bild sinkt über `--duration-dusk` in den neuen
+     Zustand, statt umzuklappen. Zwei Fälle nutzen ihn:
+     - Nachdimmen (Paket 4): das letzte Licht im Raum geht aus. Der umgekehrte
+       Weg bleibt kurz — Licht an ist ein Schaltvorgang, kein Abendlicht.
+     - Raumwechsel: von Raum zu Raum blendet die Bühne ruhig über, egal welche
+       Tages- oder Lichtfassung beide Räume gerade tragen.
+     Die Klasse räumt sich selbst wieder ab, damit ein Fassungswechsel im
+     stehenden Raum (Licht an) danach wieder im normalen Tempo läuft. */
+  let softSwap = $state(false);
+  let softSwapTimer: ReturnType<typeof setTimeout> | undefined;
   let lastVariant: string | null = null;
+  let lastRoom: string | null = null;
 
   function resolutionKey(resolution: { userCandidate: HeroImageCandidate | null; projectFallback: HeroImageCandidate | null }): string {
     return [
@@ -147,14 +151,16 @@
     if (key === requested) return;
     requested = key;
     const currentRequest = ++request;
-    const dimNow = resolution.variant === 'dark-off' && lastVariant === 'dark';
+    const roomChanged = lastRoom !== null && appState.currentRoom !== lastRoom;
+    const softNow = roomChanged || (resolution.variant === 'dark-off' && lastVariant === 'dark');
     lastVariant = resolution.variant;
+    lastRoom = appState.currentRoom;
 
     void loadRoomHero(resolution, decodeHeroImageOffThread, () => request === currentRequest).then((candidate) => {
       if (!candidate || request !== currentRequest) return;
-      clearTimeout(dimmingTimer);
-      dimming = dimNow;
-      if (dimNow) dimmingTimer = setTimeout(() => { dimming = false; }, DIM_RESET_MS);
+      clearTimeout(softSwapTimer);
+      softSwap = softNow;
+      if (softNow) softSwapTimer = setTimeout(() => { softSwap = false; }, SOFT_SWAP_RESET_MS);
       if (front === 'a') {
         layerB = candidate;
         front = 'b';
@@ -229,10 +235,10 @@
       .catch(() => { /* Werkstatt-Werkzeug: fehlt es, fehlt nur die Einblendung */ });
   });
 
-  $effect(() => () => clearTimeout(dimmingTimer));
+  $effect(() => () => clearTimeout(softSwapTimer));
 </script>
 
-<div class="room-hero" class:is-dimming={dimming} aria-hidden="true"
+<div class="room-hero" class:is-soft-swap={softSwap} aria-hidden="true"
      style:--hero-parallax={`${heroParallax.offsetPx}px`}>
   <div class="hero-layer" class:is-front={front === 'a'}
        style:background-image={layerA ? `url("${layerA.url}")` : undefined}

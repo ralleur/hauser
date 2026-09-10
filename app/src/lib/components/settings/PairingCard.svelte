@@ -33,6 +33,10 @@
     return () => { clearInterval(tick); stopPairing(); };
   });
 
+  /* Telefon-Shell = derselbe Bildschirm, auf dem die App läuft. Am Wandpanel
+     bliebe der Link ein Knopf ins Leere. */
+  const sameDevice = typeof matchMedia === 'function' && matchMedia('(max-width: 767px)').matches;
+
   $effect(() => {
     const link = pairingUi.active?.link;
     if (!link) { qrMarkup = ''; return; }
@@ -80,7 +84,14 @@
         <p class="pairing-scan">{m.sys_app_pairing_scan()}</p>
         <code class="pairing-code">{pairingUi.active.code}</code>
         <p class="pairing-expires">{m.sys_app_pairing_expires({ time: expiresLabel(pairingUi.active.expiresAt) })}</p>
-        <button type="button" class="pairing-button pressable" onclick={() => stopPairing()}>{m.sys_app_pairing_done()}</button>
+        <div class="pairing-actions">
+          {#if sameDevice}
+            <!-- Wer Hauser im Browser dieses Telefons geöffnet hat, kann den
+                 Code nicht scannen — der Link übergibt ihn direkt an die App. -->
+            <a class="pairing-button pairing-here pressable" href={pairingUi.active.link}>{m.sys_app_pairing_open_here()}</a>
+          {/if}
+          <button type="button" class="pairing-button pressable" onclick={() => stopPairing()}>{m.sys_app_pairing_done()}</button>
+        </div>
       </div>
     </div>
   {:else}
@@ -154,6 +165,8 @@
   .pairing-button { min-height: var(--touch-preferred); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-4); background: var(--color-surface-0); color: var(--color-text-primary); font: inherit; font-weight: var(--font-weight-semibold); cursor: pointer; justify-self: start; }
   .pairing-button:disabled { opacity: 0.5; cursor: default; }
   .pairing-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  /* Gehobene Fassung wie .primary-btn: der eine Griff, der hier zählt. */
+  .pairing-here { display: inline-flex; align-items: center; text-decoration: none; background: var(--color-text-primary); border-color: var(--color-text-primary); color: var(--color-surface-1); }
   .pairing-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .pairing-device { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .pairing-device-text { display: grid; }

@@ -17,8 +17,6 @@
   import { resetStored, isCleared, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
-  const base = import.meta.env.BASE_URL;
-
   let roomImageWizardOpen = $state(false);
   /* Ruf von außen (Meldung antippen): Der Wunsch liegt bereit, bevor diese
      Seite überhaupt existiert — deshalb wird er hier verbraucht, sobald sie
@@ -40,7 +38,23 @@
                         title={m.sys_room_images()} sub={m.sys_room_images_hint()} />
       <div class="rooms-tile-grid">
         <div class="rooms-tile" data-setting-id="room-image-wizard">
-          <img class="rooms-tile-art is-image" src={`${base}wizard/icon.webp`} alt="" loading="lazy" />
+          <svg class="rooms-tile-art is-art" viewBox="0 0 64 64" aria-hidden="true">
+            <!-- Raumbild-Assistent: ein Zimmer im Rahmen, daneben der Funke,
+                 der aus dem Foto ein Hauser-Raumbild macht. Wie beim Signet
+                 trägt currentColor die Form (dark hell, light dunkel), der
+                 Funke bleibt gold. -->
+            <rect x="5" y="11" width="54" height="42" rx="8.5"
+                  fill="none" stroke="currentColor" stroke-width="4.4" />
+            <path d="M18.5 47.6V32.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
+            <path d="M12.5 32.5a6 6 0 0 1 12 0z" fill="currentColor" />
+            <path d="M28.6 34h14.8a3.2 3.2 0 0 1 3.2 3.2V40H25.4v-2.8a3.2 3.2 0 0 1 3.2-3.2z" fill="currentColor" />
+            <rect x="25.5" y="39.6" width="21" height="7.6" rx="3.2" fill="currentColor" />
+            <rect x="23.4" y="38.6" width="4.8" height="8.6" rx="2.4" fill="currentColor" />
+            <rect x="43.8" y="38.6" width="4.8" height="8.6" rx="2.4" fill="currentColor" />
+            <path d="M27.6 47.2v2M44.4 47.2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M48 15.8c1.25 5 2.35 6.1 7.35 7.35-5 1.25-6.1 2.35-7.35 7.35-1.25-5-2.35-6.1-7.35-7.35 5-1.25 6.1-2.35 7.35-7.35z"
+                  fill="var(--color-accent-warm)" />
+          </svg>
           <div class="rooms-tile-text">
             <span class="rooms-tile-title">{m.settings_room_image_wizard_title()}</span>
             <span class="rooms-tile-sub">{m.settings_room_image_wizard_desc()}</span>
@@ -53,7 +67,25 @@
         </div>
 
         <div class="rooms-tile" data-setting-id="room-image-library">
-          <img class="rooms-tile-art is-image" src={`${base}wizard/library-icon.webp`} alt="" loading="lazy" />
+          <svg class="rooms-tile-art is-art" viewBox="0 0 64 64" aria-hidden="true">
+            <!-- Bildkatalog: ein Stapel Raumbilder. Die hinteren Blätter sind
+                 nur als Ecke zu sehen, das vordere trägt Berg und Sonne. -->
+            <defs>
+              <clipPath id="rimg-lib-frame">
+                <rect x="8.4" y="12.4" width="33.2" height="27.2" rx="5" />
+              </clipPath>
+            </defs>
+            <path d="M49 17v25a7 7 0 0 1-7 7H15" fill="none" stroke="currentColor"
+                  stroke-width="4.4" stroke-linecap="round" />
+            <path d="M55.5 23.5V49a7 7 0 0 1-7 7H21.5" fill="none" stroke="currentColor"
+                  stroke-width="4.4" stroke-linecap="round" />
+            <g clip-path="url(#rimg-lib-frame)">
+              <path d="M6 40.5 19.5 24.5 27 33.2 31 28.4 44 40.5z" fill="currentColor" />
+            </g>
+            <rect x="6" y="10" width="38" height="32" rx="7"
+                  fill="none" stroke="currentColor" stroke-width="4.4" />
+            <circle cx="33.6" cy="21" r="4.6" fill="var(--color-accent-warm)" />
+          </svg>
           <div class="rooms-tile-text">
             <span class="rooms-tile-title">{m.settings_room_image_library_title()}</span>
             <span class="rooms-tile-sub">{m.rimg_lib_hint()}</span>
@@ -170,9 +202,13 @@
     background: color-mix(in srgb, var(--color-accent-warm) 14%, var(--color-surface-1));
     color: var(--color-accent-warm);
   }
-  /* Das Wizard-Symbol ist eine eigene Illustration und bringt seine Flaeche
-     selbst mit — deshalb ohne getoenten Hintergrund. */
-  .rooms-tile-art.is-image { background: none; object-fit: contain; }
+  /* Die beiden Raumbild-Symbole sind eigene Zeichnungen ohne Flaeche: sie
+     folgen wie das Signet dem Theme (currentColor), der Funke bzw. die Sonne
+     bleibt gold. */
+  .rooms-tile-art.is-art {
+    background: none;
+    color: var(--color-text-primary);
+  }
 
   .rooms-tile-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .rooms-tile-title { font-size: var(--text-base); font-weight: var(--font-weight-semibold); }

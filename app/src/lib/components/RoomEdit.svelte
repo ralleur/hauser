@@ -17,7 +17,9 @@
     hideDevice,
     setRoomDeviceOrder,
   } from '../state/device-manager.svelte.ts';
-  import { categoryOf, CATEGORY_LABELS, type EntityCatalogItem } from '../state/device-config.ts';
+  import {
+    categoryOf, CATEGORY_LABELS, type DeviceCategory, type EntityCatalogItem,
+  } from '../state/device-config.ts';
   import { m } from '../../paraglide/messages.js';
   import {
     removeLightPlacement,
@@ -47,6 +49,11 @@
 
   let query = $state('');
   let searchEl = $state<HTMLInputElement>();
+  /* Filterpillen: Wer ins Suchfeld tippt, weiß meist den Namen — wer nur
+     hineinklickt, sucht einen Typ. Deshalb erscheinen die Pillen beim Klick
+     ins Feld und verschwinden, sobald ein Buchstabe fällt. */
+  let searchOpen = $state(false);
+  let categoryFilter = $state<DeviceCategory | null>(null);
   let view = $state<'devices' | 'immersion' | 'background' | 'advanced'>('devices');
   let wizardOpen = $state(false);
   let selectedLightId = $state('');
@@ -73,12 +80,41 @@
 
   // Vorschläge erst ab Eingabe: bestes Präfix-Match zuerst, dann Name-Substring,
   // dann entity_id/Domain. Geräte, die schon im Raum liegen, tauchen nicht auf.
+  const addable = $derived.by(() => {
+    if (!room) return [];
+    const inRoom = new Set(room.lights.map((l) => l.entityId));
+    return deviceManager.catalog.filter((item) => !inRoom.has(item.entityId));
+  });
+
+  /* Nur Typen, die es hier auch zu holen gibt — eine Pille „Mäher" ohne Mäher
+     wäre ein leeres Versprechen. Die Reihenfolge kommt aus CATEGORY_LABELS,
+     damit Licht vorn steht und die Leiste nicht bei jedem Öffnen springt. */
+  const categoryPills = $derived.by(() => {
+    const counts = new Map<DeviceCategory, number>();
+    for (const item of addable) {
+      const category = categoryOf(item.domain);
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+    return (Object.keys(CATEGORY_LABELS) as DeviceCategory[])
+      .filter((category) => counts.has(category))
+      .map((category) => ({ category, count: counts.get(category)! }));
+  });
+
+  /* Ein Griff auf „Sensor" kann dreihundert Zeilen bedeuten — so viele Kacheln
+     auf einen Schlag ruckeln am Wandpanel. Die Liste bleibt deshalb kurz und
+     sagt, wie viel noch dahinter liegt; wer mehr will, tippt. */
+  const FILTER_LIMIT = 30;
+  const filtered = $derived(categoryFilter
+    ? addable
+      .filter((item) => categoryOf(item.domain) === categoryFilter)
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    : []);
+  const hiddenByLimit = $derived(query.trim() ? 0 : Math.max(0, filtered.length - FILTER_LIMIT));
+
   const suggestions = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    if (!q || !room) return [];
-    const inRoom = new Set(room.lights.map((l) => l.entityId));
-    return deviceManager.catalog
-      .filter((item) => !inRoom.has(item.entityId))
+    if (!q) return filtered.slice(0, FILTER_LIMIT);
+    return addable
       .map((item) => ({ item, rank: matchRank(item, q) }))
       .filter((s) => s.rank > 0)
       .sort((a, b) => b.rank - a.rank || a.item.name.localeCompare(b.item.name, 'de'))
@@ -142,6 +178,8 @@
     void roomEdit.roomId;
     if (!opening) return;
     query = '';
+    searchOpen = false;
+    categoryFilter = null;
     view = requestedView;
     selectedLightId = '';
     backgroundMessage = null;
@@ -284,13 +322,30 @@
   }
 
   function onSearchFocus(): void {
+    searchOpen = true;
     liftSearchField();
     // Zweiter Anlauf, wenn die eingeblendete Tastatur den sichtbaren Bereich
     // verkleinert hat — vorher stimmt die gerechnete Strecke noch nicht.
     setTimeout(liftSearchField, 300);
   }
 
-  function onSearchBlur(): void {
+  /* Tippen schlägt Filtern: die Pillen weichen der Eingabe und geben ihre
+     Auswahl mit ab, sonst suchte man unsichtbar eingeschränkt weiter. */
+  function onSearchInput(): void {
+    if (query.trim()) categoryFilter = null;
+  }
+
+  function toggleCategory(category: DeviceCategory): void {
+    categoryFilter = categoryFilter === category ? null : category;
+  }
+
+  /* Der geliehene Auslauf darf erst zurück, wenn die Suche wirklich verlassen
+     wird. Wandert der Fokus nur auf eine Filterpille oder einen Vorschlag,
+     bliebe der Griff sonst ins Leere: das Zurückgeben verschiebt den Abschnitt
+     noch zwischen Drücken und Loslassen, und der Klick landet daneben. */
+  function onSearchBlur(event: FocusEvent): void {
+    const next = event.relatedTarget;
+    if (next instanceof HTMLElement && next.closest('.re-add-section')) return;
     if (panelEl) panelEl.style.paddingBottom = '';
     searchAnchor = 0;
   }
@@ -405,13 +460,26 @@
             {/if}
           </section>
 
-          <section class="ld-section">
+          <section class="ld-section re-add-section">
             <span class="caps-label">{m.room_add_device()}</span>
             <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
                    placeholder={m.room_search_placeholder()}
-                   onfocus={onSearchFocus} onblur={onSearchBlur}
+                   onfocus={onSearchFocus} onblur={onSearchBlur} oninput={onSearchInput}
                    aria-label={m.room_search_device()} autocomplete="off" spellcheck="false" />
-            {#if query.trim()}
+            {#if searchOpen && !query.trim() && categoryPills.length > 0}
+              <div class="re-filters" role="group" aria-label={m.room_add_device()}>
+                {#each categoryPills as pill (pill.category)}
+                  <button class="re-filter pressable" type="button"
+                          class:is-active={categoryFilter === pill.category}
+                          aria-pressed={categoryFilter === pill.category}
+                          onclick={() => toggleCategory(pill.category)}>
+                    {CATEGORY_LABELS[pill.category]}
+                    <span class="re-filter-count">{pill.count}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+            {#if query.trim() || categoryFilter}
               {#if suggestions.length === 0}
                 <p class="re-empty">{m.room_no_matches()}</p>
               {:else}
@@ -432,6 +500,9 @@
                     </li>
                   {/each}
                 </ul>
+                {#if hiddenByLimit > 0}
+                  <p class="re-empty">{m.ambient_more_count({ count: hiddenByLimit })}</p>
+                {/if}
               {/if}
             {/if}
           </section>
