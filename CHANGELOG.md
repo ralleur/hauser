@@ -5,6 +5,22 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-10
+
+### Fixed
+
+- **Raum: One damaged picture set no longer keeps the house from starting.**
+  After an update across several versions, a set could lose its files while the
+  phone derivations were being added, leaving its catalogue entry in the old
+  shape. The store then refused the whole catalogue and the service never came
+  up. A set that breaks the contract is now passed over — the room falls back to
+  its default picture, the house starts, and the log names what was skipped. The
+  contract itself stays closed: what is passed over is not served and not
+  written back.
+- **Raum: The overcast variant survives the derivation.** Adding the phone
+  derivations replaced the set's directory and dropped the optional overcast
+  picture, which costs its own model call. It is now carried across.
+
 ## [0.12.0] - 2026-09-09
 
 ### Added

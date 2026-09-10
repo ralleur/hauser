@@ -70,12 +70,14 @@ function legacySandbox(assetId = 'legacy_asset') {
 
 describe('B-27 D3 room image phone variant backfill', () => {
   /* Ohne Migration gilt jedes heutige Asset als inkohärent: verifyEntryFiles
-     vergleicht gegen ROOM_IMAGE_VARIANT_FILES und der Store wirft schon beim
-     Konstruieren. Genau das ist der Grund, warum der Backfill zwingend ist. */
+     vergleicht gegen ROOM_IMAGE_VARIANT_FILES. Der Store übergeht ein solches
+     Set (das Haus startet, der Raum zeigt sein Standardbild) — es zurückzuholen
+     ist genau die Aufgabe des Backfills. */
   it('makes a pre-derivation store loadable again and leaves it coherent', async () => {
     const { assetRoot, catalogPath, directory, assetId } = legacySandbox();
 
-    expect(() => createRoomImageAssetStore({ catalogPath, assetRoot })).toThrow();
+    const beforeStore = createRoomImageAssetStore({ catalogPath, assetRoot });
+    expect(beforeStore.list()).toEqual([]);
 
     const result = await backfillRoomImagePhoneVariants({ catalogPath, assetRoot, derive });
 
@@ -95,6 +97,29 @@ describe('B-27 D3 room image phone variant backfill', () => {
     const store = createRoomImageAssetStore({ catalogPath, assetRoot });
     expect(store.list().map((entry: { assetId: string }) => entry.assetId)).toEqual([assetId]);
     expect(store.variantBytes(assetId, 'phoneDark')).not.toBeNull();
+  });
+
+  /* Der Fall aus der Produktion (0.9.1 → 0.12.0): Ein Set verliert beim
+     Nachziehen seine Dateien, sein Katalogeintrag bleibt in der alten Form
+     zurück. Bis 0.12.0 nahm dieses eine Set das ganze Haus mit — der Dienst
+     kam nicht mehr hoch. */
+  it('keeps the house up when a single set stays broken', async () => {
+    const { assetRoot, catalogPath, directory, assetId } = legacySandbox();
+
+    await backfillRoomImagePhoneVariants({ catalogPath, assetRoot, derive });
+    const migrated = JSON.parse(readFileSync(catalogPath, 'utf8'));
+    /* Ein zweites, kaputtes Set daneben: alte Variantenliste, keine Dateien. */
+    migrated.assets.push({
+      ...structuredClone(migrated.assets[0]),
+      assetId: 'lost_asset',
+      variants: { light: 'light.avif', dark: 'dark.avif', darkOff: 'dark-off.avif' },
+    });
+    writeFileSync(catalogPath, `${JSON.stringify(migrated)}\n`);
+
+    const store = createRoomImageAssetStore({ catalogPath, assetRoot });
+    expect(store.list().map((entry: { assetId: string }) => entry.assetId)).toEqual([assetId]);
+    expect(store.variantBytes(assetId, 'phoneDark')).not.toBeNull();
+    expect(readdirSync(directory)).toContain('phone-dark.avif');
   });
 
   it('is idempotent and leaves an already migrated store untouched', async () => {

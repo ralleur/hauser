@@ -2497,6 +2497,8 @@ export function createRoomImageAssetStore({
   const setsRoot = join(root, 'room-images');
   const catalog = canonicalRoomImageAssetPath(catalogPath);
   let catalogExisted;
+  /* Damit die Warnung einmal je Stand erscheint und nicht bei jedem Lesen. */
+  let reportedDroppedEntries = 0;
   try {
     inspectRoomImageAssetPath(root, 'directory');
     inspectRoomImageAssetPath(setsRoot, 'directory');
@@ -2520,6 +2522,17 @@ export function createRoomImageAssetStore({
     const path = safeSetPath(assetId);
     return path ? join(setsRoot, `.publishing-${assetId}`) : null;
   }
+  /* Ein einzelnes unbrauchbares Bildset darf das Haus nicht am Starten
+     hindern. Bis 0.12.0 lehnte der Store den ganzen Katalog ab, sobald ein
+     Eintrag den Vertrag verletzte — nach einem Sprung ueber mehrere Versionen
+     genuegte dafuer ein Set, dessen Dateien beim Nachziehen der
+     Phone-Ableitungen verlorengingen, und der Dienst kam nicht mehr hoch.
+
+     Der Vertrag selbst bleibt geschlossen: Was ihn verletzt, wird nicht
+     geladen, nicht ausgeliefert und beim naechsten Schreiben nicht wieder
+     mitgeschrieben. Der Raum faellt auf sein Standardbild zurueck, statt das
+     ganze Haus mitzunehmen. Doppelte Ids bleiben hart — sie sind kein
+     beschaedigtes Set, sondern ein beschaedigter Katalog. */
   function readCatalog() {
     let document;
     try {
@@ -2530,11 +2543,23 @@ export function createRoomImageAssetStore({
       throw roomImageAssetStoreError('Der Room-Image-Katalog ist korrupt oder unsicher.', error);
     }
     if (!roomImageExactObject(document, ['version', 'assets']) || document.version !== 1
-        || !Array.isArray(document.assets) || !document.assets.every(validRoomImageCatalogEntry)
-        || new Set(document.assets.map((entry) => entry.assetId)).size !== document.assets.length) {
+        || !Array.isArray(document.assets)) {
       throw roomImageAssetStoreError('Der Room-Image-Katalog verletzt den geschlossenen Vertrag.');
     }
-    return document;
+    const assets = document.assets.filter(validRoomImageCatalogEntry);
+    if (new Set(assets.map((entry) => entry.assetId)).size !== assets.length) {
+      throw roomImageAssetStoreError('Der Room-Image-Katalog verletzt den geschlossenen Vertrag.');
+    }
+    const dropped = document.assets.length - assets.length;
+    if (dropped > 0 && dropped !== reportedDroppedEntries) {
+      reportedDroppedEntries = dropped;
+      const ids = document.assets
+        .filter((entry) => !validRoomImageCatalogEntry(entry))
+        .map((entry) => (typeof entry?.assetId === 'string' ? entry.assetId : '?'))
+        .join(', ');
+      console.warn(`[hauser] ${dropped} Raumbild-Set(s) uebergangen — unvollstaendig oder vertragswidrig: ${ids}. Die betroffenen Raeume zeigen ihr Standardbild.`);
+    }
+    return { version: 1, assets };
   }
   function atomicCatalogWrite(document, commitState = { committed: false }) {
     assertMutable();
@@ -2988,10 +3013,20 @@ export async function backfillRoomImagePhoneVariants({
 
       rmSync(staging, { recursive: true, force: true });
       mkdirSync(staging, { mode: 0o700 });
+      /* Die truebe Variante ist optional, aber vorhanden ist sie teuer: sie
+         kostet einen eigenen Modellaufruf. Sie wandert mit ins Staging, sonst
+         nimmt der Verzeichnistausch sie mit. */
+      for (const key of ROOM_IMAGE_OPTIONAL_VARIANT_KEYS) {
+        const source = join(directory, ROOM_IMAGE_OPTIONAL_VARIANT_FILES[key]);
+        if (entry.files?.[key] && existsSync(source)) bytesByKey[key] = readFileSync(source);
+      }
+      const carried = ROOM_IMAGE_OPTIONAL_VARIANT_KEYS.filter((key) => bytesByKey[key]);
+
       const files = {};
-      for (const key of ROOM_IMAGE_VARIANT_KEYS) {
+      for (const key of [...ROOM_IMAGE_VARIANT_KEYS, ...carried]) {
         const bytes = Buffer.from(bytesByKey[key]);
-        const target = join(staging, ROOM_IMAGE_VARIANT_FILES[key]);
+        const name = ROOM_IMAGE_VARIANT_FILES[key] ?? ROOM_IMAGE_OPTIONAL_VARIANT_FILES[key];
+        const target = join(staging, name);
         writeFileSync(target, bytes, { mode: 0o600, flush: true });
         chmodSync(target, 0o600);
         files[key] = {
@@ -3012,6 +3047,9 @@ export async function backfillRoomImagePhoneVariants({
 
       entry.files = files;
       entry.variants = { ...ROOM_IMAGE_VARIANT_FILES };
+      for (const key of carried) {
+        entry.variants[key] = ROOM_IMAGE_OPTIONAL_VARIANT_FILES[key];
+      }
       entry.manifestSha256 = createHash('sha256').update(manifest).digest('hex');
       migrated.push(entry.assetId);
       changed = true;

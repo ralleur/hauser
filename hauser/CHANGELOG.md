@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.12.1 - 2026-09-10
+
+- One damaged picture set no longer keeps the house from starting: the room
+  falls back to its default picture and the log names what was skipped.
+- The overcast variant of a room picture survives the phone derivation.
+
 ## 0.12.0 - 2026-09-09
 
 - The quick action next to the temperature can carry any device: hold it to
