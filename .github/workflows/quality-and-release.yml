@@ -81,11 +81,28 @@ jobs:
       - name: Upgrade smoke from previous release
         run: ./scripts/upgrade-smoke.sh "ci-${GITHUB_SHA::12}"
 
+  # Zwei Architekturen, zwei echte Rechner: Der arm64-Teil lief bisher unter
+  # QEMU auf einem Intel-Laeufer mit — 33 Minuten fuer die Bildableitungen und
+  # am Ende ein "illegal instruction" aus dem Emulator (Release 0.14.0,
+  # 2026-09-11). GitHub stellt oeffentlichen Repos arm64-Laeufer, also baut
+  # jede Architektur dort, wo sie hingehoert; der Merge-Job legt die beiden
+  # Abzuege unter einem Manifest zusammen. Die Tags traegt erst dieses
+  # Manifest, deshalb schieben die Bau-Jobs nur Digests hoch.
   release-image:
-    name: Publish immutable GHCR image
+    name: Build image (${{ matrix.platform }})
     if: startsWith(github.ref, 'refs/tags/v')
     needs: quality
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -126,13 +143,12 @@ jobs:
             echo "source_date_epoch=$(git show -s --format=%ct HEAD)"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build and publish multi-architecture image
-        id: publish
+      - name: Build and push image digest
+        id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
+          platforms: ${{ matrix.platform }}
           provenance: false
           build-args: |
             SOURCE_DATE_EPOCH=${{ steps.image.outputs.source_date_epoch }}
@@ -144,10 +160,104 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.image.outputs.version }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          tags: |
-            ${{ steps.image.outputs.repository }}:${{ github.ref_name }}
-            ${{ steps.image.outputs.repository }}:sha-${{ steps.image.outputs.short_sha }}
-            ${{ startsWith(github.ref, 'refs/tags/v') && format('{0}:{1}', steps.image.outputs.repository, steps.image.outputs.version) || '' }}
+          outputs: type=image,name=${{ steps.image.outputs.repository }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Hand the digest to the merge job
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          digest='${{ steps.build.outputs.digest }}'
+          touch "${RUNNER_TEMP}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release-manifest:
+    name: Publish immutable GHCR image
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out tagged revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Download digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive immutable image metadata
+        id: image
+        shell: bash
+        run: |
+          version="$(node -p 'require("./app/package.json").version')"
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "version=$version"
+            echo "repository=$repository"
+            echo "short_sha=${GITHUB_SHA::12}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create manifest and apply tags
+        id: publish
+        shell: bash
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -euo pipefail
+          repository='${{ steps.image.outputs.repository }}'
+          # Beide Architekturen muessen da sein — ein Manifest mit nur einem
+          # Abzug waere ein Release, das auf der Haelfte der Geraete fehlt.
+          count="$(find . -type f | wc -l)"
+          if [[ "$count" -ne 2 ]]; then
+            printf 'ABBRUCH — %s Abzuege statt 2 (amd64 und arm64).\n' "$count" >&2
+            exit 1
+          fi
+          docker buildx imagetools create \
+            --tag "${repository}:${GITHUB_REF_NAME}" \
+            --tag "${repository}:sha-${{ steps.image.outputs.short_sha }}" \
+            --tag "${repository}:${{ steps.image.outputs.version }}" \
+            $(printf "${repository}@sha256:%s " *)
+          digest="$(docker buildx imagetools inspect "${repository}:${GITHUB_REF_NAME}" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Verify both architectures are in the manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository='${{ steps.image.outputs.repository }}'
+          platforms="$(docker buildx imagetools inspect "${repository}:${GITHUB_REF_NAME}" --format '{{range .Manifest.Manifests}}{{.Platform.OS}}/{{.Platform.Architecture}} {{end}}')"
+          printf 'Manifest: %s\n' "$platforms"
+          for want in linux/amd64 linux/arm64; do
+            case " $platforms " in
+              *" $want "*) ;;
+              *) printf 'ABBRUCH — %s fehlt im Manifest.\n' "$want" >&2; exit 1 ;;
+            esac
+          done
 
       - name: Report immutable manifest
         shell: bash
