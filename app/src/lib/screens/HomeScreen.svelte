@@ -9,8 +9,9 @@
   import { resolveRoomHero } from '../components/room-hero-assets.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
+  import { swipeleft } from '../actions/swipeleft.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { layoutRoomsPerRow, widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
+  import { layoutHomeView, layoutRoomsPerRow, widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
   import { cameraPopouts } from '../state/camera-popouts.svelte.ts';
   import { deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
   import { currentMoment, initMoments } from '../state/moments.svelte.ts';
@@ -22,6 +23,36 @@
 
   const preset = $derived(widthPreset(layoutManager.preview));
   const roomsPerRow = $derived(layoutRoomsPerRow(layoutManager.preview));
+  /* R30: „Alle Räume" tauscht Bild und Raumauswahl gegen ein Kachelraster;
+     die Kontrollfläche gehört dann ganz den Szenen und Geräten. Das Raster
+     kommt erst, wenn die Ansicht gewählt ist — im Vollbild bleibt der
+     Startpfad unverändert. */
+  const roomsView = $derived(layoutHomeView(layoutManager.preview) === 'rooms');
+  const activeRoomIds = $derived(layoutManager.preview.slots.map((slot) => slotRoom(slot.roomId)?.id ?? ''));
+  let HomeRoomGrid = $state<Component<{
+    rooms: typeof appState.rooms;
+    activeIds: readonly string[];
+    roomsPerRow: number;
+    onselect: (roomId: string) => void;
+  }> | null>(null);
+  $effect(() => {
+    if (!roomsView || HomeRoomGrid) return;
+    void import('../components/HomeRoomGrid.svelte')
+      .then((module) => { HomeRoomGrid = module.default; })
+      .catch(() => { /* ohne Kacheln weiter */ });
+  });
+  /* Wisch nach links auf der Kontrollfläche lässt sie aus dem Bild fliegen —
+     die Bühne gehört dann ganz dem Bild bzw. den Kacheln. Die nächste
+     Berührung irgendwo holt sie zurück; der Tipp selbst wirkt weiter, damit
+     eine Kachel gleich den Raum wählt. Gilt in beiden Ansichten. */
+  let panelsHidden = $state(false);
+  $effect(() => {
+    if (!panelsHidden) return;
+    const show = () => { panelsHidden = false; };
+    window.addEventListener('pointerdown', show, { capture: true });
+    return () => window.removeEventListener('pointerdown', show, { capture: true });
+  });
+
   const layoutStyle = $derived(
     `--layout-total:${preset.totalPercent}%;--slot-min:${preset.slotMinPx}px;--hero-min:${preset.heroMinPx}px;--slot-count:${layoutManager.preview.slots.length}`,
   );
@@ -39,7 +70,18 @@
   function selectRoom(slotId: LayoutSlotId, roomId: string) {
     layoutManager.setAppliedRoom(slotId, roomId);
     appState.currentRoom = roomId;
-    preloadNeighbours(roomId);
+    if (!roomsView) preloadNeighbours(roomId);
+  }
+
+  /* Kachel angetippt: der Raum kommt in die erste Kontrollfläche. Zeigt die
+     schon diesen Raum und es gibt eine zweite, wandert er dorthin — so lassen
+     sich beide Flächen ohne Raumauswahl belegen. */
+  function selectRoomFromTile(roomId: string) {
+    const slots = layoutManager.applied.slots;
+    const first = slots[0];
+    const second = slots[1];
+    const target = second && slotRoom(first.roomId)?.id === roomId ? second.id : first.id;
+    selectRoom(target, roomId);
   }
 
   /* Paket 5 (docs/20): Die Hero-Bilder der Nachbarräume liegen nach dem
@@ -73,8 +115,14 @@
   });
 </script>
 
-<div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2} style={layoutStyle}>
-  <RoomHero />
+<!-- Wisch von rechts nach links irgendwo auf der Bühne öffnet das Layout-Menü
+     (Owner-Wunsch 2026-09-11); die Kontrollfläche behält ihre eigene Geste. -->
+<div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2}
+     class:is-rooms-view={roomsView} style={layoutStyle}
+     use:swipeleft={{ onSwipe: whenEditable(() => layoutManager.show()), move: false, ignore: '.home-panels', threshold: 120, angle: 60, enabled: !layoutManager.open }}>
+  {#if !roomsView}
+    <RoomHero />
+  {/if}
 
   <!-- Eigene freie Trefferfläche: sie liegt ausschließlich rechts neben den
        Kontrollflächen. Controls und Raumkacheln sind keine Nachfahren und können
@@ -90,29 +138,46 @@
     {/each}
   </div>
 
-  <div class="home-panels" aria-label={m.home_control_surfaces()}>
+  <div class="home-panels" class:is-hidden={panelsHidden} aria-label={m.home_control_surfaces()}
+       use:swipeleft={{ onSwipe: () => { panelsHidden = true; }, angle: 55, enabled: !panelsHidden }}>
     {#each layoutManager.preview.slots as slot, index (slot.id)}
       {@const selected = slotRoom(slot.roomId)}
       <aside class="home-panel" aria-label={m.home_control_surface({ number: index + 1 })}>
-        <PanelRoomSelector
-          rooms={appState.rooms}
-          selectedId={selected?.id ?? null}
-          {roomsPerRow}
-          onselect={(roomId) => selectRoom(slot.id, roomId)}
-        />
+        {#if roomsView}
+          {#if selected}
+            <header class="panel-head">
+              <h2 class="panel-title">{selected.name}</h2>
+            </header>
+          {/if}
+        {:else}
+          <PanelRoomSelector
+            rooms={appState.rooms}
+            selectedId={selected?.id ?? null}
+            {roomsPerRow}
+            onselect={(roomId) => selectRoom(slot.id, roomId)}
+          />
+        {/if}
 
         <div class="panel-controls">
           {#if selected}
-            {#key selected.id}<RoomControls room={selected} />{/key}
+            {#key selected.id}<RoomControls room={selected} compactClimate />{/key}
           {/if}
         </div>
       </aside>
     {/each}
   </div>
 
+  {#if roomsView && HomeRoomGrid}
+    <HomeRoomGrid rooms={appState.rooms} activeIds={activeRoomIds} {roomsPerRow} onselect={selectRoomFromTile} />
+  {/if}
+
   {#if MomentCelebration && momentVisible}
     <MomentCelebration />
   {/if}
 
-  <RoomImageOnboarding />
+  <!-- Die Onboarding-Karte wirbt für ein eigenes Bühnenbild — ohne Bühne
+       (Alle Räume) hat sie nichts, worauf sie zeigen könnte. -->
+  {#if !roomsView}
+    <RoomImageOnboarding />
+  {/if}
 </div>

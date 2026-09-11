@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import '../../styles/phone-shell.css';
+  import '../../styles/room-tiles.css';
   import '../../styles/demo.css';
   import { onMount, tick, type Component } from 'svelte';
   import { cubicOut } from 'svelte/easing';

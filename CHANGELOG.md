@@ -5,6 +5,77 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-11
+
+### Added
+
+- **Home: All rooms at a glance.** The layout menu (long press on the free
+  area) gains a "View" pill: "Full screen" is the familiar stage — one room
+  picture, the room picker at the top of the control surface. "All rooms"
+  drops the picture and shows every room as a tile, the same tiles as on the
+  phone, with picture, name and light status. The room picker leaves the
+  control surface, which now belongs entirely to scenes and devices and
+  carries the room name as its heading; a tap on a tile brings that room into
+  the control surface. "Rooms per row" sets the tile columns. In portrait the
+  tiles take the upper band, the controls the full width below.
+- **Home: swipe the control surface away.** A swipe to the left on the
+  control surface lets it fly out of the picture, in "Full screen" and in
+  "All rooms" alike. The stage then belongs entirely to the room picture or
+  the tiles, which spread to the full width. The next touch anywhere brings
+  the surface back; a tap on a tile also selects that room.
+- **Phone home with many rooms.** The room grid scrolls again and fades
+  softly behind the quick actions (off, climate, custom button), which stay
+  put at the bottom; before, with many rooms the tiles ran underneath them.
+  A swipe to the left on the grid pulls a side sheet in from the right,
+  following the finger like the control surface on the panel; it holds
+  rooms per row (1 to 3) and a switch to hide the quick actions, and a
+  swipe to the right drags it out again. Both are per device, like the
+  order of the bottom bar.
+- **Blinds come along from setup.** Covers (blinds, shutters, awnings) are
+  now a role of the household: the setup wizard hands them over into their
+  rooms like lights and switches, the household config accepts several per
+  room, and the command contract carries open, close, stop, position and
+  tilt. Before, a cover only reached a room through "Add device". The cover
+  sheet (open, stop, close, position ladder, tilt) is unchanged; the demo
+  shows one in the living room.
+- **Sensors pick their symbol.** A sensor without a symbol of its own gets
+  one from what it reports: device class first, then unit, then words in
+  its name or entity id, German and English. Battery, temperature,
+  humidity, power, energy, voltage, current, CO₂, air quality, pressure,
+  light, rain, wind, water, gas, signal, motion, door, window, smoke and
+  more; the neutral gauge stays for everything else.
+
+### Changed
+
+- **Layout menu without ceremony.** The layout menu has no title and no
+  "Apply" or "Cancel": every setting takes effect the moment it is set. It
+  stays on the right and flies in from there, over everything instead of
+  pushing anything aside, and leaves on a swipe to the right, a tap beside
+  it or Escape. A swipe from right to left anywhere on the stage opens it,
+  in "Full screen" and "All rooms" alike. "Reset to default" sits top
+  right. The second control surface is added at the bottom and gets a fixed
+  room of its own, chosen right there.
+- **Climate is a tile.** In the control surface the thermostat shrinks to a
+  tile the size of a device, showing target and current temperature and the
+  mode as its symbol, with no controls of its own. A tap opens the familiar
+  thermostat as a sheet: current, setpoint with minus and plus, modes. A long
+  press opens the tile's settings: "Controls in the surface" brings the
+  thermostat card back into the control surface, "Tile shows" picks target,
+  current or both, and "Step size" sets 0.5° or 1° per tap.
+- **Sensor tiles show the value.** A sensor added to a room shows only its
+  reading on the tile, not its name. The device sheet has a switch "Name on
+  the tile" for the cases where the name matters.
+- **Room: the thermostat never wraps.** When the controls stay in the
+  surface, the climate card is one light control surface at full card width:
+  the current temperature sits as a line above the setpoint, the frame around
+  the controls is gone, and the setpoint takes three fifths of the card at
+  hero size, the modes the rest. At any control-surface width the card keeps
+  its shape instead of breaking into two rows.
+- **Gestures forgive a crooked finger.** A horizontal swipe no longer breaks
+  off when the finger drifts, and it claims the touch before the browser
+  starts to scroll. Pressed feedback on a tile waits a moment on touch, so
+  starting a scroll on a tile no longer makes it pop.
+
 ## [0.13.0] - 2026-09-10
 
 ### Added

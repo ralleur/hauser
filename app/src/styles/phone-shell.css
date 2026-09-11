@@ -209,6 +209,33 @@
   flex-direction: column;
   overflow-y: auto;
   padding: calc(env(safe-area-inset-top, 0px) + var(--space-4)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  /* Wisch nach links öffnet das Layout-Blatt; senkrecht scrollt der Browser. */
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Unter der schwebenden Leiste verblassen die Kacheln, statt hinter der Pille
+   durchzuschimmern (Owner-Befund 2026-09-11): eine Blende über der Nav-Zone,
+   unter der Pille. Als Ebene statt als Maske, weil eine Maske auf dem
+   Scrollcontainer in Chrome mit dem Inhalt scrollt. Nur auf dem Home; die
+   Schnellaktionen sitzen oberhalb der Zone und bleiben satt. */
+.phone-shell:has(.phone-home-feed) .phone-navigation-frame::before {
+  content: '';
+  position: absolute;
+  z-index: 1; /* über den Kacheln (sie heben sich selbst), unter der Pille (kommt später) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Der Verlauf ist kurz und dann satt: unterhalb der Inhaltskante steht
+     die Fläche, damit zwischen Inhalt und Pille und hinter der Pille nichts
+     durchscheint — auf dem iPhone liegt die Pille wegen des Home-Balkens
+     höher, ein langer Verlauf blieb dort durchsichtig. */
+  height: calc(var(--phone-nav-height) + var(--space-4) + var(--space-8));
+  background: linear-gradient(to bottom, transparent, var(--color-surface-0) var(--space-8));
+  pointer-events: none;
+}
+/* Mit Schnellaktionen trägt deren Zeile die Blende selbst (siehe oben). */
+.phone-shell:has(.phone-quick-actions) .phone-navigation-frame::before {
+  display: none;
 }
 
 /* Unsichtbare Überschrift: bleibt Fokus-Anker und aria-labelledby-Ziel,
@@ -341,13 +368,23 @@
 /* Kacheln + Klima-Dock füllen den Screen bis zur Bottom-Leiste: das Raster
    nimmt die restliche Höhe, die Zeilen wachsen dynamisch mit (mindestens
    Touch-Höhe, sonst gleichmäßig gestreckt). */
+/* Das Raster nimmt seine natürliche Höhe und scrollt im Feed; schrumpfte es
+   (flex 1 1 auto, min-height 0), liefen bei vielen Räumen die Kacheln aus
+   seinem Kasten hinaus und unter die Schnellaktionen (Owner-Befund
+   2026-09-11). Räume pro Zeile kommen aus dem Layout-Blatt. */
 .phone-room-feed {
-  flex: 1 1 auto;
+  flex: none;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(calc(var(--touch-preferred) * 2), 1fr);
+  grid-template-columns: repeat(var(--phone-rooms-per-row, 2), minmax(0, 1fr));
+  grid-auto-rows: auto;
   gap: var(--space-3);
-  min-height: 0;
+}
+
+/* Die Kachel hat ein festes Seitenverhältnis je Spaltenzahl (PhoneHomeFeed
+   setzt es) — sie wächst nicht mit dem freien Platz, sonst rutschte das
+   Raster ohne Schnellaktionen nach unten (Owner-Befund 2026-09-11). */
+.phone-room-feed > .phone-room-card {
+  aspect-ratio: var(--phone-tile-ratio, 1 / 1.15);
 }
 
 /* Eine Zeile: Aus-Taste, Klima-Pille, Urlaubs-Taste. Die beiden Aktionen sind
@@ -364,6 +401,40 @@
   gap: var(--space-2);
   flex: none;
   margin-top: var(--space-3);
+  /* Bleibt am unteren Rand stehen, während das Raster dahinter scrollt.
+     Die Zeile trägt ihre Blende selbst: ein Verlauf darüber, in dem die
+     Kacheln verschwinden, und eine satte Fläche darunter bis zum Rand des
+     Bildschirms, hinter die Pille. Beides hängt an der Zeile, nicht am
+     Bildschirm — so stimmt es auf jedem Gerät (Owner-Bilder 2026-09-11). */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-top: var(--space-2);
+  background: var(--color-surface-0);
+}
+/* Die Schritt-Tasten der Pille werfen hier keinen Außenschatten: er ragte
+   unter die Zeile und wurde von der Fläche hart abgeschnitten
+   (Owner-Entscheidung 2026-09-11: Schatten weg statt mehr Platz). */
+.phone-quick-actions .climate-dock .cd-key {
+  box-shadow: var(--pill-edge);
+}
+.phone-quick-actions::before,
+.phone-quick-actions::after {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--space-4));
+  right: calc(-1 * var(--space-4));
+  pointer-events: none;
+}
+.phone-quick-actions::before {
+  bottom: 100%;
+  height: calc(var(--space-8) + var(--space-4));
+  background: linear-gradient(to bottom, transparent, var(--color-surface-0));
+}
+.phone-quick-actions::after {
+  top: 100%;
+  height: calc(var(--phone-nav-height) + var(--space-4));
+  background: var(--color-surface-0);
 }
 
 /* Auf dem Phone bleibt der Ist-Wert bei Zeichen und Zahl: das Wort „Aktuell"
@@ -421,110 +492,7 @@
   font-size: var(--text-lg);
 }
 
-.phone-room-card {
-  /* Auf einem Motiv steht der Text immer hell auf einer leicht abgedunkelten
-     Zone — auch im hellen Theme. Ein weißer Scrim würde die Illustration
-     milchig überlagern, ein dunkler nimmt ihr nichts von der Zeichnung. */
-  --phone-room-ink-shadow: 0 1px 3px rgba(8, 10, 13, 0.5);
-  --phone-room-warning: #f5b03c;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  width: 100%;
-  min-height: calc(var(--touch-preferred) * 2);
-  display: grid;
-  align-content: end;
-  padding: var(--space-4) var(--space-4) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  color: var(--color-text-primary);
-  background: var(--color-surface-1);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: transform var(--duration-quick) var(--ease-spring), opacity var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
-}
 
-/* Hero-Motiv der Tablet-Bühne als Kachelhintergrund (Schichtung wie
-   room-backgrounds.css: Bildebenen = Bild, ::after = Scrim, Inhalt darüber). */
-/* Der Ausschnitt entsteht über die negative Einrückung, nicht über
-   `transform: scale()`: der Layer wird dadurch gleich in Zielgröße gerastert,
-   statt einen 1x-Raster hochzuskalieren — sonst treppen die Linien der
-   Illustrationen sichtbar. */
-/* Zwei Ebenen statt einer: der Wechsel ist eine Ueberblendung wie auf der
-   grossen Buehne, nicht ein Umschlag. Bewegt wird nur die Deckkraft. */
-.phone-room-card .phone-room-hero-layer {
-  position: absolute;
-  inset: -7.5%;
-  z-index: 0;
-  background-image: var(--phone-room-hero);
-  background-size: cover;
-  background-position: var(--phone-room-focus, center);
-  background-repeat: no-repeat;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--duration-enter) var(--ease-out);
-}
-
-.phone-room-card .phone-room-hero-layer.is-front {
-  opacity: 1;
-}
-
-/* Nachdimmen: geht im Raum das letzte Licht aus, sinkt die Kachel langsam in
-   die unbeleuchtete Fassung. Gilt fuer beide Puffer-Ebenen, weil ein- und
-   ausgehendes Bild dieselbe Bewegung machen muessen. */
-.phone-room-card.is-dimming .phone-room-hero-layer {
-  transition: opacity var(--duration-dusk) var(--ease-in-out);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .phone-room-card .phone-room-hero-layer,
-  .phone-room-card.is-dimming .phone-room-hero-layer {
-    transition: none;
-  }
-}
-
-/* Der Scrim ist die Infozone, nicht ein Filter über der Kachel: er trägt nur
-   dort, wo Titel und Status sitzen, und ist ab ~zwei Dritteln Höhe ganz weg,
-   damit das Motiv oben unangetastet bleibt. */
-.phone-room-card.has-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    to top,
-    rgba(8, 10, 13, 0.66) 0%,
-    rgba(8, 10, 13, 0.5) 14%,
-    rgba(8, 10, 13, 0.28) 30%,
-    rgba(8, 10, 13, 0.12) 45%,
-    rgba(8, 10, 13, 0.03) 58%,
-    rgba(8, 10, 13, 0) 68%
-  );
-}
-
-.phone-room-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Die Bildebenen sind ebenfalls direkte Kinder, gehören aber unter den Scrim. */
-.phone-room-card > .phone-room-hero-layer {
-  z-index: 0;
-}
-
-.phone-room-card:hover,
-.phone-room-card.is-active {
-  background: var(--color-surface-2);
-}
-
-.phone-room-card.is-active {
-  border-color: var(--color-accent-warm);
-}
-
-.phone-room-card:active,
-.phone-room-card.is-pressed,
 .phone-scene-button:active,
 .phone-light-toggle:active,
 .phone-stepper button:active,
@@ -534,7 +502,6 @@
   transition-duration: var(--duration-fast);
 }
 
-.phone-room-card:focus-visible,
 .phone-scene-button:focus-visible,
 .phone-light-toggle:focus-visible,
 .phone-stepper button:focus-visible,
@@ -551,69 +518,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-}
-
-.phone-room-card-info {
-  display: grid;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.phone-room-card-name {
-  display: -webkit-box;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-size: var(--text-md);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
-}
-
-/* Status ist Meta: kleiner, ruhiger, aber mit eigenem Punkt als Anker. */
-.phone-room-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  color: var(--color-text-secondary);
-  font-size: var(--text-2xs);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--leading-snug);
-}
-
-.phone-room-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.phone-room-fact-dot {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-full);
-  background: currentColor;
-}
-
-.phone-room-card.has-hero .phone-room-card-name {
-  color: #fff;
-  text-shadow: var(--phone-room-ink-shadow);
-}
-
-.phone-room-card.has-hero .phone-room-facts {
-  color: rgba(255, 255, 255, 0.76);
-  text-shadow: var(--phone-room-ink-shadow);
-}
-
-.phone-room-facts .is-warning {
-  color: var(--color-warning);
-}
-
-.phone-room-card.has-hero .phone-room-facts .is-warning {
-  color: var(--phone-room-warning);
 }
 
 .room-sheet-scrim {
@@ -1137,7 +1041,7 @@
    Ecken des Telefons, der Inhalt läuft dahinter weiter und schimmert durch. */
 .phone-bottom-nav {
   position: absolute;
-  z-index: 1;
+  z-index: 2; /* über der Blende der Schnellaktionen (gleiche Stufe, später im Baum) */
   right: calc(env(safe-area-inset-right, 0px) + var(--space-4));
   bottom: var(--phone-nav-bottom-offset);
   left: calc(env(safe-area-inset-left, 0px) + var(--space-4));
@@ -1894,3 +1798,99 @@
   color: var(--color-accent-warm);
   font-weight: var(--font-weight-semibold);
 }
+
+/* ── Layout-Blatt des Home (PhoneLayoutSheet): Räume pro Zeile, Schnellaktionen.
+   Ein Seitenblatt von rechts, wie das Layout-Menü des Panels. ── */
+/* Deckkraft des Schleiers und Verschiebung des Blatts setzt die Komponente:
+   während der Geste am Finger, danach mit der Transition aus den Tokens. */
+.phone-layout-scrim {
+  align-items: stretch;
+  justify-content: flex-end;
+  animation: none;
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+.phone-layout-sheet {
+  width: min(88%, 360px);
+  height: 100%;
+  max-height: none;
+  border-bottom: 1px solid var(--overlay-border);
+  border-right: 0;
+  border-radius: var(--radius-2xl) var(--radius-none) var(--radius-none) var(--radius-2xl);
+  padding-top: calc(var(--space-4) + var(--space-2));
+  touch-action: pan-y pinch-zoom;
+  animation: none;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+.phone-layout-scrim.is-dragging,
+.phone-layout-sheet.is-dragging {
+  transition: none;
+}
+/* Hinaus geht es schnell und ohne Nachschwingen. */
+.phone-layout-scrim.is-closing,
+.phone-layout-sheet.is-closing {
+  transition-duration: var(--duration-normal);
+  transition-timing-function: var(--ease-in);
+}
+.pls-row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+.pls-row.is-switch {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.pls-label {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+}
+.pls-reset {
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+.pls-pill {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+.pls-seg {
+  flex: 1;
+  min-height: var(--touch-min);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--duration-normal) var(--ease-out), color var(--duration-normal) var(--ease-out);
+}
+.pls-seg[aria-checked='true'] {
+  background: var(--accent-light-on-fill);
+  color: var(--accent-light-on-icon);
+}
+.pls-switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3, var(--color-surface-2));
+  transition: background-color var(--duration-normal) var(--ease-out);
+}
+.pls-switch.is-on { background: var(--accent-light-on-fill); }
+.pls-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-1);
+  box-shadow: var(--elevation-overlay-shadow);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+.pls-switch.is-on .pls-switch-knob { transform: translateX(20px); }

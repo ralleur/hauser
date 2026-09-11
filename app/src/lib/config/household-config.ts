@@ -24,6 +24,7 @@ export type EntityRole =
   | 'camera'
   | 'switch'
   | 'vacuum'
+  | 'cover'
   | 'other';
 
 export interface VisibleEntityConfig {
@@ -262,6 +263,7 @@ const ENTITY_ROLES: readonly EntityRole[] = [
   'camera',
   'switch',
   'vacuum',
+  'cover',
   'other',
 ];
 type EntityDomainConstraint = string | readonly string[];
@@ -274,6 +276,7 @@ const ENTITY_ROLE_DOMAINS: Partial<Record<EntityRole, EntityDomainConstraint>> =
   camera: 'camera',
   switch: 'switch',
   vacuum: 'vacuum',
+  cover: 'cover',
 };
 const HOTEL_TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 /** Guest actions are limited to what Hauser's existing room controls really send. */
@@ -1453,7 +1456,7 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
 
 export interface CommandContract {
   entityId: string;
-  domain: 'light' | 'climate' | 'media_player' | 'switch' | 'script' | 'vacuum';
+  domain: 'light' | 'climate' | 'media_player' | 'switch' | 'script' | 'vacuum' | 'cover';
   services: string[];
 }
 

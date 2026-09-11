@@ -54,6 +54,7 @@ describe('layout config persistence', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }, { id: 'slot-2', roomId: 'buero' }],
     });
   });
@@ -109,6 +110,7 @@ describe('layout config updates', () => {
       widthPreset: 'balanced' as const,
       panelSize: 40,
       roomsPerRow: 2,
+      homeView: 'fullscreen' as const,
       slots: [
         { id: 'slot-1' as const, roomId: 'geloescht' },
         { id: 'slot-2' as const, roomId: null },

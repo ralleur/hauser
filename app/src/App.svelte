@@ -105,14 +105,49 @@
     });
   });
 
+  /* Gedrückt-Rückmeldung. Mit der Maus sofort; mit dem Finger erst nach
+     einem Wimpernschlag und nur, wenn er still liegt — wer auf einer Kachel
+     zu scrollen beginnt, sieht sonst ein kurzes Aufploppen, das den Zug
+     stört (Owner-Befund 2026-09-11). Bewegt sich der Finger vorher, ist es
+     ein Scrollen und keine Berührung. */
+  const TOUCH_PRESS_DELAY_MS = 130;
+  const TOUCH_PRESS_SLOP_PX = 6;
   function pressedFeedback(e: PointerEvent) {
     const el = (e.target as HTMLElement).closest<HTMLButtonElement>('.pressable');
     if (!el || el.disabled) return;
     const startedAt = performance.now();
-    el.classList.add('is-pressed');
-    measurePressedPaint(el, startedAt);
-    const release = () => el.classList.remove('is-pressed');
-    el.addEventListener('pointerup', release, { once: true });
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const press = () => {
+      timer = null;
+      el.classList.add('is-pressed');
+      measurePressedPaint(el, startedAt);
+    };
+    const release = () => {
+      if (timer !== null) { clearTimeout(timer); timer = null; }
+      el.classList.remove('is-pressed');
+      el.removeEventListener('pointermove', moved);
+    };
+    /* Ein schneller Tipp endet vor dem Wimpernschlag — er bekommt seine
+       Rückmeldung trotzdem, als kurzes Aufblitzen nach dem Loslassen. */
+    const releaseAfterTap = () => {
+      const pending = timer !== null;
+      release();
+      if (!pending) return;
+      el.classList.add('is-pressed');
+      setTimeout(() => el.classList.remove('is-pressed'), 110);
+    };
+    const moved = (ev: PointerEvent) => {
+      if (Math.abs(ev.clientX - startX) > TOUCH_PRESS_SLOP_PX || Math.abs(ev.clientY - startY) > TOUCH_PRESS_SLOP_PX) release();
+    };
+    if (e.pointerType === 'touch') {
+      timer = setTimeout(press, TOUCH_PRESS_DELAY_MS);
+      el.addEventListener('pointermove', moved);
+    } else {
+      press();
+    }
+    el.addEventListener('pointerup', releaseAfterTap, { once: true });
     el.addEventListener('pointercancel', release, { once: true });
     el.addEventListener('pointerleave', release, { once: true });
   }

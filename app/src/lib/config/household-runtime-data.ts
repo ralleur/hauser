@@ -226,6 +226,11 @@ function projectRooms(model: HouseholdRuntimeModel): {
         ...room.visibleEntities
           .filter(({ role }) => role === 'vacuum')
           .map((entity) => projectManagedDevice(entity, 'vacuum')),
+        /* Rollos und Jalousien kommen seit 2026-09-11 aus der Einrichtung
+           mit, nicht erst über „Gerät hinzufügen". */
+        ...room.visibleEntities
+          .filter(({ role }) => role === 'cover')
+          .map((entity) => projectManagedDevice(entity, 'cover')),
       ],
       ...(climate ? { climateEntityId: climate.entityId, target: 20, hvac: 'off' as const } : {}),
       ...(temperature ? { tempSensorId: temperature.entityId } : {}),

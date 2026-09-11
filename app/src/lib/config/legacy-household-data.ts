@@ -48,6 +48,7 @@ export interface Light {
   unit?: string | null;
   deviceClass?: string | null;
   icon?: string;
+  showName?: boolean;
 }
 
 export interface Room {

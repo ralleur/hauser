@@ -40,8 +40,17 @@ export function fittext(node: HTMLElement, params: FitTextParams = {}) {
        wie viele kleinere Zeilen erlaubt sind; ob der Text hineinpasst, sagt
        dagegen die tatsächlich sichtbare Höhe. */
     const budget = node.clientHeight;
+    /* Breite exakt über den Textbereich messen: scrollWidth rundet auf ganze
+       Pixel, und ein halber Pixel zu viel zeigt schon die Kürzung. */
+    const textWidth = () => {
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect().width;
+      } catch { return node.scrollWidth; }
+    };
     const clipped = () => (
-      node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1
+      node.scrollHeight > node.clientHeight + 1 || textWidth() > node.clientWidth
     );
 
     let size = base;

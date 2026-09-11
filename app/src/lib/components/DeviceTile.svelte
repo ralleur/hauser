@@ -109,6 +109,11 @@
     return fmtSensor(s?.value, s?.unit ?? device.unit);
   });
 
+  /* Sensor-Kacheln zeigen nur ihren Wert, solange der Schalter im Detail den
+     Namen nicht dazuholt — ohne Messwert bleibt der Name, sonst stünde die
+     Kachel leer (R3). Der Name bleibt als Vorlesetext an der Kachel. */
+  const valueOnly = $derived(category === 'info' && !device.showName && stateLine !== null);
+
   function onTap() {
     if (toggles) toggleDevice(roomId, device);
     else openDeviceDetail(roomId, device.id);
@@ -143,7 +148,8 @@
      aria-pressed; nicht-schaltbare öffnen das Detail (kein pressed-State).
      Icon dekorativ (aria-hidden), der Name trägt die Beschriftung. -->
 <button class="light-tile pressable" type="button"
-        class:is-on={isOn} aria-pressed={toggles ? isOn : undefined}
+        class:is-on={isOn} class:is-value-only={valueOnly} aria-pressed={toggles ? isOn : undefined}
+        aria-label={valueOnly ? `${device.name}: ${stateLine}` : undefined}
         use:pulse={{ seq: toggleWobble + echoWobble, cls: 'is-wobble', ms: 200 }}
         use:longpress={{ enabled: true, onLongPress: () => openDeviceDetail(roomId, device.id) }}
         onclick={onTap}>
@@ -154,8 +160,13 @@
     {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
   </span>
   <span class="light-tile-label">
-    <!-- Lange Gerätenamen werden kleiner statt abgeschnitten. -->
-    <span class="light-tile-name" use:fittext={{ text: device.name }}>{device.name}</span>
-    {#if stateLine !== null}<span class="light-tile-state num">{stateLine}</span>{/if}
+    {#if valueOnly}
+      <!-- Lange Werte werden kleiner statt abgeschnitten (wie die Namen). -->
+      <span class="light-tile-value num" use:fittext={{ text: stateLine ?? '' }}>{stateLine}</span>
+    {:else}
+      <!-- Lange Gerätenamen werden kleiner statt abgeschnitten. -->
+      <span class="light-tile-name" use:fittext={{ text: device.name }}>{device.name}</span>
+      {#if stateLine !== null}<span class="light-tile-state num" use:fittext={{ text: stateLine }}>{stateLine}</span>{/if}
+    {/if}
   </span>
 </button>

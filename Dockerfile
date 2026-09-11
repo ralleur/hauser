@@ -70,7 +70,7 @@ COPY tools/tunnel/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/hauser-tunnel .
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.13.0
+ARG HAUSER_VERSION=0.14.0
 ARG HAUSER_REVISION=""
 ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \

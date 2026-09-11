@@ -5,6 +5,7 @@
 <script lang="ts">
   import '../../styles/app.css';
   import '../../styles/hero-layout.css';
+  import '../../styles/room-tiles.css';
   import '../../styles/standalone.css';
   import '../../styles/demo.css';
   import { onMount, type Component } from 'svelte';
@@ -19,6 +20,7 @@
   import { authState } from '../state/auth.svelte.ts';
   import {
     centralClimateEdit, closeCentralClimateEdit,
+    roomClimate, closeRoomClimate,
     closeDeviceDetail, closeRoomEdit, deviceDetail, roomEdit,
   } from '../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../state/scene-edit-overlay.svelte.ts';
@@ -35,7 +37,7 @@
 
   type ScreenModule = { default: Component };
   type LazyScreenId = Exclude<ScreenId, 'home'>;
-  type LayerId = 'device' | 'room' | 'scene' | 'central-climate' | 'layout' | 'ambient' | 'hud' | 'simulator';
+  type LayerId = 'device' | 'room' | 'scene' | 'central-climate' | 'room-climate' | 'layout' | 'ambient' | 'hud' | 'simulator';
   type VisibleLayerId = Exclude<LayerId, 'ambient'>;
 
   const SCREEN_LOADERS: Record<LazyScreenId, () => Promise<ScreenModule>> = {
@@ -55,6 +57,7 @@
     room: () => import('../components/RoomEdit.svelte'),
     scene: () => import('../components/SceneEdit.svelte'),
     'central-climate': () => import('../components/CentralClimateEdit.svelte'),
+    'room-climate': () => import('../components/RoomClimateOverlay.svelte'),
     layout: () => import('../components/LayoutConfigDialog.svelte'),
     ambient: () => import('../components/AmbientLayer.svelte'),
     hud: () => import('../components/Hud.svelte'),
@@ -86,7 +89,8 @@
     else if (id === 'room') closeRoomEdit(true);
     else if (id === 'scene') closeSceneEdit(true);
     else if (id === 'central-climate') closeCentralClimateEdit(true);
-    else if (id === 'layout') layoutManager.cancel();
+    else if (id === 'room-climate') closeRoomClimate(true);
+    else if (id === 'layout') layoutManager.hide();
     else hud.active = false;
   }
 
@@ -144,7 +148,8 @@
     closeRoomEdit(true);
     closeSceneEdit(true);
     closeCentralClimateEdit(true);
-    if (layoutManager.open) layoutManager.cancel();
+    closeRoomClimate(true);
+    if (layoutManager.open) layoutManager.finishHide();
     hud.active = false;
     simulator.active = false;
   }));
@@ -276,6 +281,12 @@
     {@render layerLoadState('central-climate', false)}
   {:then loaded}{@const Layer = loaded.default}<Layer />
   {:catch}{@render layerLoadState('central-climate', true)}{/await}
+{/if}
+{#if roomClimate.mode !== 'hidden'}
+  {#await loadLayer('room-climate', layerRetryVersions['room-climate'] ?? 0)}
+    {@render layerLoadState('room-climate', false)}
+  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:catch}{@render layerLoadState('room-climate', true)}{/await}
 {/if}
 {#if layoutManager.open}
   {#await loadLayer('layout', layerRetryVersions.layout ?? 0)}

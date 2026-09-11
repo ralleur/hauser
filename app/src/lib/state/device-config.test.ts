@@ -103,7 +103,8 @@ describe('device runtime projection', () => {
     }
     const projected = buildRuntimeRooms(rooms, fullCatalog, config);
     const byId = new Map(projected[0].lights.map((l) => [l.entityId, l]));
-    expect(byId.get('sensor.aussentemp')).toMatchObject({ category: 'info', unit: '°C', deviceClass: 'temperature', icon: 'i-gauge' });
+    // Sensor-Symbol aus der device_class (Owner-Wunsch 2026-09-11), nicht mehr das neutrale Messinstrument.
+    expect(byId.get('sensor.aussentemp')).toMatchObject({ category: 'info', unit: '°C', deviceClass: 'temperature', icon: 'i-thermometer' });
     expect(byId.get('climate.buero')).toMatchObject({ category: 'temp', icon: 'i-thermometer' });
     expect(byId.get('media_player.tv')).toMatchObject({ category: 'media', icon: 'i-playlist-music' });
     expect(byId.get('binary_sensor.fenster')).toMatchObject({ category: 'info', deviceClass: 'window' });

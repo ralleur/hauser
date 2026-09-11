@@ -10,6 +10,7 @@ import {
   saveDeviceConfig,
   seedCatalog,
   setDeviceName,
+  setDeviceNameVisibility,
   setDeviceVisibility,
   setRoomOrder,
   type DeviceConfig,
@@ -60,6 +61,11 @@ export async function renameDevice(entityId: string, name: string): Promise<void
   if (!normalized) return;
   await runtime.renameEntity(entityId, normalized);
   updateConfig(setDeviceName(deviceManager.config, entityId, normalized));
+}
+
+/* Sensor-Kachel: Name neben dem Wert zeigen (Vorgabe: nur der Wert). */
+export function setDeviceShowName(entityId: string, showName: boolean): void {
+  updateConfig(setDeviceNameVisibility(deviceManager.config, entityId, showName));
 }
 
 function updateConfig(config: DeviceConfig): void {

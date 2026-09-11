@@ -6,6 +6,7 @@ import {
   iconForLightSeed,
   persistLightIconOverride,
   resetLightIconOverride,
+  sensorIconFor,
   storedLightIconOverrides,
 } from './light-icons.ts';
 
@@ -75,4 +76,35 @@ describe('kategoriebewusste Symbol-Auflösung (iconForDevice)', () => {
     expect(storedLightIconOverrides(storage)).toEqual({ 'switch.ventilator': 'i-fan' });
   });
 
+});
+
+describe('Sensor-Symbole nach Name (sensorIconFor)', () => {
+  it('nimmt die device_class vor allem anderen', () => {
+    expect(sensorIconFor({ name: 'Wohnzimmer Temperatur', deviceClass: 'battery' })).toBe('i-battery');
+    expect(sensorIconFor({ deviceClass: 'humidity' })).toBe('i-water-percent');
+    expect(sensorIconFor({ deviceClass: 'motion' })).toBe('i-motion-sensor');
+  });
+
+  it('liest die Einheit, wenn keine device_class da ist', () => {
+    expect(sensorIconFor({ name: 'Sensor 1', unit: '°C' })).toBe('i-thermometer');
+    expect(sensorIconFor({ name: 'Sensor 2', unit: 'kWh' })).toBe('i-lightning-bolt');
+    expect(sensorIconFor({ name: 'Sensor 3', unit: 'V' })).toBe('i-sine-wave');
+    expect(sensorIconFor({ name: 'Sensor 4', unit: 'W' })).toBe('i-flash');
+  });
+
+  it('erkennt deutsche und englische Wörter im Namen und in der entity_id', () => {
+    expect(sensorIconFor({ name: 'Temperature/Humidity Sensor D3F1 Battery' })).toBe('i-battery');
+    expect(sensorIconFor({ name: 'Batteriespannung' })).toBe('i-battery');
+    expect(sensorIconFor({ name: 'Luftfeuchtigkeit Bad' })).toBe('i-water-percent');
+    expect(sensorIconFor({ name: '.', entityId: 'sensor.heizung_bad_temperatur' })).toBe('i-thermometer');
+    expect(sensorIconFor({ name: 'Netzspannung L1' })).toBe('i-sine-wave');
+    expect(sensorIconFor({ name: 'Aktuelle Leistung' })).toBe('i-flash');
+    expect(sensorIconFor({ name: 'Stromverbrauch heute' })).toBe('i-lightning-bolt');
+    expect(sensorIconFor({ name: 'CO2 Büro' })).toBe('i-molecule-co2');
+    expect(sensorIconFor({ name: 'WLAN Signal' })).toBe('i-signal');
+  });
+
+  it('bleibt beim Messinstrument, wenn nichts passt', () => {
+    expect(sensorIconFor({ name: 'Irgendwas', entityId: 'sensor.xyz' })).toBe(defaultIconFor('info'));
+  });
 });

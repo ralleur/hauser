@@ -1,0 +1,182 @@
+/* ============================================================
+   Raumkacheln — geteilt zwischen Telefon (Startseite) und Wandpanel
+   (Ansicht „Alle Räume", R30). Die Kachel ist RoomSummaryCard; das
+   Hero-Motiv kommt als Telefonfassung (hero:phone), damit auch ein Raster
+   aus zwölf Räumen leicht bleibt.
+   ============================================================ */
+
+.phone-room-card {
+  /* Auf einem Motiv steht der Text immer hell auf einer leicht abgedunkelten
+     Zone — auch im hellen Theme. Ein weißer Scrim würde die Illustration
+     milchig überlagern, ein dunkler nimmt ihr nichts von der Zeichnung. */
+  --phone-room-ink-shadow: 0 1px 3px rgba(8, 10, 13, 0.5);
+  --phone-room-warning: #f5b03c;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  min-height: calc(var(--touch-preferred) * 2);
+  display: grid;
+  align-content: end;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  color: var(--color-text-primary);
+  background: var(--color-surface-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--duration-quick) var(--ease-spring), opacity var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+
+/* Hero-Motiv der Tablet-Bühne als Kachelhintergrund (Schichtung wie
+   room-backgrounds.css: Bildebenen = Bild, ::after = Scrim, Inhalt darüber). */
+/* Der Ausschnitt entsteht über die negative Einrückung, nicht über
+   `transform: scale()`: der Layer wird dadurch gleich in Zielgröße gerastert,
+   statt einen 1x-Raster hochzuskalieren — sonst treppen die Linien der
+   Illustrationen sichtbar. */
+/* Zwei Ebenen statt einer: der Wechsel ist eine Ueberblendung wie auf der
+   grossen Buehne, nicht ein Umschlag. Bewegt wird nur die Deckkraft. */
+.phone-room-card .phone-room-hero-layer {
+  position: absolute;
+  inset: -7.5%;
+  z-index: 0;
+  background-image: var(--phone-room-hero);
+  background-size: cover;
+  background-position: var(--phone-room-focus, center);
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+
+.phone-room-card .phone-room-hero-layer.is-front {
+  opacity: 1;
+}
+
+/* Nachdimmen: geht im Raum das letzte Licht aus, sinkt die Kachel langsam in
+   die unbeleuchtete Fassung. Gilt fuer beide Puffer-Ebenen, weil ein- und
+   ausgehendes Bild dieselbe Bewegung machen muessen. */
+.phone-room-card.is-dimming .phone-room-hero-layer {
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-room-card .phone-room-hero-layer,
+  .phone-room-card.is-dimming .phone-room-hero-layer {
+    transition: none;
+  }
+}
+
+/* Der Scrim ist die Infozone, nicht ein Filter über der Kachel: er trägt nur
+   dort, wo Titel und Status sitzen, und ist ab ~zwei Dritteln Höhe ganz weg,
+   damit das Motiv oben unangetastet bleibt. */
+.phone-room-card.has-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(8, 10, 13, 0.66) 0%,
+    rgba(8, 10, 13, 0.5) 14%,
+    rgba(8, 10, 13, 0.28) 30%,
+    rgba(8, 10, 13, 0.12) 45%,
+    rgba(8, 10, 13, 0.03) 58%,
+    rgba(8, 10, 13, 0) 68%
+  );
+}
+
+.phone-room-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Die Bildebenen sind ebenfalls direkte Kinder, gehören aber unter den Scrim. */
+.phone-room-card > .phone-room-hero-layer {
+  z-index: 0;
+}
+
+.phone-room-card:hover,
+.phone-room-card.is-active {
+  background: var(--color-surface-2);
+}
+
+.phone-room-card.is-active {
+  border-color: var(--color-accent-warm);
+}
+
+.phone-room-card-info {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.phone-room-card-name {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+/* Status ist Meta: kleiner, ruhiger, aber mit eigenem Punkt als Anker. */
+.phone-room-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.phone-room-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.phone-room-fact-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.phone-room-card.has-hero .phone-room-card-name {
+  color: #fff;
+  text-shadow: var(--phone-room-ink-shadow);
+}
+
+.phone-room-card.has-hero .phone-room-facts {
+  color: rgba(255, 255, 255, 0.76);
+  text-shadow: var(--phone-room-ink-shadow);
+}
+
+.phone-room-facts .is-warning {
+  color: var(--color-warning);
+}
+
+.phone-room-card.has-hero .phone-room-facts .is-warning {
+  color: var(--phone-room-warning);
+}
+
+.phone-room-card:active,
+.phone-room-card.is-pressed {
+  transform: scale(0.97);
+  transition-duration: var(--duration-fast);
+}
+
+.phone-room-card:focus-visible {
+  outline: 2px solid var(--color-accent-cool);
+  outline-offset: var(--space-1);
+}

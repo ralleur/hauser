@@ -97,3 +97,30 @@ export function closePhoneActionEdit(instant = false): void {
 export function finishPhoneActionEditClose(): void {
   if (phoneActionEdit.mode === 'closing') phoneActionEdit.mode = 'hidden';
 }
+
+/* ── Klima des Raums: Tap auf die Klima-Kachel öffnet die Steuerung, langer
+   Druck die Einstellungen der Kachel (Owner-Entscheidung 2026-09-11).
+   Dieselbe Zustandsmaschine, eigener Stack-Slot; nur das Panel nutzt sie,
+   das Telefon behält die Karte im Raum-Sheet. */
+export type RoomClimateView = 'control' | 'settings';
+
+export const roomClimate = $state({
+  mode: 'hidden' as 'hidden' | 'open' | 'closing',
+  roomId: '',
+  view: 'control' as RoomClimateView,
+});
+
+export function openRoomClimate(roomId: string, view: RoomClimateView = 'control'): void {
+  roomClimate.roomId = roomId;
+  roomClimate.view = view;
+  roomClimate.mode = 'open';
+}
+
+export function closeRoomClimate(instant = false): void {
+  if (roomClimate.mode === 'hidden' || roomClimate.mode === 'closing') return;
+  roomClimate.mode = instant ? 'hidden' : 'closing';
+}
+
+export function finishRoomClimateClose(): void {
+  if (roomClimate.mode === 'closing') roomClimate.mode = 'hidden';
+}

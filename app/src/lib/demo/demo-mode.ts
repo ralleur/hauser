@@ -387,6 +387,9 @@ function demoDiscoverySnapshot() {
    Wer in der Demo selbst Geräte umsortiert, behält seinen Stand: vorbelegt
    wird nur, solange noch nichts gespeichert ist. */
 const DEMO_FAN_ENTITY = 'fan.demo_ventilator_wohnzimmer';
+/* Das Rollo der Demo hängt im Wohnzimmer — damit die zweite Ebene für Rollos
+   (Position, Neigung, Auf/Stopp/Zu) in der Demo zu sehen ist. */
+const DEMO_COVER_ENTITY = 'cover.demo_rollo_wohnzimmer';
 /* Der Schlüssel aus state/device-config.ts, hier als Text: ein Import zöge den
    Gerätemanager samt Katalog in den Startpfad, den der Cutover-Test klein
    hält. Der Test in demo-mode.test.ts hält beide Fassungen zusammen. */
@@ -398,7 +401,10 @@ export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'>
     if (storage.getItem(DEMO_DEVICE_CONFIG_KEY) !== null) return;
     storage.setItem(DEMO_DEVICE_CONFIG_KEY, JSON.stringify({
       version: 1,
-      devices: { [DEMO_FAN_ENTITY]: { visible: true, roomId: 'schlafzimmer', name: 'Ceiling fan' } },
+      devices: {
+        [DEMO_FAN_ENTITY]: { visible: true, roomId: 'schlafzimmer', name: 'Ceiling fan' },
+        [DEMO_COVER_ENTITY]: { visible: true, roomId: 'wohnzimmer', name: 'Blinds' },
+      },
       order: {},
     }));
   } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }

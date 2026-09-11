@@ -16,6 +16,8 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* Wisch von rechts nach links öffnet das Layout-Menü (HomeScreen). */
+  touch-action: pan-y pinch-zoom;
 }
 
 /* ── Hero-Bildebenen ── */
@@ -147,16 +149,27 @@
    Die Gesamtbreite kommt ausschließlich aus robusten Presets. calc() schützt
    die Hero-Mindestfläche; jede Kontrollfläche behält ihre Mindestbreite. */
 .home-panels {
+  --panels-width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
   position: absolute;
   inset: var(--space-4) auto var(--space-4) var(--space-4);
   z-index: 2;
-  width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  width: var(--panels-width);
   max-width: calc(100% - var(--hero-min) - var(--space-8));
   display: flex;
   gap: var(--space-3);
+  /* Wisch nach links: die Fläche fliegt aus dem Bild (HomeScreen, swipeleft).
+     Senkrechtes Scrollen bleibt beim Browser, waagerechte Bewegung gehört der
+     Geste. Dauer und Kurve aus den Tokens, unter reduced motion 0 ms. */
+  touch-action: pan-y pinch-zoom;
+  transition: transform var(--duration-slow) var(--ease-out), margin-left var(--duration-slow) var(--ease-out);
+}
+.home-panels.is-hidden {
+  transform: translateX(calc(-100% - var(--space-4)));
+  pointer-events: none;
 }
 .home-stage.has-two-slots .home-panels {
-  width: max(calc(var(--slot-min) + var(--slot-min) + var(--space-3)), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  --panels-width: max(calc(var(--slot-min) + var(--slot-min) + var(--space-3)), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
+  width: var(--panels-width);
   overflow-x: auto;
 }
 .home-panel {
@@ -178,7 +191,7 @@
   position: absolute;
   z-index: 1;
   inset: 0;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 .camera-popout-layer {
@@ -398,6 +411,9 @@
   white-space: nowrap;
 }
 .layout-dialog-scrim { position: fixed; inset: 0; z-index: 120; background: transparent; }
+/* Der Dialog liegt rechts über der Bühne und fliegt von rechts herein und
+   hinaus (Transform, Tokens; unter reduced motion 0 ms). Er verschiebt
+   nichts — die Vorschau der Einstellungen läuft darunter. */
 .layout-dialog {
   position: absolute;
   inset: calc(var(--touch-preferred) + var(--space-4)) var(--space-4)
@@ -412,12 +428,30 @@
   border-radius: var(--radius-2xl);
   background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
   box-shadow: var(--elevation-overlay-shadow);
+  touch-action: pan-y pinch-zoom;
+  animation: layout-dialog-in var(--duration-slow) var(--ease-out) both;
+}
+.layout-dialog:focus { outline: none; }
+.layout-dialog.is-closing {
+  animation: layout-dialog-out var(--duration-slow) var(--ease-out) both;
+  pointer-events: none;
+}
+@keyframes layout-dialog-in {
+  from { transform: translateX(calc(100% + var(--space-4))); }
+  to { transform: translateX(0); }
+}
+@keyframes layout-dialog-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100% + var(--space-4))); }
 }
 .layout-dialog-head, .layout-dialog-actions, .system-layout-settings { display: flex; align-items: center; gap: var(--space-3); }
-.layout-dialog-head { justify-content: space-between; }
+.layout-dialog-head { justify-content: flex-end; margin-bottom: var(--space-3); }
 .layout-dialog-head h2, .system-layout-settings h2 { margin: 0; }
 .dialog-close { width: 48px; height: 48px; border: 1px solid var(--overlay-border); border-radius: var(--radius-full); font-size: var(--text-xl); background: var(--overlay-control-background); color: var(--color-text-primary); }
-.layout-config-section { margin-top: var(--space-6); padding: 0; border: 0; }
+.layout-config-section { margin-top: 0; padding: 0; border: 0; }
+/* Raumwahl der zweiten Fläche: Segmente wie die Pille, aber umbrechend. */
+.layout-room-choice { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-xl); background: var(--color-surface-2); }
+.layout-room-choice .choice-seg { flex: 1 1 auto; min-width: 0; padding: 0 var(--space-3); }
 .layout-slider-settings { display: grid; gap: var(--space-3); }
 .layout-slider-setting { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--overlay-border); border-radius: var(--radius-lg); background: var(--overlay-control-background); }
 .layout-slider-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
@@ -582,6 +616,57 @@
   justify-content: center;
 }
 
+/* ── Alle Räume (R30) ──
+   Ohne Bühnenbild: die Kontrollfläche behält ihre Breite, rechts daneben
+   liegen alle Räume als Kacheln. Die freie Trefferfläche für den Layout-
+   Long-Press bleibt darunter; das Raster selbst lässt Zeiger durch, nur die
+   Kacheln fangen sie — die Lücken zwischen ihnen sind also weiter frei. */
+.home-stage.is-rooms-view {
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface-0);
+}
+
+.home-stage.is-rooms-view .home-panels,
+.home-stage.is-rooms-view.has-two-slots .home-panels {
+  position: relative;
+  inset: auto;
+  flex: none;
+}
+
+/* In „Alle Räume" steht die Fläche im Fluss: fliegt sie hinaus, rückt das
+   Kachelraster nach und nimmt die ganze Breite — der einzige Layoutwechsel
+   dieser Geste, an einem Element, in derselben Dauer wie der Flug. */
+.home-stage.is-rooms-view .home-panels.is-hidden {
+  margin-left: calc(-1 * var(--panels-width) - var(--space-4));
+}
+
+.home-room-grid {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  /* Der Regler „Räume pro Zeile" aus dem Layout-Menü gilt hier für die Kacheln. */
+  grid-template-columns: repeat(var(--rooms-per-row, 2), minmax(0, 1fr));
+  grid-auto-rows: minmax(calc(var(--touch-preferred) * 2), 1fr);
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+.home-room-grid > * {
+  pointer-events: auto;
+}
+
+/* Die Kontrollfläche trägt in dieser Ansicht den Raumnamen selbst — die
+   Raumauswahl ist weg, irgendwo muss stehen, wessen Szenen das sind. */
+.home-stage.is-rooms-view .panel-head {
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
 /* ── Panel im Hochformat (Plan 21 §12) ──
    Das Panel-Layout ist für Querformat gebaut: Kontrollfläche links, Hero
    füllt den Rest. Hochkant fehlt dafür die Breite — die Karte drängt das
@@ -653,6 +738,31 @@
      der Bühne, statt sie zu überschreiten und waagerecht zu scrollen. */
   [data-shell="panel"] .home-stage.has-two-slots .home-panel {
     min-width: 0;
+  }
+
+  /* Alle Räume hochkant: das Kachelraster nimmt das Bildband, die
+     Kontrollfläche darunter die volle Breite. */
+  [data-shell="panel"] .home-stage.is-rooms-view {
+    flex-direction: column;
+    padding: 0;
+  }
+
+  [data-shell="panel"] .home-stage.is-rooms-view .home-room-grid {
+    order: -1;
+    flex: none;
+    box-sizing: border-box;
+    height: var(--panel-hero-band);
+    padding: var(--space-4) var(--space-4) 0;
+    grid-auto-rows: minmax(var(--touch-preferred), 1fr);
+  }
+
+  [data-shell="panel"] .home-stage.is-rooms-view .home-panels,
+  [data-shell="panel"] .home-stage.is-rooms-view.has-two-slots .home-panels {
+    position: relative;
+    inset: auto;
+    flex: 1 1 0;
+    min-height: 0;
+    margin: var(--space-3) var(--space-4) var(--space-4);
   }
 
   /* Die Raumauswahl verlässt die Karte und schwebt über dem Bild. Damit sie

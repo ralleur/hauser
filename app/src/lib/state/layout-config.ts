@@ -3,6 +3,10 @@ import { sharedStorage } from './shared-config.ts';
 import { m } from '../../paraglide/messages.js';
 export type LayoutSlotId = 'slot-1' | 'slot-2';
 export type WidthPresetId = 'compact' | 'balanced' | 'wide';
+/* `fullscreen`: ein Raumbild füllt die Bühne, die Raumauswahl sitzt in der
+   Kontrollfläche. `rooms`: alle Räume als Kacheln neben der Kontrollfläche,
+   die dann ganz den Szenen und Geräten gehört. */
+export type HomeViewId = 'fullscreen' | 'rooms';
 
 export interface LayoutSlot {
   id: LayoutSlotId;
@@ -19,6 +23,7 @@ export interface LayoutConfig {
   widthPreset: WidthPresetId;
   panelSize: number;
   roomsPerRow: number;
+  homeView: HomeViewId;
   slots: LayoutSlot[];
 }
 
@@ -49,6 +54,7 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   widthPreset: 'compact',
   panelSize: 15,
   roomsPerRow: 2,
+  homeView: 'fullscreen',
   slots: [{ id: 'slot-1', roomId: null }],
 };
 
@@ -58,6 +64,7 @@ export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
     widthPreset: config.widthPreset,
     panelSize: normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset)),
     roomsPerRow: normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+    homeView: normalizeHomeView(config.homeView),
     slots: config.slots.map((slot) => ({ ...slot })),
   };
 }
@@ -92,6 +99,7 @@ export function parseLayoutConfig(raw: string | null): LayoutConfig {
       roomsPerRow: normalizeRoomsPerRow(typeof candidate.roomsPerRow === 'number'
         ? candidate.roomsPerRow
         : DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+      homeView: normalizeHomeView(candidate.homeView),
       slots,
     };
   } catch {
@@ -179,6 +187,16 @@ export function setRoomsPerRow(config: LayoutConfig, roomsPerRow: number): Layou
   return next;
 }
 
+export function setHomeView(config: LayoutConfig, homeView: HomeViewId): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.homeView = normalizeHomeView(homeView);
+  return next;
+}
+
+export function layoutHomeView(config: LayoutConfig): HomeViewId {
+  return normalizeHomeView(config.homeView);
+}
+
 export function layoutRoomsPerRow(config: LayoutConfig): number {
   return normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow);
 }
@@ -209,6 +227,10 @@ function normalizePanelSize(value: number): number {
 
 function normalizeRoomsPerRow(value: number): number {
   return Math.min(4, Math.max(1, Math.round(value)));
+}
+
+function normalizeHomeView(value: unknown): HomeViewId {
+  return value === 'rooms' ? 'rooms' : 'fullscreen';
 }
 
 function isRoomId(value: unknown): value is string {

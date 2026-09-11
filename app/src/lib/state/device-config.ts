@@ -1,5 +1,5 @@
 import { m } from '../../paraglide/messages.js';
-import { iconForDevice } from './light-icons.ts';
+import { iconForDevice, sensorIconFor } from './light-icons.ts';
 import type { LightSeed, RoomSeed, Room } from './app.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
 import {
@@ -93,6 +93,9 @@ export interface ManagedDevice {
   unit?: string | null;
   deviceClass?: string | null;
   icon?: string;
+  /** Sensor-Kacheln zeigen standardmäßig nur den Wert; `true` blendet den
+      Namen dazu (Owner-Entscheidung 2026-09-11). */
+  showName?: boolean;
 }
 
 export interface DeviceOverride {
@@ -100,6 +103,8 @@ export interface DeviceOverride {
   roomId?: string;
   /** Lokaler Anzeigename; ändert nicht den friendly_name in Home Assistant. */
   name?: string;
+  /** Sensor-Kachel: Name neben dem Wert zeigen. */
+  showName?: boolean;
 }
 
 export interface DeviceConfig {
@@ -143,6 +148,7 @@ export function parseDeviceConfig(raw: string | null): DeviceConfig {
         if (typeof v.roomId === 'string') o.roomId = v.roomId;
         const name = typeof v.name === 'string' ? normalizeDeviceName(v.name) : null;
         if (name) o.name = name;
+        if (v.showName === true) o.showName = true;
         devices[entityId] = o;
       }
     }
@@ -241,7 +247,7 @@ export function buildRuntimeRooms(
     const suggestedRoom = seed?.roomId ?? normalizeRoomId(item.area, roomIds) ?? rooms[0]?.id;
     const roomId = override?.roomId && roomIds.has(override.roomId) ? override.roomId : suggestedRoom;
     if (!roomId) continue;
-    byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name));
+    byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName));
   }
 
   return rooms.map((room) => {
@@ -273,6 +279,19 @@ export function setDeviceName(config: DeviceConfig, entityId: string, name: stri
   const override = { ...(next.devices[entityId] ?? {}) };
   if (normalized) override.name = normalized;
   else delete override.name;
+  if (Object.keys(override).length) next.devices[entityId] = override;
+  else delete next.devices[entityId];
+  return next;
+}
+
+/* Sensor-Kachel: nur mit `true` wird der Name gezeigt; `false` löscht den
+   Eintrag wieder, damit die Vorgabe (nur Wert) keinen Speicherplatz kostet. */
+export function setDeviceNameVisibility(config: DeviceConfig, entityId: string, showName: boolean): DeviceConfig {
+  const next = cloneDeviceConfig(config);
+  if (!isManagedEntityId(entityId)) return next;
+  const override = { ...(next.devices[entityId] ?? {}) };
+  if (showName) override.showName = true;
+  else delete override.showName;
   if (Object.keys(override).length) next.devices[entityId] = override;
   else delete next.devices[entityId];
   return next;
@@ -320,7 +339,7 @@ export function domainOf(entityId: string): ManagedDomain | null {
   return (MANAGED_DOMAINS as readonly string[]).includes(domain) ? (domain as ManagedDomain) : null;
 }
 
-function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride?: string): ManagedDevice {
+function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride?: string, showName?: boolean): ManagedDevice {
   const domain = item.domain;
   const category = categoryOf(domain);
   const capabilities = item.capabilities ?? {};
@@ -337,7 +356,8 @@ function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride
     colorTempMax: capabilities.colorTempMax,
     unit: item.unit,
     deviceClass: item.deviceClass,
-    icon: iconForDevice(item.entityId, category, seed?.icon),
+    icon: iconForDevice(item.entityId, category, seed?.icon ?? (category === 'info' ? sensorIconFor(item) : undefined)),
+    ...(showName ? { showName: true } : {}),
   };
 }
 

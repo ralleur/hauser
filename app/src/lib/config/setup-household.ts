@@ -308,6 +308,7 @@ function entityRole(state: SetupState): EntityRole | null {
   if (domain === 'camera') return 'camera';
   if (domain === 'switch') return 'switch';
   if (domain === 'vacuum') return 'vacuum';
+  if (domain === 'cover') return 'cover';
   if (domain === 'sensor' && deviceClass === 'temperature') return 'temperature';
   if (domain === 'binary_sensor' && ['occupancy', 'presence', 'motion'].includes(deviceClass)) return 'presence';
   if (domain === 'binary_sensor' && ['door', 'garage_door', 'opening', 'window'].includes(deviceClass)) return 'window';
@@ -340,7 +341,7 @@ export function buildSetupHouseholdSuggestion(
   const ignored = new Set<string>();
   // Rollen, die mehrfach im selben Raum auftreten dürfen (wie 'light'); alle
   // anderen sind Singleton pro Raum (z. B. genau ein Klima-/Kamera-Entity).
-  const multiInstanceRoles = new Set<EntityRole>(['light', 'switch']);
+  const multiInstanceRoles = new Set<EntityRole>(['light', 'switch', 'cover']);
 
   function resolveAreaKey(entityId: string, areaId: string | null, deviceId: string | null): string | null {
     const explicitAreaId = areaId ?? (deviceId ? deviceArea.get(deviceId) ?? null : null);

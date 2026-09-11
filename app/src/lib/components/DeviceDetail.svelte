@@ -29,7 +29,7 @@
   import { defaultIconFor, iconForDevice, persistLightIconOverride, resetLightIconOverride } from '../state/light-icons.ts';
 
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
-  import { renameDevice } from '../state/device-manager.svelte.ts';
+  import { renameDevice, setDeviceShowName } from '../state/device-manager.svelte.ts';
   import { fmtTemp } from '../format.ts';
   import type {
     LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue, CoverValue, VacuumValue, LockValue,
@@ -861,6 +861,17 @@
                 <p class="ld-big-value num">{reading}</p>
               {/if}
               <p class="ld-meta">{device.entityId}</p>
+            </section>
+            <!-- Die Kachel zeigt nur den Wert; wer den Namen braucht, holt ihn
+                 hier dazu (Owner-Entscheidung 2026-09-11). -->
+            <section class="ld-section ld-switch-row">
+              <span id="device-show-name-label">{m.dev_show_name()}</span>
+              <button class="re-toggle pressable" type="button" role="switch"
+                      aria-checked={!!device.showName} class:is-on={!!device.showName}
+                      aria-labelledby="device-show-name-label"
+                      onclick={() => setDeviceShowName(entityId, !device.showName)}>
+                <span class="re-toggle-knob"></span>
+              </button>
             </section>
           {:else if category === 'media'}
             <section class="ld-section">

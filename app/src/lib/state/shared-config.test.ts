@@ -46,6 +46,7 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };
     const localLayout = {
@@ -53,6 +54,7 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'compact',
       panelSize: 15,
       roomsPerRow: 2,
+      homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'kueche' }],
     };
     let resolveGet!: (response: Response) => void;
@@ -439,6 +441,7 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };
     const centralScene = {

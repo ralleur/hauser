@@ -125,13 +125,18 @@
   padding: var(--space-2) var(--space-4) var(--space-3);
 }
 
-/* Klima-Hero nach dem Ziel-Mock: Istwert als ruhiger Datenanker, daneben eine
-   eigene Bedienebene für Zieltemperatur und Betriebsart. */
+/* Klima-Karte (ClimateCard.svelte): `is-stacked` ist die Panel-Fassung — eine
+   einzige helle Bedienfläche in Kartenbreite, in der Leiste wie im Overlay.
+   Der Istwert steht als Zeile über dem Sollwert, nicht in einer eigenen Spalte —
+   so gibt es in keiner Bandbreite einen Umbruch (Owner-Entscheidung
+   2026-09-11). Das Raum-Sheet des Phones behält Ist- und Sollwert nebeneinander
+   (phone-shell.css). */
 .climate-section {
   container-type: inline-size;
 }
 
-.room-controls .climate-card {
+.room-controls .climate-card,
+.room-climate-card .climate-card {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: var(--space-5);
@@ -141,20 +146,21 @@
   background: var(--color-surface-1);
 }
 
-/* Erst unter 420 px bleibt für zwei Spalten nichts übrig: darunter fiele die
-   Zelle des Sollwerts auf wenige Pixel zusammen und der Wert liefe hinter die
-   Tasten. Bis dahin bleiben Istwert und Bedienebene nebeneinander — der
-   Istwert wird kleiner, statt dass die Karte umbricht (Owner-Entscheidung
-   2026-09-10). */
-@container (max-width: 420px) {
-  .panel-controls .climate-card {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.climate-card.is-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  background: transparent;
 }
 
-.room-controls .climate-warning {
+.room-controls .climate-warning,
+.room-climate-card .climate-warning {
   grid-column: 1 / -1;
   margin-bottom: 0;
+}
+
+.climate-card.is-stacked .climate-warning.is-visible {
+  margin-bottom: var(--space-3);
 }
 
 .climate-current {
@@ -165,11 +171,9 @@
   min-width: 0;
 }
 
-/* Eigener Messbezug für den Istwert: Zahl und Beschriftung skalieren mit der
-   Breite ihrer Spalte, nicht mit der der ganzen Karte. Nur so wird der Wert
-   genau dann kleiner, wenn seine Zelle enger wird. */
-.panel-controls .climate-current {
-  container-type: inline-size;
+.climate-card.is-stacked .climate-current,
+.climate-card.is-stacked .climate-controller-label {
+  display: none;
 }
 
 .climate-current-label,
@@ -177,53 +181,96 @@
   display: none;
 }
 
-/* Fluide Typografie in der Klima-Karte der Seitenleiste: Werte und
-   Beschriftungen skalieren mit der Breite der Sektion (container-type oben),
-   damit sie beim Schmalerziehen nicht über ihre Zellen laufen — der Sollwert
-   lief sonst unter die Plus-Taste, die Modus-Wörter stießen aneinander. Die
-   Token-Stufen bleiben die Grenzen: cqi bewegt sich nur zwischen ihnen.
-   Auf `.panel-controls` eingegrenzt, weil das Raum-Sheet des Phones seine
-   eigene, engere Fassung mitbringt. */
-.panel-controls .climate-temp {
-  font-size: clamp(var(--text-lg), 36cqi, var(--text-4xl));
+/* Istwert-Zeile in der Bedienfläche (nur Panel). Nichts darin darf umbrechen. */
+.climate-controller-current {
+  display: none;
 }
 
-/* Die Einheit hängt am Wert, nicht an einer eigenen Stufe. */
-.panel-controls .climate-temp .unit {
-  font-size: 0.34em;
+.climate-card.is-stacked .climate-controller-current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: clamp(var(--text-2xs), 3cqi, var(--text-sm));
 }
 
-/* Die Ist-Wert-Zeile skaliert komplett mit — Zeichen, Abstand und Text.
-   Blieb das Zeichen bei 32 px, brach „Aktuelle Temperatur" in der schmalen
-   Spalte um, obwohl die Zahl darüber längst kleiner war. */
-.panel-controls .climate-current-meta {
-  gap: clamp(var(--space-2), 4cqi, var(--space-3));
+.climate-card.is-stacked .climate-controller-current .icon {
+  flex: none;
+  opacity: 0.72;
 }
 
-.panel-controls .climate-current-meta .icon {
-  width: clamp(var(--icon-sm), 14cqi, var(--icon-xl));
-  height: clamp(var(--icon-sm), 14cqi, var(--icon-xl));
+.climate-card.is-stacked .climate-controller-current strong {
+  color: var(--color-text-primary);
+  font-size: 1.25em;
+  font-weight: var(--font-weight-semibold);
 }
 
-.panel-controls .climate-current-meta strong {
-  font-size: clamp(var(--text-3xs), 7cqi, var(--text-sm));
-  line-height: var(--leading-tight);
+.climate-card.is-stacked .climate-controller-current strong.is-unavailable {
+  font-size: 1em;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
 }
 
-.panel-controls .climate-current-meta small {
-  font-size: clamp(var(--text-3xs), 6cqi, var(--text-xs));
+.climate-card.is-stacked .climate-controller-current small {
+  font-size: 0.9em;
+  color: var(--color-text-tertiary);
 }
 
-.panel-controls .climate-controller-label {
-  font-size: clamp(var(--text-3xs), 2.6cqi, var(--text-xs));
+/* Fluide Typografie der Bedienfläche: Sollwert und Modus-Wörter skalieren mit
+   der Breite der Sektion (container-type oben), damit sie beim Schmalerziehen
+   nicht über ihre Zellen laufen. Die Token-Stufen bleiben die Grenzen. */
+/* Sollwert und Modi teilen die Bedienfläche 60/40 zugunsten des Sollwerts
+   (Owner-Entscheidung 2026-09-11): der Sollwert-Block ist ein eigenes Raster-
+   feld, das seinen Platz ganz ausfüllt — die Zahl wächst mit der Breite bis
+   zur Hero-Stufe, die Tasten wachsen mit. */
+.climate-card.is-stacked .climate-controller {
+  display: grid;
+  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0;
 }
 
-.panel-controls .climate-target-value {
-  font-size: clamp(var(--text-lg), 6.5cqi, var(--text-2xl));
+.climate-card.is-stacked .climate-target-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 0;
+  padding-bottom: var(--space-3);
 }
 
-.panel-controls .climate-mode {
+.climate-card.is-stacked .climate-target-control {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
+}
+
+.climate-card.is-stacked .climate-step {
+  width: clamp(var(--touch-preferred), 14cqi, 72px);
+  height: clamp(var(--touch-preferred), 14cqi, 72px);
+}
+
+.climate-card.is-stacked .climate-target-value {
+  font-size: clamp(var(--text-2xl), 15cqi, var(--text-4xl));
+  line-height: 1;
+}
+
+.climate-card.is-stacked .climate-mode-selector {
+  align-self: stretch;
+  align-items: stretch;
+  min-height: 0;
+  padding-top: var(--space-3);
+}
+
+.climate-card.is-stacked .climate-mode {
   font-size: clamp(var(--text-3xs), 2.8cqi, var(--text-xs));
+}
+
+/* Die helle Box füllt auf dem Panel die ganze Karte: kein Rahmen, kein Schatten. */
+.climate-card.is-stacked .climate-controller {
+  border: 0;
+  box-shadow: none;
 }
 
 .room-controls .climate-temp.is-unavailable {

@@ -14,6 +14,7 @@ describe('demo devices', () => {
     const seeded = store.get(DEVICE_CONFIG_KEY);
     if (!seeded) return; // nicht im Demo-Build: nichts vorbelegt
     expect(parseDeviceConfig(seeded).devices['fan.demo_ventilator_wohnzimmer']).toMatchObject({ visible: true, roomId: 'schlafzimmer' });
+    expect(parseDeviceConfig(seeded).devices['cover.demo_rollo_wohnzimmer']).toMatchObject({ visible: true, roomId: 'wohnzimmer' });
     store.set(DEVICE_CONFIG_KEY, '{"version":1,"devices":{},"order":{}}');
     installDemoDevices(storage);
     expect(store.get(DEVICE_CONFIG_KEY)).toBe('{"version":1,"devices":{},"order":{}}');

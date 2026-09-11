@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## 0.14.0 - 2026-09-11
+
+- The layout menu offers a "View" pill: "Full screen" keeps the room picture
+  and picker; "All rooms" shows every room as a tile beside a control surface
+  that belongs entirely to scenes and devices. A tap on a tile selects the
+  room; "Rooms per row" sets the tile columns.
+- The layout menu itself has no title, "Apply" or "Cancel" any more: every
+  setting takes effect at once. It stays on the right, flies in from there and
+  leaves on a swipe to the right, a tap beside it or Escape; a swipe from
+  right to left on the stage opens it. The second control surface is added at
+  the bottom with a fixed room of its own.
+- Swipe left on the control surface and it flies out of the picture, in
+  "Full screen" and "All rooms" alike; the next touch anywhere brings it back.
+- Phone home: the room grid scrolls and fades behind the quick actions;
+  a swipe to the left pulls a side sheet in from the right, following the
+  finger, with rooms per row (1 to 3) and a switch for the quick actions.
+- Covers (blinds, shutters) are a household role now: the setup wizard hands
+  them over into their rooms, several per room; the cover sheet is unchanged.
+- Sensors without a symbol get one from their device class, unit or name:
+  battery, temperature, humidity, power, energy, voltage and many more.
+- The thermostat in the control surface is a device-size tile; a tap opens
+  the thermostat sheet, a long press its settings (controls back in the
+  surface, what the tile shows, step size). Kept in the surface, it is one
+  light card at full width that never wraps.
+- Sensor tiles show only their reading; a switch in the device sheet adds
+  the name when needed.
+- Horizontal swipes forgive a crooked finger and no longer break off into
+  scrolling; a tile no longer pops when a scroll starts on it.
+
 ## 0.13.0 - 2026-09-10
 
 - The device search in a room offers pills for the device types it can take,

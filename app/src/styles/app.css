@@ -1106,6 +1106,31 @@ button.security-bar {
   text-overflow: ellipsis;
 }
 
+/* Sensor-Kachel ohne Namen: der Messwert ist die Beschriftung. */
+.light-tile-value {
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Klima-Overlay: die Karte füllt das Blatt, ohne eigenen Kartenhintergrund. */
+.room-climate-card { container-type: inline-size; }
+.room-climate-card .climate-card { margin-top: 0; }
+.room-climate .ld-section + .ld-section { margin-top: var(--space-5); }
+
+.ld-section.ld-switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 /* ── Licht-Detail (zweite Ebene): Modal über der Kachel-Ebene ──
    Reuse overlay-scrim/overlay-panel/modal-enter (s. Room-Overlay). */
 .light-detail {

@@ -31,7 +31,17 @@ export interface RoomDisplayEntry {
       „keine" — das ist etwas anderes als „nicht konfiguriert". */
   windowSensorIds?: string[];
   presenceSensorIds?: string[];
+  /** Klima-Steuerung als Karte in der Kontrollfläche statt als Kachel
+      (Owner-Entscheidung 2026-09-11: Vorgabe ist die Kachel). */
+  climateInline?: boolean;
+  /** Was die Klima-Kachel zeigt (Default: beides). */
+  climateTileShows?: ClimateTileShows;
+  /** Schrittweite der Zieltemperatur in Grad (Default 0,5). */
+  climateStep?: number;
 }
+
+export type ClimateTileShows = 'target' | 'current' | 'both';
+export const CLIMATE_STEPS: readonly number[] = [0.5, 1];
 
 export interface RoomDisplayConfig {
   version: 1;
@@ -226,6 +236,40 @@ export function setSensorId(roomId: string, metric: RoomMetric, entityId: string
   writeEntry(roomId, next);
 }
 
+/* ── Klima in der Kontrollfläche (Owner-Entscheidung 2026-09-11) ── */
+export function climateInline(roomId: string): boolean {
+  return entry(roomId).climateInline === true;
+}
+
+export function setClimateInline(roomId: string, value: boolean): void {
+  const next = { ...entry(roomId) };
+  if (value) next.climateInline = true;
+  else delete next.climateInline;
+  writeEntry(roomId, next);
+}
+
+export function climateTileShows(roomId: string): ClimateTileShows {
+  return entry(roomId).climateTileShows ?? 'both';
+}
+
+export function setClimateTileShows(roomId: string, value: ClimateTileShows): void {
+  const next = { ...entry(roomId) };
+  if (value === 'both') delete next.climateTileShows;
+  else next.climateTileShows = value;
+  writeEntry(roomId, next);
+}
+
+export function climateStep(roomId: string): number {
+  return entry(roomId).climateStep ?? 0.5;
+}
+
+export function setClimateStep(roomId: string, value: number): void {
+  const next = { ...entry(roomId) };
+  if (value === 0.5 || !CLIMATE_STEPS.includes(value)) delete next.climateStep;
+  else next.climateStep = value;
+  writeEntry(roomId, next);
+}
+
 /* Leere Einträge werden entfernt, damit „alles Standard" auch den Storage räumt. */
 function writeEntry(roomId: string, next: RoomDisplayEntry): void {
   const rooms = { ...roomDisplay.config.rooms };
@@ -281,6 +325,9 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (Array.isArray(cand.presenceSensorIds)) {
         next.presenceSensorIds = cand.presenceSensorIds.filter((id): id is string => typeof id === 'string');
       }
+      if (cand.climateInline === true) next.climateInline = true;
+      if (cand.climateTileShows === 'target' || cand.climateTileShows === 'current') next.climateTileShows = cand.climateTileShows;
+      if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };
