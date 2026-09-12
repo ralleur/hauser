@@ -121,6 +121,51 @@ function avifOutput(image: ReturnType<typeof sharp>) {
   return image.avif({ ...ROOM_IMAGE_TRANSFORM_POLICY_V1.avif });
 }
 
+/* ── Eigenes Foto statt Bildset ──
+   Wer sein eigenes Foto hochlädt, bekommt genau ein Bild — kein Tag-, Nacht-
+   und Nacht-ohne-Licht-Set und keinen Anbieterweg. Deshalb gilt hier nicht die
+   Geometrie des Bildgenerators: 2544×1800 hält das kanonische Verhältnis
+   106:75 und reicht für jedes Wandpanel. `effort: 3` ist der eigentliche
+   Gewinn — auf einem Kern gemessen 3 s statt 56 s bei gleicher Dateigröße,
+   und auf einem Server entscheidet das zwischen „gleich da" und
+   „scheint hängengeblieben". */
+export const ROOM_IMAGE_MANUAL_UPLOAD_POLICY_V1 = Object.freeze({
+  id: 'room-image-manual-upload-policy-v1',
+  panel: Object.freeze({ width: 2_544, height: 1_800 }),
+  /* Dasselbe Maß wie die Phone-Ableitung des Assistenten (B-27 D1); der Wert
+     steht hier noch einmal, weil jenes Modul dieses importiert. */
+  phone: Object.freeze({ width: 1_272, height: 900 }),
+  panelAvif: Object.freeze({ ...ROOM_IMAGE_TRANSFORM_POLICY_V1.avif, effort: 3 }),
+  phoneAvif: Object.freeze({ ...ROOM_IMAGE_TRANSFORM_POLICY_V1.avif, quality: 60, effort: 3 }),
+} as const);
+
+/**
+ * Macht aus dem hochgeladenen Foto die beiden Fassungen, die Hauser wirklich
+ * zeigt: eine fürs Panel, eine fürs Telefon. Kein PNG-Zwischenschritt und kein
+ * zweiter Bildweg — das Telefonbild entsteht aus genau der Panelfassung, die
+ * auch ausgeliefert wird.
+ */
+export async function uploadedPhotoToRoomImageVariants(
+  input: Uint8Array,
+  expectedFormat: AcceptedRoomImageFormat,
+): Promise<{ panel: Uint8Array; phone: Uint8Array }> {
+  const metadata = await decoder(input).metadata();
+  assertFormat(metadata, expectedFormat);
+  assertSingleFrame(metadata);
+  assertDimensions(metadata.width, metadata.height);
+
+  const { panel, phone, panelAvif, phoneAvif } = ROOM_IMAGE_MANUAL_UPLOAD_POLICY_V1;
+  const panelBytes = await stripAlphaAndConvertToSrgb(decoder(input))
+    .resize(panel.width, panel.height, { fit: 'cover', position: 'centre', kernel: sharp.kernel.lanczos3 })
+    .avif({ ...panelAvif })
+    .toBuffer();
+  const phoneBytes = await decoder(panelBytes)
+    .resize(phone.width, phone.height, { fit: 'fill', kernel: sharp.kernel.lanczos3 })
+    .avif({ ...phoneAvif })
+    .toBuffer();
+  return { panel: panelBytes, phone: phoneBytes };
+}
+
 export async function normalizeUploadedRoomImage(
   input: Uint8Array,
   expectedFormat: AcceptedRoomImageFormat,

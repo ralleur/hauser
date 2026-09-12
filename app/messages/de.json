@@ -705,6 +705,7 @@
   "room_background_replace": "Bild ersetzen",
   "room_background_restore": "Standardillustration verwenden",
   "room_background_saving": "Bild wird gespeichert …",
+  "room_background_saving_hint": "Das Bild wird umgerechnet — auf kleinen Geräten dauert das einen Moment.",
   "room_background_saved": "Das eigene Raumbild ist aktiv.",
   "room_background_restored": "Die Standardillustration ist wieder aktiv.",
   "room_background_failed": "Das Raumbild konnte nicht gespeichert werden.",

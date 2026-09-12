@@ -369,6 +369,7 @@
   "room_background_replace": "Replace image",
   "room_background_restore": "Use default illustration",
   "room_background_saving": "Saving image …",
+  "room_background_saving_hint": "The image is being converted — on small devices this takes a moment.",
   "room_background_saved": "The custom room image is active.",
   "room_background_restored": "The default illustration is active again.",
   "room_background_failed": "The room image could not be saved.",

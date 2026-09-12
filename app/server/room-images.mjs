@@ -64,6 +64,7 @@ import {
   sharp,
   snapRoomImageCrop,
   sourceFullToProviderJpeg,
+  uploadedPhotoToRoomImageVariants,
   validateRoomImagePromptSpec,
 } from './runtime-env.mjs';
 import {
@@ -4473,8 +4474,7 @@ async function decodeManualRoomBackground(req) {
   }
   const original = await readBoundedRoomImageBody(req, contentLength.length);
   const expectedFormat = roomImageFormatForMime(mimeType, original);
-  const normalized = await normalizeUploadedRoomImage(original, expectedFormat);
-  return providerPngToFinalAvif(normalized.buffer);
+  return uploadedPhotoToRoomImageVariants(original, expectedFormat);
 }
 
 function validRoomImagePoint(value) {
@@ -4876,7 +4876,10 @@ async function serveRoomImagePublish(req, res, identity, jobId, context) {
 async function serveRoomImageAssetListing(req, res, context) {
   try {
     const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
-    const assets = context.assetStore.list().map((asset) => ({
+    /* Ohne Assetstore gibt es noch keine Bildsets — das ist der Normalzustand
+       einer frischen Installation und kein Fehler. Die Liste ist dann leer;
+       ein 503 ließe die Oberfläche unnötig eine Störung melden (Issue #15). */
+    const assets = (context.assetStore?.list() ?? []).map((asset) => ({
       ...asset, assignedRoomIds: assignedRoomIds(snapshot.document, asset.assetId),
     }));
     const totalByteLength = assets.reduce((total, asset) => total + (asset.byteLength || 0), 0);
@@ -4993,21 +4996,24 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
 }
 
 async function serveManualRoomBackground(req, res, roomId, context) {
-  let variantBytes = null;
+  let uploaded = null;
   try {
     context.assertSetupRecoveryHealthy();
     const matches = rawHeaderValues(req, 'if-match');
     if (matches.length !== 1) {
       throw new RoomImageRequestError(428, 'CONFIG_PRECONDITION_REQUIRED', 'Der Household-ETag fehlt.');
     }
-    if (req.method === 'POST') variantBytes = await decodeManualRoomBackground(req);
+    /* B-27 D2: wie im Finaljob — rechnen, bevor der Mutations-Lock greift. */
+    if (req.method === 'POST') uploaded = await decodeManualRoomBackground(req);
 
-    /* B-27 D2: wie im Finaljob — ableiten, bevor der Mutations-Lock greift. */
-    const manualFinals = variantBytes
-      ? { light: variantBytes, dark: variantBytes, darkOff: variantBytes }
-      : null;
-    const manualVariants = manualFinals
-      ? { ...manualFinals, ...await context.phoneDeriver(manualFinals) }
+    /* Ein eigenes Foto kennt keinen Tag-Nacht-Unterschied: alle Fassungen des
+       Bildsets sind dasselbe Bild. Es wird deshalb genau zweimal gerechnet —
+       einmal fürs Panel, einmal fürs Telefon — und nicht sechsmal. */
+    const manualVariants = uploaded
+      ? {
+        light: uploaded.panel, dark: uploaded.panel, darkOff: uploaded.panel,
+        phoneLight: uploaded.phone, phoneDark: uploaded.phone, phoneDarkOff: uploaded.phone,
+      }
       : null;
 
     const result = await context.configMutations.run(() => {
@@ -5182,8 +5188,7 @@ export function serveRoomImages(req, res, {
       roomImageError(req, res, 405, 'METHOD_NOT_ALLOWED', 'Die Assetliste erlaubt ausschließlich GET.', { allow: 'GET' }); return true;
     }
     const identity = authorizeRoomImage(req, res, authConfig, allowedOrigins, false);
-    if (identity && assetStore) void serveRoomImageAssetListing(req, res, context);
-    else if (identity) roomImageError(req, res, 503, 'ROOM_IMAGE_STORE_INVALID', 'Der Assetstore fehlt.');
+    if (identity) void serveRoomImageAssetListing(req, res, context);
     return true;
   }
   const manualBackgroundMatch = pathname.match(/^\/api\/room-backgrounds\/([^/]+)$/);

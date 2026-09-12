@@ -750,7 +750,9 @@
                   <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
                           onclick={restoreBackground}>{m.room_background_restore()}</button>
                 {/if}
-                {#if backgroundMessage}
+                {#if backgroundBusy}
+                  <p class="re-background-message" role="status">{m.room_background_saving_hint()}</p>
+                {:else if backgroundMessage}
                   <p class="re-background-message" class:is-error={backgroundError} role="status">{backgroundMessage}</p>
                 {/if}
               </div>

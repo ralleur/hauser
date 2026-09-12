@@ -46,6 +46,7 @@ export const {
   snapRoomImageCrop,
   sourceCropToProviderJpeg,
   sourceFullToProviderJpeg,
+  uploadedPhotoToRoomImageVariants,
 } = await import(`${roomImageContractBase}/room-image-transform-policy-v1.${roomImageContractExtension}`);
 export const {
   ROOM_IMAGE_PROMPT_POLICY_V1,

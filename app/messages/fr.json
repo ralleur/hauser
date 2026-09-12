@@ -370,6 +370,7 @@
   "room_background_replace": "Remplacer l'image",
   "room_background_restore": "Utiliser l'illustration par défaut",
   "room_background_saving": "Enregistrement de l'image …",
+  "room_background_saving_hint": "L’image est convertie — sur un petit appareil, cela prend un moment.",
   "room_background_saved": "L'image personnalisée est active.",
   "room_background_restored": "L'illustration par défaut est de nouveau active.",
   "room_background_failed": "L'image de la pièce n'a pas pu être enregistrée.",

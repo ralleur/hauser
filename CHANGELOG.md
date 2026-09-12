@@ -5,6 +5,16 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-09-12
+
+### Fixed
+
+- **Panel pages were empty in the published build.** In 0.15.0 the stage on
+  the wall panel shrank to the height of the top bar, so every page showed
+  only the background relief; the workshop build had the stylesheets in the
+  other order and did not show it. The frame rule now wins regardless of
+  bundle order.
+
 ## [0.15.0] - 2026-09-12
 
 ### Added

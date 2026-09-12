@@ -1358,6 +1358,7 @@
   "room_background_restored": "A ilustração predefinida está novamente ativa.",
   "room_background_saved": "A imagem própria está ativa.",
   "room_background_saving": "A guardar a imagem …",
+  "room_background_saving_hint": "A imagem está a ser convertida — em dispositivos pequenos demora um momento.",
   "demo_device_kugellampen": "Candeeiros esféricos",
   "demo_device_esstisch": "Mesa de jantar",
   "demo_device_kugel_tv": "Candeeiro esférico TV",

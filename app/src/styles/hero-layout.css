@@ -364,7 +364,12 @@
    stehen Uhr, Rad und Erscheinungsbild frei auf dem Bild, unten drei Pillen
    (Klima, Navigation, Sicherheit) wie am Telefon. Die übrigen Screens halten
    die Zonen frei und ihre Leisten behalten dort die Fläche der Ebene. */
-.app {
+/* Spezifischer als `.app` in app.css, absichtlich: im Produktionsbundle liegt
+   app.css als eigener Chunk hinter dieser Datei, in der Werkstatt davor. Bei
+   gleicher Spezifität gewann in der Produktion die Drei-Zeilen-Fassung, die
+   Bühne schrumpfte auf die Kopfzeile und jede Seite blieb leer (v0.15.0,
+   Owner-Befund 2026-09-12 am Panel). */
+[data-shell="panel"].app {
   --bar-top: calc(48px + env(safe-area-inset-top, 0px));
   --bar-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   position: relative;
