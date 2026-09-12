@@ -114,7 +114,7 @@ describe('Ambient-Kartenlayer — bestehende Semantik unverändert', () => {
   });
 
   it('lässt Kalender, Post-its, Einkaufsliste und Tageskommentar unverändert bedingt', () => {
-    expect(layer).toMatch(/\{#if weekHasEvents && !deepNight\}/);
+    expect(layer).toMatch(/\{#if weekHasEvents && !deepNight && settingsValues.ambientWeek\}/);
     expect(layer).toMatch(/\{#if postits\.items\.length && !deepNight\}/);
     expect(layer).toMatch(/\{#if shoppingSections\.length && !deepNight\}/);
     /* Der Tageskommentar hängt weiter am Schalter; die Hero-Zeile zeigt

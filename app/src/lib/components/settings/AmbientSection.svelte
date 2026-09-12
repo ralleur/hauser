@@ -6,7 +6,7 @@
      die ihn erzeugt. */
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
-  import { requestAmbient, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
+  import { originOf, requestAmbient, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
   import { parseAmbientMapCoordinate, type AmbientMapPlace } from '../../state/ambient-map-client.ts';
   import {
     settingsValues,
@@ -16,6 +16,7 @@
     setPresenceAwayDark,
     setPresenceGreeting,
     setAmbientWeather,
+    setAmbientWeek,
     setPresenceWake,
     setStandbyAfterMinutes,
     STANDBY_DEFAULT_MINUTES,
@@ -160,7 +161,7 @@
       <span class="settings-row-label">{m.sys_standby()}</span>
       <span class="settings-row-sub">{m.sys_standby_hint()}</span>
     </div>
-    <button class="secondary-btn pressable" type="button" onclick={() => requestAmbient()}>{m.sys_start_now()}</button>
+    <button class="secondary-btn pressable" type="button" onclick={(e) => requestAmbient(originOf(e.currentTarget))}>{m.sys_start_now()}</button>
   </div>
 
   <!-- Wer den Lockscreen nicht will, schaltet ihn hier ganz ab; wer ihn will,
@@ -227,6 +228,20 @@
             aria-checked={settingsValues.ambientWeather}
             aria-label={m.sys_ambient_weather()}
             onclick={() => setAmbientWeather(!settingsValues.ambientWeather)}>
+      <span class="settings-switch-knob"></span>
+    </button>
+  </div>
+
+  <div class="settings-row" data-setting-id="ambient-week">
+    <span class="settings-row-icon"><Icon name="i-calendar" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_ambient_week()}</span>
+      <span class="settings-row-sub">{m.sys_ambient_week_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.ambientWeek}
+            aria-label={m.sys_ambient_week()}
+            onclick={() => setAmbientWeek(!settingsValues.ambientWeek)}>
       <span class="settings-switch-knob"></span>
     </button>
   </div>

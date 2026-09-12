@@ -13,7 +13,6 @@ import type { SunValue } from '../adapter/types.ts';
 import {
   appearanceHeroPolicy,
   appearanceTheme,
-  nextAppearanceMode,
   resolveStoredAppearance,
   type AppearanceMode,
   type HeroBackgroundPolicy,
@@ -153,10 +152,6 @@ function syncInterfaceTheme(animate: boolean): void {
   appState.heroSun = heroSun;
   appState.heroDusk = dusk;
   setTheme(theme, animate, inDuskBand(dusk));
-}
-
-export function cycleAppearanceMode(): void {
-  setAppearanceMode(nextAppearanceMode(appearance.mode));
 }
 
 export function setAppearanceMode(mode: AppearanceMode): void {

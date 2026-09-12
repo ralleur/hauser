@@ -5,6 +5,72 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-12
+
+### Added
+
+- **Standby: the calendar can stay off the lock screen.** A new switch
+  under Appearance › Ambient & Standby, "Calendar in standby", removes the
+  week strip from the bottom of the lock screen; the wall then shows only
+  the clock, the weather and the notes. It stays on by default.
+
+### Fixed
+
+- **Room setup: adding a device.** Tapping into the search field now
+  glides it to the top instead of jumping. Tapping a type filter such as
+  "Light" works on the first tap; before, on the wall panel the list
+  snapped back and the tap was lost.
+
+### Changed
+
+- **Navigation: the marker glides.** The small gold underline under the
+  active tab is gone. A warm, translucent pill now sits behind the active
+  tab and glides to the next one when you switch, with a light spring that
+  overshoots a touch and settles; the icon of the active tab lifts slightly
+  and takes the gold. Reduced-motion settings switch without movement.
+- **Pages move with the bar.** Switching pages is no longer a plain
+  crossfade. The new page comes in a short way from the side its tab sits
+  on, slightly smaller, and settles; the old page eases out to the other
+  side. Going back runs the other way. Reduced-motion settings switch
+  without movement.
+- **Home comes back without a white flash.** Returning to Home from
+  another page shows the room picture from the first frame; before, the
+  stage was briefly white while the picture was decoded again.
+- **Touch: the lock screen opens instead of cutting.** A tap on the
+  standby screen no longer jumps to the next frame. A soft ring runs out
+  from the finger across the glass, the clock lifts a touch and blurs, the
+  week strip and notes sink away, and the pane fades to reveal the room
+  beneath — just under a second, only transform and opacity. Locking is the
+  mirror image: the pane settles in, the clock comes into focus from a soft
+  blur, the week strip and notes rise into place, and from the standby
+  button the ring runs the other way, drawing in to the button. The idle
+  timer settles the pane quietly without a ring. Reduced-motion settings
+  skip all of it.
+- **Phone shopping list: a quiet checklist.** The items carry the page now,
+  the interface steps back: a smaller title, store names as compact
+  headings with a small count beside them, items in regular weight, no
+  dotted separators. Every row is 48 px tall and tappable in full, with an
+  empty circle on the left that fills in the warm accent when you tap it;
+  the item then moves to a "Done" group at the bottom, where the store
+  stands small beside it and a tap brings it back. A short strip above the
+  navigation offers "Undo" for five seconds after each check. The plus
+  buttons are gone: each store ends in a muted "Add item" row that turns
+  into the input on tap and stays open for the next item after Enter. The
+  sync time sits small under the title; only an error stands out. Sort and
+  refresh are two icons in the top right, the active sort state in amber.
+- **Phone energy: the story behind the numbers.** The page opens with the
+  power right now, large and in watts when it is small, with solar and grid
+  draw or feed-in as two quiet lines beneath. The period control belongs to
+  the history below it, one row "Today · Week · Month · Total" with the
+  concrete range underneath, so it is clear that the live value stays
+  untouched and that "Week" is the last calendar week. Today shows the load
+  curve of the day as a warm area over 24 h and a comparison with yesterday
+  up to the same time of day; the other periods show compact numbers. A
+  "Top consumers" list with thin share bars replaces the two navigation
+  buttons; "Show all" unfolds the rest. Several plugs are called "Measured
+  devices", not a house load. The status sentence, the "grid flow" line
+  and its orange dot are gone; only missing data gets a note.
+
 ## [0.14.0] - 2026-09-11
 
 ### Added

@@ -240,6 +240,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   /* ── Darstellung ── */
   { id: 'theme-mode', section: 'appearance', get label() { return m.settings_entry_theme_mode_label(); },
     keywords: ['theme', 'dunkel', 'hell', 'dark', 'light', 'nacht', 'tag', 'automatisch', 'sonne', 'design', 'farben'] },
+  { id: 'card-style', section: 'appearance', get label() { return m.settings_entry_card_style_label(); },
+    keywords: ['karten', 'glas', 'milchglas', 'frosted', 'glass', 'stil', 'style', 'kacheln', 'transparent', 'raumblatt', 'bühne'] },
   { id: 'ui-language', section: 'appearance', get label() { return m.settings_entry_ui_language_label(); },
     keywords: ['sprache', 'language', 'deutsch', 'englisch', 'locale', 'übersetzung'] },
   { id: 'layout-config', section: 'appearance', get label() { return m.settings_entry_layout_config_label(); },

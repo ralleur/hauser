@@ -36,7 +36,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeCentralClimateEdit()}></div>
-  <div class="room-edit-panel overlay-panel" role="dialog" aria-modal="true"
+  <div class="room-edit-panel overlay-panel on-image" role="dialog" aria-modal="true"
        aria-label={m.central_climate_settings_title()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (centralClimateEdit.mode === 'closing' && e.target === e.currentTarget) finishCentralClimateEditClose(); }}>
     <header class="ld-header">

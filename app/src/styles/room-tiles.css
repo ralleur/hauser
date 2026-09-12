@@ -176,6 +176,18 @@
   transition-duration: var(--duration-fast);
 }
 
+/* Auf der Bühne („Alle Räume") wählt der Tipp nur den Raum — der Druck
+   darf leiser sein als am Telefon: weniger Hub, kein Federn, ein weiches
+   Zurückgleiten (Owner-Wunsch 2026-09-12). */
+.home-room-grid .phone-room-card {
+  transition: transform var(--duration-slow) var(--ease-out), opacity var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+.home-room-grid .phone-room-card:active,
+.home-room-grid .phone-room-card.is-pressed {
+  transform: scale(0.985);
+  transition-duration: var(--duration-quick);
+}
+
 .phone-room-card:focus-visible {
   outline: 2px solid var(--color-accent-cool);
   outline-offset: var(--space-1);

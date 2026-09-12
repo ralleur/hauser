@@ -1,0 +1,501 @@
+/* ── Flächen auf Bildern: dunkles Glas (Owner-Mock 2026-09-12) ──
+   Eine Token-Ebene, keine Stelle-für-Stelle-Gestaltung: Wer `.on-image`
+   trägt (Raumblatt am Telefon, Kontrollfläche auf der Bühne des Panels),
+   bekommt durchscheinende dunkle Flächen mit heller Schrift, in beiden Themes
+   gleich. Der Blur liegt auf jeder Karte, nicht auf dem Träger, damit das
+   Motiv dazwischen scharf bleibt.
+
+   Schalter: „Kartenstil“ unter Oberfläche & Bedienung. Steht die Wurzel auf
+   `data-card-style="standard"`, greift nichts hiervon und die Karten sind die
+   Standardkarten der Fläche (state/card-style.svelte.ts).
+
+   Die Vorstufe `:root:not([data-card-style="standard"])` erhöht zugleich die
+   Spezifität, damit diese Regeln über den shell-eigenen Kartenregeln liegen. */
+
+/* Die eine Glasscheibe: Bühnen-Fläche und Fußzeilen-Pillen tragen dieselbe
+   Dichte und denselben Blur — nur so wirken beide gleich frostig. */
+:root:not([data-card-style="standard"]) {
+  --glass-face: rgba(26, 28, 34, 0.42);
+  --glass-blur: blur(18px) saturate(1.2);
+}
+
+/* Dieselbe Token-Ebene tragen am Panel die Flächen der übrigen Screens
+   (Kalender, Notizen, Bibliothek, Ablage, System): sie liegen im Glasstil als
+   dunkle Scheiben auf dem Relief der Bühne (siehe unten, „Übrige Screens“). */
+:root:not([data-card-style="standard"]) :is(
+  .on-image,
+  [data-shell="panel"] :is(.calendar-screen, .screen-inner, .notes-panel),
+  :root:has([data-shell="panel"]) .notification-tile
+) {
+  --color-text-primary: #fff;
+  --color-text-secondary: rgba(255, 255, 255, 0.78);
+  --color-text-tertiary: rgba(255, 255, 255, 0.6);
+  --color-border: rgba(255, 255, 255, 0.2);
+  --overlay-border: rgba(255, 255, 255, 0.22);
+  --overlay-control-background: var(--glass-face);
+  --color-surface-1: rgba(255, 255, 255, 0.12);
+  --color-surface-2: rgba(255, 255, 255, 0.14);
+  --color-surface-3: rgba(255, 255, 255, 0.18);
+  /* Gewählte Raumkachel und aktive Betriebsart: dunkel und satt statt weiß. */
+  --color-surface-inverse: rgba(18, 20, 24, 0.85);
+  --color-text-on-inverse: #fff;
+  /* Die Schriftfarbe wird oben am Dokument berechnet — hier neu setzen, sonst
+     bleiben Titel und Zahlen im Erbe des hellen Themes dunkel. */
+  color: var(--color-text-primary);
+}
+
+/* Der Träger selbst: Blatt (Telefon) dunkel unterlegt, Kontrollfläche (Panel)
+   als Glas über dem Raumbild. */
+:root:not([data-card-style="standard"]) .room-sheet.on-image {
+  --overlay-panel-background: linear-gradient(160deg, #23262d, #101216);
+}
+:root:not([data-card-style="standard"]) .home-panel.on-image {
+  background: var(--overlay-control-background);
+  border-color: var(--overlay-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+:root:not([data-card-style="standard"]) .on-image .room-sheet-more,
+:root:not([data-card-style="standard"]) .on-image .light-tile,
+:root:not([data-card-style="standard"]) .on-image .room-controls .scene-row,
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-card,
+:root:not([data-card-style="standard"]) .on-image .camera-feed {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root:not([data-card-style="standard"]) .on-image .light-tile {
+  background: var(--overlay-control-background);
+  border-color: var(--overlay-border);
+}
+:root:not([data-card-style="standard"]) .on-image .light-tile-icon {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+:root:not([data-card-style="standard"]) .on-image .light-tile-name,
+:root:not([data-card-style="standard"]) .on-image .light-tile-state,
+:root:not([data-card-style="standard"]) .on-image .light-tile-value { color: #fff; }
+/* Szenen: die Pillen liegen gemeinsam in einer Glasleiste. */
+:root:not([data-card-style="standard"]) .on-image .room-controls .scene-row {
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: var(--overlay-control-background);
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .scene-btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 var(--space-3);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .scene-btn.is-active {
+  border-color: var(--color-accent-warm);
+  color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 22%, rgba(255, 255, 255, 0.08));
+}
+/* Klima: Glaskarte, Schritt-Tasten als helle Kreise, die aktive Betriebsart
+   steht dunkel und satt in der Glasleiste. */
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-card {
+  background: var(--overlay-control-background);
+  border-color: var(--overlay-border);
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-step {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode-selector {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode.is-active {
+  background: rgba(18, 20, 24, 0.82);
+  color: #fff;
+  box-shadow: none;
+}
+:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode.is-active .icon { color: #fff; }
+/* Der Platzhalter „Gerät hinzufügen“ hat keine eigene Fläche — auf dem Bild
+   bekommt er die Kartenebene, sonst verschwände sein Text im Motiv. */
+:root:not([data-card-style="standard"]) .on-image .light-tile.is-placeholder {
+  background: var(--overlay-control-background);
+  color: var(--color-text-primary);
+}
+/* Raumwahl auf der Bühne: Kacheln als helles Glas, der gewählte Raum dunkel
+   und satt — die Standard-Umkehrung (helle Füllung) wäre auf dem Motiv ein
+   weißer Block. */
+:root:not([data-card-style="standard"]) .on-image .room-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+:root:not([data-card-style="standard"]) .on-image .room-btn.is-active {
+  background: var(--color-surface-inverse);
+  color: var(--color-text-on-inverse);
+}
+:root:not([data-card-style="standard"]) .on-image .room-btn.is-active .room-btn-stats {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Auf der Kontrollfläche des Panels liegen die Karten auf dem Glas der
+   Fläche, nicht direkt auf dem Bild: dort sind sie helles Glas wie die
+   Raumwahl, sonst stapelt sich Dunkel auf Dunkel. */
+:root:not([data-card-style="standard"]) .home-panel.on-image .light-tile,
+:root:not([data-card-style="standard"]) .home-panel.on-image .room-controls .scene-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:not([data-card-style="standard"]) .home-panel.on-image .room-controls .scene-row {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:not([data-card-style="standard"]) .home-panel.on-image .room-controls .scene-btn.is-active {
+  background: color-mix(in srgb, var(--color-accent-warm) 22%, rgba(255, 255, 255, 0.08));
+}
+
+/* Die Pillen der Fußzeile: dunkles Glas mit heller Schrift — auf jedem Screen,
+   nicht nur auf der Bühne (Owner-Ansage 2026-09-12: Leisten überall gleich). */
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .tab-bar {
+  --color-text-primary: #fff;
+  --color-text-secondary: rgba(255, 255, 255, 0.78);
+  --color-text-tertiary: rgba(255, 255, 255, 0.62);
+  --color-border: rgba(255, 255, 255, 0.2);
+  --pill-face: var(--glass-face);
+  --pill-border: rgba(255, 255, 255, 0.22);
+  --pill-edge: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --overlay-border: rgba(255, 255, 255, 0.22);
+  --overlay-control-background: rgba(255, 255, 255, 0.14);
+  --color-surface-1: rgba(255, 255, 255, 0.12);
+  --color-surface-2: rgba(255, 255, 255, 0.14);
+  color: var(--color-text-primary);
+}
+/* Der Blur der Pillen braucht das Bild hinter der Leiste. Ihr
+   `view-transition-name` (hero-layout.css) macht die Fußzeile aber zu einer
+   eigenen Render-Ebene: der Backdrop-Filter sieht dann nur die leere Leiste
+   und blurrt nichts — die Pillen wirkten glatt statt milchig, auch wenn die
+   Werte stimmten. Im Glas-Kartenstil fällt der Name deshalb weg; die Leiste
+   wird beim Screenwechsel mit der Wurzel überblendet, was auf dem Bild
+   nicht auffällt. */
+:root:not([data-card-style="standard"]) .tab-bar { view-transition-name: none; }
+/* Alle drei Pillen tragen dieselbe Scheibe — ausdrücklich, nicht über die
+   geerbte Fassung, damit keine ihre eigene Deckkraft mitbringt. */
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .tab-nav,
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar,
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .tab-edge .climate-dock,
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-detail {
+  /* Dieselbe Scheibe wie die Gerätesteuerung auf der Bühne (Owner-Ansage
+     2026-09-12): ein Frost für alles, keine eigene Dichte für die Pillen. */
+  background: var(--glass-face);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .tab-edge .climate-dock .cd-key {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar .icon { color: var(--color-success); }
+
+/* „Alle Räume" hat kein Raumbild — Glas braucht aber Struktur dahinter, sonst
+   ist es nur eine graue Fläche. Die Bühne trägt deshalb ein ruhiges Relief,
+   hell und dunkel je nach Theme (Owner-Vorlagen 2026-09-12). Die Farbe
+   darunter bleibt, falls das Bild fehlt. */
+:root:not([data-card-style="standard"]) [data-shell="panel"].app:not([data-screen="system"]) {
+  background: url('/backgrounds/glass-light.webp') center / cover no-repeat var(--color-surface-0);
+}
+:root:not([data-card-style="standard"])[data-theme='dark'] [data-shell="panel"].app:not([data-screen="system"]) {
+  background-image: url('/backgrounds/glass-dark.webp');
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .home-stage.is-rooms-view {
+  background: transparent;
+}
+
+/* ── Übrige Screens am Panel (Owner-Ansage 2026-09-12) ──
+   Kopf- und Fußzeile schweben auch hier ohne eigene Fläche; die Screens
+   laufen bis unter die Leisten und halten oben und unten nur Innenabstand
+   frei, damit nichts unter der Uhr oder den Pillen startet. Kalender,
+   Bibliothek, Ablage und System sind eine durchgehende Milchglasscheibe über
+   dem Relief — keine Kanten. Energie und Notizen behalten ihr Bild, das nun
+   wie die Bühne die ganze Fläche füllt. */
+:root:not([data-card-style="standard"]) [data-shell="panel"]:not([data-screen="system"]) .status-bar,
+:root:not([data-card-style="standard"]) [data-shell="panel"]:not([data-screen="system"]) .tab-bar {
+  background: transparent;
+  border-color: transparent;
+}
+/* Kopfzeile auf jedem Screen wie auf der Bühne: helle Schrift mit Kante und
+   ein weicher dunkler Verlauf dahinter. */
+:root:not([data-card-style="standard"]) [data-shell="panel"]:not([data-screen="system"]) .status-bar {
+  --color-text-primary: #fff;
+  --color-text-secondary: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-primary);
+  text-shadow: 0 1px 2px rgba(8, 10, 13, 0.6), 0 2px 12px rgba(8, 10, 13, 0.45);
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"]:not([data-screen="system"]) .status-bar .mode-toggle-core { fill: #fff; }
+:root:not([data-card-style="standard"]) [data-shell="panel"]:not([data-screen="system"]) .status-bar::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: calc(var(--bar-top) + var(--space-8));
+  background: linear-gradient(to bottom, rgba(8, 10, 13, 0.5), rgba(8, 10, 13, 0.22) 55%, transparent);
+  pointer-events: none;
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .screen {
+  background: transparent;
+}
+/* System kennt keinen Glasstil (Owner-Ansage 2026-09-12): kein Relief, keine
+   schwebenden Leisten, keine Scheibe — es läuft immer wie im Standardstil.
+   Die Leisten- und Relief-Regeln oben nehmen den Screen deshalb aus. */
+:root:not([data-card-style="standard"]) [data-shell="panel"].app[data-screen="system"] {
+  background: var(--color-surface-0);
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .screen:not([data-screen="home"], [data-screen="system"]) {
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding-top: var(--bar-top);
+  padding-bottom: var(--bar-bottom);
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .screen:is([data-screen="calendar"], [data-screen="library"], [data-screen="library-detail"], [data-screen="ablage"]) {
+  background: var(--glass-face);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+/* Kalender: Uhrzeiten nicht mehr in der Quellenfarbe, die auf dunklem Glas
+   absäuft, sondern in der hellen Zweitschrift. */
+:root:not([data-card-style="standard"]) [data-shell="panel"] .cal-event-time {
+  color: var(--color-text-secondary);
+}
+/* Notizen: das Bild trägt der Screen selbst, bis unter die Leisten. */
+:root:not([data-card-style="standard"]) [data-shell="panel"] .screen[data-screen="notes"] {
+  background: url('/notes/notes-day.webp') center / cover no-repeat var(--color-surface-0);
+}
+:root:not([data-card-style="standard"])[data-theme='dark'] [data-shell="panel"] .screen[data-screen="notes"] {
+  background-image: url('/notes/notes-night.webp');
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .notes-screen {
+  background: transparent;
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .notes-panel {
+  background: var(--glass-face);
+  border-color: var(--overlay-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+/* Energie: die Szene liegt absolut in der Fläche und füllt sie deshalb bis
+   unter die Leisten; Zahlenwand und Tageskurve rücken aus deren Zonen. */
+:root:not([data-card-style="standard"]) [data-shell="panel"] .energy-wall {
+  top: calc(var(--bar-top) + var(--space-3));
+}
+:root:not([data-card-style="standard"]) [data-shell="panel"] .energy-daycurve {
+  bottom: calc(var(--bar-bottom) + var(--space-2));
+}
+/* Benachrichtigungen: dieselbe Scheibe. Die Ebene hängt außerhalb der Shell
+   direkt am Dokument, deshalb über `:has` an das Panel gebunden. */
+/* Die Scheibe liegt auf der Hülle, nicht auf der Kachel: die Hülle trägt die
+   Einblend-Animation, und ein Blur *unter* einem animierten Element sieht in
+   Chrome nur dessen leere Ebene — auf der Hülle selbst sieht er das Bild. */
+:root:not([data-card-style="standard"]):has([data-shell="panel"]) .notification-tile-shell {
+  border-radius: var(--radius-xl);
+  background: var(--glass-face);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root:not([data-card-style="standard"]):has([data-shell="panel"]) .notification-tile {
+  background: transparent;
+  border-color: var(--overlay-border);
+}
+:root:not([data-card-style="standard"]):has([data-shell="panel"]) .notification-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+/* Overlays (Gerätedetail, Raum bearbeiten, Szene, Klima, Energie-Verbraucher):
+   im Glas-Kartenstil dieselbe Scheibe wie die Gerätesteuerung auf der Bühne —
+   das Motiv bleibt dahinter sichtbar, der Schleier verdunkelt nur leicht und
+   blurrt nicht selbst, sonst wäre unter der Scheibe nichts mehr, was sie
+   brechen könnte (Owner-Ansage 2026-09-12). Alle Overlay-Flächen tragen
+   `on-image`, das Token-Set oben liefert Schrift und Kontrollflächen. */
+:root:not([data-card-style="standard"]) :is(.light-detail, .room-edit, .energy-load-overlay, .room-overlay) .overlay-scrim {
+  background: rgba(11, 14, 18, 0.35);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:not([data-card-style="standard"]) .overlay-panel.on-image {
+  background: var(--glass-face);
+  border-color: var(--overlay-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root:not([data-card-style="standard"]) .overlay-panel.on-image :where(
+  .ld-symbol, .ld-power, .ld-close, .elo-close,
+  .re-row, .re-btn, .re-search, .re-immersion-entry, .re-quick-entry, .re-metric-box,
+  .secondary-btn
+) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ── Sperrbildschirm im Glasstil (Owner-Mock 2026-09-12) ──
+   Warmer Sandgrund (nachts tiefes Braun), darauf der Stadtplan als weiche
+   Zeichnung: eine unscharfe Kopie über die ganze Fläche, darüber eine
+   schärfere, die zum Rand hin ausblendet — die Mitte ist klar, der Rand
+   verschwimmt. Zwei hauchfeine radiale Verläufe heben die Mitte und dunkeln
+   den Rand ab. Das Wochenband ist dieselbe Milchglasscheibe wie die
+   Gerätesteuerung. Einkaufszettel und Post-its bleiben, wie sie sind. */
+:root:not([data-card-style="standard"]) .ambient {
+  /* Karte: helles, entsättigtes Taupe auf warmem Creme, deutlich zurück-
+     genommen — Struktur, kein Motiv. */
+  --ambient-glass-ground: #ede4d6;
+  --ambient-glass-ink: #b8a996;
+  --ambient-glass-soft: 0.38;
+  --ambient-glass-sharp: 0.3;
+  --ambient-glass-divider: rgba(255, 255, 255, 0.16);
+  --ambient-glass-time: #e3c9a0;
+  --ambient-glass-vignette: rgba(80, 55, 30, 0.08);
+  /* Breite, sehr weiche Verläufe in Creme und Sand; die Aufhellung hinter
+     der Uhr läuft ohne sichtbare Grenze aus. Zuoberst eine feinkörnige
+     Textur (SVG-Rauschen, statisch). */
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.3  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>"),
+    radial-gradient(ellipse 80% 75% at 50% 45%, transparent 50%, var(--ambient-glass-vignette) 100%),
+    radial-gradient(ellipse 48% 42% at 50% 40%, rgba(255, 250, 240, 0.55) 0%, rgba(255, 250, 240, 0.25) 40%, transparent 78%),
+    radial-gradient(ellipse 70% 60% at 18% 85%, rgba(226, 208, 182, 0.35), transparent 70%),
+    radial-gradient(ellipse 60% 55% at 85% 15%, rgba(238, 226, 208, 0.4), transparent 70%),
+    var(--ambient-glass-ground);
+}
+:root:not([data-card-style="standard"])[data-theme='dark'] .ambient {
+  --ambient-glass-ground: #37312c;
+  --ambient-glass-ink: #8a7f73;
+  --ambient-glass-soft: 0.34;
+  --ambient-glass-sharp: 0.24;
+  --ambient-glass-divider: rgba(255, 255, 255, 0.14);
+  --ambient-glass-time: #e3c9a0;
+  --ambient-glass-vignette: rgba(0, 0, 0, 0.22);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.3  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>"),
+    radial-gradient(ellipse 80% 75% at 50% 45%, transparent 50%, var(--ambient-glass-vignette) 100%),
+    radial-gradient(ellipse 48% 42% at 50% 40%, rgba(255, 238, 215, 0.07) 0%, rgba(255, 238, 215, 0.03) 40%, transparent 78%),
+    radial-gradient(ellipse 70% 60% at 18% 85%, rgba(70, 58, 48, 0.5), transparent 70%),
+    radial-gradient(ellipse 60% 55% at 85% 15%, rgba(66, 58, 50, 0.5), transparent 70%),
+    var(--ambient-glass-ground);
+}
+/* Nachts dimmt app.css den Inhalt auf Schwarz herunter — auf dem braunen
+   Grund würde die Uhr darin versinken; im Mock steht sie cremeweiß. */
+:root:not([data-card-style="standard"])[data-theme='dark'] .ambient-content {
+  filter: none;
+  --color-text-primary: #f0e6d6;
+  --color-text-secondary: rgba(240, 230, 214, 0.8);
+  color: var(--color-text-primary);
+}
+/* Der Kartenknoten wird zum Träger zweier Kopien; die Maske wandert auf die
+   Kopien. Die Filter sind statisch und kosten nur beim Aufbau. */
+:root:not([data-card-style="standard"]) .ambient-map {
+  background: transparent;
+  opacity: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root:not([data-card-style="standard"]) .ambient-map::before,
+:root:not([data-card-style="standard"]) .ambient-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ambient-glass-ink);
+  -webkit-mask-image: var(--ambient-map-src);
+  mask-image: var(--ambient-map-src);
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+/* Beide Kopien weich: feine Nebenstraßen verschwimmen im Grund, die
+   dickeren Hauptstraßen und Flüsse bleiben als Struktur lesbar. */
+:root:not([data-card-style="standard"]) .ambient-map::before {
+  opacity: var(--ambient-glass-soft);
+  filter: blur(4px);
+}
+:root:not([data-card-style="standard"]) .ambient-map::after {
+  opacity: var(--ambient-glass-sharp);
+  filter: blur(1.2px);
+  -webkit-mask-image: var(--ambient-map-src), radial-gradient(ellipse 50% 50% at 50% 45%, #000 35%, transparent 100%);
+  mask-image: var(--ambient-map-src), radial-gradient(ellipse 50% 50% at 50% 45%, #000 35%, transparent 100%);
+  -webkit-mask-size: cover, 100% 100%;
+  mask-size: cover, 100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+/* Das Wochenband ist exakt die Scheibe der Gerätesteuerung: dunkles Glas,
+   helle Schrift, derselbe Blur — in beiden Themes (Owner-Ansage 2026-09-12). */
+:root:not([data-card-style="standard"]) .ambient-week {
+  --color-text-primary: #fff;
+  --color-text-secondary: rgba(255, 255, 255, 0.78);
+  --color-text-tertiary: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-primary);
+  gap: 0;
+  width: min(94vw, 1600px);
+  padding: var(--space-4) 0;
+  border: 1px solid var(--overlay-border, rgba(255, 255, 255, 0.22));
+  border-radius: var(--radius-2xl);
+  background: rgba(26, 28, 34, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  /* Dünner und weniger Blur als auf der Bühne: hinter dem Band liegt kein
+     Foto, sondern nur die feine Karte — bei 18 px löst sie sich vollständig
+     auf und das Band wirkt wie eine deckende Fläche. Bei 4 px bleibt ihre
+     Struktur als weiches Muster im Glas erkennbar. */
+  -webkit-backdrop-filter: blur(4px) saturate(1.2);
+  backdrop-filter: blur(4px) saturate(1.2);
+}
+:root:not([data-card-style="standard"]) .ambient-week-title { color: var(--color-text-primary); }
+:root:not([data-card-style="standard"]) .ambient-week-more { color: var(--color-text-tertiary); }
+:root:not([data-card-style="standard"]) .ambient-week-day {
+  min-height: 7lh;
+  padding: 0 var(--space-4);
+  border-top: 0;
+  border-left: 1px solid var(--ambient-glass-divider);
+}
+:root:not([data-card-style="standard"]) .ambient-week-day:first-child {
+  border-left: 0;
+}
+:root:not([data-card-style="standard"]) .ambient-week-head {
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+:root:not([data-card-style="standard"]) .ambient-week-name,
+:root:not([data-card-style="standard"]) .ambient-week-num {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+}
+:root:not([data-card-style="standard"]) .ambient-week-name { font-weight: var(--font-weight-semibold); }
+:root:not([data-card-style="standard"]) .ambient-week-num { color: var(--color-text-secondary); }
+/* Das Band beginnt heute: die erste Spalte trägt die warme Akzentfarbe. */
+:root:not([data-card-style="standard"]) .ambient-week-day:first-child .ambient-week-name,
+:root:not([data-card-style="standard"]) .ambient-week-day:first-child .ambient-week-num {
+  color: var(--color-accent-warm);
+}
+/* Spezifischer als die Quellenfarbe der Termine und die Dark-Regel in
+   app.css: im Glas-Sperrbildschirm sind alle Uhrzeiten warm. */
+:root:not([data-card-style="standard"])[data-theme] .ambient .ambient-week-time:not(.is-accent),
+:root:not([data-card-style="standard"]) .ambient .ambient-week-time {
+  color: var(--ambient-glass-time);
+  font-weight: var(--font-weight-medium);
+}

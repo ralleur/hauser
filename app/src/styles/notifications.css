@@ -12,7 +12,10 @@
 
 .notification-tile-shell {
   position: relative;
-  transform: translate3d(var(--notification-drag), 0, 0);
+  /* Im Glasstil trägt die Hülle selbst die Milchglasscheibe (on-image.css):
+     die Einblend-Animation macht sie zu einer eigenen Render-Ebene, ein Blur
+     auf der Kachel darunter sähe nur diese leere Ebene. */
+  transform: translate(var(--notification-drag), 0);
   transition: transform var(--duration-normal) var(--ease-out);
   touch-action: pan-y;
   pointer-events: auto;
@@ -176,8 +179,8 @@
 .notification-confetti-piece.piece-12 { --confetti-x: calc(0px - var(--space-8) - var(--space-5)); --confetti-y: calc(0px - var(--space-5)); --confetti-r: 405deg; }
 
 @keyframes notification-enter {
-  from { opacity: 0; transform: translate3d(120%, 0, 0); }
-  to { opacity: 1; transform: translate3d(var(--notification-drag), 0, 0); }
+  from { opacity: 0; transform: translate(120%, 0); }
+  to { opacity: 1; transform: translate(var(--notification-drag), 0); }
 }
 
 @keyframes notification-pop {

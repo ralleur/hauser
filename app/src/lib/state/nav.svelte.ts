@@ -58,7 +58,16 @@ export const nav = $state({
   screen: 'home' as ScreenId,
   entering: null as ScreenId | null, // Screen mit anim-fade-in
   leaving: null as ScreenId | null,  // Screen mit anim-fade-out (bleibt is-active)
+  /* Richtung des Wechsels entlang der Tab-Leiste: 1 nach rechts, -1 nach
+     links. Der neue Screen kommt von dieser Seite herein, der alte weicht
+     zur anderen — so folgt die Bewegung der Leiste (Owner-Idee 2026-09-12). */
+  direction: 1 as 1 | -1,
 });
+
+function tabIndexOf(screen: ScreenId): number {
+  const tab = SCREENS.find((s) => s.id === screen)?.tab;
+  return NAV_TABS.findIndex((t) => t.id === tab);
+}
 
 export type PhoneTarget =
   | { area: 'home' | 'calendar' }
@@ -92,6 +101,7 @@ export function activeTab(): string {
 export function showScreen(next: ScreenId) {
   const configured = normalizeScreen(next);
   if (nav.leaving !== null || configured === nav.screen) return; // navigating-Guard
+  nav.direction = tabIndexOf(configured) >= tabIndexOf(nav.screen) ? 1 : -1;
   nav.leaving = nav.screen;
   nav.entering = configured;
   nav.screen = configured;

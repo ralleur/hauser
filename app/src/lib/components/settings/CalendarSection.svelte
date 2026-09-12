@@ -27,6 +27,7 @@
     type MomentHolidayKey,
   } from '../../state/moment-holidays.ts';
   import { momentHolidayLabel } from '../../state/moment-copy.ts';
+  import { openSetting } from '../../state/settings.svelte.ts';
 
   let calSelection = $state<string[] | null>(selectedCalendarIds());
   let reminderSelection = $state<string[]>(selectedReminderListIds() ?? []);
@@ -102,6 +103,16 @@
         </button>
       </div>
     {/each}
+    <!-- Abkürzung: das iCloud-Konto wird unter Verbindungen · Dienste
+         angelegt — hier sucht man es sonst vergeblich (Owner 2026-09-12). -->
+    <div class="settings-row">
+      <span class="settings-row-icon"><Icon name="i-cloud-outline" cls="icon icon-md" /></span>
+      <div class="settings-row-text">
+        <span class="settings-row-label">{m.settings_entry_icloud_setup_label()}</span>
+        <span class="settings-row-sub">{m.sys_calendar_icloud_shortcut_hint()}</span>
+      </div>
+      <button class="secondary-btn pressable" type="button" onclick={() => openSetting('icloud-setup')}>{m.sys_calendar_icloud_shortcut_open()}</button>
+    </div>
     {#if calSelection !== null}
       <div class="settings-row">
         <span class="settings-row-icon"><Icon name="i-restore" cls="icon icon-md" /></span>

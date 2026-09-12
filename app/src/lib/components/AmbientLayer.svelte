@@ -69,13 +69,14 @@
   let contentEl: HTMLElement;
   let clockEl = $state<HTMLElement>();
 
-  function showAmbient(previewDeepNight = false, fromSettings = false) {
+  function showAmbient(previewDeepNight = false, fromSettings = false, origin: { x: number; y: number } | null = null) {
     if (active) return;
     // Laufende Wiedergabe hemmt den Idle-Timeout — Film schauen ist kein
     // Leerlauf (Phase 4 übernimmt das die Player-Aktivität)
     if (!previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
     deepNightPreview = previewDeepNight;
     settingsPreview = fromSettings;
+    settleFrom(origin);
     active = true;
     setAmbientActive(true);
     void refreshFamilyCalendar();
@@ -90,6 +91,44 @@
       const y = Math.round(Math.random() * 16 - 8);
       contentEl.style.transform = `translate(${x}px, ${y}px)`;
     }, 150_000);
+  }
+
+  /* ── Aufwachen mit Welle (Owner-Idee 2026-09-12): kein harter Schnitt.
+     Vom Finger läuft ein weicher Ring über das Glas, die Uhr hebt sich leicht
+     an und wird unscharf, dann gibt die Scheibe den Blick frei. Nur Transform
+     und Opacity plus ein einmaliger Blur — reiner Compositor-Job. ── */
+  let waking = $state(false);
+  let wakeX = $state(0);
+  let wakeY = $state(0);
+  let wakeTimer: ReturnType<typeof setTimeout> | undefined;
+  const WAKE_MS = 920;
+
+  function rippleFrom(e: PointerEvent) {
+    clearTimeout(settleTimer);
+    settling = false;
+    ring = 'out';
+    wakeX = e.clientX;
+    wakeY = e.clientY;
+    waking = true;
+    clearTimeout(wakeTimer);
+    wakeTimer = setTimeout(() => { waking = false; ring = null; }, WAKE_MS);
+  }
+
+  /* Das Gegenstück beim Sperren: die Scheibe legt sich auf. Uhr, Band und
+     Zettel kommen aus leichter Unschärfe scharf; beim Knopf zieht sich der
+     Ring zum Knopf zusammen, der Timer legt die Scheibe nur still auf. */
+  let settling = $state(false);
+  let ring = $state<'out' | 'in' | null>(null);
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  const SETTLE_MS = 1000;
+
+  function settleFrom(origin: { x: number; y: number } | null) {
+    clearTimeout(wakeTimer);
+    waking = false;
+    if (origin) { wakeX = origin.x; wakeY = origin.y; ring = 'in'; } else ring = null;
+    settling = true;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => { settling = false; ring = null; }, SETTLE_MS);
   }
 
   function wakeAmbient() {
@@ -111,6 +150,7 @@
     /* Beide Vorschauen wecken an Ort und Stelle: sie wurden aus den
        Einstellungen gestartet, dorthin gehört der Benutzer zurück. Nur der
        echte Standby führt in die getippte Zone. */
+    rippleFrom(e);
     if (deepNightPreview || settingsPreview) {
       wakeAmbient();
       return;
@@ -183,6 +223,7 @@
     showAmbient(
       ambientRequest.mode === 'deep-night-preview',
       ambientRequest.mode === 'preview',
+      ambientRequest.origin,
     );
   });
 
@@ -379,7 +420,14 @@
      class:has-side-notes={shoppingSections.length > 0 || postits.items.length > 0}
      class:deep-night={deepNight}
      class:is-away-dark={awayDark}
+     class:is-waking={waking}
+     class:is-settling={settling}
+     style:--wake-x={`${wakeX}px`}
+     style:--wake-y={`${wakeY}px`}
      onpointerdown={wakeTo}>
+  {#if ring}
+    <span class="ambient-wake-ripple" class:is-inward={ring === 'in'} aria-hidden="true"></span>
+  {/if}
   <!-- Genau ein dekorativer Kartenlayer, ganz hinten: das fertige Serverasset
        dient als Maske über der primären Schriftfarbe. Kein Inline-SVG, keine
        Geometrie im Browser, kein Pointer-Ziel — Light und Dark teilen sich
@@ -445,7 +493,7 @@
        ganz links; leere Tage behalten ihre Spalte, damit die Woche als Raster
        lesbar bleibt. Bewusst außerhalb von .ambient-content: es sitzt fest am
        unteren Bildschirmrand, während Uhr & Begrüßung mittig zentriert bleiben. -->
-  {#if weekHasEvents && !deepNight}
+  {#if weekHasEvents && !deepNight && settingsValues.ambientWeek}
     <section class="ambient-week" bind:this={weekEl} aria-label="Familientermine der kommenden Tage">
       {#each ambientWeek as day (day.key)}
         <div class="ambient-week-day">

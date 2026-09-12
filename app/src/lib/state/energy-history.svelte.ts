@@ -32,6 +32,9 @@ const DAY_MS = 86_400_000;
 
 export const energyHistory = $state({
   curve: null as EnergyCurvePoint[] | null,
+  /* Gestern in derselben Auflösung: der Vergleich „bis zur gleichen Uhrzeit"
+     am Telefon braucht beide Tage aus derselben Quelle. */
+  yesterday: null as EnergyCurvePoint[] | null,
   periods: { week: null, month: null, total: null } as Record<HistoryPeriod, EnergyPeriodTotals | null>,
   updatedAt: 0,
   loading: false,
@@ -148,14 +151,16 @@ async function loadPeriod(period: HistoryPeriod): Promise<EnergyPeriodTotals | n
   return Object.values(totals).some((value) => value !== null) ? totals : null;
 }
 
-async function loadCurve(): Promise<EnergyCurvePoint[] | null> {
+async function loadCurve(dayOffset = 0): Promise<EnergyCurvePoint[] | null> {
   const loadIds = ids(ENERGY_SENSORS.load);
   const prodIds = ids(ENERGY_SENSORS.pv);
   if (!loadIds.length && !prodIds.length) return null;
   const dayStart = new Date();
   dayStart.setHours(0, 0, 0, 0);
+  dayStart.setDate(dayStart.getDate() + dayOffset);
+  const end = dayOffset < 0 ? new Date(dayStart.getTime() + DAY_MS) : undefined;
   const buckets = await runtime.getStatistics({
-    statisticIds: [...loadIds, ...prodIds], start: dayStart, period: '5minute', types: ['mean'],
+    statisticIds: [...loadIds, ...prodIds], start: dayStart, ...(end ? { end } : {}), period: '5minute', types: ['mean'],
   });
   const curve = curveFromBuckets(buckets, loadIds, prodIds, dayStart.getTime(), toKw);
   return curve.length ? curve : null;
@@ -167,10 +172,11 @@ export function refreshEnergyHistory(): Promise<void> {
   energyHistory.loading = true;
   inflight = (async () => {
     try {
-      const [curve, week, month, total] = await Promise.all([
-        loadCurve(), loadPeriod('week'), loadPeriod('month'), loadPeriod('total'),
+      const [curve, yesterday, week, month, total] = await Promise.all([
+        loadCurve(), loadCurve(-1), loadPeriod('week'), loadPeriod('month'), loadPeriod('total'),
       ]);
       energyHistory.curve = curve;
+      energyHistory.yesterday = yesterday;
       energyHistory.periods = { week, month, total };
       energyHistory.updatedAt = Date.now();
     } catch { /* Ohne Antwort bleibt der letzte Stand — oder nichts. */ }
@@ -207,6 +213,11 @@ export function energyCurve(): EnergyCurvePoint[] | null {
   const sim = simulation.energy;
   if (sim) return sim.configured ? simulatedCurve(sim.generation ? sim.pv : null, sim.load) : null;
   return energyHistory.curve;
+}
+
+/** Kurve von gestern, nur gemessen: der Simulator kennt keinen Vortag. */
+export function energyYesterdayCurve(): EnergyCurvePoint[] | null {
+  return simulation.energy ? null : energyHistory.yesterday;
 }
 
 /** Summen eines Zeitraums: simuliert oder aus der Statistik. */

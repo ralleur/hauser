@@ -8,6 +8,7 @@
   import { longpress } from '../actions/longpress.ts';
   import { dragreorder } from '../actions/dragreorder.ts';
   import { SHEET_SWIPE_IGNORE, swipedown } from '../actions/swipedown.ts';
+  import { swipeleft } from '../actions/swipeleft.ts';
   import { appState } from '../state/app.svelte.ts';
   import { roomEdit, closeRoomEdit, finishRoomEditClose } from '../state/overlay.svelte.ts';
   import { openSceneEdit, scenes } from '../state/scene-manager.svelte.ts';
@@ -21,6 +22,7 @@
     categoryOf, CATEGORY_LABELS, type DeviceCategory, type EntityCatalogItem,
   } from '../state/device-config.ts';
   import { m } from '../../paraglide/messages.js';
+  import { prefersReducedMotion } from '../motion/index.ts';
   import {
     removeLightPlacement,
     roomLightPlacements,
@@ -180,6 +182,7 @@
     query = '';
     searchOpen = false;
     categoryFilter = null;
+    releaseSearchLift();
     view = requestedView;
     selectedLightId = '';
     backgroundMessage = null;
@@ -295,6 +298,40 @@
       && document.querySelector('[data-shell="phone"]') !== null;
   });
 
+  /* Wisch nach links oder rechts wechselt den Raum (Owner-Wunsch 2026-09-12),
+     mit derselben Toleranz wie im Raumblatt; der Inhalt klebt am Finger, der
+     nächste Raum gleitet von der Wischseite herein und beginnt bei seinen
+     Geräten. Im Lampen-Editor bleibt der Finger dem Bild vorbehalten. */
+  let dragLeft = $state(0);
+  let dragRight = $state(0);
+  let dragging = $state(false);
+  const dragX = $derived(dragLeft + dragRight);
+  let slideFrom = 0;
+  const roomSwipeEnabled = $derived(onPhone && view !== 'immersion');
+  function endRoomDrag(): void { dragLeft = 0; dragRight = 0; dragging = false; }
+  function switchRoom(delta: 1 | -1): void {
+    const ids = appState.rooms.map((entry) => entry.id);
+    const index = ids.indexOf(roomEdit.roomId);
+    if (index < 0 || ids.length < 2) return;
+    slideFrom = delta;
+    view = 'devices';
+    selectedLightId = '';
+    query = '';
+    categoryFilter = null;
+    releaseSearchLift();
+    if (panelEl) panelEl.scrollTop = 0;
+    roomEdit.roomId = ids[(index + delta + ids.length) % ids.length];
+  }
+  function roomEnter(node: HTMLElement) {
+    const from = slideFrom * 40;
+    slideFrom = 0;
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return {
+      duration: reduced || from === 0 ? 0 : 180,
+      css: (t: number) => `opacity:${t};transform:translateX(${(1 - t) * from}px)`,
+    };
+  }
+
   /* Suchen heißt tippen, und die Tastatur nimmt die untere Hälfte des Bildes.
      Beim Fokus rückt das Suchfeld deshalb an den oberen Rand des Panels —
      darunter bleibt genug Platz für die Vorschläge. Fehlt dem Panel dafür
@@ -309,16 +346,28 @@
     const panel = panelEl;
     const field = searchEl;
     if (!panel || !field) return;
-    /* Erst den geliehenen Auslauf zurückgeben, dann neu rechnen: sonst misst
-       der zweite Anlauf gegen den Platz, den der erste schon geschaffen hat,
-       und kürzt ihn auf die verbliebene Reststrecke zusammen. */
-    panel.style.paddingBottom = '';
     const distance = field.getBoundingClientRect().top - panel.getBoundingClientRect().top;
-    if (distance <= 0) return;
-    const rest = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
-    if (distance > rest) panel.style.paddingBottom = `${distance - rest}px`;
-    panel.scrollTop += distance;
-    searchAnchor = panel.scrollTop;
+    if (distance <= 1) return;
+    /* Der bereits geliehene Auslauf wird herausgerechnet statt zurückgegeben:
+       ein Zurückgeben mitten in der weichen Fahrt ließe die Liste springen.
+       Gemessen wird gegen den echten Inhalt, der Auslauf ersetzt sich. */
+    const loaned = Number.parseFloat(panel.style.paddingBottom) || 0;
+    const rest = panel.scrollHeight - loaned - panel.scrollTop - panel.clientHeight;
+    panel.style.paddingBottom = distance > rest ? `${distance - rest}px` : '';
+    const top = panel.scrollTop + distance;
+    /* Weich statt hart (Owner-Befund 2026-09-12): das Feld fährt nach oben. */
+    panel.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    searchAnchor = top;
+  }
+
+  /* Der geliehene Auslauf geht erst zurück, wenn die Suche wirklich vorbei
+     ist — nicht beim Blur: am Wandpanel bekommt eine getippte Filterpille
+     keinen Fokus, `relatedTarget` ist dann leer, und das Zurückgeben verschob
+     den Abschnitt zwischen Drücken und Loslassen; der erste Tipp ging ins
+     Leere und die Ansicht sprang zurück (Owner-Befund 2026-09-12). */
+  function releaseSearchLift(): void {
+    if (panelEl) panelEl.style.paddingBottom = '';
+    searchAnchor = 0;
   }
 
   function onSearchFocus(): void {
@@ -339,6 +388,24 @@
     categoryFilter = categoryFilter === category ? null : category;
   }
 
+  /* Am Wandpanel (Fully Kiosk, Android-WebView) nimmt die Tastatur die
+     untere Hälfte und verkleinert dabei das Layout. Ein Tipp auf eine Pille
+     oder einen Vorschlag nahm dem Suchfeld den Fokus, die Tastatur klappte
+     zu, die Fläche wuchs, und die Liste rutschte nach unten — der Tipp ging
+     dabei ins Leere (Owner-Befund 2026-09-12, zweiter Anlauf). Der Fokus
+     bleibt deshalb im Feld: kein Fokuswechsel beim Drücken, der Klick kommt
+     trotzdem an. */
+  function keepSearchFocus(event: PointerEvent): void {
+    if (document.activeElement === searchEl) event.preventDefault();
+  }
+
+  /* Klappt die Tastatur trotzdem zu (Zurück-Taste), während das Feld den
+     Fokus hat, wächst die Fläche und das Feld sackt ab — dann fährt es
+     wieder hoch. */
+  function onViewportResize(): void {
+    if (searchOpen && document.activeElement === searchEl) liftSearchField();
+  }
+
   /* Der geliehene Auslauf darf erst zurück, wenn die Suche wirklich verlassen
      wird. Wandert der Fokus nur auf eine Filterpille oder einen Vorschlag,
      bliebe der Griff sonst ins Leere: das Zurückgeben verschiebt den Abschnitt
@@ -346,27 +413,39 @@
   function onSearchBlur(event: FocusEvent): void {
     const next = event.relatedTarget;
     if (next instanceof HTMLElement && next.closest('.re-add-section')) return;
-    if (panelEl) panelEl.style.paddingBottom = '';
-    searchAnchor = 0;
+    /* Ohne Ziel (Tipp am Panel) bleibt der Auslauf stehen; nur ein Fokus
+       außerhalb des Abschnitts — Tastatur, anderes Feld — beendet die Suche. */
+    if (!(next instanceof HTMLElement)) return;
+    releaseSearchLift();
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} onresize={onViewportResize} />
 
-<div class="room-edit" class:is-open={roomEdit.mode === 'open'}
+<div class="room-edit" class:is-open={roomEdit.mode === 'open'} class:is-phone={onPhone}
      class:is-closing={roomEdit.mode === 'closing'} hidden={roomEdit.mode === 'hidden'}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
-  <div class="room-edit-panel overlay-panel" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
+  <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
        aria-label={m.room_edit_devices_label({ room: room?.name ?? '' })} tabindex="-1" bind:this={panelEl}
        use:swipedown={{ onSwipe: () => closeRoomEdit(), surface: () => panelEl,
                         atTop: (t) => Boolean(t?.closest('.ld-header'))
                                       || (panelEl?.scrollTop ?? 0) <= searchAnchor,
                         ignore: SHEET_SWIPE_IGNORE, enabled: onPhone }}
+       use:swipeleft={{ onSwipe: () => switchRoom(1), move: false, threshold: 48, angle: 60,
+                        enabled: roomSwipeEnabled, ignore: SHEET_SWIPE_IGNORE,
+                        onDrag: (travel) => { dragging = true; dragLeft = travel; },
+                        onDragEnd: endRoomDrag }}
+       use:swipeleft={{ onSwipe: () => switchRoom(-1), move: false, threshold: 48, angle: 60, direction: 'right',
+                        enabled: roomSwipeEnabled, ignore: SHEET_SWIPE_IGNORE,
+                        onDrag: (travel) => { dragging = true; dragRight = travel; },
+                        onDragEnd: endRoomDrag }}
        onanimationend={(e) => { if (roomEdit.mode === 'closing' && e.target === e.currentTarget) finishRoomEditClose(); }}>
     {#if room}
       {#key room.id}
+        <div class="re-room" class:is-following={dragging} in:roomEnter
+             style:transform={dragX === 0 ? undefined : `translateX(${dragX * 0.5}px)`}>
         <header class="ld-header">
           {#if view !== 'devices'}
             <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
@@ -467,7 +546,7 @@
                    onfocus={onSearchFocus} onblur={onSearchBlur} oninput={onSearchInput}
                    aria-label={m.room_search_device()} autocomplete="off" spellcheck="false" />
             {#if searchOpen && !query.trim() && categoryPills.length > 0}
-              <div class="re-filters" role="group" aria-label={m.room_add_device()}>
+              <div class="re-filters" role="group" aria-label={m.room_add_device()} onpointerdown={keepSearchFocus}>
                 {#each categoryPills as pill (pill.category)}
                   <button class="re-filter pressable" type="button"
                           class:is-active={categoryFilter === pill.category}
@@ -483,7 +562,7 @@
               {#if suggestions.length === 0}
                 <p class="re-empty">{m.room_no_matches()}</p>
               {:else}
-                <ul class="re-list re-suggest">
+                <ul class="re-list re-suggest" onpointerdown={keepSearchFocus}>
                   {#each suggestions as item (item.entityId)}
                     {@const origin = locatedIn(item.entityId)}
                     <li>
@@ -677,6 +756,7 @@
               </div>
             </section>
           {/if}
+        </div>
         </div>
       {/key}
     {/if}

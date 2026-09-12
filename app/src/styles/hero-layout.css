@@ -151,7 +151,7 @@
 .home-panels {
   --panels-width: max(var(--slot-min), min(var(--layout-total), calc(100% - var(--hero-min) - var(--space-8))));
   position: absolute;
-  inset: var(--space-4) auto var(--space-4) var(--space-4);
+  inset: calc(var(--bar-top) + var(--space-3)) auto calc(var(--bar-bottom) + var(--space-3)) var(--space-4);
   z-index: 2;
   width: var(--panels-width);
   max-width: calc(100% - var(--hero-min) - var(--space-8));
@@ -358,15 +358,90 @@
 /* ── Globales Klima-Dock in der Bottom-Leiste (B-13, Vorbild Hauser) ──
    Zentrale Synchron-Steuerung links in der TabBar → aus JEDEM Screen erreichbar.
    Die Tabs bleiben mittig, weil beide Rand-Zonen (.tab-edge) gleich breit sind. */
+/* ── Rahmen ohne Leisten (Owner-Wunsch 2026-09-12) ──
+   Kopf- und Fußzeile liegen als schwebende Ebenen über der Bühne statt als
+   Grid-Zeilen mit eigener Fläche: die Bühne reicht bis an die Ränder, oben
+   stehen Uhr, Rad und Erscheinungsbild frei auf dem Bild, unten drei Pillen
+   (Klima, Navigation, Sicherheit) wie am Telefon. Die übrigen Screens halten
+   die Zonen frei und ihre Leisten behalten dort die Fläche der Ebene. */
 .app {
-  /* Die Bottom-Leiste trägt links die Klima-Pille (Wert, Bereich, Ist-Wert)
-     und braucht dafür mehr Höhe als die reine Tab-Zeile. */
-  grid-template-rows: 48px 1fr 76px;
+  --bar-top: calc(48px + env(safe-area-inset-top, 0px));
+  --bar-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  position: relative;
+  grid-template-rows: minmax(0, 1fr);
+}
+.status-bar,
+.tab-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+/* Die Bühne ist ein eigener Stapel: ihre Ebenen (Lichtschein, Kamera,
+   Konfektionsfläche) bleiben unter den schwebenden Leisten, auch wenn sie
+   eigene z-Indizes tragen. */
+.screens { isolation: isolate; }
+.status-bar { top: 0; height: var(--bar-top); }
+.tab-bar { bottom: 0; height: var(--bar-bottom); }
+/* Die übrigen Screens beginnen unter der Kopf- und enden über der Fußzeile —
+   als Zone, nicht als Innenabstand, damit auch absolut gesetzte Inhalte
+   (Energie, Kalender) frei bleiben. */
+.screen:not([data-screen="home"]) {
+  top: var(--bar-top);
+  bottom: var(--bar-bottom);
+}
+/* Auf der Bühne keine Fläche: die Schrift trägt Kante und Schein wie der
+   Raumname auf der Telefon-Kachel, in beiden Themes hell. */
+.app[data-screen="home"] .status-bar {
+  --color-text-primary: #fff;
+  --color-text-secondary: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-primary);
+  background: transparent;
+  border-bottom: 0;
+  text-shadow: 0 1px 2px rgba(8, 10, 13, 0.6), 0 2px 12px rgba(8, 10, 13, 0.45);
+}
+.app[data-screen="home"] .status-bar .mode-toggle-core { fill: #fff; }
+/* Ein ganz weicher dunkler Verlauf hinter der Kopfzeile hebt Uhr und Rad
+   auch von hellen Motiven ab; er läuft über die Zone hinaus sanft aus. */
+.app[data-screen="home"] .status-bar::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: calc(var(--bar-top) + var(--space-8));
+  background: linear-gradient(to bottom, rgba(8, 10, 13, 0.5), rgba(8, 10, 13, 0.22) 55%, transparent);
+  pointer-events: none;
+}
+.app[data-screen="home"] .tab-bar {
+  background: transparent;
+  border-top: 0;
 }
 .tab-bar {
   justify-content: space-between;
-  align-items: stretch;
+  align-items: center;
   padding: 0 var(--space-4);
+}
+/* Navigation als Pille in der gehobenen Fassung der Klima-Pille. */
+.tab-nav {
+  flex: 0 1 auto;
+  height: 60px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--pill-border);
+  border-radius: var(--radius-full);
+  background: var(--pill-face);
+  box-shadow: var(--pill-edge);
+}
+.tab-nav .tab {
+  min-width: 84px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+}
+.security-bar {
+  border-color: var(--pill-border);
+  border-radius: var(--radius-full);
+  background: var(--pill-face);
+  box-shadow: var(--pill-edge);
+  height: 60px;
+  padding: 0 var(--space-5);
 }
 .tab-edge {
   flex: 0 0 296px;
@@ -376,27 +451,13 @@
 .tab-edge-start { justify-content: flex-start; }
 .tab-edge-end { justify-content: flex-end; }
 
-/* In der Bottom-Leiste gilt das Maß ihrer Nachbarn (.security-bar, Tabs):
-   eine Fläche, eine Haarlinie, kein Relief. Die gehobene Fassung
-   (--pill-face/--pill-edge) bleibt der Phone-Zeile vorbehalten, wo die Pille
-   frei auf dem Screen-Grund liegt statt in einer eigenen Leiste. */
-.tab-edge .climate-dock {
-  border-color: var(--color-border);
-  background: var(--color-surface-1);
-  box-shadow: none;
-}
-
-.tab-edge .climate-dock .cd-key {
-  border-color: var(--color-border);
-  background: var(--color-surface-2);
-  box-shadow: none;
-}
+/* Die Klima-Pille liegt frei wie am Telefon und behält ihre gehobene Fassung. */
+.tab-edge .climate-dock { width: auto; }
 .tab-nav {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 /* ── Layout-Konfiguration ── */
@@ -625,7 +686,10 @@
   box-sizing: border-box;
   display: flex;
   gap: var(--space-4);
-  padding: var(--space-4);
+  /* Die Leisten schweben seit dem rahmenlosen Panel über der Bühne; hier gibt
+     es kein Bild, das darunter weiterlaufen dürfte — Kontrollfläche und
+     Kacheln beginnen deshalb unter der Uhr und enden über den Pillen. */
+  padding: calc(var(--bar-top) + var(--space-4)) var(--space-4) calc(var(--bar-bottom) + var(--space-4));
   background: var(--color-surface-0);
 }
 
@@ -660,6 +724,12 @@
 .home-room-grid > * {
   pointer-events: auto;
 }
+
+/* Raumwechsel in der Kontrollfläche (Owner-Wunsch 2026-09-12): HomeScreen
+   blendet alten und neuen Block per Svelte-Transition über. Damit dabei
+   nichts springt, liegen beide Seiten in derselben Rasterzelle. */
+.panel-controls { display: grid; align-content: start; }
+.panel-controls-page { grid-area: 1 / 1; min-width: 0; }
 
 /* Die Kontrollfläche trägt in dieser Ansicht den Raumnamen selbst — die
    Raumauswahl ist weg, irgendwo muss stehen, wessen Szenen das sind. */
@@ -752,7 +822,7 @@
     flex: none;
     box-sizing: border-box;
     height: var(--panel-hero-band);
-    padding: var(--space-4) var(--space-4) 0;
+    padding: calc(var(--bar-top) + var(--space-4)) var(--space-4) 0;
     grid-auto-rows: minmax(var(--touch-preferred), 1fr);
   }
 
@@ -762,7 +832,7 @@
     inset: auto;
     flex: 1 1 0;
     min-height: 0;
-    margin: var(--space-3) var(--space-4) var(--space-4);
+    margin: var(--space-3) var(--space-4) calc(var(--bar-bottom) + var(--space-4));
   }
 
   /* Die Raumauswahl verlässt die Karte und schwebt über dem Bild. Damit sie
@@ -834,7 +904,8 @@
 }
 
 @container (max-width: 132px) {
-  .security-bar > span {
+  /* Nur der Text — das Symbol ist ebenfalls ein span und muss bleiben. */
+  .security-bar > span:not(.icon) {
     display: none;
   }
 
@@ -860,9 +931,30 @@
     flex: 0 1 auto;
     min-width: 0;
   }
+  /* Der rechte Rand ist ein Größen-Container und meldet deshalb keine
+     Inhaltsbreite — ohne festes Maß schrumpfte er auf null und „Alles ruhig"
+     wurde ein senkrechter Strich. */
+  [data-shell="panel"] .tab-edge-end {
+    flex: 0 0 200px;
+  }
 
+  /* Ohne linken Rand rutschte die Navigation an den linken Rand — die
+     Zentrierung lebte von zwei gleich breiten Zonen. Ein Raster mit zwei
+     gleichen Außenspalten hält die Pille in der Mitte; die rechte Zone
+     schrumpft mit und lässt „Alles ruhig" per Container-Abfrage zum Symbol
+     werden, sobald es eng wird. */
   [data-shell="panel"] .tab-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
     gap: var(--space-2);
     padding: 0 var(--space-3);
+  }
+  [data-shell="panel"] .tab-nav { grid-column: 2; }
+  /* Volle Spaltenbreite, nicht Inhaltsbreite: die Zone ist ein Größen-
+     Container und hätte sonst gar keine — die Pille würde zum Strich. */
+  [data-shell="panel"] .tab-edge-end {
+    grid-column: 3;
+    width: 100%;
   }
 }

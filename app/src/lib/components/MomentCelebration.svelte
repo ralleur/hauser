@@ -121,7 +121,8 @@
 
   .moment-line {
     position: absolute;
-    top: var(--space-3, 12px);
+    /* Unter der schwebenden Kopfzeile des Panels (--bar-top), sonst am Rand. */
+    top: calc(var(--bar-top, 0px) + var(--space-3, 12px));
     left: 50%;
     transform: translateX(-50%);
     pointer-events: auto;

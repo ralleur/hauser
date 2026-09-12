@@ -151,6 +151,10 @@ button {
   stroke-width: 2.6;
 }
 .mode-toggle-core { fill: var(--color-text-primary); }
+/* Getrennt: Ring und Strahlen in der Fehlerfarbe — das Rad ist die einzige
+   Verbindungsanzeige der Kopfzeile (Owner-Wunsch 2026-09-12). */
+.app.is-disconnected .mode-toggle-ring,
+.app.is-disconnected .mode-toggle-rays path { stroke: var(--color-error); }
 .mode-toggle-rays path {
   fill: none;
   stroke: var(--color-accent-warm);
@@ -359,7 +363,6 @@ button {
   cursor: pointer;
   touch-action: manipulation;
 }
-.theme-toggle,
 .standby-btn {
   display: grid;
   place-items: center;
@@ -367,31 +370,6 @@ button {
   height: var(--touch-min);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-}
-.theme-toggle {
-  display: flex;
-  width: auto;
-  min-width: var(--touch-min);
-  gap: var(--space-2);
-  padding: 0 var(--space-3);
-}
-.theme-toggle-icon {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-.theme-toggle-lock {
-  position: absolute;
-  right: calc(-1 * var(--space-1));
-  bottom: calc(-1 * var(--space-1));
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-  color: var(--color-accent-warm);
-}
-.theme-toggle-label {
-  font-size: var(--text-2xs);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
 }
 
 .appearance-mode-seg {
@@ -499,10 +477,34 @@ button {
 /* Tab-Wechsel: Crossfade 200 ms (docs/07 Transitions-Tabelle) */
 /* --duration-tabfade kommt aus design-tokens/tokens.css. */
 
+/* ── Screenwechsel (Owner-Idee 2026-09-12): kein bloßer Crossfade. Der neue
+   Screen kommt von der Seite herein, auf der sein Tab liegt, ein kleines
+   Stück und etwas verkleinert, und setzt sich ruhig; der alte weicht zur
+   anderen Seite und blendet aus. Die Richtung setzt der Shell aus der Leiste
+   (data-direction). Nur Transform und Opacity; die Dauern hängen am Token
+   --duration-tabfade und werden mit ihm bei reduzierter Bewegung null. ── */
 @keyframes screen-fade-in  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes screen-fade-out { from { opacity: 1; } to { opacity: 0; } }
-.anim-fade-in  { animation: screen-fade-in  var(--duration-tabfade) var(--ease-out) both; }
-.anim-fade-out { animation: screen-fade-out var(--duration-tabfade) var(--ease-out) both; }
+@keyframes screen-enter-forward {
+  from { opacity: 0; transform: translate3d(36px, 0, 0) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes screen-enter-back {
+  from { opacity: 0; transform: translate3d(-36px, 0, 0) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes screen-leave-forward {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(-20px, 0, 0) scale(0.99); }
+}
+@keyframes screen-leave-back {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(20px, 0, 0) scale(0.99); }
+}
+.anim-fade-in  { animation: screen-enter-forward calc(var(--duration-tabfade) * 2) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-fade-out { animation: screen-leave-forward calc(var(--duration-tabfade) * 1.5) cubic-bezier(0.4, 0, 0.6, 1) both; }
+[data-direction="back"] > .anim-fade-in  { animation-name: screen-enter-back; }
+[data-direction="back"] > .anim-fade-out { animation-name: screen-leave-back; }
 
 /* ── Room Overlay (docs/07 Screen 2): Scrim mit Blur+Dim, Panel modal-enter.
    Liegt im .screens-Bereich — Status- und Tab-Bar bleiben scharf.
@@ -639,20 +641,38 @@ body.theme-fade.is-dusk { --duration-theme-fade: var(--duration-dusk); }
 }
 .tab.is-active { color: var(--color-text-primary); }
 
-/* Gold-Unterstrich 24×3px — Hauser-Aktiv-Pattern, kein gefüllter Hintergrund */
-.tab-indicator {
+/* ── Gleiter (Owner-Idee 2026-09-12): eine warme Pille fährt hinter dem
+   aktiven Tab her, statt dass je Tab ein Unterstrich aufblendet. Position und
+   Breite misst TabBar.svelte (--glider-x/--glider-w); die Bewegung ist eine
+   Feder, die leicht überschwingt. Nur Transform und Breite der einen Pille.
+   Das Symbol des aktiven Tabs hüpft einen Hauch und trägt das Gold. ── */
+.tab-nav { position: relative; }
+.tab-glider {
   position: absolute;
-  bottom: 8px;
-  width: 24px;
-  height: 3px;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: var(--glider-w);
   border-radius: var(--radius-full);
-  background: var(--color-accent-warm);
-  opacity: 0;
-  transform: scaleX(0.5);
-  transition: opacity var(--duration-normal) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
+  background: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
+  transform: translate3d(var(--glider-x), 0, 0);
+  transition: transform 460ms cubic-bezier(0.34, 1.4, 0.64, 1),
+              width 460ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  pointer-events: none;
 }
-.tab.is-active .tab-indicator { opacity: 1; transform: scaleX(1); }
+.tab { z-index: 1; }
+.tab.is-active .tab-icon {
+  color: var(--color-accent-warm);
+  transform: scale(1.06);
+  transition: transform 460ms cubic-bezier(0.34, 1.56, 0.64, 1), color var(--duration-normal) var(--ease-out);
+}
+.tab.is-active.is-pressed .tab-icon { transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) {
+  .tab-glider { transition: none; }
+  .tab.is-active .tab-icon { transition: none; transform: none; }
+}
 /* Gesperrter System-Tab (Bedienen-Modus): sichtbar, aber zurückgenommen — er
    führt nicht weiter, sondern erklärt den Weg über den Knopf oben. */
 .tab.is-locked { opacity: 0.45; }
@@ -3159,6 +3179,105 @@ button.security-bar {
   visibility: visible;
   opacity: 1;
   transition: opacity var(--duration-enter) var(--ease-out);
+}
+
+/* ── Aufwachen mit Welle: die Scheibe gibt den Blick frei, statt zu
+   schneiden. Der Ring läuft vom Finger (--wake-x/--wake-y) nach außen, der
+   Inhalt hebt sich einen Hauch an und verschwimmt, die Fläche blendet erst
+   danach aus. Nur Transform, Opacity und ein einmaliger Blur.
+   Bewusst nicht --ease-out: die Token-Kurve (0.16, 1, 0.3, 1) ist so stark
+   vorgeladen, dass alles nach ~150 ms praktisch vorbei wäre und als Schnitt
+   wirkt. Hier gilt eine ruhige Standardkurve, gemessen 2026-09-12. ── */
+.ambient.is-waking {
+  --wake-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  transition: opacity 620ms var(--wake-ease) 240ms,
+              visibility 0s linear 880ms;
+}
+/* Überschreibt die 4-s-Transition des Pixel-Shifts nur für den Moment. */
+.ambient.is-waking .ambient-content {
+  transition: transform 800ms var(--wake-ease), filter 800ms var(--wake-ease), opacity 620ms var(--wake-ease) 140ms;
+  transform: scale(1.035);
+  filter: blur(6px);
+  opacity: 0;
+}
+.ambient.is-waking .ambient-week,
+.ambient.is-waking .ambient-postits,
+.ambient.is-waking .ambient-shopping {
+  transition: transform 800ms var(--wake-ease), opacity 560ms var(--wake-ease) 160ms;
+  transform: translateY(12px);
+  opacity: 0;
+}
+.ambient-wake-ripple {
+  position: absolute;
+  left: var(--wake-x);
+  top: var(--wake-y);
+  width: 72vmax;
+  height: 72vmax;
+  margin: -36vmax 0 0 -36vmax;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.08), inset 0 0 40px rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  z-index: 2;
+  transform: scale(0.02);
+  opacity: 0;
+  animation: ambient-wake-ripple 900ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+[data-theme='light'] .ambient-wake-ripple {
+  border-color: rgba(120, 95, 60, 0.35);
+  box-shadow: 0 0 0 10px rgba(120, 95, 60, 0.06), inset 0 0 40px rgba(255, 255, 255, 0.35);
+}
+@keyframes ambient-wake-ripple {
+  0% { opacity: 0.85; transform: scale(0.02); }
+  45% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1); }
+}
+/* ── Sperren: die Scheibe legt sich auf (Gegenstück zum Aufwachen). Die
+   Fläche blendet ruhig ein, der Inhalt kommt aus derselben leichten
+   Unschärfe und Vergrößerung scharf, Band und Zettel steigen an ihren Platz.
+   Beim Knopf läuft der Ring rückwärts: er zieht sich zum Knopf zusammen. ── */
+.ambient.is-on.is-settling {
+  transition: opacity 640ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ambient.is-settling .ambient-content {
+  animation: ambient-settle-content 900ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.ambient.is-settling .ambient-week,
+.ambient.is-settling .ambient-postits,
+.ambient.is-settling .ambient-shopping {
+  animation: ambient-settle-rise 800ms cubic-bezier(0.4, 0, 0.2, 1) 160ms both;
+}
+@keyframes ambient-settle-content {
+  from { transform: scale(1.035); filter: blur(6px); opacity: 0; }
+  to { transform: none; filter: none; opacity: 1; }
+}
+@keyframes ambient-settle-rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.ambient-wake-ripple.is-inward {
+  transform: scale(1);
+  animation: ambient-wake-ripple-in 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+/* Rückwärts, aber mit eigenem Deckkraftverlauf: die Scheibe blendet in der
+   ersten Viertelsekunde erst ein, der Ring darf deshalb später hell werden
+   und muss am Knopf ins Nichts laufen statt dort stehenzubleiben. */
+@keyframes ambient-wake-ripple-in {
+  0% { opacity: 0; transform: scale(1); }
+  35% { opacity: 0.7; }
+  100% { opacity: 0; transform: scale(0.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient.is-settling .ambient-content,
+  .ambient.is-settling .ambient-week,
+  .ambient.is-settling .ambient-postits,
+  .ambient.is-settling .ambient-shopping { animation: none; }
+  .ambient-wake-ripple { animation: none; display: none; }
+  .ambient.is-waking .ambient-content { transform: none; filter: none; }
+  .ambient.is-waking .ambient-week,
+  .ambient.is-waking .ambient-postits,
+  .ambient.is-waking .ambient-shopping { transform: none; }
 }
 
 /* ── Stadtplan-Hintergrund (docs/18 §3.1, §8): genau ein dekorativer Layer,

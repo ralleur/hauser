@@ -34,6 +34,14 @@ beta line ran through `v0.4.0-beta.10`. From `v0.5.0` on the `-beta.N` suffix is
 gone: every release below `v1.0.0` is a beta, so the version number says it on
 its own.
 
+Since `v0.9.0` the work ships in small packages, one release each, rather than
+in milestones. Recent releases brought the layout menu and the swipe-away
+control surface on the panel, an all-rooms tile view beside the room picture,
+blinds as a household role handed over by the setup wizard, the thermostat as a
+tile with its own sheet, sensors that pick their own symbol, soft room
+transitions, and the layout and shopping sheets on the phone. The
+[changelog](CHANGELOG.md) carries every one of them.
+
 ---
 
 ## Core interface
@@ -50,10 +58,18 @@ its own.
 | Device management in the UI — add, hide, assign to room, reorder | **Live** |
 | Custom room-background upload, replacement and default restore | **Live** |
 | Phone shell alongside the tablet panel shell | **Live** |
+| Layout menu on the stage: rooms per row, second control surface, all applied as you set them | **Live** |
+| All-rooms view: every room as a tile instead of one room picture | **Live** |
+| Swipe the control surface out of the picture, tap anywhere to bring it back | **Live** |
+| Phone: scrolling room grid with fixed quick actions and a layout sheet per device | **Live** |
+| Thermostat as a device-sized tile, controls in a sheet | **Live** |
+| Sensors pick their symbol from device class, unit or name | **Live** |
+| Blinds, shutters and awnings as a household role from the setup wizard | **Built** |
+| Weather over the room picture: rain, snow or a veil, off under reduced motion | **Built** |
+| Drag-and-drop reordering of rooms, devices, scenes and the phone bottom bar | **Built** |
 | Guided, OpenAI-assisted room image wizard in the HMI style | **Built** |
 | Hotel mode: a dedicated panel as a guest surface for one holiday apartment | **Built** |
 | Swipe navigation between screens | **Planned** |
-| Drag-and-drop reordering of home tiles | **Planned** |
 | Dynamic tile heights and a combined tile | **Maybe** |
 
 ## Media
@@ -63,7 +79,8 @@ its own.
 | Jellyfin library, shelves, detail view | **Live** |
 | HLS playback with resume and progress | **Live** |
 | Room audio via Home Assistant media players | **Live** |
-| Player controls: volume, audio track, subtitle language | **Planned** |
+| Player controls: audio track and subtitle language | **Built** |
+| Player volume control | **Planned** |
 | Request and recommendation integration | **Maybe** |
 
 ## Energy
@@ -72,13 +89,14 @@ its own.
 |---|---|
 | Live load and daily consumption from real sensors | **Live** |
 | Graceful empty states when PV or grid sensors are absent | **Live** |
-| Weather variants for the ambient room backgrounds | **Planned** |
+| Weather variants for the ambient room backgrounds | **Built** |
 
 ## Everyday screens
 
 | Item | Status |
 |---|---|
 | Calendar, notes, reminders, shopping list | **Built** |
+| Phone shopping list as a checklist: tap a row to tick it, five seconds to undo | **Built** |
 | Laundry notifications from preconfigured Home Assistant status helpers | **Built** |
 | Guided, portable Home Assistant laundry setup | **Built** |
 | Generic notification core beyond laundry | **Planned** |
@@ -149,8 +167,8 @@ light and two dark modes remain distinguishable.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits; project illustrations remain the defaults and users can upload local room backgrounds |
-| Beta stabilisation | `v0.14.0` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
-| Release candidate | `v0.14.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
+| Beta stabilisation | `v0.15.0` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
+| Release candidate | `v0.x.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
 The critical path is configuration, installation and upgrade evidence — not

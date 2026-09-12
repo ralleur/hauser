@@ -2,7 +2,7 @@
   import Icon from './Icon.svelte';
   import { m } from '../../paraglide/messages.js';
   import { longpress } from '../actions/longpress.ts';
-  import { requestAmbient } from '../state/ambient.svelte.ts';
+  import { originOf, requestAmbient } from '../state/ambient.svelte.ts';
   import { setClassicLockButton } from '../state/settings.svelte.ts';
 
   let { variant }: { variant: 'large' | 'titlebar' } = $props();
@@ -32,7 +32,7 @@
           aria-label={m.lock_button_label()}
           aria-haspopup="menu" aria-expanded={menuOpen}
           use:longpress={{ onLongPress: () => { menuOpen = true; } }}
-          onclick={requestAmbient}>
+          onclick={(e) => requestAmbient(originOf(e.currentTarget))}>
     <Icon name="i-power" cls={variant === 'large' ? 'icon icon-xl' : 'icon icon-md'} />
   </button>
 

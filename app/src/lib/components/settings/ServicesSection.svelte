@@ -258,6 +258,9 @@
 <div class="settings-group">
   <SettingsCardHead icon="i-play-network" tint="cool" title={m.nav_library()} sub={m.sys_module_library_hint()} />
   {@render moduleToggle('library')}
+  <!-- Die Jellyfin-Konfiguration gehoert zum Modul: ist die Bibliothek aus,
+       taucht weder Adresse noch Anmeldung noch Geraete-ID auf. -->
+  {#if moduleEnabled('library')}
   <div class="settings-row is-stacked" data-setting-id="jf-url">
     <div class="settings-row-text">
       <span class="settings-row-label">Jellyfin-Adresse</span>
@@ -312,6 +315,7 @@
     </div>
     <span class="settings-row-value num">{jellyfin.deviceId}</span>
   </div>
+  {/if}
 
 </div>
 

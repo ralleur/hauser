@@ -12,6 +12,7 @@
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
   import { appearanceMode, setAppearanceMode } from '../../state/theme.svelte.ts';
+  import { cardStyle, setCardStyle, type CardStyle } from '../../state/card-style.svelte.ts';
   import type { AppearanceMode } from '../../state/appearance-mode.ts';
   import { AVAILABLE_LOCALES, changeLocale, localeLabel, localeState } from '../../state/locale.svelte.ts';
   import { setAmbientLightDim, settingsValues } from '../../state/settings.svelte.ts';
@@ -43,6 +44,13 @@
     { id: 'fixed-dark', icon: 'i-weather-night', advanced: true,
       label: () => m.appearance_mode_fixed_evening(), desc: () => m.appearance_mode_fixed_evening_desc() },
   ];
+
+  /* Kartenstil: Glas auf Bildern (Raumblatt, Bühne) oder überall Standard. */
+  const style = $derived(cardStyle());
+  const CARD_STYLES: readonly { id: CardStyle; icon: string; label: () => string; desc: () => string }[] = [
+    { id: 'glass', icon: 'i-blur', label: () => m.card_style_glass(), desc: () => m.card_style_glass_desc() },
+    { id: 'standard', icon: 'i-card-outline', label: () => m.card_style_standard(), desc: () => m.card_style_standard_desc() },
+  ];
 </script>
 
 <div class="settings-group" data-setting-id="theme-mode">
@@ -63,6 +71,28 @@
             <span class="settings-option-check"><Icon name="i-check" cls="icon" /></span>
           {:else if option.advanced}
             <span class="settings-option-mark"><Icon name="i-lock" cls="icon" /></span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+  </div>
+</div>
+
+<div class="settings-group" data-setting-id="card-style">
+  <SettingsCardHead icon="i-blur" tint="cool"
+                    title={m.card_style_title()} sub={m.card_style_hint()} />
+  <div class="settings-row is-stacked">
+    <div class="settings-options" role="radiogroup" aria-label={m.card_style_title()}>
+      {#each CARD_STYLES as option (option.id)}
+        <button class="settings-option pressable" type="button" role="radio"
+                aria-checked={style === option.id}
+                class:is-active={style === option.id}
+                onclick={() => setCardStyle(option.id)}>
+          <span class="settings-option-glyph"><Icon name={option.icon} cls="icon" /></span>
+          <span class="settings-option-label">{option.label()}</span>
+          <span class="settings-option-desc">{option.desc()}</span>
+          {#if style === option.id}
+            <span class="settings-option-check"><Icon name="i-check" cls="icon" /></span>
           {/if}
         </button>
       {/each}

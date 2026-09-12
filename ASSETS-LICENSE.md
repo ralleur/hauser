@@ -16,6 +16,7 @@ The following paths are licensed under
 | `app/public/rooms/` | Room thumbnails |
 | `app/public/energy/` | Energy background artwork |
 | `app/public/notes/` | Notes background artwork |
+| `app/public/backgrounds/` | Relief backgrounds behind the glass surfaces of the panel, one light and one dark |
 | `website/media/` | Public screenshots and presentation images |
 | `app/public/wizard/` | Before/after example pair and the icons of the room-image wizard and its library |
 

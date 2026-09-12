@@ -4,6 +4,8 @@
 
 <script lang="ts">
   import '../../styles/phone-shell.css';
+  /* Kartenstil-Attribut an der Wurzel — mit der Shell, nicht vor dem ersten Bild. */
+  import '../state/card-style.svelte.ts';
   import '../../styles/room-tiles.css';
   import '../../styles/demo.css';
   import { onMount, tick, type Component } from 'svelte';
@@ -75,6 +77,15 @@
     windowOpen: roomWindowOpen,
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
+  /* Bildfassung für das Raumblatt: dieselbe wie auf der Kachel des Raums. */
+  function sheetHeroVariantFor(roomId: string | null): PhoneHeroVariant {
+    const base: PhoneHeroVariant = appState.heroSun
+      ? (appState.heroSun.day ? 'light' : 'dark')
+      : appState.theme;
+    const summary = roomSummaries.find((candidate) => candidate.id === roomId);
+    return summary ? phoneHeroVariantForRoom(summary, base) : base;
+  }
+  const sheetHeroVariant = $derived(sheetHeroVariantFor(appState.currentRoom));
   type PhoneFeatureId = 'calendar' | 'media' | 'library-detail' | 'library' | 'energy'
     | 'shopping' | 'reminders' | 'ablage' | 'room' | 'room-edit' | 'central-climate'
     | 'phone-action';
@@ -376,6 +387,17 @@
     preloadNeighbourHeroes(room.id);
   }
 
+  /* Wisch im Raumblatt: der Nachbarraum in Kachelreihenfolge, am Ende wieder
+     von vorn. Das Blatt bleibt offen, nur der Raum wechselt. */
+  function switchRoom(delta: 1 | -1): void {
+    const ids = appState.rooms.map((room) => room.id);
+    const index = ids.indexOf(appState.currentRoom ?? '');
+    if (index < 0 || ids.length < 2) return;
+    const next = ids[(index + delta + ids.length) % ids.length];
+    appState.currentRoom = next;
+    preloadNeighbourHeroes(next);
+  }
+
   /* Paket 5 (docs/20): Nach dem Antippen liegen die Hero-Bilder der beiden
      Nachbarräume im Cache — die nächste Kachel öffnet ohne Ladepause. */
   function preloadNeighbourHeroes(roomId: string): void {
@@ -610,7 +632,7 @@
         {@render phoneLayerLoading('room', 'Raumsteuerung')}
       {:then loaded}
         {@const RoomControlSheet = loaded.default}
-        <RoomControlSheet room={selectedRoom} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} />
+        <RoomControlSheet room={selectedRoom} heroVariant={sheetHeroVariant} heroVariantFor={sheetHeroVariantFor} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} onswitch={switchRoom} />
       {:catch}
         {@render phoneLayerError('room', 'Raumsteuerung', () => retryPhoneFeature('room'), () => closeLayer('close'))}
       {/await}

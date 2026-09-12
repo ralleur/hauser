@@ -8,6 +8,9 @@
 export const ambientRequest = $state({
   seq: 0,
   mode: 'normal' as 'normal' | 'preview' | 'deep-night-preview',
+  /* Bildschirmpunkt des auslösenden Knopfs: von dort zieht sich beim
+     manuellen Sperren der Ring zusammen. Der Timer hat keinen Punkt. */
+  origin: null as { x: number; y: number } | null,
 });
 export const ambientState = $state({ active: false });
 
@@ -18,9 +21,16 @@ export function setAmbientActive(active: boolean): void {
   }
 }
 
-export function requestAmbient(): void {
+export function requestAmbient(origin: { x: number; y: number } | null = null): void {
   ambientRequest.mode = 'normal';
+  ambientRequest.origin = origin;
   ambientRequest.seq++;
+}
+
+/** Mitte eines Knopfs als Ursprung — auch bei Tastatur-Auslösung sinnvoll. */
+export function originOf(el: Element): { x: number; y: number } {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 /** Vorschau aus den Einstellungen heraus: zeigt den Standby einschließlich
@@ -30,6 +40,7 @@ export function requestAmbient(): void {
  * zu wecken. */
 export function requestAmbientPreview(): void {
   ambientRequest.mode = 'preview';
+  ambientRequest.origin = null;
   ambientRequest.seq++;
 }
 
@@ -37,5 +48,6 @@ export function requestAmbientPreview(): void {
  * Uhrzeit und Schalter. Der nächste Tap beendet die Vorschau wie jeden Standby. */
 export function requestDeepNightPreview(): void {
   ambientRequest.mode = 'deep-night-preview';
+  ambientRequest.origin = null;
   ambientRequest.seq++;
 }

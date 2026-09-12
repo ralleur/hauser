@@ -5,6 +5,8 @@
 <script lang="ts">
   import '../../styles/app.css';
   import '../../styles/hero-layout.css';
+  /* Kartenstil-Attribut an der Wurzel — mit der Shell, nicht vor dem ersten Bild. */
+  import '../state/card-style.svelte.ts';
   import '../../styles/room-tiles.css';
   import '../../styles/standalone.css';
   import '../../styles/demo.css';
@@ -139,7 +141,7 @@
     if (!nav.entering) return;
     const el = screenEls[nav.entering];
     if (el) el.scrollTop = 0;
-    const fallback = setTimeout(endTransition, 400);
+    const fallback = setTimeout(endTransition, 700);
     return () => clearTimeout(fallback);
   });
 
@@ -223,9 +225,9 @@
 <!-- Gesperrt, solange keine Verbindung steht (auch beim Reconnect, nicht erst
      bei harter Trennung). Kein Banner mehr über der Bühne: die Titelleiste
      trägt Ursache und Wiederverbinden ohnehin schon (R2). -->
-<div class="app" data-shell="panel" class:is-disconnected={conn.banner !== null}>
+<div class="app" data-shell="panel" data-screen={nav.screen} class:is-disconnected={conn.banner !== null}>
   <StatusBar />
-  <main class="screens">
+  <main class="screens" data-direction={nav.direction === 1 ? 'forward' : 'back'}>
     {#each visiblePanelScreens as screen (screen.id)}
       <section class="screen" data-screen={screen.id} data-tab={screen.tab}
                class:is-active={nav.screen === screen.id || nav.leaving === screen.id}

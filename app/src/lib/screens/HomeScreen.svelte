@@ -10,6 +10,10 @@
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
+  import { fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import { prefersReducedMotion } from '../motion/index.ts';
+  import { ambientState } from '../state/ambient.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { layoutHomeView, layoutRoomsPerRow, widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
   import { cameraPopouts } from '../state/camera-popouts.svelte.ts';
@@ -42,12 +46,17 @@
       .catch(() => { /* ohne Kacheln weiter */ });
   });
   /* Wisch nach links auf der Kontrollfläche lässt sie aus dem Bild fliegen —
-     die Bühne gehört dann ganz dem Bild bzw. den Kacheln. Die nächste
-     Berührung irgendwo holt sie zurück; der Tipp selbst wirkt weiter, damit
-     eine Kachel gleich den Raum wählt. Gilt in beiden Ansichten. */
+     die Bühne gehört dann ganz dem Bild bzw. den Kacheln. Im Vollbild holt
+     die nächste Berührung irgendwo sie zurück; der Tipp selbst wirkt weiter.
+     In „Alle Räume" startet sie ausgeblendet — beim Wechsel in die Ansicht
+     und nach dem Standby — und kommt erst, wenn eine Kachel angetippt wird
+     (Owner-Wunsch 2026-09-12). */
   let panelsHidden = $state(false);
   $effect(() => {
-    if (!panelsHidden) return;
+    panelsHidden = roomsView && !ambientState.active;
+  });
+  $effect(() => {
+    if (!panelsHidden || roomsView) return;
     const show = () => { panelsHidden = false; };
     window.addEventListener('pointerdown', show, { capture: true });
     return () => window.removeEventListener('pointerdown', show, { capture: true });
@@ -82,6 +91,7 @@
     const second = slots[1];
     const target = second && slotRoom(first.roomId)?.id === roomId ? second.id : first.id;
     selectRoom(target, roomId);
+    panelsHidden = false;
   }
 
   /* Paket 5 (docs/20): Die Hero-Bilder der Nachbarräume liegen nach dem
@@ -142,7 +152,7 @@
        use:swipeleft={{ onSwipe: () => { panelsHidden = true; }, angle: 55, enabled: !panelsHidden }}>
     {#each layoutManager.preview.slots as slot, index (slot.id)}
       {@const selected = slotRoom(slot.roomId)}
-      <aside class="home-panel" aria-label={m.home_control_surface({ number: index + 1 })}>
+      <aside class="home-panel on-image" aria-label={m.home_control_surface({ number: index + 1 })}>
         {#if roomsView}
           {#if selected}
             <header class="panel-head">
@@ -158,9 +168,18 @@
           />
         {/if}
 
+        <!-- Raumwechsel als Überblendung: alter und neuer Block liegen kurz
+             übereinander (Grid-Zelle, CSS), der alte löst sich auf, der neue
+             kommt weich herein — kein Sprung von einem Frame auf den nächsten. -->
         <div class="panel-controls">
           {#if selected}
-            {#key selected.id}<RoomControls room={selected} compactClimate />{/key}
+            {#key selected.id}
+              <div class="panel-controls-page"
+                   in:fade={{ duration: prefersReducedMotion() ? 0 : 220, easing: cubicOut }}
+                   out:fade={{ duration: prefersReducedMotion() ? 0 : 140, easing: cubicOut }}>
+                <RoomControls room={selected} compactClimate />
+              </div>
+            {/key}
           {/if}
         </div>
       </aside>

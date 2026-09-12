@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.15.0 - 2026-09-12
+
+- The phone shopping list becomes a quiet checklist: smaller title, store
+  names as compact headings with the count beside them, no separator lines.
+  Every row is fully tappable with an empty circle on the left; a tap fills
+  it, moves the item to "Done" at the bottom and offers "Undo" for five
+  seconds. Each store ends in an "Add item" row that turns into the input and
+  stays open for the next item. Sort and refresh are two icons at the top.
+- The phone energy page tells a story: power now in watts, then the period
+  with today's load curve and a comparison with yesterday up to the same
+  time, then the top consumers with share bars. The period control moves
+  below the live value; several plugs are called "Measured devices".
+
 ## 0.14.0 - 2026-09-11
 
 - The layout menu offers a "View" pill: "Full screen" keeps the room picture

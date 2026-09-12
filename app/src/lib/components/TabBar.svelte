@@ -15,7 +15,7 @@
   import { notifications } from '../state/notifications.svelte.ts';
   import { IS_DEMO } from '../demo/demo-mode.ts';
   import { m } from '../../paraglide/messages.js';
-  import { pluralCategory } from '../state/locale.svelte.ts';
+  import { localeState, pluralCategory } from '../state/locale.svelte.ts';
 
   const visibleTabs = $derived(TABS.filter((tab) => {
     // Ablage bleibt aus der öffentlichen Demo heraus (docs/12).
@@ -81,6 +81,33 @@
     openWindows.length ? openWindows.map((room) => room.name).join(', ') : quietLabel,
   );
 
+  /* ── Gleiter (Owner-Idee 2026-09-12): statt eines Unterstrichs je Tab
+     fährt eine Pille hinter dem aktiven Tab her. Sie wird gemessen, nicht
+     geraten: Position und Breite des aktiven Knopfs relativ zur Leiste,
+     neu bei Tabwechsel, Sichtbarkeit der Tabs und Fenstergröße. Vor der
+     ersten Messung gibt es keinen Gleiter — so gleitet er nie aus dem
+     Nichts herein. */
+  let navEl = $state<HTMLElement | null>(null);
+  let glider = $state<{ x: number; w: number } | null>(null);
+  let viewportTick = $state(0);
+
+  $effect(() => {
+    void activeTab();
+    void visibleTabs;
+    void viewportTick;
+    void localeState.current;
+    const nav = navEl;
+    if (!nav) return;
+    const measure = () => {
+      const el = nav.querySelector<HTMLElement>('.tab.is-active');
+      if (!el) { glider = null; return; }
+      glider = { x: el.offsetLeft, w: el.offsetWidth };
+    };
+    /* Nach dem DOM-Update messen, damit die neue is-active-Klasse steht. */
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  });
+
   function go(target: string) {
     // Der System-Bereich ist Konfiguration: im Bedienen-Modus führt der Tap
     // nicht dorthin, sondern erklärt sofort den Weg über den Knopf oben — und
@@ -100,6 +127,8 @@
      Links das globale Klima-Dock (zentrale Synchron-Steuerung, aus jedem Screen
      erreichbar — wie das Fahrzeug-UI), mittig die Navigation, rechts der globale
      Sicherheitsstatus. Gleiche Rand-Zonen halten die Tabs zentriert. -->
+<svelte:window onresize={() => (viewportTick += 1)} />
+
 <nav class="tab-bar" aria-label={m.nav_main()}>
   <div class="tab-edge tab-edge-start">
     {#if centralClimate.hasClimate}
@@ -110,13 +139,17 @@
     {/if}
   </div>
 
-  <div class="tab-nav">
+  <div class="tab-nav" bind:this={navEl}
+       class:has-glider={glider !== null}
+       style:--glider-x={glider ? `${glider.x}px` : '0px'}
+       style:--glider-w={glider ? `${glider.w}px` : '0px'}>
+    {#if glider}<span class="tab-glider" aria-hidden="true"></span>{/if}
     {#each visibleTabs as tab (tab.id)}
       <button class="tab pressable" class:is-active={activeTab() === tab.id}
               class:is-locked={tab.id === 'system' && !editMode.active}
               type="button" data-nav={tab.id} aria-label={tab.label}
               onclick={() => go(tab.id)}>
-        <Icon name={tab.icon} cls="icon tab-icon" /><span class="tab-label">{tab.label}</span><span class="tab-indicator"></span>
+        <Icon name={tab.icon} cls="icon tab-icon" /><span class="tab-label">{tab.label}</span>
       </button>
     {/each}
   </div>

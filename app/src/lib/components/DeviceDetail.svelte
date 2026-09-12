@@ -333,7 +333,9 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeDeviceDetail()}></div>
-  <div class="light-detail-panel overlay-panel" role="dialog" aria-modal="true"
+  <!-- `on-image`: im Glas-Kartenstil ist das Overlay dieselbe Milchglasscheibe
+       wie die Gerätesteuerung auf der Bühne (styles/on-image.css). -->
+  <div class="light-detail-panel overlay-panel on-image" role="dialog" aria-modal="true"
        aria-label={device?.name ?? m.dev_device()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (deviceDetail.mode === 'closing' && e.target === e.currentTarget) finishDeviceDetailClose(); }}>
     {#if device}

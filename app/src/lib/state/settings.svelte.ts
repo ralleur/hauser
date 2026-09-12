@@ -134,6 +134,7 @@ export const settingsValues = $state({
   presenceAwayDark: lsGet('hmi:presence-away-dark') === 'on',
   presenceGreeting: lsGet('hmi:presence-greeting') === 'on',
   ambientWeather: lsGet('hmi:ambient-weather') !== 'off',
+  ambientWeek: lsGet('hmi:ambient-week') !== 'off',
   ambientLightDim: lsGet('hmi:ambient-light-dim') === 'on',
   offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
     ? null
@@ -237,6 +238,13 @@ export function setPresenceGreeting(on: boolean): void {
 export function setAmbientWeather(on: boolean): void {
   settingsValues.ambientWeather = on;
   lsSet('hmi:ambient-weather', on ? null : 'off');
+}
+
+/* Das Wochenband am Fuß des Sperrbildschirms ist an; wer die Wand ruhiger
+   will, schaltet es hier aus. Gerätelokal wie das Wetter. */
+export function setAmbientWeek(on: boolean): void {
+  settingsValues.ambientWeek = on;
+  lsSet('hmi:ambient-week', on ? null : 'off');
 }
 
 export function setAmbientLightDim(on: boolean): void {

@@ -1,3 +1,13 @@
+<script module lang="ts">
+  /* Das zuletzt gezeigte Bild überlebt das Abbauen des Home-Screens (Owner-
+     Befund 2026-09-12): Wer von einem anderen Screen zurückkommt, sah die
+     Bühne sonst für einen Moment weiß, weil das Bild erst wieder im Worker
+     dekodiert wurde. Stimmt der Schlüssel beim Aufbau, liegt das Bild sofort
+     in der vorderen Ebene — der Browser hat es noch, ein neuer Durchlauf
+     bringt nichts als die Lücke. */
+  let lastShown: { key: string; candidate: import('./room-hero-assets.ts').HeroImageCandidate } | null = null;
+</script>
+
 <script lang="ts">
   /* ── Room-Hero (B-13): Vollbild-Bühne hinter dem Home-Screen.
 
@@ -145,6 +155,20 @@
     ].join('|');
   }
 
+  /* Wiederaufbau mit bekanntem Bild: sofort vorne, ohne Dekodieren und ohne
+     Einblenden — genau der Stand, den der Screen beim Verlassen hatte. */
+  {
+    // svelte-ignore state_referenced_locally
+    const initial = targetHero;
+    const initialKey = resolutionKey(initial);
+    if (lastShown && lastShown.key === initialKey) {
+      layerA = lastShown.candidate;
+      requested = initialKey;
+      lastVariant = initial.variant;
+      lastRoom = appState.currentRoom;
+    }
+  }
+
   $effect(() => {
     const resolution = targetHero;
     const key = resolutionKey(resolution);
@@ -158,6 +182,7 @@
 
     void loadRoomHero(resolution, decodeHeroImageOffThread, () => request === currentRequest).then((candidate) => {
       if (!candidate || request !== currentRequest) return;
+      lastShown = { key, candidate };
       clearTimeout(softSwapTimer);
       softSwap = softNow;
       if (softNow) softSwapTimer = setTimeout(() => { softSwap = false; }, SOFT_SWAP_RESET_MS);

@@ -2,6 +2,7 @@ import { mount, unmount } from 'svelte';
 // design-tokens/ bleibt Single Source of Truth — importiert, nicht kopiert (ADR-003/013)
 import '../../design-tokens/tokens.css';
 import './styles/climate-controls.css';
+import './styles/on-image.css';
 import { applyDemoDeepLink, installDemoApi } from './lib/demo/demo-mode.ts';
 
 const STARTUP_LABELS: Record<string, string> = {

@@ -12,8 +12,8 @@ describe('room control surface contrast', () => {
     expect(appCss).not.toMatch(/(?<!room-controls )\.scene-btn\s*\{[\s\S]*?background:\s*var\(--overlay-control-background\)/);
   });
 
-  it('uses the same glass hierarchy for the phone room sheet and close control', () => {
+  it('lays the room image under the phone room sheet on the glass panel', () => {
     expect(phoneCss).toMatch(/\.room-sheet\s*\{[\s\S]*?background:\s*var\(--overlay-panel-background\)[\s\S]*?-webkit-backdrop-filter:/);
-    expect(phoneCss).toMatch(/\.room-sheet-close\s*\{[\s\S]*?background:\s*var\(--overlay-control-background\)/);
+    expect(phoneCss).toMatch(/\.room-sheet-hero-layer\s*\{[\s\S]*?background-image:\s*var\(--phone-room-hero\)/);
   });
 });
