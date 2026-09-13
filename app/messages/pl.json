@@ -1897,5 +1897,17 @@
   "card_style_glass": "Szkło na obrazach",
   "card_style_glass_desc": "Ciemne, półprzezroczyste szkło z jasnym tekstem; obraz prześwituje.",
   "card_style_standard": "Standard",
-  "card_style_standard_desc": "Wszędzie te same karty co na pozostałych powierzchniach."
+  "card_style_standard_desc": "Wszędzie te same karty co na pozostałych powierzchniach.",
+  "grp_open": "Grupuj",
+  "grp_title_new": "Utwórz grupę",
+  "grp_title_edit": "Edytuj grupę",
+  "grp_name": "Nazwa grupy",
+  "grp_members": "Członkowie",
+  "grp_hint": "Jeden ruch, jedna wartość dla wszystkich: grupa steruje wszystkimi członkami naraz.",
+  "grp_origin_tag": "Źródło",
+  "grp_none": "Brak innych urządzeń tego rodzaju.",
+  "grp_min": "Wybierz co najmniej dwa urządzenia.",
+  "grp_create": "Utwórz grupę",
+  "grp_save": "Zapisz",
+  "grp_dissolve": "Rozwiąż grupę"
 }

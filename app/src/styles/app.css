@@ -4517,6 +4517,23 @@ button.security-bar {
   border-color: var(--color-accent-warm);
   color: var(--color-accent-warm);
 }
+/* Gruppen-Editor (Owner-Wunsch 2026-09-13): Scheibe wie der Szenen-Editor,
+   Mitglieder als wählbare Reihen, Ursprungsgerät fest. */
+.ld-group .icon { width: 20px; height: 20px; }
+.grp-symbol { pointer-events: none; }
+.grp-room { font-family: inherit; }
+.re-light-choice:disabled { opacity: 1; }
+.grp-actions { display: flex; gap: var(--space-3); margin-top: var(--space-5); }
+.grp-actions .secondary-btn {
+  flex: 1;
+  min-height: var(--touch-preferred);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+}
+.grp-save { border-color: var(--color-accent-warm); color: var(--color-accent-warm); }
+.grp-save:disabled { opacity: 0.4; }
+.grp-min { margin-top: var(--space-2); }
 /* Import aus Home Assistant: liegt direkt unter den Szenen-Tabs und benutzt
    dieselbe Vorschlagsliste wie die Gerätesuche. */
 .se-import { margin-bottom: var(--space-5); }

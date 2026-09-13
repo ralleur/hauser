@@ -107,10 +107,44 @@ export interface DeviceOverride {
   showName?: boolean;
 }
 
+/* Gerätegruppe (Owner-Wunsch 2026-09-13): mehrere Lampen, Ventilatoren,
+   Steckdosen oder Jalousien werden als EIN Gerät bedient — jeder Griff geht
+   an alle Mitglieder mit demselben Wert (adapter/runtime verteilt). Die
+   Gruppe nimmt im Raum den Platz des Geräts ein, aus dem sie angelegt wurde
+   (`origin`); das Gerät selbst wird ausgeblendet, bis die Gruppe aufgelöst
+   wird. Ihre entity_id trägt das Präfix `group.` und existiert nur lokal. */
+export type GroupCategory = 'light' | 'fan' | 'switch' | 'cover';
+export const GROUPABLE_CATEGORIES: readonly DeviceCategory[] = ['light', 'fan', 'switch', 'cover'];
+
+export interface DeviceGroup {
+  id: string;
+  name: string;
+  category: GroupCategory;
+  members: string[];
+  roomId: string;
+  origin: string;
+}
+
 export interface DeviceConfig {
   version: 1;
   devices: Record<string, DeviceOverride>;
   order: Record<string, string[]>;
+  groups: Record<string, DeviceGroup>;
+}
+
+export const GROUP_PREFIX = 'group.';
+
+export function isGroupEntityId(entityId: string): boolean {
+  return entityId.startsWith(GROUP_PREFIX);
+}
+
+/** Alles, was in der Reihenfolge eines Raums stehen darf: HA-Geräte und Gruppen. */
+function isOrderableEntityId(entityId: string): boolean {
+  return isManagedEntityId(entityId) || isGroupEntityId(entityId);
+}
+
+export function isGroupableCategory(category: DeviceCategory | undefined): category is GroupCategory {
+  return !!category && GROUPABLE_CATEGORIES.includes(category);
 }
 
 export interface DeviceStorage {
@@ -121,13 +155,14 @@ export interface DeviceStorage {
 
 export const DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
 
-export const EMPTY_DEVICE_CONFIG: DeviceConfig = { version: 1, devices: {}, order: {} };
+export const EMPTY_DEVICE_CONFIG: DeviceConfig = { version: 1, devices: {}, order: {}, groups: {} };
 
 export function cloneDeviceConfig(config: DeviceConfig): DeviceConfig {
   return {
     version: 1,
     devices: Object.fromEntries(Object.entries(config.devices).map(([id, v]) => [id, { ...v }])),
     order: Object.fromEntries(Object.entries(config.order).map(([room, ids]) => [room, [...ids]])),
+    groups: Object.fromEntries(Object.entries(config.groups ?? {}).map(([id, g]) => [id, { ...g, members: [...g.members] }])),
   };
 }
 
@@ -136,7 +171,7 @@ export function parseDeviceConfig(raw: string | null): DeviceConfig {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object') return cloneDeviceConfig(EMPTY_DEVICE_CONFIG);
-    const obj = parsed as { version?: unknown; devices?: unknown; order?: unknown };
+    const obj = parsed as { version?: unknown; devices?: unknown; order?: unknown; groups?: unknown };
     if (obj.version !== 1) return cloneDeviceConfig(EMPTY_DEVICE_CONFIG);
     const devices: Record<string, DeviceOverride> = {};
     if (obj.devices && typeof obj.devices === 'object' && !Array.isArray(obj.devices)) {
@@ -156,10 +191,22 @@ export function parseDeviceConfig(raw: string | null): DeviceConfig {
     if (obj.order && typeof obj.order === 'object' && !Array.isArray(obj.order)) {
       for (const [roomId, ids] of Object.entries(obj.order as Record<string, unknown>)) {
         if (typeof roomId !== 'string' || !Array.isArray(ids)) continue;
-        order[roomId] = ids.filter((id): id is string => typeof id === 'string' && isManagedEntityId(id));
+        order[roomId] = ids.filter((id): id is string => typeof id === 'string' && isOrderableEntityId(id));
       }
     }
-    return { version: 1, devices, order };
+    const groups: Record<string, DeviceGroup> = {};
+    if (obj.groups && typeof obj.groups === 'object' && !Array.isArray(obj.groups)) {
+      for (const [id, value] of Object.entries(obj.groups as Record<string, unknown>)) {
+        if (!isGroupEntityId(id) || !value || typeof value !== 'object') continue;
+        const g = value as Record<string, unknown>;
+        if (!isGroupableCategory(g.category as DeviceCategory) || typeof g.roomId !== 'string' || typeof g.origin !== 'string') continue;
+        const members = Array.isArray(g.members) ? g.members.filter((m): m is string => typeof m === 'string' && isManagedEntityId(m)) : [];
+        if (members.length < 2) continue;
+        const name = typeof g.name === 'string' ? normalizeDeviceName(g.name) : null;
+        groups[id] = { id, name: name ?? '', category: g.category as GroupCategory, members, roomId: g.roomId, origin: g.origin };
+      }
+    }
+    return { version: 1, devices, order, groups };
   } catch {
     return cloneDeviceConfig(EMPTY_DEVICE_CONFIG);
   }
@@ -250,6 +297,13 @@ export function buildRuntimeRooms(
     byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName));
   }
 
+  for (const group of Object.values(config.groups ?? {})) {
+    if (!roomIds.has(group.roomId)) continue;
+    const members = group.members.map((id) => catalogById.get(id)).filter((item): item is EntityCatalogItem => !!item);
+    if (members.length === 0) continue;
+    byRoom.get(group.roomId)?.push(toGroupDevice(group, members));
+  }
+
   return rooms.map((room) => {
     const devices = byRoom.get(room.id) ?? [];
     return {
@@ -260,6 +314,75 @@ export function buildRuntimeRooms(
       lights: sortDevices(devices, config.order[room.id], catalogById),
     };
   });
+}
+
+/* ── Gruppen ── */
+export function groupDomain(category: GroupCategory): ManagedDomain {
+  return category;
+}
+
+/* Die Gruppe kann, was ALLE Mitglieder können: eine nicht dimmbare Lampe in
+   der Gruppe nimmt der Gruppe die Helligkeit — sonst bekämen einige Lampen
+   einen Befehl, den sie nicht verstehen. */
+function toGroupDevice(group: DeviceGroup, members: readonly EntityCatalogItem[]): ManagedDevice {
+  const caps = members.map((item) => item.capabilities ?? {});
+  const mins = caps.map((c) => c.colorTempMin).filter((n): n is number => typeof n === 'number');
+  const maxs = caps.map((c) => c.colorTempMax).filter((n): n is number => typeof n === 'number');
+  const light = group.category === 'light';
+  return {
+    id: stableDeviceId(group.id),
+    entityId: group.id,
+    domain: groupDomain(group.category),
+    category: group.category,
+    name: group.name || members[0]?.name || '',
+    dimmable: light && caps.every((c) => !!c.dimmable),
+    colorTemp: light && caps.every((c) => !!c.colorTemp),
+    color: light && caps.every((c) => !!c.color),
+    colorTempMin: mins.length ? Math.max(...mins) : undefined,
+    colorTempMax: maxs.length ? Math.min(...maxs) : undefined,
+    icon: iconForDevice(group.id, group.category, undefined),
+  };
+}
+
+export function newGroupId(existing: Readonly<Record<string, unknown>>): string {
+  let n = 1;
+  while (existing[`${GROUP_PREFIX}hauser_${n}`]) n++;
+  return `${GROUP_PREFIX}hauser_${n}`;
+}
+
+/* Legt die Gruppe an und setzt sie an die Stelle des Ursprungsgeräts; das
+   Ursprungsgerät verschwindet aus dem Raum. `currentOrder` ist die angezeigte
+   Reihenfolge (siehe setRoomOrder). */
+export function createGroup(config: DeviceConfig, group: DeviceGroup, currentOrder: readonly string[]): DeviceConfig {
+  let next = cloneDeviceConfig(config);
+  next.groups[group.id] = { ...group, members: [...group.members] };
+  next = setDeviceVisibility(next, group.origin, false);
+  const order = currentOrder.includes(group.origin)
+    ? currentOrder.map((id) => (id === group.origin ? group.id : id))
+    : [...currentOrder, group.id];
+  return setRoomOrder(next, group.roomId, order);
+}
+
+export function updateGroup(config: DeviceConfig, id: string, patch: Partial<Pick<DeviceGroup, 'name' | 'members'>>): DeviceConfig {
+  const next = cloneDeviceConfig(config);
+  const group = next.groups[id];
+  if (!group) return next;
+  if (patch.name !== undefined) group.name = normalizeDeviceName(patch.name) ?? group.name;
+  if (patch.members) group.members = [...patch.members];
+  return next;
+}
+
+/* Auflösen: das Ursprungsgerät kommt an die Stelle der Gruppe zurück. */
+export function dissolveGroup(config: DeviceConfig, id: string): DeviceConfig {
+  let next = cloneDeviceConfig(config);
+  const group = next.groups[id];
+  if (!group) return next;
+  delete next.groups[id];
+  next = setDeviceVisibility(next, group.origin, true, group.roomId);
+  const order = (next.order[group.roomId] ?? []).filter((eid) => eid !== group.origin);
+  next.order[group.roomId] = order.includes(id) ? order.map((eid) => (eid === id ? group.origin : eid)) : [...order, group.origin];
+  for (const [rid, ids] of Object.entries(next.order)) if (rid !== group.roomId) removeFromArray(ids, id);
+  return next;
 }
 
 export function setDeviceVisibility(config: DeviceConfig, entityId: string, visible: boolean, roomId?: string): DeviceConfig {
@@ -314,7 +437,7 @@ export function assignDeviceRoom(config: DeviceConfig, entityId: string, roomId:
    das Gerät sonst an den Anfang/das Ende springen lassen statt eine Position. */
 export function setRoomOrder(config: DeviceConfig, roomId: string, entityIds: readonly string[]): DeviceConfig {
   const next = cloneDeviceConfig(config);
-  next.order[roomId] = entityIds.filter(isManagedEntityId);
+  next.order[roomId] = entityIds.filter(isOrderableEntityId);
   return next;
 }
 
@@ -378,6 +501,11 @@ function sortDevices(devices: ManagedDevice[], order: readonly string[] | undefi
     if (ar !== undefined || br !== undefined) return (ar ?? 9999) - (br ?? 9999) || a.index - b.index;
     return a.index - b.index;
   }).map((entry) => entry.device);
+}
+
+/** Kachel-Id (Room.lights[].id) zu einer entity_id — auch für Gruppen. */
+export function deviceIdOf(entityId: string): string {
+  return stableDeviceId(entityId);
 }
 
 function stableDeviceId(entityId: string): string {

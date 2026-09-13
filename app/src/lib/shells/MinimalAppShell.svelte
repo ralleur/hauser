@@ -41,6 +41,9 @@
   const refresh = () => { view = snapshot(); };
 
   onMount(() => {
+    /* `index.html` kann die Sprache nicht kennen; hier steht sie zum ersten
+       Mal fest (gespeicherte Wahl, sonst Browsersprache, sonst Englisch). */
+    document.documentElement.lang = locale();
     const id = setInterval(refresh, TICK_MS);
     document.addEventListener('visibilitychange', refresh);
     window.addEventListener('focus', refresh);

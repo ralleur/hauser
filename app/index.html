@@ -1,10 +1,15 @@
 <!doctype html>
-<html lang="de" data-theme="dark">
+<html lang="de" data-theme="dark" translate="no" class="notranslate">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0b0e12">
   <title>Hauser</title>
+  <!-- Browser-Übersetzer tauschen Textknoten gegen eigene aus. Die Oberfläche
+       schreibt danach in den abgehängten Originalknoten: Uhr und Statuszeile
+       frieren ein, während Farben und Bedienung weiterlaufen (Issue #15).
+       Hauser bringt seine Sprachen selbst mit, deshalb bleibt die Seite außen vor. -->
+  <meta name="google" content="notranslate">
 
   <!-- ── PWA / Home-Screen-Web-App (iPadOS 17 Standalone-Kiosk) ──
        Das Manifest steuert Chrome/Android; die apple-* Metas steuern iOS/iPadOS,

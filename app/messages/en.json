@@ -1896,5 +1896,17 @@
   "card_style_glass": "Glass on images",
   "card_style_glass_desc": "Dark translucent glass with light text; the picture shows through.",
   "card_style_standard": "Standard",
-  "card_style_standard_desc": "The same cards everywhere as on the other surfaces."
+  "card_style_standard_desc": "The same cards everywhere as on the other surfaces.",
+  "grp_open": "Group devices",
+  "grp_title_new": "Create a group",
+  "grp_title_edit": "Edit group",
+  "grp_name": "Group name",
+  "grp_members": "Members",
+  "grp_hint": "One touch, one value for all: the group switches and sets every member at once.",
+  "grp_origin_tag": "Origin",
+  "grp_none": "No other devices of this kind.",
+  "grp_min": "Choose at least two devices.",
+  "grp_create": "Create group",
+  "grp_save": "Save",
+  "grp_dissolve": "Dissolve group"
 }

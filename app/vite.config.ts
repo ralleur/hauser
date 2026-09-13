@@ -246,8 +246,10 @@ export default defineConfig({
        raus. Das Performance-Budget (docs/03) bleibt unberührt.
 
        Keine `url`-Strategie: die HMI ist eine Kiosk-Oberfläche ohne Routing.
-       Die Sprache kommt aus dem lokalen Speicher, sonst aus der Browsersprache,
-       sonst Deutsch. */
+       Die Sprache kommt aus dem lokalen Speicher (die Wahl in den
+       Einstellungen), sonst aus der Browsersprache, sonst Englisch —
+       `baseLocale` ist `en`, damit eine unbekannte Gerätesprache nicht auf
+       Deutsch landet. */
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/paraglide',
@@ -336,6 +338,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    setupFiles: ['./src/test-setup.ts'],
     environment: 'node',
     testTimeout: CI_TEST_TIMEOUT,
     hookTimeout: CI_TEST_TIMEOUT,

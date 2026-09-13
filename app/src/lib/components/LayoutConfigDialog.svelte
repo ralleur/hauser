@@ -83,7 +83,7 @@
     <div class="layout-dialog" class:is-closing={layoutManager.closing}
          role="dialog" aria-modal="true" aria-label={m.layout_title()}
          tabindex="-1" bind:this={dialog}
-         use:swipeleft={{ onSwipe: close, direction: 'right', angle: 70, enabled: !layoutManager.closing }}
+         use:swipeleft={{ onSwipe: close, direction: 'right', angle: 70, ignore: '.tickscale', enabled: !layoutManager.closing }}
          onanimationend={onAnimationEnd}>
       <!-- Kein Titel: oben rechts steht nur der Weg zurück auf Standard. -->
       <header class="layout-dialog-head">

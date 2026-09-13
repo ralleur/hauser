@@ -20,7 +20,8 @@
     setHumidifierTarget, setHumidifierMode, setWaterHeaterTarget, setWaterHeaterMode, setWaterHeaterOn,
     mowerCommand, alarmCommand, setNumberValue, selectOption, pressButton, type AlarmAction,
   } from '../state/commands.ts';
-  import { deviceDetail, closeDeviceDetail, finishDeviceDetailClose } from '../state/overlay.svelte.ts';
+  import { deviceDetail, closeDeviceDetail, finishDeviceDetailClose, openDeviceDetail } from '../state/overlay.svelte.ts';
+  import { isGroupableCategory } from '../state/device-config.ts';
   import { pulse } from '../actions/pulse.ts';
   import { LIGHT_COLOR_SWATCHES, tempTint, climateTint, lightLevel } from '../state/light-presets.ts';
   import { fanPresetIcon, fanPresetLabel, fanSpinDuration } from '../state/fan-presets.ts';
@@ -278,6 +279,16 @@
 
   // Symbol-Picker: vollständiger Tabler-Outline-Katalog (B-22).
   let pickerOpen = $state(false);
+  /* Gruppen (Owner-Wunsch 2026-09-13): Lampen, Ventilatoren, Steckdosen und
+     Jalousien haben oben rechts statt des Kreuzes den Gruppen-Knopf; der
+     Editor kommt erst, wenn er gebraucht wird. */
+  const groupable = $derived(isGroupableCategory(device?.category));
+  let groupEditOpen = $state(false);
+  let GroupEditComponent = $state<any>(null);
+  async function openGroupEdit() {
+    GroupEditComponent ??= (await import('./DeviceGroupEdit.svelte')).default;
+    groupEditOpen = true;
+  }
   let IconPickerComponent = $state<any>(null);
   async function togglePicker() {
     if (pickerOpen) { pickerOpen = false; return; }
@@ -371,8 +382,15 @@
               {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
             </button>
           {/if}
-          <button class="ld-close pressable" type="button" aria-label={m.common_close()}
-                  onclick={() => closeDeviceDetail()}>×</button>
+          {#if groupable}
+            <button class="ld-close ld-group pressable" type="button" aria-label={m.grp_open()}
+                    aria-haspopup="dialog" aria-expanded={groupEditOpen} onclick={() => void openGroupEdit()}>
+              <Icon name={category === 'light' ? 'i-lightbulb-group-outline' : 'i-select-group'} cls="icon icon-md" />
+            </button>
+          {:else}
+            <button class="ld-close pressable" type="button" aria-label={m.common_close()}
+                    onclick={() => closeDeviceDetail()}>×</button>
+          {/if}
         </header>
         {#if nameError}<p id="device-name-error" class="ld-name-error" role="alert">{nameError}</p>{/if}
 
@@ -897,6 +915,11 @@
 <!-- Bewusst außerhalb von .light-detail-panel: Ein position:fixed-Kind innerhalb
      des animierten/transformierten Panels würde an dessen Containing Block und
      Overflow gebunden. Der Picker ist ein eigenes viewportweites Modal. -->
+{#if groupEditOpen && GroupEditComponent && device}
+  <GroupEditComponent {roomId} {device}
+                      onDone={(next: string | null) => { if (next) openDeviceDetail(roomId, next); }}
+                      onClose={() => { groupEditOpen = false; }} />
+{/if}
 {#if pickerOpen && IconPickerComponent}
   <IconPickerComponent {currentIcon} onSelect={setIcon} onReset={resetIcon} onClose={() => (pickerOpen = false)} />
 {/if}

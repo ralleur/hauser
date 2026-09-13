@@ -435,7 +435,7 @@ describe('zentrale HMI-Konfiguration', () => {
     const { settingsValues } = await import('./settings.svelte.ts');
     const { rehydrateShoppingConfig, shoppingConfig } = await import('./shopping-settings.svelte.ts');
     const { immersionLight, rehydrateImmersionLight } = await import('./immersion-light.svelte.ts');
-    const centralDevice = { version: 1, devices: { 'light.wohnzimmer_kugellampen': { name: 'Zentral' } }, order: {} };
+    const centralDevice = { version: 1, devices: { 'light.wohnzimmer_kugellampen': { name: 'Zentral' } }, order: {}, groups: {} };
     const centralLayout = {
       version: 1,
       widthPreset: 'wide',

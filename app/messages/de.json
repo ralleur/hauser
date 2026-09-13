@@ -1896,5 +1896,17 @@
   "card_style_glass": "Glas auf Bildern",
   "card_style_glass_desc": "Dunkles, durchscheinendes Glas mit heller Schrift, das Motiv scheint durch.",
   "card_style_standard": "Standard",
-  "card_style_standard_desc": "Überall dieselben Karten wie auf den übrigen Flächen."
+  "card_style_standard_desc": "Überall dieselben Karten wie auf den übrigen Flächen.",
+  "grp_open": "Gruppe bilden",
+  "grp_title_new": "Gruppe bilden",
+  "grp_title_edit": "Gruppe bearbeiten",
+  "grp_name": "Name der Gruppe",
+  "grp_members": "Mitglieder",
+  "grp_hint": "Ein Griff, ein Wert für alle: Die Gruppe schaltet und stellt alle Mitglieder gleichzeitig.",
+  "grp_origin_tag": "Ursprung",
+  "grp_none": "Keine weiteren Geräte dieser Art vorhanden.",
+  "grp_min": "Mindestens zwei Geräte wählen.",
+  "grp_create": "Gruppe anlegen",
+  "grp_save": "Speichern",
+  "grp_dissolve": "Gruppe auflösen"
 }

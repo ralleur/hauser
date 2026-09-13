@@ -5,15 +5,21 @@ import {
   assignDeviceRoom,
   buildRuntimeRooms,
   cloneDeviceConfig,
+  createGroup,
+  dissolveGroup,
+  isGroupEntityId,
   loadDeviceConfig,
   mergeCatalog,
+  newGroupId,
   saveDeviceConfig,
   seedCatalog,
   setDeviceName,
   setDeviceNameVisibility,
   setDeviceVisibility,
   setRoomOrder,
+  updateGroup,
   type DeviceConfig,
+  type DeviceGroup,
   type EntityCatalogItem,
 } from './device-config.ts';
 
@@ -23,6 +29,10 @@ export const deviceManager = $state({
   config: loadDeviceConfig(),
   catalog: mergeCatalog(seedItems, []),
 });
+
+/* Gruppen: die Laufzeit fragt hier nach den Mitgliedern einer `group.*`-
+   Entität und verteilt Lesen und Schreiben selbst (adapter/runtime). */
+runtime.setGroupResolver((entityId) => (isGroupEntityId(entityId) ? deviceManager.config.groups[entityId]?.members ?? null : null));
 
 let subscribed = false;
 
@@ -59,6 +69,8 @@ export function setRoomDeviceOrder(roomId: string, entityIds: readonly string[])
 export async function renameDevice(entityId: string, name: string): Promise<void> {
   const normalized = name.trim().replace(/\s+/g, ' ');
   if (!normalized) return;
+  // Gruppen gibt es nur hier — Home Assistant kennt sie nicht.
+  if (isGroupEntityId(entityId)) { updateConfig(updateGroup(deviceManager.config, entityId, { name: normalized })); return; }
   await runtime.renameEntity(entityId, normalized);
   updateConfig(setDeviceName(deviceManager.config, entityId, normalized));
 }
@@ -66,6 +78,26 @@ export async function renameDevice(entityId: string, name: string): Promise<void
 /* Sensor-Kachel: Name neben dem Wert zeigen (Vorgabe: nur der Wert). */
 export function setDeviceShowName(entityId: string, showName: boolean): void {
   updateConfig(setDeviceNameVisibility(deviceManager.config, entityId, showName));
+}
+
+/* ── Gerätegruppen (Owner-Wunsch 2026-09-13) ── */
+export function groupOf(entityId: string): DeviceGroup | null {
+  return deviceManager.config.groups[entityId] ?? null;
+}
+
+/** Legt die Gruppe an Stelle von `origin` an und liefert die Kachel-Id der Gruppe. */
+export function createDeviceGroup(input: Omit<DeviceGroup, 'id'>, currentOrder: readonly string[]): string {
+  const id = newGroupId(deviceManager.config.groups);
+  updateConfig(createGroup(deviceManager.config, { ...input, id }, currentOrder));
+  return id;
+}
+
+export function updateDeviceGroup(id: string, patch: Partial<Pick<DeviceGroup, 'name' | 'members'>>): void {
+  updateConfig(updateGroup(deviceManager.config, id, patch));
+}
+
+export function dissolveDeviceGroup(id: string): void {
+  updateConfig(dissolveGroup(deviceManager.config, id));
 }
 
 function updateConfig(config: DeviceConfig): void {

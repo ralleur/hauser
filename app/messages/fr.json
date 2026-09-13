@@ -1897,5 +1897,17 @@
   "card_style_glass": "Verre sur images",
   "card_style_glass_desc": "Verre sombre translucide avec texte clair, l’image transparaît.",
   "card_style_standard": "Standard",
-  "card_style_standard_desc": "Partout les mêmes cartes que sur les autres surfaces."
+  "card_style_standard_desc": "Partout les mêmes cartes que sur les autres surfaces.",
+  "grp_open": "Grouper",
+  "grp_title_new": "Créer un groupe",
+  "grp_title_edit": "Modifier le groupe",
+  "grp_name": "Nom du groupe",
+  "grp_members": "Membres",
+  "grp_hint": "Un geste, une valeur pour tous : le groupe commande tous ses membres en même temps.",
+  "grp_origin_tag": "Origine",
+  "grp_none": "Aucun autre appareil de ce type.",
+  "grp_min": "Choisissez au moins deux appareils.",
+  "grp_create": "Créer le groupe",
+  "grp_save": "Enregistrer",
+  "grp_dissolve": "Dissoudre le groupe"
 }

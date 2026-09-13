@@ -5,6 +5,44 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-09-13
+
+### Added
+
+- **Device groups.** Lights, fans, plugs and blinds that always act together
+  can become one tile: the device detail has a group button at the top right
+  instead of the close cross. Pick two or more devices of the same kind from
+  any room; the group takes the place of the device it was created from, and
+  every touch — on, brightness, colour, speed, position — goes to all members
+  with the same value. The group can be edited or dissolved later; dissolving
+  puts the original device back in its place. Groups live in Hauser only.
+
+### Fixed
+
+- **Lights that are on look on again.** In the glass card style, the icon
+  chip of a light tile stayed grey on the phone room sheet and on the wall
+  panel, and dimmed lights no longer showed their level. The chip now turns
+  warm when the light is on and follows the brightness, and the same applies
+  to the symbol and power button in the device detail.
+- **The layout sliders on the wall panel move smoothly again.** Dragging the
+  "Adjust size" or "Rooms per row" ladder in the layout menu no longer
+  stalls: the swipe that closes the menu had been grabbing the finger.
+- **Scene pills wrap instead of shrinking.** In the glass card style the
+  scene pills used to squeeze and cut off names; now they fill the row and
+  move to a second row when the control surface is too narrow, following its
+  width like the device grid.
+
+### Changed
+
+- **The layout menu is a glass sheet.** In the glass card style the layout
+  menu on the wall panel now uses the same frosted dark sheet as the other
+  overlays, with its setting cards as light glass on top.
+- **Hauser opens in the language of the device.** Without a stored choice the
+  interface follows the browser or tablet language, and when none of the six
+  languages fits it now shows English instead of German. The language picked
+  in the settings — or during the setup wizard — still wins and is remembered
+  on that device.
+
 ## [0.15.1] - 2026-09-12
 
 ### Fixed

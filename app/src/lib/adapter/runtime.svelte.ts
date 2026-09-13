@@ -33,6 +33,23 @@ import { fakeSeedFor } from '../state/fake-discovery-catalog.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 
+/* Gemischte Sicht einer Gruppe: an, sobald ein Mitglied an ist; Stufe,
+   Helligkeit und Position sind das Maximum der eingeschalteten Mitglieder;
+   alles Übrige (Farbe, Presets, Fähigkeiten) kommt vom ersten eingeschalteten
+   Mitglied, sonst vom ersten bekannten. `undefined`, solange kein Mitglied
+   einen Wert hat. */
+export function mergeGroupValues(values: readonly unknown[]): unknown {
+  const known = values.filter((v): v is Record<string, unknown> => !!v && typeof v === 'object');
+  if (known.length === 0) return undefined;
+  const active = known.filter((v) => v.on === true);
+  const merged: Record<string, unknown> = { ...(active[0] ?? known[0]), on: active.length > 0 };
+  for (const key of ['brightness', 'percentage', 'position', 'tilt']) {
+    const nums = (active.length ? active : known).map((v) => v[key]).filter((n): n is number => typeof n === 'number');
+    if (nums.length) merged[key] = Math.max(...nums);
+  }
+  return merged;
+}
+
 export class AdapterRuntime {
   readonly store = new EntityStore();
   #intents = new SvelteMap<string, Intent>();
@@ -54,6 +71,10 @@ export class AdapterRuntime {
   /* Seit wann steht dieser Verbindungszustand? Die versteckte Diagnose
      (Paket 10) zeigt daraus das Verbindungsalter. */
   #connectionSince = $state(Date.now());
+  /* Gerätegruppen (state/device-config): eine `group.*`-Entität steht für
+     mehrere HA-Entitäten. Lesen mischt die Mitglieder, Schreiben verteilt
+     denselben Befehl an alle — die Komponenten merken davon nichts. */
+  #groupMembers: ((entityId: string) => readonly string[] | null) | null = null;
 
   // Subset-Match (ADR-017 Addendum): Teil-Patches (Media) und volle Werte
   // (Licht/Klima) reconcilen durch dieselbe Logik.
@@ -142,8 +163,17 @@ export class AdapterRuntime {
   /* Selektives Abo (ADR-006): reicht die sichtbaren entity_ids an das Backend
      durch. FakeBackend ignoriert das (No-op), HaBackend resubscribed. */
   setVisible(entityIds: readonly string[]): void {
-    this.#visible = [...entityIds];
+    this.#visible = entityIds.flatMap((id) => this.#membersOf(id) ?? [id]);
     this.#backend.setVisible?.(this.#visible);
+  }
+
+  setGroupResolver(resolver: ((entityId: string) => readonly string[] | null) | null): void {
+    this.#groupMembers = resolver;
+  }
+
+  #membersOf(entityId: string): readonly string[] | null {
+    const members = this.#groupMembers?.(entityId) ?? null;
+    return members && members.length > 0 ? members : null;
   }
 
   subscribeCatalog(cb: (items: unknown[]) => void): void {
@@ -250,6 +280,8 @@ export class AdapterRuntime {
      Der pending Intent überlagert NUR seine Felder (Patch-Merge); Server-
      Metadaten (media track/artist/…) fließen unverändert durch. */
   merged(entityId: string): unknown {
+    const members = this.#membersOf(entityId);
+    if (members) return mergeGroupValues(members.map((id) => this.merged(id)));
     const server = this.store.get(entityId)?.value;
     const intent = this.#intents.get(entityId);
     return intent ? mergePatch(server, intent.value) : server;
@@ -257,6 +289,16 @@ export class AdapterRuntime {
 
   /* „pending"-Dot am Control, sobald der Command ins Timeout läuft (docs/02) */
   intentStatus(entityId: string): IntentStatus | null {
+    const members = this.#membersOf(entityId);
+    if (members) {
+      const rank: Record<IntentStatus, number> = { inflight: 1, unconfirmed: 2, pending: 3 };
+      let worst: IntentStatus | null = null;
+      for (const id of members) {
+        const status = this.#intents.get(id)?.status ?? null;
+        if (status && (!worst || rank[status] > rank[worst])) worst = status;
+      }
+      return worst;
+    }
     return this.#intents.get(entityId)?.status ?? null;
   }
 
@@ -264,6 +306,15 @@ export class AdapterRuntime {
      Wobble (Toggle) bzw. Interpolation (Slider) aus. `null`, solange kein
      Widerspruch aufgetreten ist. */
   reconcileEvent(entityId: string): ReconcileEvent | null {
+    const members = this.#membersOf(entityId);
+    if (members) {
+      let latest: ReconcileEvent | null = null;
+      for (const id of members) {
+        const event = this.#reconciled.get(id);
+        if (event && (!latest || event.seq > latest.seq)) latest = event;
+      }
+      return latest;
+    }
     return this.#reconciled.get(entityId) ?? null;
   }
 
@@ -271,6 +322,8 @@ export class AdapterRuntime {
      ohne Intent — media_next/prev, analog scene.turn_on. Läuft durch dieselbe
      Sende-Dedup, reconciled aber nichts. */
   send(cmd: Command): void {
+    const members = this.#membersOf(cmd.entityId);
+    if (members) { for (const id of members) this.send({ ...cmd, entityId: id }); return; }
     if (this.#connection === 'disconnected') return; // offline (docs/02)
     nativeBridge().haptic('impact');
     if (this.#connection !== 'connected') {
@@ -285,6 +338,8 @@ export class AdapterRuntime {
      Der optimistische UI-Update ist mit dem gesetzten Intent bereits sichtbar
      (ADR-005). `optimistic` ist der erwartete Zielwert für die Reconciliation. */
   dispatch(cmd: Command, optimistic: unknown): void {
+    const members = this.#membersOf(cmd.entityId);
+    if (members) { for (const id of members) this.dispatch({ ...cmd, entityId: id }, optimistic); return; }
     /* Endgültig getrennt (docs/02): kein Command und kein optimistischer
        Intent, der nie bestätigt würde — die UI sperrt die Controls sichtbar.
        Während `connecting`/`reconnecting` wird dagegen angenommen: das ist der

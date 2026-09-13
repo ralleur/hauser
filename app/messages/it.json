@@ -1897,5 +1897,17 @@
   "card_style_glass": "Vetro sulle immagini",
   "card_style_glass_desc": "Vetro scuro traslucido con testo chiaro, l’immagine traspare.",
   "card_style_standard": "Standard",
-  "card_style_standard_desc": "Ovunque le stesse schede delle altre superfici."
+  "card_style_standard_desc": "Ovunque le stesse schede delle altre superfici.",
+  "grp_open": "Raggruppa",
+  "grp_title_new": "Crea un gruppo",
+  "grp_title_edit": "Modifica gruppo",
+  "grp_name": "Nome del gruppo",
+  "grp_members": "Membri",
+  "grp_hint": "Un tocco, un valore per tutti: il gruppo comanda tutti i membri insieme.",
+  "grp_origin_tag": "Origine",
+  "grp_none": "Nessun altro dispositivo di questo tipo.",
+  "grp_min": "Scegli almeno due dispositivi.",
+  "grp_create": "Crea gruppo",
+  "grp_save": "Salva",
+  "grp_dissolve": "Sciogli gruppo"
 }

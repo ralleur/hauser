@@ -24,6 +24,7 @@
    dunkle Scheiben auf dem Relief der Bühne (siehe unten, „Übrige Screens“). */
 :root:not([data-card-style="standard"]) :is(
   .on-image,
+  .layout-dialog,
   [data-shell="panel"] :is(.calendar-screen, .screen-inner, .notes-panel),
   :root:has([data-shell="panel"]) .notification-tile
 ) {
@@ -48,6 +49,13 @@
    als Glas über dem Raumbild. */
 :root:not([data-card-style="standard"]) .room-sheet.on-image {
   --overlay-panel-background: linear-gradient(160deg, #23262d, #101216);
+  /* Der Verlauf ist deckend, das Raumbild und der Schleier liegen darauf:
+     der Backdrop-Filter der Telefon-Fassung (phone-shell.css) blurrt hier das
+     ganze Blatt hindurch — 20 px über die volle Fläche, in jedem Frame —
+     und kein Pixel davon erreicht den Schirm. Die Kacheln brechen weiter
+     das Raumbild, das ein Kind des Blatts ist; sie sehen dasselbe wie zuvor. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 :root:not([data-card-style="standard"]) .home-panel.on-image {
   background: var(--overlay-control-background);
@@ -73,6 +81,15 @@
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
 }
+/* An bleibt An: die Glas-Regel oben ist spezifischer als `.light-tile.is-on
+   .light-tile-icon` in app.css und würde den Ein-Zustand samt Helligkeits-
+   stufe wegbügeln. Deshalb hier dieselbe Mischung, nur gegen die Glas-Grund-
+   werte statt gegen die Standardfläche. */
+:root:not([data-card-style="standard"]) .on-image .light-tile.is-on .light-tile-icon {
+  background: color-mix(in srgb, var(--accent-light-on-fill) calc(var(--light-level, 1) * 100%), rgba(255, 255, 255, 0.14));
+  border-color: color-mix(in srgb, var(--accent-light-on-border) calc(var(--light-level, 1) * 100%), rgba(255, 255, 255, 0.22));
+  color: color-mix(in srgb, var(--accent-light-on-icon) calc(var(--light-level, 1) * 100%), #fff);
+}
 :root:not([data-card-style="standard"]) .on-image .light-tile-name,
 :root:not([data-card-style="standard"]) .on-image .light-tile-state,
 :root:not([data-card-style="standard"]) .on-image .light-tile-value { color: #fff; }
@@ -84,10 +101,14 @@
   border-radius: var(--radius-full);
   background: var(--overlay-control-background);
 }
+/* Pillen füllen die Zeile, schrumpfen aber nie unter ihren Namen: passt die
+   nächste nicht mehr, rückt sie in eine neue Zeile — abhängig von der Breite
+   der Fläche, wie das Geräteraster. */
 :root:not([data-card-style="standard"]) .on-image .room-controls .scene-btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   justify-content: center;
-  min-width: 0;
+  min-width: max-content;
+  white-space: nowrap;
   padding: 0 var(--space-3);
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.12);
@@ -350,6 +371,31 @@
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.16);
 }
+/* Gerätedetail: Symbol-Chip und Ein/Aus-Knopf zeigen auch auf Glas den
+   Ein-Zustand und die Stufe (siehe Kachel-Icon oben). */
+:root:not([data-card-style="standard"]) .overlay-panel.on-image .ld-symbol.is-on {
+  background: color-mix(in srgb, var(--accent-light-on-fill) calc(var(--light-level, 1) * 100%), rgba(255, 255, 255, 0.12));
+  border-color: color-mix(in srgb, var(--accent-light-on-border) calc(var(--light-level, 1) * 100%), rgba(255, 255, 255, 0.16));
+  color: color-mix(in srgb, var(--accent-light-on-icon) calc(var(--light-level, 1) * 100%), #fff);
+}
+:root:not([data-card-style="standard"]) .overlay-panel.on-image .ld-power.is-on {
+  color: var(--color-accent-warm);
+  border-color: var(--color-accent-warm);
+}
+
+/* Layout-Menü der Bühne (Kontrollflächen anpassen): dieselbe Scheibe wie die
+   Overlays; die Einstellkarten darauf als helles Glas wie die Kontrollen der
+   Overlays, damit sich nicht Dunkel auf Dunkel stapelt. */
+:root:not([data-card-style="standard"]) .layout-dialog {
+  background: var(--glass-face);
+  border-color: var(--overlay-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root:not([data-card-style="standard"]) .layout-dialog :where(.layout-slider-setting, .secondary-btn) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
 
 /* ── Sperrbildschirm im Glasstil (Owner-Mock 2026-09-12) ──
    Warmer Sandgrund (nachts tiefes Braun), darauf der Stadtplan als weiche
@@ -498,4 +544,86 @@
 :root:not([data-card-style="standard"]) .ambient .ambient-week-time {
   color: var(--ambient-glass-time);
   font-weight: var(--font-weight-medium);
+}
+
+/* ── Glass Lite (Owner-Entscheidung 2026-09-13) ──
+   Derselbe Look für Geräte, auf denen das volle Glas ruckelt (iPad Pro 2018).
+   Die Wurzel trägt `data-card-style="glass-lite"`; alle Glas-Regeln oben gelten
+   weiter, hier liegt nur das darüber, was Rechenarbeit spart:
+   1. Blur nur auf der obersten Fläche, mit 10 statt 18 px.
+   2. Kalender, Bibliothek, Ablage und die Notizen-Scheiben sind statisch:
+      eine vorgerechnete, unscharfe Kopie des Bilds dahinter statt eines
+      Vollbild-Blurs in jedem Frame (public/backgrounds/*-lite.webp,
+      public/notes/*-lite.webp — blur(10px) saturate(1.2), gerechnet auf 1366 px).
+   3. Flächen unter einer Glasfläche (Klimakarte und Kamera auf der Bühne, die
+      Kacheln im Telefon-Raumblatt) brechen nichts mehr; am Telefon sind sie
+      dafür dichter, damit die Schrift auf dem Foto lesbar bleibt.
+   4. Einblendungen animieren keinen Blur: Overlay und Meldung kommen als
+      Fläche herein, die Scheibe steht erst mit dem letzten Frame. */
+:root[data-card-style="glass-lite"] {
+  --glass-blur: blur(10px) saturate(1.2);
+}
+@keyframes lite-blur-in {
+  from { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  to { -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+}
+
+/* 2. Statische Scheiben. Das Relief liegt als `center / cover` auf dem
+   Rahmen; die Screens füllen den Rahmen, also deckt dieselbe Angabe hier den
+   gleichen Ausschnitt. */
+:root[data-card-style="glass-lite"] [data-shell="panel"] .screen:is([data-screen="calendar"], [data-screen="library"], [data-screen="library-detail"], [data-screen="ablage"]) {
+  background:
+    linear-gradient(var(--glass-face), var(--glass-face)),
+    url('/backgrounds/glass-light-lite.webp') center / cover no-repeat var(--color-surface-0);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-card-style="glass-lite"][data-theme='dark'] [data-shell="panel"] .screen:is([data-screen="calendar"], [data-screen="library"], [data-screen="library-detail"], [data-screen="ablage"]) {
+  background-image:
+    linear-gradient(var(--glass-face), var(--glass-face)),
+    url('/backgrounds/glass-dark-lite.webp');
+}
+/* Die Notizen-Scheiben liegen irgendwo im Rahmen: der Ausschnitt wird aus
+   der Rahmengröße (100vw × 100dvh, das Bild deckt ihn wie `cover`) und der
+   Lage der Scheibe (--lite-x/--lite-y aus actions/lite-backdrop.ts) berechnet. */
+:root[data-card-style="glass-lite"] [data-shell="panel"] .notes-panel {
+  --lite-aspect: calc(1677 / 938);
+  --lite-w: max(100vw, calc(100dvh * var(--lite-aspect)));
+  --lite-h: max(100dvh, calc(100vw / var(--lite-aspect)));
+  background:
+    linear-gradient(var(--glass-face), var(--glass-face)),
+    url('/notes/notes-day-lite.webp')
+      calc((100vw - var(--lite-w)) / 2 - var(--lite-x, 0px))
+      calc((100dvh - var(--lite-h)) / 2 - var(--lite-y, 0px))
+      / var(--lite-w) var(--lite-h) no-repeat;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-card-style="glass-lite"][data-theme='dark'] [data-shell="panel"] .notes-panel {
+  --lite-aspect: calc(1672 / 941);
+  background-image:
+    linear-gradient(var(--glass-face), var(--glass-face)),
+    url('/notes/notes-night-lite.webp');
+}
+
+/* 3. Nichts bricht unter einer Glasfläche. */
+:root[data-card-style="glass-lite"] .home-panel.on-image :is(.room-controls .climate-card, .camera-feed),
+:root[data-card-style="glass-lite"] .room-sheet.on-image :is(.room-sheet-more, .light-tile, .room-controls .scene-row, .room-controls .climate-card, .camera-feed) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-card-style="glass-lite"] .room-sheet.on-image {
+  --overlay-control-background: rgba(26, 28, 34, 0.62);
+}
+
+/* 4. Einblenden ohne animierten Blur. */
+:root[data-card-style="glass-lite"] :is(.room-overlay.is-open .overlay-panel, .light-detail.is-open .light-detail-panel, .energy-load-overlay.is-open .elo-panel, .room-edit.is-open .room-edit-panel).on-image {
+  animation:
+    modal-enter var(--duration-enter) var(--ease-spring) both,
+    lite-blur-in 0s linear var(--duration-enter) both;
+}
+:root[data-card-style="glass-lite"]:has([data-shell="panel"]) .notification-tile-shell {
+  animation:
+    notification-enter var(--duration-enter) var(--ease-out) both,
+    lite-blur-in 0s linear var(--duration-enter) both;
 }
