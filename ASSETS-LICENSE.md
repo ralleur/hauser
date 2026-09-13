@@ -54,6 +54,7 @@ AGPL-3.0-only:
 - `website/favicon.png`
 - `website/apple-touch-icon.png`
 - `website/brand/`
+- `docs-site/public/favicon.png` and `docs-site/src/assets/` (the same brand marks, used by the wiki)
 
 See [TRADEMARKS.md](TRADEMARKS.md) for permitted brand references and the rules
 for modified distributions. CC BY 4.0 reuse of screenshots does not grant any

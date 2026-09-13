@@ -5,11 +5,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 npm run build:pages-demo --prefix app
+npm run build --prefix docs-site
 
 rm -rf .pages
-mkdir -p .pages/demo
+mkdir -p .pages/demo .pages/docs
 cp -R website/. .pages/
 cp -R app/dist-pages-demo/. .pages/demo/
+cp -R docs-site/dist/. .pages/docs/
 touch .pages/.nojekyll
 
 python3 - <<'PY'
@@ -33,6 +35,20 @@ if not icon_sources or any(not isinstance(src, str) or src.startswith('/') for s
     raise SystemExit(f'Demo manifest icon paths must be relative: {icon_sources}')
 
 print('pages_base_path_contract=PASS')
+
+# The wiki is built with base /hauser/docs; every root-relative reference in
+# its HTML must stay below the Pages project root (/hauser/).
+docs_root = Path('.pages/docs')
+if not (docs_root / 'index.html').is_file():
+    raise SystemExit('Wiki build missing: .pages/docs/index.html')
+bad = []
+for page in docs_root.rglob('*.html'):
+    for ref in re.findall(r'(?:src|href)="([^"]+)"', page.read_text()):
+        if ref.startswith('/') and not ref.startswith('/hauser/'):
+            bad.append((str(page.relative_to(docs_root)), ref))
+if bad:
+    raise SystemExit(f'Wiki HTML contains root-relative references outside /hauser/: {bad[:10]}')
+print('wiki_base_path_contract=PASS')
 PY
 
-printf 'pages_root=%s\nlanding=index.html\ndemo=demo/index.html\n' "$ROOT/.pages"
+printf 'pages_root=%s\nlanding=index.html\ndemo=demo/index.html\nwiki=docs/index.html\n' "$ROOT/.pages"

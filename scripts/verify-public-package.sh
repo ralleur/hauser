@@ -207,6 +207,7 @@ npm run build --prefix app
 npm test --prefix app
 npm run check --prefix app
 npm run build:demo --prefix app
+npm ci --prefix docs-site
 ./scripts/build-pages.sh
 npm run performance:budget --prefix app
 

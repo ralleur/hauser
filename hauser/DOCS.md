@@ -21,6 +21,9 @@ installation uses.
 3. Select **Hauser**, choose **Install**, then **Start**.
 4. Choose **Open Web UI**.
 
+The [Hauser Wiki](https://ralleur.github.io/hauser/docs/) explains every
+feature and the first setup step by step.
+
 Apps require Home Assistant OS or a Supervised installation. Home Assistant
 Container has no App system — use the Docker/Compose installation described in
 the repository README and in [`docs/08-installation.md`](../docs/08-installation.md).

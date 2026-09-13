@@ -1,0 +1,15 @@
+/* Light touch of the Hauser identity: the warm accent from the project website. */
+:root {
+  --sl-color-accent-low: #3a2a0a;
+  --sl-color-accent: #f5b03c;
+  --sl-color-accent-high: #ffd58a;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #fff0d0;
+  --sl-color-accent: #b8771a;
+  --sl-color-accent-high: #4a2f06;
+}
+.site-title {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-weight: 400;
+}

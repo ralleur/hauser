@@ -23,3 +23,6 @@ app/public/hero/*-phone.avif
 
 # Automatic household migration rollback copies
 app/config/households/*.backup-v*-*
+
+# Astro: generated types of the wiki (docs-site)
+.astro/

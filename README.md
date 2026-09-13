@@ -8,7 +8,7 @@
 
 **A calm, visual Home Assistant frontend for the people who live in the home.**
 
-[**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [Install](#installation) · [Documentation](#documentation) · [Roadmap](ROADMAP.md)
+[**Project page**](https://ralleur.github.io/hauser/) · [**Live demo**](https://ralleur.github.io/hauser/demo/) · [**Wiki**](https://ralleur.github.io/hauser/docs/) · [Install](#installation) · [Documentation](#documentation) · [Roadmap](ROADMAP.md)
 
 [![Quality and release](https://github.com/ralleur/hauser/actions/workflows/quality-and-release.yml/badge.svg?branch=main)](https://github.com/ralleur/hauser/actions/workflows/quality-and-release.yml) [![Latest tag](https://img.shields.io/github/v/tag/ralleur/hauser?sort=semver&label=version)](https://github.com/ralleur/hauser/releases) [![License AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-informational)](LICENSE)
 
@@ -388,6 +388,12 @@ companion server, and a permanent "demo" badge. The hosted demo publishes the
 same artifact type below the repository's Pages base path.
 
 ## Documentation
+
+The [**Hauser Wiki**](https://ralleur.github.io/hauser/docs/) is the user and
+developer documentation: installation, every feature and the idea behind it,
+configuration, FAQ and troubleshooting. Its source lives in
+[`docs-site/`](docs-site/). The documents below are the deeper technical
+reference.
 
 | | |
 |---|---|
