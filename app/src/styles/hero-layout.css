@@ -420,7 +420,11 @@
   background: transparent;
   border-top: 0;
 }
-.tab-bar {
+/* Mit Shell-Selektor, nicht nur `.tab-bar`: app.css setzt `justify-content:
+   center` und liegt im Produktionsbundle hinter dieser Datei — bei gleicher
+   Spezifität rückten Klima-Pille und „Alles ruhig" in die Mitte (v0.15.2,
+   Owner-Befund 2026-09-14 am Panel), in der Werkstatt standen sie außen. */
+[data-shell="panel"] .tab-bar {
   justify-content: space-between;
   align-items: center;
   padding: 0 var(--space-4);
@@ -440,7 +444,8 @@
   padding: 0 var(--space-3);
   border-radius: var(--radius-full);
 }
-.security-bar {
+/* Gleicher Grund wie bei .tab-bar: app.css trägt Flächenfassung und Höhe. */
+[data-shell="panel"] .security-bar {
   border-color: var(--pill-border);
   border-radius: var(--radius-full);
   background: var(--pill-face);

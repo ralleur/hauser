@@ -2,6 +2,7 @@
   import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
+  import { IS_DEMO } from '../demo/demo-mode.ts';
   import { clock } from '../state/clock.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
   import { roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
@@ -175,8 +176,28 @@
     idleTimer = setTimeout(showAmbient, idleTimeoutMs);
   }
 
+  /* Demo (Owner-Wunsch 2026-09-14): der erste Aufruf im Browser-Tab beginnt
+     im Standby — Uhr und Stadtplan sind die Begrüßung, nicht der Raum. Ein
+     Neuladen im selben Tab startet wie gewohnt auf Home. Nur die Demo; im
+     Haus entscheidet der Timer. Die Aufnahme setzt die Marke selbst, damit
+     ihre Läufe weiter auf dem Home beginnen. */
+  const DEMO_GREETED_KEY = 'hmi:demo-greeted';
+  let greetWithStandby = (() => {
+    if (!IS_DEMO) return false;
+    try {
+      if (sessionStorage.getItem(DEMO_GREETED_KEY) !== null) return false;
+      sessionStorage.setItem(DEMO_GREETED_KEY, '1');
+      return true;
+    } catch { return false; }
+  })();
+
   $effect(() => {
-    armIdleTimer();
+    if (greetWithStandby) {
+      greetWithStandby = false;
+      showAmbient();
+    } else {
+      armIdleTimer();
+    }
     return () => { clearTimeout(idleTimer); clearInterval(shiftTimer); setAmbientActive(false); };
   });
 

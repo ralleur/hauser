@@ -353,7 +353,7 @@
           <!-- 1:1 die Tablet-Seitenleiste: gleiche Controls, gleiche Long-Press-
                Gesten und Overlays (Geräte-Detail, Szenen-Editor) — eine Erfahrung
                aus einem Guss auf beiden Shells. -->
-          <RoomControls {room} />
+          <RoomControls {room} stackedClimate />
         </div>
       {/key}
     </div>

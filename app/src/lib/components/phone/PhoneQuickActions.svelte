@@ -62,8 +62,9 @@
   <div class="phone-quick-actions">
     <button class="phone-quick-action is-off pressable" type="button" disabled={!online}
             aria-label={m.phone_all_off_label()} onclick={onHomeOff}>
+      <!-- Nur das Zeichen, ohne Wort (Owner-Wunsch 2026-09-14); den Text trägt
+           das aria-label. -->
       <Icon name="i-power" cls="icon icon-md" />
-      <span>{m.phone_off()}</span>
     </button>
     <ClimatePill label={m.phone_climate_central()}
                  coolerLabel={m.phone_climate_colder()}

@@ -64,7 +64,10 @@
 
      Der Werkstatt-Simulator kann „alle Lichter aus" erzwingen, auch dort. */
   const roomLightsOff = $derived.by(() => {
-    const lights = room?.lights ?? [];
+    /* Nur Lampen zählen: `room.lights` trägt seit der Einrichtung auch
+       Schalter, Sauger und Rollos — ein offenes Rollo meldet „an" und hielt
+       das Zimmer sonst für beleuchtet (Befund Demo-Aufnahme 2026-09-14). */
+    const lights = (room?.lights ?? []).filter((device) => (device.domain ?? 'light') === 'light');
     if (lights.length === 0) return false;
     return lights.every((device) => (mergedDevice(room?.id ?? '', device) as LightValue | undefined)?.on !== true);
   });

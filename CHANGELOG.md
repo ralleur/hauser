@@ -5,6 +5,158 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-14
+
+### Changed
+
+- **The demo greets you with the standby screen.** The first visit in a
+  browser tab opens on the clock over the street map, the way a panel rests
+  on the wall; a tap wakes it. A reload in the same tab starts on Home. Real
+  installations are unaffected, there the standby timer decides.
+- **The demo's street map is Cologne**, five kilometres around the cathedral,
+  drawn from OpenStreetMap data like a real household's map.
+- **Wiki pictures of the mode mark** in the title bar are current again.
+
+## [0.19.1] - 2026-09-14
+
+### Fixed
+
+- **The room goes dark again when the last lamp goes out.** Since blinds,
+  switches and vacuums joined a room's device list, an open blind counted as
+  "on" and kept the evening picture lit. Only lamps decide now.
+- **Room pictures on the phone in the demo.** The demo build skipped the
+  phone-sized picture variants, so the room tiles stayed empty.
+- **Screenshots and wiki refreshed** for the glass card style, the question
+  mark in the title bar and the phone's frosted-glass controls.
+
+## [0.19.0] - 2026-09-14
+
+### Changed
+
+- **A new house on the Energy screen.** The bundled placeholder — shown
+  wherever no exterior picture of your own is assigned, and in the demo — is
+  now a modern two-storey family house with a solar roof, day and night, with
+  the notes for solar, load and grid placed on it.
+
+## [0.18.6] - 2026-09-14
+
+### Changed
+
+- **Home, Shopping list and Reminders are the phone's default bottom tabs.**
+  Everything else waits under "More". A device with its own saved order
+  keeps it.
+
+## [0.18.5] - 2026-09-14
+
+### Fixed
+
+- **The active tab's highlight on the phone now encloses icon and label**
+  completely; on Energy and Shopping list the icon used to peek out at the top.
+
+## [0.18.4] - 2026-09-14
+
+### Changed
+
+- **The phone's off button is all symbol.** The power sign now nearly fills
+  the button.
+- **The "off" safety prompt is off by default.** New installations switch
+  everything off without asking; the prompt with its cut-off time can be
+  turned on under System → Interface & controls. A device that already had
+  the prompt on keeps it.
+
+### Fixed
+
+- **Climate pill and "All quiet" sat in the middle of the panel's footer.**
+  In the published build the footer's base stylesheet won over the panel
+  layout, so the climate control and the security status crowded around the
+  navigation instead of standing at the left and right edge; the workshop
+  build had the stylesheets in the other order and did not show it. The panel
+  footer rule now wins regardless of bundle order, and the status pill keeps
+  its rounded glass shape.
+
+## [0.18.3] - 2026-09-14
+
+### Changed
+
+- **The off button on the phone shows only its symbol.** The word below the
+  power sign is gone; the button keeps its size and its spoken label.
+
+## [0.18.2] - 2026-09-14
+
+### Changed
+
+- **Phone controls now match the panel's footer exactly.** Off, climate,
+  holiday and the navigation pill carry the same dark frosted glass as the
+  panel's pills, with light text, a faint bright edge and the same amber
+  highlight behind the active tab — identical in light and dark mode, as on
+  the panel. The calm taupe ground behind the room tiles stays.
+
+## [0.18.1] - 2026-09-14
+
+### Fixed
+
+- **Stronger contrast on the phone controls.** Text and icons on the quick
+  actions and the navigation pill are darker and more opaque, the frosted
+  glass a little lighter and denser, and the active tab a deeper amber, so
+  labels read clearly on the taupe ground. Dark mode gets the same lift.
+
+## [0.18.0] - 2026-09-14
+
+### Changed
+
+- **A quieter phone home.** In the glass card style the room tiles now stand
+  on a calm, warm taupe ground instead of the panel's relief: no waves or
+  diagonals between the tiles, only a very soft shift of light across the
+  bottom of the screen that stays put while you scroll. Off, climate, holiday
+  and the navigation pill share one matte frosted glass — a lightly tinted
+  warm grey with real blur, a faint bright edge and a soft shadow — with dark
+  warm-anthracite text and icons; minus stays blue, plus and off red, the
+  active tab amber. The two control rows sit a little closer to the tiles and
+  are slightly more compact; every touch target stays at least 48 px. Dark
+  mode gets the same material in its dark form. Panel and standard card style
+  are unchanged.
+
+## [0.17.1] - 2026-09-14
+
+### Fixed
+
+- **The phone navigation pill is frosted glass too.** In the glass card style
+  it now carries the same dark pane as the quick actions and the panel's
+  footer pills, on every phone screen, so it no longer stands out as a light
+  bar under the dark glass above it.
+
+## [0.17.0] - 2026-09-14
+
+### Changed
+
+- **The phone home stands on the same relief as "All rooms" on the panel.**
+  In the glass card style the room tiles no longer sit on a flat surface: the
+  quiet light or dark relief from the panel lies behind them, and the quick
+  actions row — off, climate, holiday — becomes the same frosted glass as the
+  panel's footer pills. The tiles scroll on behind it and shimmer through
+  instead of vanishing into a solid band. Other phone screens are unchanged.
+
+## [0.16.1] - 2026-09-14
+
+### Fixed
+
+- **Swiping down closes the room sheet on the phone again**, even when the
+  room has so many devices that the list scrolls. As long as the list sits at
+  the top, dragging down pulls the sheet away; further down, the same movement
+  scrolls the list.
+
+## [0.16.0] - 2026-09-14
+
+### Added
+
+- **Say something, right from the panel.** A question mark at the top right,
+  next to the standby button, opens a small sheet: "Something is wrong" or
+  "I would like …", a sentence, and an optional reply address. No GitHub
+  account, no forum. The sheet shows what travels along — version, language,
+  screen size, connection state — before you send. Messages go to a postbox
+  that the maintainer empties regularly; the demo shows the sheet but sends
+  nothing. Available in all six languages.
+
 ## [0.15.2] - 2026-09-13
 
 ### Added

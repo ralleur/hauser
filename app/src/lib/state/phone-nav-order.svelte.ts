@@ -57,7 +57,13 @@ export function projectPhoneNavOrder(
       if (defaults.includes(id) && !order.includes(id)) order.push(id);
     }
   }
-  return order;
+  /* Standard unten in der Leiste: Home, Einkaufsliste, Erinnerungen
+     (Owner-Entscheidung 2026-09-14) — unabhängig davon, wie die
+     Haushaltskonfiguration ihre Tabs ordnet. Was fehlt, wird übersprungen; der
+     Rest folgt in Tab-Reihenfolge. Eine am Gerät gespeicherte Reihenfolge
+     bleibt davon unberührt (normalizePhoneNavOrder). */
+  const front = (['home', 'shopping', 'reminders'] as const).filter((id) => order.includes(id));
+  return [...front, ...order.filter((id) => !front.includes(id as typeof front[number]))];
 }
 
 function configuredOrder(): PhoneNavTarget[] {

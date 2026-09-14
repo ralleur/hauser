@@ -32,6 +32,7 @@
   import { shellLifecycle } from '../state/shell-lifecycle-instance.ts';
   import { undoOffer } from '../state/undo.svelte.ts';
   import { clockZoom, diagnostics } from '../state/hidden-gestures.svelte.ts';
+  import { feedback } from '../state/feedback.svelte.ts';
   import { appState } from '../state/app.svelte.ts';
   import { ambientLight, watchAmbientLight } from '../state/ambient-light.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
@@ -116,6 +117,13 @@
     void import('../components/ClockZoom.svelte')
       .then((loaded) => { ClockZoomComponent = loaded.default; })
       .catch(() => { /* versteckte Geste: ein Fehlschlag bleibt folgenlos */ });
+  });
+  let FeedbackComponent = $state<Component<any> | null>(null);
+  $effect(() => {
+    if (!feedback.active || FeedbackComponent) return;
+    void import('../components/FeedbackSheet.svelte')
+      .then((loaded) => { FeedbackComponent = loaded.default; })
+      .catch(() => { feedback.active = false; });
   });
   $effect(() => {
     if (!diagnostics.active || DiagnosticsComponent) return;
@@ -300,6 +308,7 @@
 {#if UndoToastComponent}<UndoToastComponent />{/if}
 {#if ClockZoomComponent && clockZoom.active}<ClockZoomComponent />{/if}
 {#if DiagnosticsComponent && diagnostics.active}<DiagnosticsComponent />{/if}
+{#if FeedbackComponent && feedback.active}<FeedbackComponent />{/if}
 {#if settingsValues.ambientLightDim && ambientLight.dim > 0}
   <div class="ambient-dim-veil" aria-hidden="true" style:opacity={ambientLight.dim}></div>
 {/if}

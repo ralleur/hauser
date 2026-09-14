@@ -121,6 +121,7 @@ import { createFamilyDataStore, serveFamilyData } from './server/family-data.mjs
 import { notionShoppingRoute, serveNotionShopping } from './server/shopping-notion.mjs';
 import { createMomentsService, MOMENT_HOLIDAYS_CONFIG_KEY, serveMoments } from './server/moments.mjs';
 import { createWeatherService, serveWeather } from './server/weather.mjs';
+import { createFeedbackService, serveFeedback } from './server/feedback.mjs';
 import { applyAppCors, authenticateRequest, CLAIM_LIMIT_PER_MINUTE, createDeviceStore, createRateLimiter, PAIRING_ROUTE_PREFIX, remoteGateAllows, remoteGateReject, servePairing, TOKEN_FAILURE_LIMIT_PER_MINUTE } from './server/pairing.mjs';
 import { APP_ROUTE_PREFIX, createFileIndex, readTextIfExists, serveAppBundle } from './server/app-bundle.mjs';
 import { createTunnelSupervisor, REMOTE_ROUTE_PREFIX, serveRemote } from './server/remote.mjs';
@@ -749,6 +750,7 @@ export function createHmiServer(
   };
   /* Kalendermomente: Erkennung gehört dem Server, nicht dem Browser. Er liest
      Termine und Wetterlage selbst und merkt sich nur die Schneesaison. */
+  const feedback = createFeedbackService({ buildInfo, haConnectionMode });
   const moments = momentsService ?? createMomentsService({
     clientFactory: laundryClientFactory,
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode),
@@ -1086,6 +1088,16 @@ export function createHmiServer(
         });
       } else {
         void serveWeather(req, res, weather);
+      }
+    } else if ((req.url || '') === '/api/feedback') {
+      if (!requestOriginAllowed(req, allowedOrigins)) {
+        jsonResponse(res, 403, {
+          ok: false,
+          code: 'FEEDBACK_ORIGIN_FORBIDDEN',
+          message: 'Die Rückmeldung stammt nicht von einer freigegebenen Origin.',
+        });
+      } else {
+        serveFeedback(req, res, feedback);
       }
     } else if ((req.url || '').startsWith('/api/moments')) {
       if (!requestOriginAllowed(req, allowedOrigins)) {

@@ -119,31 +119,77 @@
   background: color-mix(in srgb, var(--color-accent-warm) 22%, rgba(255, 255, 255, 0.08));
 }
 /* Klima: Glaskarte, Schritt-Tasten als helle Kreise, die aktive Betriebsart
-   steht dunkel und satt in der Glasleiste. */
+   steht dunkel und satt in der Glasleiste. Dieselbe Karte steht am Panel im
+   Klima-Overlay (`.room-climate-card`, ohne eigene Fläche) — Tasten und
+   Betriebsarten tragen dort dieselben Glaswerte wie im Raumblatt des Telefons. */
 :root:not([data-card-style="standard"]) .on-image .room-controls .climate-card {
   background: var(--overlay-control-background);
   border-color: var(--overlay-border);
 }
-:root:not([data-card-style="standard"]) .on-image .room-controls .climate-step {
+:root:not([data-card-style="standard"]) .on-image :is(.room-controls, .room-climate-card) .climate-step {
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.22);
   box-shadow: none;
 }
-:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode-selector {
+:root:not([data-card-style="standard"]) .on-image :is(.room-controls, .room-climate-card) .climate-mode-selector {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
 }
-:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode {
+:root:not([data-card-style="standard"]) .on-image :is(.room-controls, .room-climate-card) .climate-mode {
   background: transparent;
   border-color: rgba(255, 255, 255, 0.14);
   color: #fff;
 }
-:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode.is-active {
+:root:not([data-card-style="standard"]) .on-image :is(.room-controls, .room-climate-card) .climate-mode.is-active {
   background: rgba(18, 20, 24, 0.82);
   color: #fff;
   box-shadow: none;
 }
-:root:not([data-card-style="standard"]) .on-image .room-controls .climate-mode.is-active .icon { color: #fff; }
+/* Klima-Overlay des Panels, Raumblatt des Telefons und die Leiste der
+   Panel-Bühne („Steuerung in der Leiste“) zeigen dieselbe gestapelte Karte:
+   Die Bedienbox hat keine eigene helle Fläche — Sollwert, Tasten und
+   Betriebsarten stehen direkt auf dem Glas. */
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-controller {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* Der Rahmen der Karte bekommt Luft, damit nichts an ihm klebt; Minus und
+   Plus rücken an die Zahl statt an den Rand. Die Betriebsarten sind eine
+   Pille wie die Fußzeile des Panels, die aktive trägt deren Glider
+   (app.css .tab-glider): amber getönt mit Lichtkante, Zeichen amber
+   (Owner-Ansage 2026-09-14). */
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-card {
+  padding: var(--space-4);
+}
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-target-control {
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  gap: var(--space-5);
+}
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-mode-selector {
+  align-self: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding: var(--space-1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+}
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-mode {
+  border: 0;
+  border-radius: var(--radius-full);
+}
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-mode.is-active {
+  background: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
+}
+:root:not([data-card-style="standard"]) :is(.overlay-panel.on-image .room-climate-card, .room-sheet.on-image .room-controls, .home-panel.on-image .room-controls) .climate-mode.is-active .icon {
+  color: var(--color-accent-warm);
+}
+:root:not([data-card-style="standard"]) .on-image :is(.room-controls, .room-climate-card) .climate-mode.is-active .icon { color: #fff; }
 /* Der Platzhalter „Gerät hinzufügen“ hat keine eigene Fläche — auf dem Bild
    bekommt er die Kartenebene, sonst verschwände sein Text im Motiv. */
 :root:not([data-card-style="standard"]) .on-image .light-tile.is-placeholder {
@@ -587,7 +633,7 @@
    der Rahmengröße (100vw × 100dvh, das Bild deckt ihn wie `cover`) und der
    Lage der Scheibe (--lite-x/--lite-y aus actions/lite-backdrop.ts) berechnet. */
 :root[data-card-style="glass-lite"] [data-shell="panel"] .notes-panel {
-  --lite-aspect: calc(1677 / 938);
+  --lite-aspect: calc(1672 / 941);
   --lite-w: max(100vw, calc(100dvh * var(--lite-aspect)));
   --lite-h: max(100dvh, calc(100vw / var(--lite-aspect)));
   background:
@@ -600,7 +646,6 @@
   backdrop-filter: none;
 }
 :root[data-card-style="glass-lite"][data-theme='dark'] [data-shell="panel"] .notes-panel {
-  --lite-aspect: calc(1672 / 941);
   background-image:
     linear-gradient(var(--glass-face), var(--glass-face)),
     url('/notes/notes-night-lite.webp');
@@ -626,4 +671,107 @@
   animation:
     notification-enter var(--duration-enter) var(--ease-out) both,
     lite-blur-in 0s linear var(--duration-enter) both;
+}
+
+/* ── Telefon: ruhiger Grund und mattes Glas (Owner-Mock 2026-09-14) ──
+   Die Raumkacheln sind auf Telefon und Panel dieselbe Kachel (room-tiles.css),
+   der Grund darunter ist es nicht: Das Relief der Panel-Bühne brachte am
+   Telefon Wellen und Diagonalen zwischen die Kacheln. Hier steht deshalb ein
+   überwiegend gleichmäßiger, warmer Taupe-Ton, unten mit einer breiten,
+   sehr weichen Helligkeitsvariation (links heller, rechts dunkler) — aus zwei
+   Verläufen, kein Bild. Er liegt auf der Shell, also am Viewport: beim
+   Scrollen bleibt er hinter der unteren Bedienung stehen.
+
+   Die Bedienflächen (Aus, Klima, Urlaub, Navigations-Pille, Hinweis) teilen
+   sich einen Satz Material-Tokens: getönte, halbtransparente Füllung in
+   warmem Grau, echter Blur, dezente helle Kontur, weicher Schatten. Schrift
+   und inaktive Zeichen in dunklem, warmem Anthrazit; Minus blau, Plus und Aus
+   rot, aktive Navigation amber (Token). Das Raumbild bleibt der Blickfang.
+   Nur die Telefon-Shell im Glas-Kartenstil; Panel und Standardstil
+   unverändert. */
+/* Material 1:1 wie die Fußzeilen-Pillen des Panels (Owner-Ansage
+   2026-09-14, nach zwei Anläufen mit heller Scheibe): dieselbe dunkle
+   Glasscheibe, derselbe Blur, dieselbe helle Kante und Schrift — in beiden
+   Themes gleich, wie am Panel. Nur der Grund darunter ist telefon-eigen. */
+:root:not([data-card-style="standard"]) [data-shell="phone"] {
+  --phone-ground: #b4aba0;
+  --phone-glass-fill: var(--glass-face);
+  --phone-glass-blur: var(--glass-blur);
+  --phone-glass-edge: rgba(255, 255, 255, 0.22);
+  --phone-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --phone-glass-key: rgba(255, 255, 255, 0.14);
+  --phone-glass-ink: #fff;
+  --phone-glass-ink-soft: rgba(255, 255, 255, 0.78);
+  --phone-glass-ink-faint: rgba(255, 255, 255, 0.62);
+  --phone-glass-rule: rgba(255, 255, 255, 0.2);
+}
+:root:not([data-card-style="standard"])[data-theme='dark'] [data-shell="phone"] {
+  --phone-ground: #3b3733;
+}
+
+/* Der Grund: nur auf dem Home, die übrigen Telefon-Screens behalten ihre
+   Fläche. */
+:root:not([data-card-style="standard"]) [data-shell="phone"]:has(.phone-home-feed) {
+  background:
+    radial-gradient(110% 55% at 0% 100%, rgba(255, 255, 255, 0.13), transparent 65%),
+    radial-gradient(110% 55% at 100% 100%, rgba(0, 0, 0, 0.11), transparent 65%),
+    var(--phone-ground);
+}
+
+/* Eine Scheibe für alle Bedienflächen. */
+:root:not([data-card-style="standard"]) [data-shell="phone"] :is(.phone-quick-action, .phone-quick-actions .climate-dock, .phone-bottom-nav, .phone-home-notice) {
+  background: var(--phone-glass-fill);
+  border-color: var(--phone-glass-edge);
+  box-shadow: var(--phone-glass-shadow);
+  -webkit-backdrop-filter: var(--phone-glass-blur);
+  backdrop-filter: var(--phone-glass-blur);
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] :is(.phone-quick-actions, .phone-bottom-nav, .phone-home-notice) {
+  --color-text-primary: var(--phone-glass-ink);
+  --color-text-secondary: var(--phone-glass-ink-soft);
+  --color-text-tertiary: var(--phone-glass-ink-faint);
+  --color-border: var(--phone-glass-rule);
+  --color-surface-2: var(--phone-glass-key);
+  color: var(--color-text-primary);
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-home-notice span {
+  color: var(--phone-glass-ink-soft);
+}
+
+/* Schnellaktionen: kein sattes Band und keine Blende mehr, die Kacheln
+   laufen gefrostet dahinter weiter. Etwas kompakter: Tasten und Klima-Schritte
+   48 px statt der bevorzugten Touchgröße, näher an den Kacheln. */
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-quick-actions {
+  --touch-preferred: 48px;
+  --overlay-control-background: var(--phone-glass-key);
+  --overlay-border: var(--phone-glass-edge);
+  --pill-edge: none;
+  margin-top: var(--space-2);
+  padding-top: 0;
+  background: transparent;
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-quick-actions::before,
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-quick-actions::after {
+  display: none;
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-quick-action {
+  min-height: 48px;
+}
+/* Ohne Schnellaktionen blendete eine Fläche die Kacheln unter der
+   Navigations-Pille aus; auf dem ruhigen Grund gibt es diese Fläche nicht. */
+:root:not([data-card-style="standard"]) [data-shell="phone"]:has(.phone-home-feed) .phone-navigation-frame::before {
+  display: none;
+}
+/* Aktive Navigation wie der Glider der Panel-Fußzeile (app.css .tab-glider):
+   amber getönte Fläche mit Lichtkante, Zeichen amber, Beschriftung hell. */
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-nav-target.is-active {
+  color: var(--color-text-primary);
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-nav-target.is-active svg {
+  color: var(--color-accent-warm);
+}
+:root:not([data-card-style="standard"]) [data-shell="phone"] .phone-nav-indicator {
+  background: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+              inset 0 0 0 1px color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
 }

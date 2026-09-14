@@ -20,8 +20,12 @@
 
   import { m } from '../../paraglide/messages.js';
   /* `compactClimate` (Panel): Klima ist eine Kachel unter den Geräten, die
-     Steuerung liegt im Overlay — außer der Raum will die Karte in der Leiste. */
-  let { room, compactClimate = false }: { room: Room; compactClimate?: boolean } = $props();
+     Steuerung liegt im Overlay — außer der Raum will die Karte in der Leiste.
+     `stackedClimate` (Telefon): die Karte bleibt in der Leiste, aber in der
+     gestapelten Fassung des Panel-Overlays (Owner-Ansage 2026-09-14). */
+  let { room, compactClimate = false, stackedClimate = false }: {
+    room: Room; compactClimate?: boolean; stackedClimate?: boolean;
+  } = $props();
 
   const climate = $derived(mergedClimate(room.id));
   const climateAsTile = $derived(compactClimate && !climateInline(room.id));
@@ -120,7 +124,7 @@
 
   {#if climate && !climateAsTile}
     <section class="detail-section climate-section">
-      <ClimateCard {room} stacked={compactClimate}
+      <ClimateCard {room} stacked={compactClimate || stackedClimate}
                    onLongPress={compactClimate ? whenEditable(() => openRoomClimate(room.id, 'settings')) : undefined} />
     </section>
   {/if}

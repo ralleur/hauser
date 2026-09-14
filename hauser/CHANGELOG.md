@@ -2,6 +2,84 @@
 
 ## Unreleased
 
+## 0.20.0 - 2026-09-14
+
+- Demo only: the first visit opens on the standby screen over a map of
+  Cologne. Installed panels are unaffected.
+
+## 0.19.1 - 2026-09-14
+
+- The room goes dark again when the last lamp goes out: an open blind no
+  longer counts as a light.
+- Phone room tiles in the demo show their pictures again.
+
+## 0.19.0 - 2026-09-14
+
+- A new house on the Energy screen: the bundled placeholder, shown wherever no
+  exterior picture of your own is assigned, is a modern family house with a
+  solar roof, day and night.
+
+## 0.18.6 - 2026-09-14
+
+- Home, Shopping list and Reminders are the phone's default bottom tabs; a
+  device with its own saved order keeps it.
+
+## 0.18.5 - 2026-09-14
+
+- The active tab's highlight on the phone encloses icon and label completely;
+  on Energy and Shopping list the icon used to peek out at the top.
+
+## 0.18.4 - 2026-09-14
+
+- The phone's off button is all symbol: the power sign nearly fills it.
+- The "off" safety prompt is off by default; it can be turned on under
+  System → Interface & controls. Devices that already had it on keep it.
+
+- The climate pill and "All quiet" stand at the left and right edge of the
+  panel's footer again; in the published build they had crowded around the
+  navigation.
+
+## 0.18.3 - 2026-09-14
+
+- The off button on the phone shows only its power symbol, without the word.
+
+## 0.18.2 - 2026-09-14
+
+- Phone controls now match the panel's footer exactly: the same dark frosted
+  glass with light text and the amber highlight behind the active tab, in
+  both themes. The taupe ground behind the room tiles stays.
+
+## 0.18.1 - 2026-09-14
+
+- Stronger contrast on the phone controls: darker text and icons on quick
+  actions and the navigation pill, slightly denser glass, deeper amber for
+  the active tab; dark mode lifted the same way.
+
+## 0.18.0 - 2026-09-14
+
+- A quieter phone home in the glass card style: the room tiles stand on a
+  calm warm taupe ground instead of the panel's relief, and off, climate,
+  holiday and the navigation pill share one matte frosted glass with dark
+  warm text. The control rows sit closer to the tiles and a little more
+  compact. Dark mode gets the same material in its dark form.
+
+## 0.17.1 - 2026-09-14
+
+- The phone navigation pill is frosted glass too, on every phone screen,
+  matching the quick actions and the panel's footer pills.
+
+## 0.17.0 - 2026-09-14
+
+- The phone home stands on the same light or dark relief as "All rooms" on
+  the panel; the quick actions row becomes frosted glass like the panel's
+  footer pills, and the tiles shimmer through behind it.
+
+## 0.16.1 - 2026-09-14
+
+- Swiping down closes the room sheet on the phone again, even when the device
+  list scrolls. As long as the list sits at the top, the drag pulls the sheet
+  away; further down it scrolls the list.
+
 ## 0.15.0 - 2026-09-12
 
 - The phone shopping list becomes a quiet checklist: smaller title, store

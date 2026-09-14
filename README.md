@@ -54,7 +54,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.15.2` is current. The first installation by
+normal installation path; `v0.20.0` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -173,7 +173,7 @@ hosted demo.
 |---|---|
 | ![The notes screen: a shopping list on the left grouped by shop, and reminders as coloured sticky notes grouped per person on the right.](website/media/notes-1100.webp) | ![The calendar screen as a sheet: the month name in a serif, small-caps weekdays, hairline rules between the weeks, timed events under their day and multi-day events as bars across the week.](website/media/calendar-1100.webp) |
 | **Everyday** — a colour per person, a group per shop | **Calendar** — Home Assistant's calendar entities as one sheet of paper |
-| ![The energy screen by day: an illustration of a house with solar panels, three paper notes pinned into the picture at the panels, the house and the grid pole, today's figures written top left, and the day's curves drawn along the bottom edge.](website/media/energy-1100.webp) | ![The home screen while Home Assistant is unreachable: the living-room illustration stays, the controls are dimmed, and the status chip in the title bar reads Disconnected.](website/media/offline-home-1100.webp) |
+| ![The energy screen by day: an illustration of a house with solar panels, three paper notes pinned into the picture at the panels, the house and the grid pole, today's figures written top left, and the day's curves drawn along the bottom edge.](website/media/energy-1100.webp) | ![The home screen while Home Assistant is unreachable: the living-room illustration stays, the controls are dimmed, and the mode mark in the title bar turns red.](website/media/offline-home-1100.webp) |
 | **Energy** — the figures live in a picture of the house; what there is no meter for is simply not shown | **Disconnected** — the stage stays lit, the controls dim, one word in the title bar |
 
 ### Two shells, one design system
@@ -300,9 +300,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.15.2` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.20.0` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.15.2` tag, which the Home Assistant Supervisor
+publish the plain `0.20.0` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

@@ -38,7 +38,7 @@ A swipe from right to left anywhere on the stage opens the menu. A swipe to the 
 
 ## Title bar
 
-The title bar carries the connection state, the [edit or use mode](/hauser/docs/using/edit-and-use-mode/) mark in the middle, the appearance button, the central climate pill and the standby button.
+The title bar carries the connection state, the [edit or use mode](/hauser/docs/using/edit-and-use-mode/) mark in the middle, the appearance button, the central climate pill, a question mark and the standby button. The question mark opens a short sheet to [report a problem or make a suggestion](/hauser/docs/reference/faq/#how-do-i-report-a-problem-or-make-a-suggestion).
 
 ## Idea behind it
 

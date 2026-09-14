@@ -110,6 +110,13 @@
     padding: 0 var(--space-3);
   }
 
+  /* Die aufgeklappte Liste ist ein Systemfenster: Auf Glas erbt sie sonst die
+     weiße Schrift des Feldes und steht damit weiß auf weiß. */
+  .central-climate-select option {
+    color: CanvasText;
+    background-color: Canvas;
+  }
+
   .central-climate-room {
     display: grid;
     min-width: 0;

@@ -122,7 +122,8 @@ describe('phone home source, command and modal boundaries', () => {
     // Eine Erfahrung aus einem Guss: das Sheet rendert dieselbe RoomControls-
     // Komponente wie die Tablet-Seitenleiste (inkl. Long-Press-Overlays),
     // statt eigene Phone-Controls zu duplizieren.
-    expect(roomSheet).toMatch(/<RoomControls\s+\{room\}\s*\/>/);
+    // Darstellungs-Props (z. B. stackedClimate) sind erlaubt, Steuerlogik nicht.
+    expect(roomSheet).toMatch(/<RoomControls\s+\{room\}[^>]*\/>/);
     expect(roomControls).toMatch(/import '\.\.\/\.\.\/styles\/room-controls\.css'/);
     expect(roomSheet).not.toMatch(/toggleLight|setBrightness|stepTarget|setHvac|applyScene/);
     expect(roomSheet).not.toMatch(/callService|sendCommand|runtime\.dispatch|home-assistant/);

@@ -44,6 +44,7 @@ Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/RO
 | [Edit and use mode](/hauser/docs/using/edit-and-use-mode/) | Lock configuration on a panel, optionally behind a PIN. | Built |
 | [Languages](/hauser/docs/using/languages/) | German, English, French, Italian, Portuguese, Polish. | Built |
 | [Hotel mode](/hauser/docs/using/hotel-mode/) | A panel as a guest surface for one holiday apartment. | Experimental |
+| [Say something](/hauser/docs/reference/faq/#how-do-i-report-a-problem-or-make-a-suggestion) | The question mark in the title bar sends a problem or a wish to the author, no account needed. | Live |
 
 ## Installation
 

@@ -27,8 +27,12 @@
 
   <!-- Long-Press öffnet die zentrale Klimasteuerung. Er hängt an der Lesezone,
        nicht an der ganzen Pille: auf den Schritt-Tasten würde ein längerer
-       Druck sonst die Konfiguration öffnen statt zu schalten. -->
-  <div class="cd-readout" use:longpress={{ onLongPress: whenEditable(openCentralClimateEdit) }}>
+       Druck sonst die Konfiguration öffnen statt zu schalten. Das Overlay-Modul
+       wird schon beim Aufsetzen des Fingers geholt (dieselbe Datei wie in den
+       Shells, also derselbe Chunk), damit es nach den 400 ms sofort steht. -->
+  <!-- svelte-ignore a11y_no_static_element_interactions — pointerdown lädt nur vor, bedient nichts -->
+  <div class="cd-readout" use:longpress={{ onLongPress: whenEditable(openCentralClimateEdit) }}
+       onpointerdown={() => { void import('./CentralClimateEdit.svelte').catch(() => {}); }}>
     <span class="cd-value num" class:is-mixed={!centralClimate.isSynced}>{fmtTemp(centralClimate.value)}°</span>
     <p class="cd-current">
       <Icon name="i-thermometer" cls="icon cd-current-icon" />

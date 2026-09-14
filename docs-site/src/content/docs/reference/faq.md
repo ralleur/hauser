@@ -57,6 +57,10 @@ Through the Home Assistant app update, or `docker compose pull` and `up -d`. See
 
 No. The [demo](https://ralleur.github.io/hauser/demo/) runs against simulated devices and never connects to a Home Assistant.
 
+### How do I report a problem or make a suggestion?
+
+Tap the question mark at the top right of the title bar. Choose **Something is wrong** or **I would like …**, write a sentence, optionally leave a reply address and send. Hauser attaches its version, language, screen size and connection mode, nothing else. The message reaches the author's inbox without a GitHub account. In the demo nothing is sent. Bugs with details are still welcome as [GitHub issues](https://github.com/ralleur/hauser/issues).
+
 ### What licence is it under?
 
 AGPL-3.0-only. Every running instance shows its licence, version and source link under **Status & Updates**.

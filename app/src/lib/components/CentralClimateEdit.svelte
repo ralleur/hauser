@@ -59,4 +59,14 @@
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
   }
+
+  /* Im Overlay steht die Konfiguration direkt auf der Scheibe: Die Karte der
+     Einstellungen (Fläche `--color-surface-0`, die die Glas-Token-Ebene nicht
+     kennt) würde hier hell unter weißer Schrift liegen. Zeilen, Auswahl und
+     Feld bleiben — sie nehmen die Kontrollflächen des Overlays (on-image.css). */
+  .central-climate-edit :global(.central-climate-card) {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
 </style>

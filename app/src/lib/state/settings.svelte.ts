@@ -136,9 +136,11 @@ export const settingsValues = $state({
   ambientWeather: lsGet('hmi:ambient-weather') !== 'off',
   ambientWeek: lsGet('hmi:ambient-week') !== 'off',
   ambientLightDim: lsGet('hmi:ambient-light-dim') === 'on',
-  offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off'
+  /* Standard: keine Abfrage (Owner-Entscheidung 2026-09-14); wer sie will,
+     schaltet sie unter Oberfläche & Bedienung ein. */
+  offConfirmBefore: lsGet('hmi:off-confirm-before') === 'off' || lsGet('hmi:off-confirm-before') === null
     ? null
-    : (lsGet('hmi:off-confirm-before') ?? '22:00'),
+    : lsGet('hmi:off-confirm-before'),
 });
 
 /* Ablage · Paperless: Adresse und API-Token liegen wie die übrigen

@@ -36,6 +36,7 @@ export const API_ROUTES = [
   { id: 'haGateway', methods: ['GET'], path: '/api/websocket', area: 'core', access: 'origin', purpose: 'Same-Origin-WebSocket-Relais zu Home Assistant im Supervisor-Modus (Upgrade).' },
   { id: 'haCameraProxy', methods: ['GET'], path: '/api/camera_proxy/:entityId', area: 'core', access: 'origin', purpose: 'Kamerabild aus Home Assistant im Supervisor-Modus.' },
   { id: 'haCameraProxyStream', methods: ['GET'], path: '/api/camera_proxy_stream/:entityId', area: 'core', access: 'origin', purpose: 'Kamerastrom aus Home Assistant im Supervisor-Modus.' },
+  { id: 'feedback', methods: ['POST'], path: '/api/feedback', area: 'core', access: 'origin', purpose: 'Problem oder Vorschlag aus der App an das Postfach weiterreichen (R40).' },
   { id: 'haCaldavFlow', methods: ['POST'], path: '/api/ha/caldav-flow', area: 'core', access: 'origin', purpose: 'iCloud-Kalender über den HA-Config-Flow einrichten.' },
 
   /* ── Konfiguration ── */

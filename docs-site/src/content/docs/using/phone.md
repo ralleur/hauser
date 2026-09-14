@@ -7,11 +7,13 @@ sidebar:
 
 The phone layout is not a squeezed panel. Navigation moves to the thumb, rooms become a drill-down and the destinations you use most sit in the bar in an order you choose.
 
-![The phone layout: room cards in two columns, quick actions and a floating bottom bar.](/hauser/media/phone.webp)
+![The phone layout: room tiles in two columns on a calm taupe ground, quick actions and the bottom bar as dark frosted glass.](/hauser/media/phone.webp)
 
 ## Bottom bar
 
 A floating pill with three destinations you pick plus **More**. Arrange it from the More menu: two groups, the bar and the rest, drag to reorder. The More menu shows every category. Media remembers whether you last opened room audio or the library.
+
+With the glass [card style](/hauser/docs/using/appearance/#card-style) the pill and the quick actions carry the same dark frosted glass as the panel's footer: light text, a faint bright edge and an amber highlight behind the active tab, identical in light and dark mode. The ground behind the room tiles is a calm taupe, so the pictures stay the brightest thing on the screen.
 
 ## Home
 

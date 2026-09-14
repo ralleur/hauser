@@ -118,7 +118,21 @@ export function swipedown(node: HTMLElement, params: SwipeDownParams) {
     reset(true);
   };
 
+  /* Ist der Inhalt scrollbar, beansprucht der Browser die Berührung fürs
+     Scrollen, sobald der Finger sich bewegt — auch am oberen Anschlag, wo es
+     nichts mehr zu scrollen gibt (Gummiband). Dann kommt `pointercancel`, und
+     die Geste ist weg, obwohl das Sheet dran wäre. Deshalb: solange die Geste
+     läuft und der Finger nicht nach oben geht, das native Scrollen unterbinden.
+     Nach oben (dy < 0) bleibt frei, damit die Liste normal scrollt. */
+  const onTouchMove = (e: TouchEvent) => {
+    if (!dragging || !e.cancelable || locked === 'horizontal') return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    if (locked === 'vertical' || touch.clientY - startY >= 0) e.preventDefault();
+  };
+
   node.addEventListener('pointerdown', onDown);
+  node.addEventListener('touchmove', onTouchMove, { passive: false });
   node.addEventListener('pointermove', onMove);
   node.addEventListener('pointerup', onUp);
   node.addEventListener('pointercancel', onCancel);
@@ -134,6 +148,7 @@ export function swipedown(node: HTMLElement, params: SwipeDownParams) {
     },
     destroy() {
       node.removeEventListener('pointerdown', onDown);
+      node.removeEventListener('touchmove', onTouchMove);
       node.removeEventListener('pointermove', onMove);
       node.removeEventListener('pointerup', onUp);
       node.removeEventListener('pointercancel', onCancel);

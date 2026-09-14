@@ -8,6 +8,9 @@
   import { settingsValues } from '../state/settings.svelte.ts';
   import { nav } from '../state/nav.svelte.ts';
   import ModeToggle from './ModeToggle.svelte';
+  import Icon from './Icon.svelte';
+  import { m } from '../../paraglide/messages.js';
+  import { openFeedback } from '../state/feedback.svelte.ts';
 
   const conn = $derived(connection());
 </script>
@@ -37,6 +40,11 @@
        (Owner-Wunsch 2026-09-12), der Modus bleibt unter Oberfläche & Bedienung
        einstellbar. -->
   <div class="status-group status-group-end">
+    <!-- Fragezeichen (R40): Problem melden oder Vorschlag machen, ohne Konto. -->
+    <button class="standby-btn pressable" type="button" aria-label={m.feedback_button_label()}
+            title={m.feedback_button_label()} onclick={openFeedback}>
+      <Icon name="i-help-circle-outline" cls="icon icon-md" />
+    </button>
     <!-- Standby: Langes Halten bietet den direkten Wechsel zum großen Button an. -->
     {#if settingsValues.classicLockButton || nav.screen === 'system'}
       <LockButton variant="titlebar" />

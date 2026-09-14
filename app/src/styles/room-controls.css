@@ -129,8 +129,8 @@
    einzige helle Bedienfläche in Kartenbreite, in der Leiste wie im Overlay.
    Der Istwert steht als Zeile über dem Sollwert, nicht in einer eigenen Spalte —
    so gibt es in keiner Bandbreite einen Umbruch (Owner-Entscheidung
-   2026-09-11). Das Raum-Sheet des Phones behält Ist- und Sollwert nebeneinander
-   (phone-shell.css). */
+   2026-09-11). Das Raumblatt des Telefons zeigt dieselbe gestapelte Karte
+   (Owner-Ansage 2026-09-14). */
 .climate-section {
   container-type: inline-size;
 }
@@ -222,13 +222,14 @@
 /* Fluide Typografie der Bedienfläche: Sollwert und Modus-Wörter skalieren mit
    der Breite der Sektion (container-type oben), damit sie beim Schmalerziehen
    nicht über ihre Zellen laufen. Die Token-Stufen bleiben die Grenzen. */
-/* Sollwert und Modi teilen die Bedienfläche 60/40 zugunsten des Sollwerts
-   (Owner-Entscheidung 2026-09-11): der Sollwert-Block ist ein eigenes Raster-
-   feld, das seinen Platz ganz ausfüllt — die Zahl wächst mit der Breite bis
-   zur Hero-Stufe, die Tasten wachsen mit. */
+/* Sollwert-Block und Modi sind zwei Rasterzeilen, jede so hoch wie ihr
+   Inhalt: Die Karte hat in Overlay, Leiste und Raumblatt keine feste Höhe,
+   ein fester Teiler würde den Sollwert-Block leer aufblähen (Owner-Ansage
+   2026-09-14). Die Zahl wächst mit der Breite bis zur Hero-Stufe, die Tasten
+   wachsen mit. */
 .climate-card.is-stacked .climate-controller {
   display: grid;
-  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-rows: auto auto;
   gap: 0;
 }
 

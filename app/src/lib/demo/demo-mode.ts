@@ -208,19 +208,19 @@ export function demoResponse(path: string, method: string): Response | null {
       ? json({ state: 'queued' }, 202, { 'cache-control': 'no-store' })
       : json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'POST', 'cache-control': 'no-store' });
   }
-  /* Der Stadtplan der Demo ist genau das Beispielbild aus dem Assistenten —
-     dasselbe, das der Schritt ankuendigt. */
+  /* Der Stadtplan der Demo ist Köln (Owner-Wunsch 2026-09-14): dieselbe
+     Karte, die auch die Website im Standby zeigt — 5 km um den Dom, aus
+     OpenStreetMap-Daten mit derselben Maschine gezeichnet wie im Haus. */
   if (path === '/api/ambient-map' || path === '/api/admin/ambient-map') {
     return json({
       version: 1, state: 'ready', radiusMetres: 5000,
       asset: {
-        /* Dieselbe Datei, die der Assistent als Beispiel zeigt — unter ihrem
-           echten Inhalts-Hash, damit sie die Allowlist des Clients passiert.
-           Ein Beispiel unter einem Fantasiepfad wuerde stillschweigend
-           verworfen und die Vorschau bliebe leer. */
-        url: '/assets/ambient-maps/a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a.svg',
-        etag: '"a7de47116390b2ef4e0ba1ca5f5fcfe0cb904ac82d0bc753b12a8b24da44d98a"',
-        byteLength: 128091,
+        /* Unter ihrem echten Inhalts-Hash, damit sie die Allowlist des
+           Clients passiert. Ein Fantasiepfad wuerde stillschweigend
+           verworfen und der Standby bliebe ohne Karte. */
+        url: '/assets/ambient-maps/e4b655e9dcae7ceae387d4dcb36c03eda6f6bc5afc3b4a487bbb79780aac0614.svg',
+        etag: '"e4b655e9dcae7ceae387d4dcb36c03eda6f6bc5afc3b4a487bbb79780aac0614"',
+        byteLength: 606883,
       },
       ...(path === '/api/admin/ambient-map' ? { source: 'home_assistant' } : {}),
     }, 200, { 'cache-control': 'no-store' });
