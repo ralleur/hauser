@@ -123,6 +123,7 @@ export const settingsValues = $state({
   jellyfinUrl: lsGet('hmi:jf-url') ?? '',
   paperlessUrl: lsGet('hmi:paperless-url') ?? '',
   paperlessTokenSet: (lsGet('hmi:paperless-token') ?? '').length > 0,
+  ablagePinSet: (lsGet('hmi:ablage-pin') ?? '').length > 0,
   libraryMode: (lsGet('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake',
   classicLockButton: lsGet('hmi:lock-button') !== 'large',
   ambientHeroText: lsGet('hmi:ambient-hero-text') === 'on',
@@ -157,6 +158,17 @@ export function setPaperlessToken(token: string): void {
   const value = token.trim();
   settingsValues.paperlessTokenSet = value.length > 0;
   lsSet('hmi:paperless-token', value || null);
+}
+
+/* Die PIN, die den Ablage-Screen sperrt. Auf dem Mac kam sie aus dem
+   Schlüsselbund — im Add-on gibt es den nicht, dort blieb die Ablage deshalb
+   für immer „noch nicht konfiguriert". Also gehört sie neben Adresse und
+   Token: einmal setzen, danach nur noch der Hinweis, dass eine hinterlegt
+   ist. */
+export function setAblagePin(pin: string): void {
+  const value = pin.trim();
+  settingsValues.ablagePinSet = value.length > 0;
+  lsSet('hmi:ablage-pin', value || null);
 }
 
 /* Lock-Button-Schema: Default ist der Button oben in der Status-Bar;

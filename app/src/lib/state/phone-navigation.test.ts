@@ -538,7 +538,7 @@ describe('phone source and accessibility boundaries', () => {
     expect(phoneShell).toMatch(/const closingGeneration = modalLifecycle\.beginClose\(\)/);
     expect(phoneShell).toMatch(/outroGeneration = closingGeneration/);
     expect(phoneShell).toMatch(/finishOutro\(outroGeneration\)/);
-    expect(phoneShell).toMatch(/setTimeout\(\(\) => handleOuterOutroEnd\(\), 240\)/);
+    expect(phoneShell).toMatch(/setTimeout\(\(\) => handleOuterOutroEnd\(\), 300\)/);
     expect(phoneShell).toMatch(/clearTimeout\(modalReleaseTimer\)/);
     expect(phoneShell).not.toMatch(/<RoomControlSheet[^>]*\{outroGeneration\}/);
     expect(phoneShell).not.toMatch(/<MoreSheet[^>]*\{outroGeneration\}/);
@@ -620,6 +620,10 @@ describe('phone source and accessibility boundaries', () => {
     expect(moreSheet).toMatch(/try\s*\{[\s\S]*matchMedia[\s\S]*\}\s*catch\s*\{/);
     expect(moreSheet).toMatch(/duration:\s*reducedMotion\s*\?\s*0\s*:/);
     expect(moreSheet).toMatch(/function scrimExit[\s\S]*duration:\s*reducedMotion\s*\?\s*0\s*:/);
-    expect(moreSheet).toMatch(/css:\s*reducedMotion\s*\?\s*\(t:\s*number\)\s*=>\s*`opacity:\$\{t\}`\s*:\s*\(t:\s*number\)\s*=>[\s\S]*transform:translateY/);
+    // Ausflug: unter reduced motion nur ein Fade ohne Dauer, sonst reine
+    // Bewegung ab der Loslass-Position — ohne Deckkraft auf dem Blatt.
+    expect(moreSheet).toMatch(/function sheetExit[\s\S]*if \(prefersReducedMotion\(\)\) return \{ duration: 0, css: \(t: number\) => `opacity:\$\{t\}` \};/);
+    expect(moreSheet).toMatch(/const start = sheetReleaseOffset\(node\)/);
+    expect(moreSheet).toMatch(/css:\s*\(t:\s*number,\s*u:\s*number\)\s*=>\s*`transform:translateY\(calc\(\$\{t \* start\}px \+ \$\{u \* 100\}%\)\)`/);
   });
 });

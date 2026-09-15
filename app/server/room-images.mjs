@@ -62,6 +62,7 @@ import {
   providerPngToFinalAvif,
   providerPngToProviderJpeg,
   sharp,
+  sharpAvailable,
   snapRoomImageCrop,
   sourceFullToProviderJpeg,
   uploadedPhotoToRoomImageVariants,
@@ -5201,6 +5202,15 @@ export function serveRoomImages(req, res, {
     }
     if (!ROOM_IMAGE_ROOM_ID_PATTERN.test(manualBackgroundMatch[1] || '')) {
       roomImageError(req, res, 404, 'ROOM_NOT_FOUND', 'Der Raum wurde nicht gefunden.'); return true;
+    }
+    /* Ohne Bildbibliothek kann kein Foto umgerechnet werden. Das steht seit
+       dem Start fest, also hier sagen statt beim Umrechnen scheitern — sonst
+       sieht der Haushalt nur „konnte nicht gespeichert werden" und sucht den
+       Fehler bei seinem Bild. Löschen bleibt erlaubt, das kostet kein Bild. */
+    if (req.method === 'POST' && !sharpAvailable) {
+      roomImageError(req, res, 503, 'IMAGE_LIBRARY_UNAVAILABLE',
+        'Die Bildbibliothek läuft auf diesem Gerät nicht — eigene Raumbilder sind deshalb nicht möglich.');
+      return true;
     }
     if (!assetStore) roomImageError(req, res, 503, 'ROOM_IMAGE_STORE_INVALID', 'Der Assetstore fehlt.');
     else void serveManualRoomBackground(req, res, manualBackgroundMatch[1], context);

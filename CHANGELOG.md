@@ -5,6 +5,25 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-09-15
+
+### Fixed
+
+- **An all-day event fills one day again, not two.** Calendars that deliver a
+  plain date — iCloud and CalDAV among them — were read as UTC, so a birthday
+  stretched into the next morning and showed up as a multi-day bar.
+- **Picking your own room picture now says when the device cannot do it.**
+  Where the image library does not run, the upload said only that the picture
+  could not be saved; it now names the reason, and the log records what really
+  failed instead of a follow-up error.
+- **Document storage can be set up from the panel.** Its PIN used to come from
+  the Mac keychain only, so in the add-on the storage stayed locked forever.
+  PIN, address and token now live together under Settings → Services.
+- **Sheets on the phone come and go like app cards.** The room sheet, the More
+  sheet and the room setup now slide out in the same time and curve they slide
+  in, without fading; after a swipe the sheet continues from where your finger
+  let go instead of jumping back up first.
+
 ## [0.20.0] - 2026-09-14
 
 ### Changed

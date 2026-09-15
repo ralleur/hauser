@@ -9,7 +9,8 @@
   import { phoneTargetVisible } from '../../state/module-config.svelte.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
   import PhoneNavIcon from './PhoneNavIcon.svelte';
-  import { SHEET_SWIPE_IGNORE, swipedown } from '../../actions/swipedown.ts';
+  import { cubicOut } from 'svelte/easing';
+  import { SHEET_SWIPE_IGNORE, sheetReleaseOffset, swipedown } from '../../actions/swipedown.ts';
   import { m } from '../../../paraglide/messages.js';
 
   let {
@@ -38,10 +39,13 @@
     ArrangeComponent ??= (await import('./PhoneNavArrange.svelte')).default;
   }
 
+  /* Ausflug wie beim Raum-Blatt: reine Bewegung in Einflug-Zeit und -Kurve,
+     nach einem Wisch ab der Loslass-Position; nur der Scrim blendet aus. */
   function scrimExit(node: HTMLElement) {
     const reducedMotion = prefersReducedMotion();
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
+      duration: reducedMotion ? 0 : tokenDuration(node, 'enter'),
+      easing: cubicOut,
       css: (t: number) => `opacity:${t}`,
     };
   }
@@ -57,12 +61,12 @@
   }
 
   function sheetExit(node: HTMLElement) {
-    const reducedMotion = prefersReducedMotion();
+    if (prefersReducedMotion()) return { duration: 0, css: (t: number) => `opacity:${t}` };
+    const start = sheetReleaseOffset(node);
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
-      css: reducedMotion
-        ? (t: number) => `opacity:${t}`
-        : (t: number) => `opacity:${t};transform:translateY(${(1 - t) * 100}%)`,
+      duration: tokenDuration(node, 'enter'),
+      easing: cubicOut,
+      css: (t: number, u: number) => `transform:translateY(calc(${t * start}px + ${u * 100}%))`,
     };
   }
 

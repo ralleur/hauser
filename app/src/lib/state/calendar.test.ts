@@ -270,6 +270,18 @@ describe('calendar multi-day bars', () => {
     expect(current.bars.find((bar) => bar.id === 'b')?.lane).toBe(1);
   });
 
+  /* Home Assistant liefert Ganztagestermine als reines Datum. `new Date()`
+     liest das als Weltzeit — in Berlin rutschte das exklusive Ende damit zwei
+     Stunden in den Folgetag, und ein Tag wurde zu einem Balken über zwei. */
+  it('behandelt ein reines Datum als lokalen Tag, nicht als Weltzeit', () => {
+    const current = projectCalendarWeeks([
+      event({ id: 'geburtstag', title: 'Geburtstag', allDay: true,
+        start: '2026-07-07', end: '2026-07-08' }), // genau ein Tag, Apple-/CalDAV-Form
+    ], NOW)[CALENDAR_PAST_WEEKS];
+    expect(current.bars).toHaveLength(0);
+    expect(current.days[1].events.map((item) => item.id)).toEqual(['geburtstag']); // Di, Spalte 1
+  });
+
   it('behandelt eintägige Ganztagestermine weiter als Tagestermin, nicht als Balken', () => {
     const current = projectCalendarWeeks([
       event({ id: 'kita', title: 'Kita zu', allDay: true,

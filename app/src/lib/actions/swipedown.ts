@@ -35,6 +35,17 @@ const DIRECTION_LOCK = 12; // px Bewegung, bis horizontal/vertikal entschieden i
    dieselbe Bewegung anders, Eingaben brauchen Auswahl und Cursor. */
 export const SHEET_SWIPE_IGNORE = 'input, textarea, select, [role="slider"], .slider, .cfg-handle';
 
+/* Wo der Finger das Sheet losgelassen hat (px nach unten), wenn die Geste
+   das Schließen auslöst. Die Ausflug-Transition setzt dort an, statt das
+   Sheet erst auf null zurückspringen zu lassen (Owner-Befund 2026-09-14:
+   „ab der Hälfte super abrupt"). */
+const RELEASE_OFFSET_PROPERTY = '--sheet-release-y';
+
+export function sheetReleaseOffset(node: HTMLElement): number {
+  const value = Number.parseFloat(node.style.getPropertyValue(RELEASE_OFFSET_PROPERTY));
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function swipedown(node: HTMLElement, params: SwipeDownParams) {
   let { onSwipe, surface, threshold, atTop, ignore, enabled = true } = params;
   let pointerId: number | null = null;
@@ -53,9 +64,8 @@ export function swipedown(node: HTMLElement, params: SwipeDownParams) {
     dragging = false;
     locked = null;
     if (!target) return;
-    target.style.transition = animate ? 'transform 160ms ease-out, opacity 160ms ease-out' : '';
+    target.style.transition = animate ? 'transform 200ms cubic-bezier(0.215, 0.61, 0.355, 1)' : '';
     target.style.transform = '';
-    target.style.opacity = '';
   };
 
   const onDown = (e: PointerEvent) => {
@@ -98,17 +108,20 @@ export function swipedown(node: HTMLElement, params: SwipeDownParams) {
       }
     }
     if (locked !== 'vertical' || !moved) return;
-    const shift = Math.max(0, dy);
-    moved.style.transform = `translateY(${shift}px)`;
-    moved.style.opacity = String(Math.max(0.4, 1 - shift / (moved.offsetHeight || 1)));
+    /* Nur Verschiebung, keine Deckkraft: ein halb durchsichtiges Blatt sieht
+       nach Web aus, und Deckkraft auf einer Fläche mit Backdrop-Filter kostet
+       auf dem Telefon Bilder. */
+    moved.style.transform = `translateY(${Math.max(0, dy)}px)`;
   };
 
   const onUp = (e: PointerEvent) => {
     if (e.pointerId !== pointerId) return;
     const fire = locked === 'vertical' && moved !== null
       && e.clientY - startY >= resolvedThreshold(moved);
-    // Beim Auslösen die Inline-Angaben sofort räumen: die Ausblend-Transition
-    // des Sheets setzt ihre eigene Verschiebung.
+    // Beim Auslösen die Inline-Verschiebung sofort räumen und nur die
+    // Loslass-Position hinterlassen: die Ausflug-Transition des Sheets
+    // startet dort und übernimmt die Bewegung.
+    if (fire && moved) moved.style.setProperty(RELEASE_OFFSET_PROPERTY, `${Math.max(0, e.clientY - startY)}px`);
     reset(!fire);
     if (fire) onSwipe();
   };

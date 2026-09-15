@@ -9,15 +9,17 @@ export function ablageRequestAllowed(req, allowedOrigins = ALLOWED_ORIGINS) {
   return ['GET', 'POST'].includes(req.method || '') && requestOriginAllowed(req, allowedOrigins);
 }
 
-/* `token` darf eine Funktion sein: dann wird der Wert bei jedem Zugriff neu
-   gelesen — die Ablage lässt sich so aus der Oberfläche konfigurieren, ohne
-   den Server neu zu starten. */
+/* `pin` und `token` dürfen Funktionen sein: dann wird der Wert bei jedem
+   Zugriff neu gelesen — die Ablage lässt sich so aus der Oberfläche
+   konfigurieren, ohne den Server neu zu starten. Für die PIN ist das im Add-on
+   der einzige Weg: dort gibt es keinen Schlüsselbund, aus dem sie käme. */
 export function createAblageAccess(pin = '', token = '', now = () => Date.now()) {
   const sessions = new Map();
   const attempts = new Map();
   const readToken = typeof token === 'function' ? token : () => token;
+  const readPin = typeof pin === 'function' ? pin : () => pin;
 
-  function configured() { return Boolean(pin && readToken()); }
+  function configured() { return Boolean(readPin() && readToken()); }
   function cookieToken(req) {
     const match = String(req.headers.cookie || '').match(/(?:^|;\s*)hmi_ablage=([a-f0-9]{64})(?:;|$)/);
     return match?.[1] || '';
@@ -36,7 +38,7 @@ export function createAblageAccess(pin = '', token = '', now = () => Date.now())
     const key = remoteAddress || 'unknown';
     const attempt = attempts.get(key) || { failures: 0, blockedUntil: 0 };
     if (attempt.blockedUntil > now()) return { ok: false, limited: true };
-    const expected = Buffer.from(pin);
+    const expected = Buffer.from(readPin());
     const supplied = Buffer.from(String(candidate || ''));
     const valid = expected.length === supplied.length && timingSafeEqual(expected, supplied);
     if (!valid) {

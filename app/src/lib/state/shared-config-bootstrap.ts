@@ -28,6 +28,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:moment-holidays:v1',
   'hmi:paperless-url',
   'hmi:paperless-token',
+  'hmi:ablage-pin',
   'hmi:shopping-config:v1',
   'hmi:reminder-persons:v1',
   'hmi:notion-token',

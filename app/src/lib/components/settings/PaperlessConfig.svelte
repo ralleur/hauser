@@ -6,10 +6,12 @@
      Neustart. Der Token wird nach dem Speichern nicht mehr angezeigt — die
      Zeile sagt nur noch, dass einer hinterlegt ist.
 
-     Die PIN, die den Ablage-Screen sperrt, bleibt bewusst außen vor: sie liegt
-     im Schlüsselbund des Servers und ist kein Dienst-Zugang. */
+     Die PIN, die den Ablage-Screen sperrt, steht darunter. Früher kam sie aus
+     dem Schlüsselbund des Servers — im Add-on gibt es den nicht, dort blieb
+     die Ablage deshalb dauerhaft gesperrt. Ohne PIN und Token bleibt der
+     Ablage-Screen zu. */
   import Icon from '../Icon.svelte';
-  import { settingsValues, setPaperlessToken, setPaperlessUrl } from '../../state/settings.svelte.ts';
+  import { settingsValues, setAblagePin, setPaperlessToken, setPaperlessUrl } from '../../state/settings.svelte.ts';
   import { probeLocalServices } from '../../state/service-probes.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
@@ -17,12 +19,20 @@
 
   let tokenDraft = $state('');
   let saved = $state(false);
+  let pinDraft = $state('');
+  let pinSaved = $state(false);
 
   function saveToken(): void {
     setPaperlessToken(tokenDraft);
     tokenDraft = '';
     saved = true;
     void probeLocalServices();
+  }
+
+  function savePin(): void {
+    setAblagePin(pinDraft);
+    pinDraft = '';
+    pinSaved = true;
   }
 </script>
 
@@ -62,6 +72,35 @@
     {/if}
   </div>
   {#if saved}
+    <p class="settings-form-msg is-ok" role="status">{m.sys_paperless_saved()}</p>
+  {/if}
+</div>
+
+<div class="settings-row is-stacked" data-setting-id="ablage-pin">
+  <div class="settings-row-text">
+    <span class="settings-row-label">
+      <Icon name="i-lock" cls="icon icon-sm" />
+      {m.sys_ablage_pin()}
+    </span>
+    <span class="settings-row-sub">
+      {settingsValues.ablagePinSet ? m.sys_ablage_pin_set() : m.sys_ablage_pin_hint()}
+    </span>
+  </div>
+  <div class="settings-form-grid">
+    <input class="settings-input" type="password" inputmode="numeric" autocomplete="off"
+           spellcheck="false" maxlength="12" aria-label={m.sys_ablage_pin()}
+           placeholder={settingsValues.ablagePinSet ? '••••' : ''}
+           bind:value={pinDraft} />
+    <button class="secondary-btn pressable" type="button" disabled={!pinDraft.trim()}
+            onclick={savePin}>{m.sys_paperless_save()}</button>
+    {#if settingsValues.ablagePinSet}
+      <button class="secondary-btn danger-btn pressable" type="button"
+              onclick={() => { setAblagePin(''); pinSaved = false; }}>
+        {m.sys_signout()}
+      </button>
+    {/if}
+  </div>
+  {#if pinSaved}
     <p class="settings-form-msg is-ok" role="status">{m.sys_paperless_saved()}</p>
   {/if}
 </div>

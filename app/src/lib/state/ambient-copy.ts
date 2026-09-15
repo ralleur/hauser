@@ -1,4 +1,4 @@
-import { localDayKey, type CalendarEvent } from './calendar.ts';
+import { calendarMoment, localDayKey, type CalendarEvent } from './calendar.ts';
 import type { OutdoorReading } from './weather.ts';
 import { m } from '../../paraglide/messages.js';
 import { intlLocale } from './locale.svelte.ts';
@@ -195,13 +195,13 @@ function eventsForDay(events: readonly CalendarEvent[], now: Date): CalendarEven
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return [...events]
-    .filter((event) => new Date(event.end) > start && new Date(event.start) < end)
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    .filter((event) => calendarMoment(event.end) > start && calendarMoment(event.start) < end)
+    .sort((a, b) => calendarMoment(a.start).getTime() - calendarMoment(b.start).getTime());
 }
 
 function eventPhase(event: CalendarEvent, now: Date): 'past' | 'now' | 'upcoming' {
-  if (new Date(event.end) <= now) return 'past';
-  if (new Date(event.start) <= now) return 'now';
+  if (calendarMoment(event.end) <= now) return 'past';
+  if (calendarMoment(event.start) <= now) return 'now';
   return 'upcoming';
 }
 
@@ -330,7 +330,7 @@ function calendarTemplate(events: readonly CalendarEvent[], now: Date, key: stri
 
   const upcoming = events.filter((event) => eventPhase(event, now) === 'upcoming');
   const gaps = upcoming.slice(1).map((event, index) =>
-    new Date(event.start).getTime() - new Date(upcoming[index].end).getTime(),
+    calendarMoment(event.start).getTime() - calendarMoment(upcoming[index].end).getTime(),
   );
   const dense = upcoming.length >= 3 && gaps.some((gap) => gap <= 45 * 60 * 1000);
   if (dense) return pick(CALENDAR_TEMPLATES.dense, `${key}:dense`);
@@ -340,7 +340,7 @@ function calendarTemplate(events: readonly CalendarEvent[], now: Date, key: stri
   if (next) {
     const slotStart = new Date(now);
     slotStart.setMinutes(0, 0, 0);
-    const wait = new Date(next.start).getTime() - slotStart.getTime();
+    const wait = calendarMoment(next.start).getTime() - slotStart.getTime();
     if (wait <= 90 * 60 * 1000) return pick(CALENDAR_TEMPLATES.soon, `${key}:soon`);
     if (wait >= 4 * 60 * 60 * 1000) return pick(CALENDAR_TEMPLATES.gap, `${key}:gap`);
   }
@@ -444,7 +444,7 @@ export function analyzeAmbientContext(
   const remaining = today.filter((event) => eventPhase(event, now) !== 'past');
   const next = remaining[0] ?? null;
   const gaps = remaining.slice(1).map((event, index) =>
-    new Date(event.start).getTime() - new Date(remaining[index].end).getTime(),
+    calendarMoment(event.start).getTime() - calendarMoment(remaining[index].end).getTime(),
   );
   const dense = remaining.length >= 3 && gaps.some((gap) => gap <= 45 * 60 * 1000);
   const calendarLoad = remaining.length === 0 ? 'frei'
@@ -476,7 +476,7 @@ export function analyzeAmbientContext(
     nextEvent: next ? {
       id: next.id,
       title: next.title,
-      time: next.allDay ? null : timeFormatter.format(new Date(next.start)),
+      time: next.allDay ? null : timeFormatter.format(calendarMoment(next.start)),
       category: nextCategory.category,
       running: eventPhase(next, now) === 'now',
     } : null,

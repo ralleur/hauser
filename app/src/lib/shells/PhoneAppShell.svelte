@@ -347,9 +347,10 @@
       outroGeneration = closingGeneration;
       // Lazy #await-Sheets liefern auf einzelnen Browsern kein verlässliches
       // Component-Outro-Event. Nach der maximalen Overlay-Dauer muss die
-      // Inert-Sperre deshalb fail-safe fallen (Token --duration-slow = 240 ms).
+      // Inert-Sperre deshalb fail-safe fallen (Token --duration-enter = 300 ms,
+      // so lang fliegen die Sheets aus).
       clearTimeout(modalReleaseTimer);
-      modalReleaseTimer = setTimeout(() => handleOuterOutroEnd(), 240);
+      modalReleaseTimer = setTimeout(() => handleOuterOutroEnd(), 300);
     }
     if (reason === 'unmount') {
       restoreFocusAfterOutro = false;

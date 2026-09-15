@@ -22,8 +22,15 @@ async function householdEtag(): Promise<string> {
   return etag;
 }
 
+/* Der Server weiß beim Start, ob die Bildbibliothek auf diesem Gerät läuft.
+   Sagt er, dass sie fehlt, hat der Haushalt nichts falsch gemacht — dann den
+   Grund nennen statt der allgemeinen Meldung, die zum Suchen am eigenen Bild
+   verleitet. Alles andere bleibt bei der stabilen Übersetzung. */
 async function errorMessage(response: Response): Promise<string> {
-  try { await response.arrayBuffer(); } catch { /* use stable localized fallback */ }
+  try {
+    const payload = await response.json() as { code?: unknown };
+    if (payload?.code === 'IMAGE_LIBRARY_UNAVAILABLE') return m.room_background_no_image_library();
+  } catch { /* use stable localized fallback */ }
   return m.room_background_failed();
 }
 

@@ -6,7 +6,7 @@
   import Icon from '../Icon.svelte';
   import { cubicOut } from 'svelte/easing';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
-  import { SHEET_SWIPE_IGNORE, swipedown } from '../../actions/swipedown.ts';
+  import { SHEET_SWIPE_IGNORE, sheetReleaseOffset, swipedown } from '../../actions/swipedown.ts';
   import { swipeleft } from '../../actions/swipeleft.ts';
   import { appState, type Room } from '../../state/app.svelte.ts';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
@@ -227,20 +227,27 @@
     else closeSceneEdit(true);
   }
 
+  /* Ausflug wie Einflug: das Blatt gleitet in derselben Zeit und mit derselben
+     Kurve nach unten, ohne dabei auszubleichen — ein Blatt, das schon auf
+     halbem Weg durchsichtig ist, wirkt wie ein Website-Dialog (Owner-Befund
+     2026-09-14). Nach einem Wisch setzt die Bewegung dort an, wo der Finger
+     losgelassen hat, statt erst nach oben zurückzuspringen. Nur der Scrim
+     blendet aus. */
   function scrimExit(node: HTMLElement) {
     return {
-      duration: prefersReducedMotion() ? 0 : tokenDuration(node, 'normal'),
+      duration: prefersReducedMotion() ? 0 : tokenDuration(node, 'enter'),
+      easing: cubicOut,
       css: (t: number) => `opacity:${t}`,
     };
   }
 
   function sheetExit(node: HTMLElement) {
-    const reducedMotion = prefersReducedMotion();
+    if (prefersReducedMotion()) return { duration: 0, css: (t: number) => `opacity:${t}` };
+    const start = sheetReleaseOffset(node);
     return {
-      duration: reducedMotion ? 0 : tokenDuration(node, 'normal'),
-      css: reducedMotion
-        ? (t: number) => `opacity:${t}`
-        : (t: number) => `opacity:${t};transform:translateY(${(1 - t) * 100}%)`,
+      duration: tokenDuration(node, 'enter'),
+      easing: cubicOut,
+      css: (t: number, u: number) => `transform:translateY(calc(${t * start}px + ${u * 100}%))`,
     };
   }
 

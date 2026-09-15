@@ -412,7 +412,7 @@ export function createHmiServer(
   const householdConfigReader = createHouseholdConfigReader(householdConfigPath);
   const familyStore = familyData || createFamilyDataStore(familyDataPath);
   const ablageAccess = createAblageAccess(
-    paperlessPin,
+    () => configStore.read()['hmi:ablage-pin'] || paperlessPin,
     () => configStore.read()['hmi:paperless-token'] || paperlessToken,
   );
   const hotelStore = hotelModeStore || createHotelModeStore(hotelModeDataPath || resolveHotelModeDataPath(configPath));

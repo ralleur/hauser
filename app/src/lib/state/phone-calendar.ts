@@ -1,6 +1,6 @@
 import { m } from '../../paraglide/messages.js';
 import { intlLocale } from './locale.svelte.ts';
-import type { CalendarEvent } from './calendar.ts';
+import { calendarMoment, type CalendarEvent } from './calendar.ts';
 
 export interface PhoneAgendaEvent {
   id: string;
@@ -81,8 +81,8 @@ interface ProjectedEvent {
 }
 
 function projectEvent(item: CalendarEvent, index: number, now: Date, todayKey: string): ProjectedEvent | null {
-  const start = new Date(item.start);
-  const end = new Date(item.end);
+  const start = calendarMoment(item.start);
+  const end = calendarMoment(item.end);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end <= now) return null;
 
   const running = start <= now;

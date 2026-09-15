@@ -2,6 +2,7 @@ import { calendarPaperColors } from './calendar-paper.ts';
 import { reminderPersons } from './reminder-persons.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import {
+  calendarMoment,
   calendarWindow,
   selectCalendars,
   type CalendarEvent,
@@ -137,7 +138,7 @@ async function refresh(): Promise<void> {
     }));
     familyCalendar.sources = sources;
     familyCalendar.events = perSource.flat()
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      .sort((a, b) => calendarMoment(a.start).getTime() - calendarMoment(b.start).getTime());
     familyCalendar.updatedAt = Date.now();
     familyCalendar.error = null;
     saveCache();

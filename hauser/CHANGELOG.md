@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.20.1 - 2026-09-15
+
+- An all-day event fills one day again, not two: plain dates from iCloud and
+  CalDAV were read as UTC.
+- Document storage can be set up from the panel — its PIN now sits beside the
+  address and the token under Settings → Services, instead of only in the Mac
+  keychain.
+- Picking your own room picture names the reason when the image library does
+  not run on the device.
+- Sheets on the phone come and go like app cards: same time and curve in both
+  directions, and a swipe carries on from where your finger let go.
+
 ## 0.20.0 - 2026-09-14
 
 - Demo only: the first visit opens on the standby screen over a map of

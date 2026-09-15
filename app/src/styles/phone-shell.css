@@ -548,7 +548,7 @@
   align-items: flex-end;
   padding: 0;
   background: var(--overlay-scrim);
-  animation: phone-scrim-enter var(--duration-normal) var(--ease-out) both;
+  animation: phone-scrim-enter var(--duration-enter) var(--ease-out) both;
   transition: top var(--duration-enter) var(--ease-out);
 }
 
@@ -571,7 +571,10 @@
   box-shadow: var(--elevation-overlay-shadow);
   -webkit-backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
   backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
-  animation: phone-sheet-enter var(--duration-enter) var(--ease-out) both;
+  /* Reine Bewegung mit der Kurve des Raumwechsels (cubicOut), gleich lang wie
+     der Ausflug im Svelte-Outro: das Blatt kommt wie eine App-Karte, nicht
+     wie ein Web-Dialog (Owner-Befund 2026-09-14). */
+  animation: phone-sheet-enter var(--duration-enter) cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
 .room-offline-note {
@@ -735,10 +738,10 @@
   touch-action: pan-y pinch-zoom;
 }
 .room-edit.is-phone.is-open .room-edit-panel {
-  animation: phone-sheet-enter var(--duration-enter) var(--ease-out) both;
+  animation: phone-sheet-enter var(--duration-enter) cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 .room-edit.is-phone.is-closing .room-edit-panel {
-  animation: phone-sheet-exit var(--duration-normal) var(--ease-in) both;
+  animation: phone-sheet-exit var(--duration-enter) cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 .room-edit.is-phone .re-room {
   transition: transform var(--duration-normal) var(--ease-out);
@@ -1115,7 +1118,7 @@
   align-items: flex-end;
   padding: 0;
   background: var(--overlay-scrim);
-  animation: phone-scrim-enter var(--duration-normal) var(--ease-out) both;
+  animation: phone-scrim-enter var(--duration-enter) var(--ease-out) both;
 }
 
 /* Der Anfangsfokus sitzt auf dem Sheet selbst, damit die Tastatur darin
@@ -1138,7 +1141,7 @@
   box-shadow: var(--elevation-overlay-shadow);
   -webkit-backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
   backdrop-filter: blur(var(--overlay-blur)) saturate(1.08);
-  animation: phone-sheet-enter var(--duration-enter) var(--ease-out) both;
+  animation: phone-sheet-enter var(--duration-enter) cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
 .more-sheet header {
@@ -2032,13 +2035,16 @@
   to { opacity: 1; }
 }
 
+/* Phone-Sheets fliegen nur, sie bleichen nicht: Deckkraft auf dem Blatt macht
+   die Bewegung unlesbar und kostet mit Backdrop-Filter Bilder; den Übergang
+   zum Grund trägt allein der Scrim. */
 @keyframes phone-sheet-enter {
-  from { opacity: 0; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 @keyframes phone-sheet-exit {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(100%); }
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {

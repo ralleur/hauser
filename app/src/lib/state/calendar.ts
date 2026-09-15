@@ -412,8 +412,20 @@ export function eventIsNext(item: CalendarEvent, events: readonly CalendarEvent[
     .sort((a, b) => eventStart(a).getTime() - eventStart(b).getTime())[0]?.id === item.id;
 }
 
-function eventStart(item: CalendarEvent): Date { return new Date(item.start); }
-function eventEnd(item: CalendarEvent): Date { return new Date(item.end); }
+/* Ganztagestermine kommen aus Home Assistant als reines Datum (`2026-09-15`).
+   `new Date('2026-09-15')` liest das als Mitternacht Weltzeit — in Berlin also
+   02:00 desselben Tages. Das exklusive Ende rutschte damit um zwei Stunden in
+   den Folgetag, und ein eintägiger Termin erschien als Balken über zwei Tage.
+   Deshalb wird ein reines Datum hier ausdrücklich als lokaler Tagesbeginn
+   gelesen; alles mit Uhrzeit bleibt unverändert. */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+export function calendarMoment(value: string): Date {
+  const parts = DATE_ONLY.exec(value);
+  if (!parts) return new Date(value);
+  return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
+}
+export function eventStart(item: CalendarEvent): Date { return calendarMoment(item.start); }
+export function eventEnd(item: CalendarEvent): Date { return calendarMoment(item.end); }
 export function localDayKey(date: Date): string { return dayKeyFormatter.format(date); }
 function startOfLocalDay(date: Date): Date {
   const result = new Date(date);
