@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.20.2 - 2026-09-16
+
+- Housekeeping for Docker Compose installations: releases are published as
+  GitHub releases and a moving `latest` image tag exists. Add-on installations
+  are unaffected — Home Assistant already shows updates and their changelog.
+- A view that fails to open says what went wrong and offers to try again,
+  instead of showing "Loading view." forever.
+- A damaged job no longer keeps the picture wizard switched off: the job store
+  opens empty again instead of answering 503 forever.
+- Homes with more than 64 power sensors can save their energy selection again.
+
 ## 0.20.1 - 2026-09-15
 
 - An all-day event fills one day again, not two: plain dates from iCloud and

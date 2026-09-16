@@ -1,8 +1,8 @@
 # Installation and operation
 
-Hauser `v0.20.1` is the current public technical beta. Once a tag passes
+Hauser `v0.20.2` is the current public technical beta. Once a tag passes
 the release workflow, the release package uses
-`ghcr.io/ralleur/hauser:v0.20.1`. An explicit source-build overlay remains
+`ghcr.io/ralleur/hauser:v0.20.2`. An explicit source-build overlay remains
 available for development and source-level verification. Neither path comes with
 a support promise.
 
@@ -274,6 +274,29 @@ The helper rejects unsafe archive paths and archives without
 and restarts only if the service had been running before the restore.
 
 ## Update
+
+### Being told that a new version exists
+
+Every release is published as a GitHub release. Use **Watch → Custom →
+Releases** on this repository to be notified; the release notes carry the
+changelog section for that version. Installations that run as a Home Assistant
+add-on do not need this — the Supervisor shows the update and its changelog
+inside Home Assistant.
+
+### Choosing a version
+
+`compose.yaml` pins an exact version on purpose, so an update is something you
+decide. If you prefer to follow the newest release instead, set the moving tag
+in `.env`:
+
+```dotenv
+HAUSER_IMAGE_TAG=latest
+```
+
+`latest` always points at the most recent published release; pre-releases are
+excluded. Combine it with `pull_policy: always` only if you accept that a
+`docker compose up -d` can then bring in a new version unattended — while
+Hauser is below 1.0, pinning stays the recommendation.
 
 For a published beta, set the intended version in `.env`, then pull before
 recreating the service:

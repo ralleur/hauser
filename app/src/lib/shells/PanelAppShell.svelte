@@ -12,6 +12,7 @@
   import '../../styles/demo.css';
   import { onMount, type Component } from 'svelte';
   import StatusBar from '../components/StatusBar.svelte';
+  import ScreenBoundary from '../components/ScreenBoundary.svelte';
   import { nativeBridge } from '../native/bridge.ts';
   import TabBar from '../components/TabBar.svelte';
   import LoginScreen from '../components/LoginScreen.svelte';
@@ -215,7 +216,7 @@
     <div class="layout-dialog-scrim" role="presentation">
       <div class="layout-dialog" role="dialog" aria-modal="true" aria-label="Bereich laden">
         <p role="alert">{m.shell_load_failed()}</p>
-        <button class="secondary-btn pressable" type="button" onclick={() => retryLayer(id)}>Erneut versuchen</button>
+        <button class="secondary-btn pressable" type="button" onclick={() => retryLayer(id)}>{m.shell_retry()}</button>
         <button class="secondary-btn pressable" type="button" onclick={() => closeLayer(id)}>{m.common_close()}</button>
       </div>
     </div>
@@ -248,16 +249,16 @@
                  if (nav.entering === screen.id && event.target === event.currentTarget) endTransition();
                }}>
         {#if screen.id === 'home'}
-          <HomeScreen />
+          <ScreenBoundary><HomeScreen /></ScreenBoundary>
         {:else}
           {#await loadScreen(screen.id as LazyScreenId, screenRetryVersions[screen.id as LazyScreenId] ?? 0)}
             <p role="status" aria-live="polite">{m.shell_loading()}</p>
           {:then loaded}
             {@const ScreenComponent = loaded.default}
-            <ScreenComponent />
+            <ScreenBoundary><ScreenComponent /></ScreenBoundary>
           {:catch}
             <p role="alert">{m.shell_load_failed()}</p>
-            <button class="secondary-btn pressable" type="button" onclick={() => retryScreen(screen.id as LazyScreenId)}>Erneut versuchen</button>
+            <button class="secondary-btn pressable" type="button" onclick={() => retryScreen(screen.id as LazyScreenId)}>{m.shell_retry()}</button>
           {/await}
         {/if}
       </section>
@@ -271,37 +272,37 @@
 {#if deviceDetail.mode !== 'hidden'}
   {#await loadLayer('device', layerRetryVersions.device ?? 0)}
     {@render layerLoadState('device', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('device', true)}{/await}
 {/if}
 {#if roomEdit.mode !== 'hidden'}
   {#await loadLayer('room', layerRetryVersions.room ?? 0)}
     {@render layerLoadState('room', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('room', true)}{/await}
 {/if}
 {#if sceneEdit.mode !== 'hidden'}
   {#await loadLayer('scene', layerRetryVersions.scene ?? 0)}
     {@render layerLoadState('scene', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('scene', true)}{/await}
 {/if}
 {#if centralClimateEdit.mode !== 'hidden'}
   {#await loadLayer('central-climate', layerRetryVersions['central-climate'] ?? 0)}
     {@render layerLoadState('central-climate', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('central-climate', true)}{/await}
 {/if}
 {#if roomClimate.mode !== 'hidden'}
   {#await loadLayer('room-climate', layerRetryVersions['room-climate'] ?? 0)}
     {@render layerLoadState('room-climate', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('room-climate', true)}{/await}
 {/if}
 {#if layoutManager.open}
   {#await loadLayer('layout', layerRetryVersions.layout ?? 0)}
     {@render layerLoadState('layout', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('layout', true)}{/await}
 {/if}
 {#if AmbientLayerComponent}<AmbientLayerComponent />{/if}
@@ -315,13 +316,13 @@
 {#if hud.active}
   {#await loadLayer('hud', layerRetryVersions.hud ?? 0)}
     {@render layerLoadState('hud', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('hud', true)}{/await}
 {/if}
 {#if simulator.active}
   {#await loadLayer('simulator', layerRetryVersions.simulator ?? 0)}
     {@render layerLoadState('simulator', false)}
-  {:then loaded}{@const Layer = loaded.default}<Layer />
+  {:then loaded}{@const Layer = loaded.default}<ScreenBoundary><Layer /></ScreenBoundary>
   {:catch}{@render layerLoadState('simulator', true)}{/await}
 {/if}
 

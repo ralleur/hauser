@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)">
-<link rel="preload" href="media/room-light-1100.webp" as="image" imagesrcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w" imagesizes="min(100vw, 1320px)">
+<link rel="preload" href="media/hero-home-1100.webp" as="image" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="min(100vw, 1320px)">
 <link rel="stylesheet" href="site.css">
 <script type="application/ld+json">
 {
@@ -65,17 +65,18 @@
 <!-- ── Hero ──────────────────────────────────────────────────────────────
      Erst der Satz, dann das Bild. Die Kopfzeile lag früher im Bildrahmen und
      wurde auf dem Telefon von dessen Seitenverhältnis abgeschnitten: Man sah
-     ein Wohnzimmer und keinen einzigen Satz darüber, was Hauser ist. -->
+     ein Wohnzimmer und keinen einzigen Satz darüber, was Hauser ist.
+     Die Bühne zeigt die beiden Ansichten der Startseite — Vollbild und Alle
+     Räume — als echte Aufnahmen, nicht mehr das Raumbild allein. -->
 <header class="hero" id="main">
   <div class="wrap hero-copy">
     <p class="eyebrow">A frontend for Home Assistant</p>
     <h1>A picture of your home.<br>Until you reach for it.</h1>
     <p class="lead">
       Hauser turns a wall tablet or your phone into a calm view of your home.
-      Every room is an illustration that follows the real sun, the weather and
-      the lamps that are on. Touch it and the controls come forward — lights,
-      heating, the calendar, the shopping list. Leave it, and only the picture
-      remains.
+      One room filling the screen, or all of them at once — either way the
+      picture is the state: it follows the sun, the weather and the lamps that
+      are on. Touch it, and the controls come forward.
     </p>
     <div class="actions">
       <a class="btn btn-primary" href="demo/">Open the live demo</a>
@@ -90,37 +91,28 @@
   </div>
 
   <div class="stage-wrap">
-    <div class="stage" data-state="light" data-cycle="light,overcast,dark,dark-off" data-interval="5200">
-      <img class="stage-img is-light" src="media/room-light.webp"
-           srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-           sizes="min(100vw, 1320px)" width="1696" height="1200" fetchpriority="high"
-           alt="A living room drawn as a warm illustration: afternoon sun through a balcony door, a grey sofa with cushions, a wooden dining table, plants, children's toys and a pendant lamp.">
-      <img class="stage-img is-overcast" src="media/room-overcast.webp"
-           srcset="media/room-overcast-700.webp 700w, media/room-overcast-1100.webp 1100w, media/room-overcast.webp 1696w"
-           sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The same living room under an overcast sky: flat grey light from the balcony door, colours cooler, the pendant lamp still off.">
-      <img class="stage-img is-dark" src="media/room-dark.webp"
-           srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
-           sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The same living room in the evening: the pendant lamp and the reading lamp are on, warm pools of light on the table and the sofa.">
-      <img class="stage-img is-dark-off" src="media/room-dark-off.webp"
-           srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
-           sizes="min(100vw, 1320px)" width="1696" height="1200" loading="lazy" decoding="async"
-           alt="The same living room at night with every lamp off: only a faint blue glow from the balcony door outlines the sofa and the table.">
-      <div class="rain" aria-hidden="true">
-        <span class="rain-pane" style="clip-path: polygon(22.3% 19.9%, 30.1% 20.5%, 30.4% 47.3%, 22.7% 47.8%)"></span>
-        <span class="rain-pane" style="clip-path: polygon(31.7% 20.7%, 40% 21.4%, 40.2% 42.3%, 31.8% 41.8%)"></span>
-        <span class="rain-pane" style="clip-path: polygon(41.3% 21.6%, 48.1% 22.4%, 48% 40.5%, 41.3% 41.3%)"></span>
+    <div class="state-demo" data-state="fullscreen" data-cycle="fullscreen,rooms" data-interval="6200">
+      <div class="state-switch" role="group" aria-label="Show the home screen in its two views">
+        <button type="button" class="state-btn" data-state="fullscreen" aria-pressed="true">Full screen</button>
+        <button type="button" class="state-btn" data-state="rooms" aria-pressed="false">All rooms</button>
       </div>
-      <p class="stage-label" aria-live="polite">
-        <span data-for="light">Afternoon. The sun does the lighting.</span>
-        <span data-for="overcast">Rain outside. It runs down the window, and only the window.</span>
-        <span data-for="dark">Evening. Lights are on.</span>
-        <span data-for="dark-off">Night. The last lamp went out, slowly.</span>
-      </p>
+      <div class="stage state-stack">
+        <img class="stage-img state-shot" data-for="fullscreen" src="media/hero-home.webp"
+             srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
+             sizes="min(100vw, 1320px)" width="1696" height="960" fetchpriority="high"
+             alt="The home screen in full screen: the sunlit living-room illustration fills the panel, and one narrow control surface on the left carries the six rooms, the scenes Cozy, Bright and Off, the room&rsquo;s lamps, its blinds and its climate.">
+        <img class="stage-img state-shot" data-for="rooms" src="media/home-rooms-dark.webp"
+             srcset="media/home-rooms-dark-700.webp 700w, media/home-rooms-dark-1100.webp 1100w, media/home-rooms-dark.webp 1696w"
+             sizes="min(100vw, 1320px)" width="1696" height="960" loading="lazy" decoding="async"
+             alt="The same home screen in the all-rooms view after dark: six room tiles, each with its own illustration. The living room and the bedroom carry their lit evening picture and a small note saying how many lamps are on; the kitchen and the bathroom stand in their dark picture with no lamp on at all.">
+        <p class="stage-label" aria-live="polite">
+          <span data-for="fullscreen">Full screen. One room, the whole wall.</span>
+          <span data-for="rooms">All rooms. Lit where a lamp is on.</span>
+        </p>
+      </div>
     </div>
   </div>
-  <p class="stage-under">This is the living-room screen without its controls. All four states ship with Hauser; your own rooms are drawn from a photograph you take with your phone.</p>
+  <p class="stage-under">Two views of the same home screen, both captured from the running app. After dark the all-rooms view reads from across the hallway: a room with a lamp on carries its lit picture, a room with every lamp out carries the dark one. Your own rooms are drawn from a photograph you take with your phone.</p>
 </header>
 
 <!-- ── Was es ist ────────────────────────────────────────────────────────
@@ -141,9 +133,10 @@
       <li class="reveal">
         <h3>Made for the wall and for the hand</h3>
         <p>
-          On a wall panel or tablet the room picture fills the screen with one
-          narrow control surface beside it. On a phone the rooms are cards under
-          your thumb. Lights, heating, media, the calendar, the shopping list and
+          On a wall panel or tablet you pick the view: one room filling the
+          screen with a narrow control surface beside it, or all rooms as tiles
+          side by side. On a phone the rooms are the same cards under your
+          thumb. Lights, heating, media, the calendar, the shopping list and
           the household's notes are all there.
         </p>
       </li>
@@ -184,7 +177,7 @@
         <a href="#room">
           <span class="moment-num">02</span>
           <h3>The room</h3>
-          <p>The illustration is the state. Light, dusk, weather and the lamps show in the picture. The controls step aside.</p>
+          <p>The illustration is the state — one room on the whole wall, or all of them as tiles. Light, dusk, weather and the lamps show in the picture.</p>
         </a>
       </li>
       <li class="moment reveal">
@@ -361,6 +354,44 @@
 
   <div class="wrap">
     <div class="showcase-head showcase-head-later">
+      <h3 class="h3-large">Or every room at once.</h3>
+      <p class="body-text">
+        The same screen has a second view. Instead of one stage it shows all
+        rooms as tiles, each with its own illustration, and the control surface
+        steps out of the picture until you touch one. After dark the view earns
+        its keep: a room with a lamp on carries its lit evening picture, a room
+        with every lamp out carries the dark one. Nobody reads a list to see
+        which lights are still burning — the wall shows it from the hallway.
+      </p>
+    </div>
+  </div>
+  <div class="showcase-wide">
+    <div class="state-demo" data-state="day" data-cycle="day,evening" data-interval="5200">
+      <div class="state-switch" role="group" aria-label="Show all rooms by day or after dark">
+        <button type="button" class="state-btn" data-state="day" aria-pressed="true">Day</button>
+        <button type="button" class="state-btn" data-state="evening" aria-pressed="false">After dark</button>
+      </div>
+      <div class="device state-stack reveal">
+        <img class="state-shot" data-for="day" src="media/home-rooms.webp"
+             srcset="media/home-rooms-700.webp 700w, media/home-rooms-1100.webp 1100w, media/home-rooms.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
+             alt="The all-rooms view by day: six tiles with the living room, the kids&rsquo; room, the bedroom, the bathroom, the kitchen and the hallway, each in its own daylight illustration, with the heating and the house status along the bottom edge.">
+        <img class="state-shot" data-for="evening" src="media/home-rooms-dark.webp"
+             srcset="media/home-rooms-dark-700.webp 700w, media/home-rooms-dark-1100.webp 1100w, media/home-rooms-dark.webp 1696w"
+             sizes="(min-width: 1360px) 1296px, 100vw"
+             width="1696" height="960" loading="lazy" decoding="async"
+             alt="The same six tiles after dark: the living room and the bedroom are lit from inside and note how many lamps are on, while the kitchen and the bathroom stand in their dark picture with every lamp out.">
+      </div>
+      <p class="device-caption">
+        <span data-for="day">Six rooms by day. A tap puts one of them into the control surface.</span>
+        <span data-for="evening">The same six after dark. Two rooms have a lamp on; the kitchen and the bathroom do not, and look it.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="showcase-head showcase-head-later">
       <h3 class="h3-large">Photograph the room. That is the whole input.</h3>
       <p class="body-text">
         The rooms that ship with Hauser are of one particular home, which is
@@ -384,14 +415,34 @@
         <p class="device-caption"><span class="shot-label">Input</span> Evening light, a wide lens, toys on the floor. Nothing staged.</p>
       </div>
       <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/room-light.webp"
-               srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The same living room redrawn as the Hauser illustration: the balcony door, the grey sofa and the wooden dining table in their original positions, in afternoon sun.">
+        <!-- Die vier Fassungen laufen hier durch: Sie sind das Ergebnis des
+             Assistenten und zugleich das, was die Bühne oben den ganzen Tag
+             zeigt. -->
+        <div class="state-demo" data-state="light" data-cycle="light,overcast,dark,dark-off" data-interval="3400">
+          <div class="device state-stack">
+            <img class="state-shot" data-for="light" src="media/room-light.webp"
+                 srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The same living room redrawn as the Hauser illustration: the balcony door, the grey sofa and the wooden dining table in their original positions, in afternoon sun.">
+            <img class="state-shot" data-for="overcast" src="media/room-overcast.webp"
+                 srcset="media/room-overcast-700.webp 700w, media/room-overcast-1100.webp 1100w, media/room-overcast.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The same living room under an overcast sky: flat grey light from the balcony door, colours cooler, the pendant lamp still off.">
+            <img class="state-shot" data-for="dark" src="media/room-dark.webp"
+                 srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The same living room in the evening: the pendant lamp and the reading lamp are on, warm pools of light on the table and the sofa.">
+            <img class="state-shot" data-for="dark-off" src="media/room-dark-off.webp"
+                 srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
+                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
+                 width="1696" height="1200" loading="lazy" decoding="async"
+                 alt="The same living room at night with every lamp off: only a faint blue glow from the balcony door outlines the sofa and the table.">
+          </div>
         </div>
-        <p class="device-caption"><span class="shot-label shot-label-out">Output</span> The same room. It is the living room in the pictures above.</p>
+        <p class="device-caption"><span class="shot-label shot-label-out">Output</span> The same room in the four states it ships in: sun, overcast, evening, every lamp out. This is the living room in the pictures above.</p>
       </div>
     </div>
   </div>
@@ -587,10 +638,10 @@
       <div class="split-text">
         <h3 class="h3-large">Same language, different hand.</h3>
         <p class="body-text">
-          On the phone the rooms are cards with their own pictures, and the
-          cards go dark with the room in the evening. Navigation moves to the
-          thumb as a floating bar. The tokens, the motion and the two voices
-          stay exactly the same.
+          On the phone the rooms are the same cards the panel shows in its
+          all-rooms view, and they go dark with the room in the evening.
+          Navigation moves to the thumb as a floating bar. The tokens, the
+          motion and the two voices stay exactly the same.
         </p>
       </div>
       <div class="phone reveal">

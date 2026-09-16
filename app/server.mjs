@@ -495,18 +495,34 @@ export function createHmiServer(
     if (roomImageJobStore) {
       roomImageJobs = roomImageJobStore;
     } else if (roomImageJobRoot && roomImageAuthConfig?.configured) {
+      const loadRoomImageJobStore = () => roomImageJobStoreFactory({
+        metadataRoot: roomImageJobRoot, tempRoot: roomImageTempRoot, now: roomImageNow,
+        transactionStep: roomImagePublishStep, assertSetupRecoveryHealthy,
+      });
+      const describeStoreFailure = (error) => ({
+        code: typeof error?.code === 'string' ? error.code : 'ROOM_IMAGE_STORE_INVALID',
+        message: error instanceof Error ? error.message : 'Room-Image-Jobstore konnte nicht geladen werden.',
+      });
       try {
-        roomImageJobs = roomImageJobStoreFactory({
-          metadataRoot: roomImageJobRoot, tempRoot: roomImageTempRoot, now: roomImageNow,
-          transactionStep: roomImagePublishStep, assertSetupRecoveryHealthy,
-        });
+        roomImageJobs = loadRoomImageJobStore();
       } catch (error) {
-        roomImageStoreFailure = {
-          code: typeof error?.code === 'string' ? error.code : 'ROOM_IMAGE_STORE_INVALID',
-          message: error instanceof Error ? error.message : 'Room-Image-Jobstore konnte nicht geladen werden.',
-        };
-        console.error(`[hauser] Raumbild-Jobspeicher nicht geladen — der Assistent bleibt abgeschaltet, das Haus startet trotzdem: ${roomImageStoreFailure.message}`);
+        /* Ein einziger beschädigter Auftrag hat den Assistenten bisher dauerhaft
+           abgeschaltet — niemand kommt an den Ordner im Add-on heran. Der
+           Ordner wird deshalb einmal beiseitegestellt (nichts wird repariert,
+           nichts gelöscht) und der Speicher leer neu geöffnet. Bleibt es dabei,
+           gilt wie bisher: Haus läuft, Assistent aus, Grund im Log. */
+        const failure = describeStoreFailure(error);
+        console.error(`[hauser] Raumbild-Jobspeicher nicht geladen: ${failure.message}`);
         if (error?.cause) console.error('[hauser] Ursache:', error.cause instanceof Error ? error.cause.message : String(error.cause));
+        const parkedJobRoot = `${roomImageJobRoot}.beschaedigt-${new Date(roomImageNow()).toISOString().replace(/[:.]/g, '-')}`;
+        try {
+          renameSync(roomImageJobRoot, parkedJobRoot);
+          roomImageJobs = loadRoomImageJobStore();
+          console.error(`[hauser] Beschädigte Raumbild-Aufträge liegen unter ${parkedJobRoot}; der Assistent startet mit leerem Jobspeicher.`);
+        } catch (parkError) {
+          roomImageStoreFailure = failure;
+          console.error(`[hauser] Der Assistent bleibt abgeschaltet, das Haus startet trotzdem: ${parkError instanceof Error ? parkError.message : String(parkError)}`);
+        }
       }
     }
   }

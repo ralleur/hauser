@@ -36,7 +36,8 @@
   let production = $state(typeof ENERGY_SENSORS.pv === 'string' ? ENERGY_SENSORS.pv : '');
   let consumption = $state(storedConsumption);
   let busy = $state(false);
-  let result = $state<'saved' | 'failed' | null>(null);
+  let result = $state<'saved' | 'failed' | 'too-many' | null>(null);
+  let maxLoads = $state(0);
 
   /* Ohne gespeicherte Auswahl steht alles an, sobald der Katalog da ist. */
   $effect(() => {
@@ -80,7 +81,17 @@
             .map((entity) => ({ entityId: entity.entityId, name: entity.name })),
         }),
       });
-      if (!response.ok) throw new Error('ENERGY_WRITE_FAILED');
+      if (!response.ok) {
+        /* Der Server kennt seine Grenze; die Oberfläche soll sie nennen statt
+           nur „konnte nicht gespeichert werden" zu sagen. */
+        const payload = await response.json().catch(() => null) as { code?: unknown; max?: unknown } | null;
+        if (payload?.code === 'ENERGY_TOO_MANY_LOADS') {
+          maxLoads = typeof payload.max === 'number' ? payload.max : 0;
+          result = 'too-many';
+          return;
+        }
+        throw new Error('ENERGY_WRITE_FAILED');
+      }
       result = 'saved';
     } catch {
       result = 'failed';
@@ -134,6 +145,8 @@
   </div>
   {#if result === 'saved'}
     <p class="settings-form-msg is-ok" role="status">{m.sys_module_saved()}</p>
+  {:else if result === 'too-many'}
+    <p class="settings-form-msg is-error" role="alert">{m.sys_energy_too_many({ max: maxLoads })}</p>
   {:else if result === 'failed'}
     <p class="settings-form-msg is-error" role="alert">{m.sys_module_failed()}</p>
   {/if}

@@ -1189,7 +1189,15 @@ export async function serveHouseholdModuleToggle(req, res, moduleId, context) {
 /* Energie-Entitäten setzen: eine Erzeugungsquelle, beliebig viele Verbraucher.
    Wie der Modulschalter ein schmaler, ETag-gesicherter Schreibzugriff auf die
    Haushalts-Konfiguration — die Oberfläche schickt die Auswahl, der Server
-   baut daraus die `energy`-Sektion. */
+   baut daraus die `energy`-Sektion.
+
+   Die Obergrenze lag bei 64 und war damit niedriger als ein gut vermessenes
+   Haus: die Oberfläche wählt ohne gespeicherten Stand alle gefundenen
+   Leistungssensoren vor, und wer mehr als 64 davon hat, bekam sein Haus nie
+   gespeichert (Frank, simon42-Forum: 82 Sensoren). Die Grenze bleibt, damit
+   die Anfrage endlich ist — aber jenseits dessen, was ein Haushalt hat. */
+const ENERGY_LOAD_MAX = 256;
+
 function normalizeEnergySelection(payload) {
   if (!payload || typeof payload !== 'object') return null;
   const entity = (value) => (typeof value === 'string' && /^[a-z_]+\.[a-z0-9_]+$/.test(value) ? value : null);
@@ -1197,7 +1205,7 @@ function normalizeEnergySelection(payload) {
     ? null
     : entity(payload.production);
   if (payload.production && !production) return null;
-  if (!Array.isArray(payload.consumption) || payload.consumption.length > 64) return null;
+  if (!Array.isArray(payload.consumption) || payload.consumption.length > ENERGY_LOAD_MAX) return null;
   const consumption = [];
   const seen = new Set();
   for (const item of payload.consumption) {
@@ -1301,7 +1309,17 @@ export async function serveHouseholdEnergyMarks(req, res, context) {
 export async function serveHouseholdEnergy(req, res, context) {
   try {
     context.assertSetupRecoveryHealthy();
-    const selection = normalizeEnergySelection(await readRoomImageJsonBody(req));
+    const payload = await readRoomImageJsonBody(req);
+    /* Zu viele Verbraucher ist kein Formfehler, sondern eine Grenze — das
+       gehört eigens gemeldet, sonst steht die Oberfläche vor „ungültig" und
+       kann dem Haushalt nicht sagen, was er ändern soll. */
+    if (Array.isArray(payload?.consumption) && payload.consumption.length > ENERGY_LOAD_MAX) {
+      return jsonResponse(res, 400, {
+        ok: false, code: 'ENERGY_TOO_MANY_LOADS', max: ENERGY_LOAD_MAX,
+        message: `Höchstens ${ENERGY_LOAD_MAX} Verbraucher lassen sich speichern.`,
+      });
+    }
+    const selection = normalizeEnergySelection(payload);
     if (!selection) {
       return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Die Energie-Auswahl ist ungültig.' });
     }

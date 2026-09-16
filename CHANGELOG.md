@@ -5,6 +5,46 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-09-16
+
+### Changed
+
+- **The project page now opens with both views of the home screen.** The hero
+  shows real captures of the two home views — one room filling the panel, and
+  all rooms as tiles — with the tile view after dark, where a room with a lamp
+  on carries its lit picture and a room with every lamp out carries the dark
+  one. A new section walks through the tile view by day and after dark, and
+  every screenshot on the page was retaken from the current release.
+
+### Added
+
+- **Every release now shows up as a GitHub release**, with its changelog
+  section as the notes. Watching this repository for releases tells you that a
+  new version exists — until now only a tag was pushed, which notifies nobody.
+  Home Assistant add-on installations were unaffected: the Supervisor has
+  always shown the update inside Home Assistant.
+- **A moving `latest` image tag** for Compose installations that would rather
+  follow the newest release than a fixed number. Pre-releases are excluded, and
+  `compose.yaml` keeps pinning an exact version by default.
+
+### Fixed
+
+- **A view that fails to open now says so.** Until now anything that went wrong
+  while a view was being built left "Loading view." on screen forever, with the
+  cause visible only in the browser console. The view now shows what went wrong
+  and offers to try again, and the rest of the panel keeps working. Retry
+  buttons in the shell follow the interface language again.
+- **A damaged job no longer switches the picture wizard off for good.** One
+  incoherent record kept the job store closed, and inside the add-on nobody can
+  reach the folder to clear it, so the wizard answered 503 forever. The folder
+  is now set aside once — nothing is repaired, nothing is deleted — and the
+  store opens empty.
+- **A well-metered house can save its energy selection again.** The server
+  accepted at most 64 consumers, while the settings page pre-selects every
+  power sensor Home Assistant reports — a home with more of them could never
+  save the page. The limit is now 256, and going past it says so instead of
+  failing silently.
+
 ## [0.20.1] - 2026-09-15
 
 ### Fixed

@@ -13,6 +13,7 @@
   import type { TransitionConfig } from 'svelte/transition';
   import { slideFade, tokenDuration } from '../motion/index.ts';
   import PhoneBottomNav from '../components/phone/PhoneBottomNav.svelte';
+  import ScreenBoundary from '../components/ScreenBoundary.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomTemperature, roomWindowOpen } from '../state/commands.ts';
@@ -503,7 +504,7 @@
 {#snippet phoneScreenState()}
   {#if PhoneScreenComponent}
     <div class="phone-screen-content" in:phoneContentTransition>
-      <PhoneScreenComponent phone bind:titleAnchor />
+      <ScreenBoundary><PhoneScreenComponent phone bind:titleAnchor /></ScreenBoundary>
     </div>
   {:else}
     <main class="phone-skeleton" aria-labelledby="phone-target-title">
@@ -512,7 +513,7 @@
         <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{targetName}</h1>
         {#if phoneScreenFailed}
           <p role="alert">{m.shell_load_failed()}</p>
-          <button class="secondary-btn pressable" type="button" onclick={retryPhoneScreen}>Erneut versuchen</button>
+          <button class="secondary-btn pressable" type="button" onclick={retryPhoneScreen}>{m.shell_retry()}</button>
         {:else}
           <p role="status" aria-live="polite">{m.shell_loading()}</p>
         {/if}
@@ -533,7 +534,7 @@
   <div class={`${kind}-sheet-scrim`} role="presentation">
     <div class={`${kind}-sheet`} role="dialog" aria-modal="true" aria-label={label}>
       <p role="alert">{m.shell_load_failed()}</p>
-      <button class="secondary-btn pressable" type="button" onclick={retry}>Erneut versuchen</button>
+      <button class="secondary-btn pressable" type="button" onclick={retry}>{m.shell_retry()}</button>
       <button class="secondary-btn pressable" type="button" onclick={close}>{m.common_close()}</button>
     </div>
   </div>
@@ -552,7 +553,7 @@
     {#key nav.screen}
       <div class="phone-screen-transition" in:phoneScreenEnter out:phoneScreenExit onoutroend={endTransition}>
         {#if target.area === 'home'}
-          <PhoneHomeFeed rooms={roomSummaries} currentRoom={roomOpen ? appState.currentRoom : null} online={conn.online} onopen={openRoom} bind:titleAnchor />
+          <ScreenBoundary><PhoneHomeFeed rooms={roomSummaries} currentRoom={roomOpen ? appState.currentRoom : null} online={conn.online} onopen={openRoom} bind:titleAnchor /></ScreenBoundary>
         {:else if featureStylesReady && activePhoneScreenId}
           {#if target.area === 'media'}
             <div class="phone-media-area">
@@ -570,7 +571,7 @@
         {:else if featureStylesReady && target.area === 'more' && target.subtarget === 'system'}
           {#if SystemScreenComponent}
             <div class="phone-screen-content" in:phoneContentTransition>
-              <SystemScreenComponent phone bind:titleAnchor />
+              <ScreenBoundary><SystemScreenComponent phone bind:titleAnchor /></ScreenBoundary>
             </div>
           {:else}
             <main class="phone-skeleton" aria-labelledby="phone-target-title">
@@ -579,7 +580,7 @@
                 <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{m.nav_system()}</h1>
                 {#if systemLoadFailed}
                   <p role="alert">{m.shell_load_failed()}</p>
-                  <button class="secondary-btn pressable" type="button" onclick={ensureSystemScreen}>Erneut versuchen</button>
+                  <button class="secondary-btn pressable" type="button" onclick={ensureSystemScreen}>{m.shell_retry()}</button>
                 {:else}
                   <p role="status" aria-live="polite">{m.shell_loading()}</p>
                 {/if}
@@ -593,7 +594,7 @@
               <h1 bind:this={titleAnchor} id="phone-target-title" tabindex="-1">{targetName}</h1>
               {#if featureStylesFailed}
                 <p role="alert">{m.shell_load_failed()}</p>
-                <button class="secondary-btn pressable" type="button" onclick={retryFeatureStyles}>Erneut versuchen</button>
+                <button class="secondary-btn pressable" type="button" onclick={retryFeatureStyles}>{m.shell_retry()}</button>
               {:else}
                 <p role="status" aria-live="polite">{m.phone_view_preparing()}</p>
               {/if}
@@ -618,7 +619,7 @@
   {/if}
   {#if moreOpen}
     {#if featureStylesReady && MoreSheetComponent}
-      <MoreSheetComponent current={nav.screen} onclose={closeLayer} onselect={selectMore} onouteroutroend={handleOuterOutroEnd} />
+      <ScreenBoundary><MoreSheetComponent current={nav.screen} onclose={closeLayer} onselect={selectMore} onouteroutroend={handleOuterOutroEnd} /></ScreenBoundary>
     {:else}
       {#if featureStylesFailed || moreLoadFailed}
         {@render phoneLayerError('more', 'Mehr', retryMoreResources, () => closeLayer('close'))}
@@ -633,7 +634,7 @@
         {@render phoneLayerLoading('room', 'Raumsteuerung')}
       {:then loaded}
         {@const RoomControlSheet = loaded.default}
-        <RoomControlSheet room={selectedRoom} heroVariant={sheetHeroVariant} heroVariantFor={sheetHeroVariantFor} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} onswitch={switchRoom} />
+        <ScreenBoundary><RoomControlSheet room={selectedRoom} heroVariant={sheetHeroVariant} heroVariantFor={sheetHeroVariantFor} onclose={closeLayer} onouteroutroend={handleOuterOutroEnd} onswitch={switchRoom} /></ScreenBoundary>
       {:catch}
         {@render phoneLayerError('room', 'Raumsteuerung', () => retryPhoneFeature('room'), () => closeLayer('close'))}
       {/await}

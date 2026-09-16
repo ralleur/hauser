@@ -237,10 +237,20 @@ jobs:
             printf 'ABBRUCH — %s Abzuege statt 2 (amd64 und arm64).\n' "$count" >&2
             exit 1
           fi
+          # `latest` wandert mit, damit eine Compose-Installation ohne feste
+          # Nummer aktualisieren kann. Vorabfassungen (0.4.0-beta.1) bleiben
+          # aussen vor: wer `latest` folgt, will die fertige Fassung.
+          version='${{ steps.image.outputs.version }}'
+          moving=()
+          case "$version" in
+            *-*) printf 'Vorabfassung %s — latest bleibt stehen.\n' "$version" ;;
+            *) moving=(--tag "${repository}:latest") ;;
+          esac
           docker buildx imagetools create \
             --tag "${repository}:${GITHUB_REF_NAME}" \
             --tag "${repository}:sha-${{ steps.image.outputs.short_sha }}" \
-            --tag "${repository}:${{ steps.image.outputs.version }}" \
+            --tag "${repository}:${version}" \
+            "${moving[@]}" \
             $(printf "${repository}@sha256:%s " *)
           digest="$(docker buildx imagetools inspect "${repository}:${GITHUB_REF_NAME}" --format '{{json .Manifest.Digest}}' | tr -d '"')"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
@@ -265,3 +275,61 @@ jobs:
           printf 'image=%s@%s\n' \
             '${{ steps.image.outputs.repository }}' \
             '${{ steps.publish.outputs.digest }}'
+
+  # Ohne veroeffentlichte Release-Notiz erfaehrt niemand ausserhalb von Home
+  # Assistant von einer neuen Fassung: ein Tag allein benachrichtigt keinen
+  # Beobachter. Die Notiz traegt den Abschnitt aus dem CHANGELOG, damit
+  # „was ist neu?" eine Adresse hat.
+  github-release:
+    name: Publish release notes
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tagged revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Collect the changelog section
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          awk -v want="$version" '
+            /^## / {
+              inside = index($0, "[" want "]") > 0 || index($0, " " want " ") > 0
+              next
+            }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          if [[ ! -s notes.md ]]; then
+            printf 'ABBRUCH — kein CHANGELOG-Abschnitt fuer %s.\n' "$version" >&2
+            exit 1
+          fi
+          {
+            printf '\n'
+            printf 'Container image: `ghcr.io/%s:%s`\n' "${GITHUB_REPOSITORY,,}" "$version"
+          } >> notes.md
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version='${{ steps.notes.outputs.version }}'
+          # Alles unter 1.0 ist Beta — das steht auch so in der Roadmap.
+          prerelease=()
+          case "$version" in
+            0.*|*-*) prerelease=(--prerelease) ;;
+          esac
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "Hauser $GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Hauser $GITHUB_REF_NAME" --notes-file notes.md "${prerelease[@]}"
+          fi
