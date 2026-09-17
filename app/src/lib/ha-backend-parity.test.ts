@@ -74,7 +74,12 @@ class FakeUpstream {
           type: 'result',
           success: true,
           result: message.return_response
-            ? { response: { 'calendar.family': { events: [{ summary: 'Dinner', start: '2026-09-01', end: '2026-09-02' }] } } }
+            ? { response: { 'calendar.family': { events: [
+              { summary: 'Dinner', start: '2026-09-01', end: '2026-09-02' },
+              { summary: 'Yoga', start: '2026-09-01T18:00:00+02:00', end: '2026-09-01T19:00:00+02:00', uid: 'yoga' },
+              { summary: 'Yoga', start: '2026-09-08T18:00:00+02:00', end: '2026-09-08T19:00:00+02:00', uid: 'yoga' },
+              { summary: 'Dinner', start: '2026-09-01', end: '2026-09-02' },
+            ] } } }
             : { context: { id: 'ctx' } },
         });
         return;
@@ -160,6 +165,8 @@ describe('Backend-Parität über das Gateway', () => {
       'calendar.family', new Date('2026-09-01'), new Date('2026-09-02'),
     );
     expect(events[0]).toMatchObject({ title: 'Dinner' });
+    /* Serientermine teilen die uid; die Kalenderansicht braucht eindeutige IDs. */
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
   });
 
   it('liest Erinnerungslisten und Einträge', async () => {

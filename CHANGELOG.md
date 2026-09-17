@@ -5,6 +5,15 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-09-17
+
+### Fixed
+
+- **A calendar with a recurring event opens again.** Every occurrence of a
+  series carries the same identifier, and the calendar view stopped with
+  "This view failed to build" as soon as a series had more than one date in
+  view. Each occurrence now has its own identifier.
+
 ## [0.20.2] - 2026-09-16
 
 ### Changed

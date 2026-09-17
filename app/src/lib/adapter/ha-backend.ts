@@ -339,7 +339,16 @@ export class HaBackend implements Backend {
     const result = await this.#conn.sendMessagePromise<{ response?: Record<string, { events?: HaCalendarEvent[] }> }>(
       calendarEventsMessage(entityId, start, end),
     );
-    return (result.response?.[entityId]?.events ?? []).map((item, index) => calendarEventFromHa(item, index));
+    /* Serientermine tragen in jeder Wiederholung dieselbe `uid`, und zwei gleiche
+       Termine ohne `uid` ergeben dieselbe Ersatz-ID. Die Ansichten schlüsseln
+       ihre Listen nach ID; eine Dublette bricht den Aufbau ab. */
+    const seen = new Map<string, number>();
+    return (result.response?.[entityId]?.events ?? []).map((item, index) => {
+      const event = calendarEventFromHa(item, index);
+      const count = seen.get(event.id) ?? 0;
+      seen.set(event.id, count + 1);
+      return count ? { ...event, id: `${event.id}#${count}` } : event;
+    });
   }
 
   /* ── iCloud-Erinnerungen (Einstellungen → Kalender → Erinnerungen) ──
@@ -938,7 +947,7 @@ function calendarEventFromHa(item: HaCalendarEvent, index: number): CalendarEven
     ? !!item.start.date && !item.start.dateTime
     : /^\d{4}-\d{2}-\d{2}$/.test(start);
   return {
-    id: item.uid ?? `${start}-${end}-${item.summary ?? index}`,
+    id: item.uid ? `${item.uid}@${start}` : `${start}-${end}-${item.summary ?? index}`,
     title: item.summary?.trim() || 'Ohne Titel',
     start,
     end,

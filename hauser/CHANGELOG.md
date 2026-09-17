@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.20.3 - 2026-09-17
+
+- A calendar with a recurring event opens again instead of failing to build.
+
 ## 0.20.2 - 2026-09-16
 
 - Housekeeping for Docker Compose installations: releases are published as
