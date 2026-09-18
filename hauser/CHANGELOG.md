@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.20.4 - 2026-09-17
+
+- The energy screen accepts your own photo as the house picture, without the
+  picture wizard.
+
 ## 0.20.3 - 2026-09-17
 
 - A calendar with a recurring event opens again instead of failing to build.

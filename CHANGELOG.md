@@ -5,6 +5,16 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-09-17
+
+### Added
+
+- **The energy screen takes your own photo directly.** Long-press the picture
+  in configure mode and choose "Choose custom image" — the photo becomes the
+  house picture and lands in the library, just like a room picture. Until now
+  the energy screen only offered the picture wizard or an image already in
+  the library.
+
 ## [0.20.3] - 2026-09-17
 
 ### Fixed

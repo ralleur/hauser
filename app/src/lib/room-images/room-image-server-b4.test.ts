@@ -670,6 +670,23 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     });
   });
 
+  it('accepts a manual upload as the exterior picture of the energy screen', async () => {
+    const app = await startB4();
+    const household = await fetch(`${app.base}/api/household-config`);
+    const etag = household.headers.get('etag')!;
+    await household.arrayBuffer();
+    const png = readFileSync(new URL('./fixtures/neutral-alpha.png', import.meta.url));
+
+    const upload = await fetch(`${app.base}/api/room-backgrounds/exterior`, {
+      method: 'POST', headers: { origin: ORIGIN, 'if-match': etag, 'content-type': 'image/png' }, body: png,
+    });
+
+    expect(upload.status).toBe(200);
+    const uploaded = await upload.json();
+    expect(uploaded).toMatchObject({ roomId: 'exterior', hero: { assetId: expect.stringMatching(/^manual_[0-9a-f]{32}$/) } });
+    expect(JSON.parse(readFileSync(app.householdConfigPath, 'utf8')).exterior.hero.assetId).toBe(uploaded.hero.assetId);
+  });
+
   it('rejects unsafe manual room background requests without mutation', async () => {
     const app = await startB4();
     const before = readFileSync(app.householdConfigPath);

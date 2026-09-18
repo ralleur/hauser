@@ -20,6 +20,7 @@
   } from '../components/energy-hero-assets.ts';
   import { EXTERIOR_HERO_ID } from '../config/household-config.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
+  import { uploadRoomBackground } from '../state/room-background-client.ts';
   import { loadRoomRegionsOnce, roomRegions } from '../state/room-regions.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
@@ -165,6 +166,28 @@
     library: () => import('../components/settings/RoomImageLibrary.svelte'),
   });
   function openWizard(): void { menuOpen = false; wizardOpen = true; }
+  /* Eigenes Foto ohne Assistent, wie beim Raum: landet in der Bibliothek und
+     wird gleich das Außenbild. Das Menü bleibt bis zum Ergebnis offen, damit
+     ein Fehler (z. B. fehlende Bildbibliothek) sichtbar wird. */
+  let uploadInput = $state<HTMLInputElement>();
+  let uploadBusy = $state(false);
+  let uploadError = $state<string | null>(null);
+  async function chooseUpload(event: Event): Promise<void> {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || uploadBusy) return;
+    uploadBusy = true;
+    uploadError = null;
+    try {
+      await uploadRoomBackground(EXTERIOR_HERO_ID, file);
+      menuOpen = false;
+    } catch (error) {
+      uploadError = error instanceof Error ? error.message : m.room_background_failed();
+    } finally {
+      uploadBusy = false;
+    }
+  }
   function openLibrary(): void { menuOpen = false; libraryOpen = true; }
   function openSensors(): void {
     menuOpen = false;
@@ -312,7 +335,7 @@
   <!-- Freie Trefferfläche unter Zetteln, Chips und Linie: nur der lange Druck
        auf den Hintergrund öffnet das Menü; alles darüber bleibt bedienbar. -->
   <div class="energy-config-hitarea" aria-label={m.energy_menu_hint()}
-       use:longpress={{ onLongPress: whenEditable(() => (menuOpen = true)), enabled: !arrange }}></div>
+       use:longpress={{ onLongPress: whenEditable(() => { uploadError = null; menuOpen = true; }), enabled: !arrange }}></div>
 
   <!-- Cover-Rechteck des Motivs: Zettel, Linien und Punkte rechnen in Bildprozent. -->
   {#if shown}
@@ -457,6 +480,12 @@
         <button class="re-row pressable" type="button" onclick={openWizard}>
           <Icon name="i-auto-fix" cls="icon icon-md" /><span>{m.energy_menu_wizard()}</span>
         </button>
+        <input bind:this={uploadInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif"
+               onchange={chooseUpload} />
+        <button class="re-row pressable" type="button" disabled={uploadBusy} onclick={() => uploadInput?.click()}>
+          <Icon name="i-cloud-upload-outline" cls="icon icon-md" />
+          <span>{uploadBusy ? m.room_background_saving() : m.room_background_choose()}</span>
+        </button>
         <button class="re-row pressable" type="button" onclick={openLibrary}>
           <Icon name="i-image" cls="icon icon-md" /><span>{m.energy_menu_library()}</span>
         </button>
@@ -467,6 +496,11 @@
           <Icon name="i-flash" cls="icon icon-md" /><span>{m.energy_menu_sensors()}</span>
         </button>
       </div>
+      {#if uploadBusy}
+        <p class="re-background-message" role="status">{m.room_background_saving_hint()}</p>
+      {:else if uploadError}
+        <p class="re-background-message is-error" role="alert">{uploadError}</p>
+      {/if}
     </div>
   </div>
 {/if}
