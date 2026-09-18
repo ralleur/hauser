@@ -70,7 +70,7 @@ COPY tools/tunnel/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/hauser-tunnel .
 
 FROM ${NODE_IMAGE} AS runtime
-ARG HAUSER_VERSION=0.20.4
+ARG HAUSER_VERSION=0.20.5
 ARG HAUSER_REVISION=""
 ARG HAUSER_SOURCE_URL=""
 LABEL org.opencontainers.image.title="Hauser" \
@@ -91,6 +91,7 @@ ENV NODE_ENV=production \
     HMI_CONFIG_PATH=/data/config.json \
     HMI_FAMILY_DATA_PATH=/data/family-data.json \
     HMI_SONG_LIBRARY_DIR=/data/songs \
+    HMI_ROOM_IMAGE_AUTH_MODE=direct \
     HMI_REQUIRED_WRITABLE_DIRS=/config,/data,/assets \
     HMI_SERVER_CONTRACT=compiled \
     HMI_TUNNEL_BIN=/opt/hauser/bin/hauser-tunnel \

@@ -94,6 +94,9 @@ export function createAmbientCopyClient(options: ClientOptions = {}) {
     : { lines: [], source: 'fallback', fingerprint: '', generatedAt: 0, locale: initialLocale };
   let history = parseHistory(storage, initialLocale);
   let inflightFingerprint: string | null = null;
+  /* 204 vom Server heißt: kein Modell konfiguriert. Dann bleibt es bis zum
+     nächsten Laden der Seite beim eingebauten Text, ohne weitere Anfragen. */
+  let modelAbsent = false;
 
   async function request(context: AmbientAnalysis, retry: boolean, activeLocale: string): Promise<string | null> {
     const response = await fetcher(`${url().replace(/\/+$/, '')}/chat/completions`, {
@@ -109,6 +112,7 @@ export function createAmbientCopyClient(options: ClientOptions = {}) {
         messages: buildAmbientCopyMessages(context, history, retry, activeLocale),
       }),
     });
+    if (response.status === 204) { modelAbsent = true; return null; }
     if (!response.ok) return null;
     const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
     const content = data.choices?.[0]?.message?.content;
@@ -138,6 +142,13 @@ export function createAmbientCopyClient(options: ClientOptions = {}) {
       state.fingerprint = fingerprint;
     }
     if (state.fingerprint === fingerprint && now.getTime() - state.generatedAt <= MAX_AGE_MS) return;
+    if (modelAbsent) {
+      state.lines = fallback;
+      state.source = 'fallback';
+      state.fingerprint = fingerprint;
+      state.generatedAt = now.getTime();
+      return;
+    }
     if (inflightFingerprint === fingerprint) return;
     inflightFingerprint = fingerprint;
 
@@ -145,7 +156,7 @@ export function createAmbientCopyClient(options: ClientOptions = {}) {
       let raw = await request(context, false, activeLocale);
       if (locale() !== activeLocale) return;
       let lines = raw ? sanitizeAmbientLlmCopy(raw, history, context) : null;
-      if (!lines) {
+      if (!lines && !modelAbsent) {
         raw = await request(context, true, activeLocale);
         if (locale() !== activeLocale) return;
         lines = raw ? sanitizeAmbientLlmCopy(raw, history, context) : null;

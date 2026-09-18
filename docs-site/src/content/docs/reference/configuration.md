@@ -36,9 +36,10 @@ Set by the Compose file or the App manifest. You rarely change them.
 | `HMI_PAIRING_DEVICES_PATH` | next to config | Hashed device tokens |
 | `HMI_ROOM_IMAGE_ASSET_ROOT` | `/assets` | Published room-image sets |
 | `HMI_ROOM_IMAGE_CREDENTIAL_PATH` | | OpenAI access for the wizard |
-| `HMI_ROOM_IMAGE_AUTH_MODE` | `direct` | Same-origin boundary for room-image uploads |
+| `HMI_ROOM_IMAGE_AUTH_MODE` | `direct` (set by the image) | Same-origin boundary for room-image uploads. The image, the shipped `compose.yaml` and the add-on set `direct`, so a hand-written Compose file gets the picture wizard too. `trusted_proxy` needs `HMI_ROOM_IMAGE_TRUSTED_PROXY_CIDRS` and `HMI_ROOM_IMAGE_IDENTITY_HEADER`; an incomplete boundary answers `503 AUTH_BOUNDARY_MISSING`. |
 | `HMI_ROOM_IMAGE_VISION_MODEL` | | Override the vision model used for surfaces |
 | `HMI_OPENAI_API_KEY` | | API key from the environment instead of the settings |
+| `HMI_AMBIENT_HOST`, `HMI_AMBIENT_PORT` | unset — no model | Address of an OpenAI-compatible chat endpoint for the ambient texts on the standby screen. Hauser ships no model and starts none. Unset, Hauser never asks one: the route answers `204` and the lines come from the built-in generator. Set, an unreachable model answers `502 Ambient-Modell nicht erreichbar`; everything else keeps working either way. |
 | `HMI_AMBIENT_MAP_CONFIG_PATH` | `/data/ambient-map.json` | Map location and asset reference |
 | `HMI_AMBIENT_MAP_ASSET_ROOT` | `/assets/ambient-maps` | Rendered map SVGs |
 | `HMI_HOTEL_MODE_DATA_PATH` | unset | Hotel-mode data with the PIN verifier |

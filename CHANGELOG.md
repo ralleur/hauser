@@ -5,6 +5,29 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-09-18
+
+### Fixed
+
+- **A hand-written Compose file gets the picture wizard.** The image now sets
+  the room-image boundary (`HMI_ROOM_IMAGE_AUTH_MODE=direct`) itself. A Compose
+  file that does not copy the shipped environment answered
+  `503 AUTH_BOUNDARY_MISSING` to every room-image request, so saving the
+  OpenAI key and opening the wizard failed
+  ([#19](https://github.com/ralleur/hauser/issues/19)).
+- **The ambient texts stop asking for a model that is not there.** Hauser only
+  calls a language model for the standby lines when `HMI_AMBIENT_HOST` or
+  `HMI_AMBIENT_PORT` names one. Without it the route answers `204`, the lines
+  come from the built-in generator as before, and the browser console no
+  longer shows a `502` on every refresh
+  ([#19](https://github.com/ralleur/hauser/issues/19)).
+- **A fresh add-on install no longer hits a missing image.** The add-on
+  manifest on `main` named the new version before its image was built, so for
+  the first hour after a release the Supervisor failed with
+  `manifest unknown` ([#20](https://github.com/ralleur/hauser/issues/20)).
+  The release now publishes the image first and makes the version visible
+  afterwards.
+
 ## [0.20.4] - 2026-09-17
 
 ### Added

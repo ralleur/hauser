@@ -86,6 +86,11 @@ export const APP_VERSION = (() => {
 export const HERMES_HOST = process.env.HMI_HERMES_HOST || '127.0.0.1';
 export const HERMES_PORT = Number(process.env.HMI_HERMES_PORT || 8642);
 export const AI_CUSTOMIZING_ENABLED = process.env.HMI_AI_CUSTOMIZING_ENABLED !== '0';
+/* Das Sprachmodell hinter den Ambient-Texten ist eine eigene Gegenstelle;
+   Hauser bringt keines mit und startet keines. Erst eine ausdrückliche
+   Adresse schaltet die Anfrage ein — ohne sie kommen die Standby-Zeilen aus
+   dem eingebauten Generator, und im Browser steht kein 502 (Issue #19). */
+export const AMBIENT_CONFIGURED = Boolean(process.env.HMI_AMBIENT_HOST || process.env.HMI_AMBIENT_PORT);
 export const AMBIENT_HOST = process.env.HMI_AMBIENT_HOST || '127.0.0.1';
 export const AMBIENT_PORT = Number(process.env.HMI_AMBIENT_PORT || 18088);
 

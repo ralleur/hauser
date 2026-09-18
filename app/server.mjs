@@ -19,6 +19,7 @@ import {
   ACESTEP_PORT,
   AI_CUSTOMIZING_ENABLED,
   ALLOWED_ORIGINS,
+  AMBIENT_CONFIGURED,
   AMBIENT_HOST,
   AMBIENT_MAP_SERVER_ASSET_DIRECTORY,
   AMBIENT_MAP_SERVER_CONFIG_PATH,
@@ -283,8 +284,9 @@ export function createHmiServer(
     upstreamHost = HERMES_HOST,
     upstreamPort = HERMES_PORT,
     aiCustomizingEnabled = AI_CUSTOMIZING_ENABLED,
-    ambientHost = AMBIENT_HOST,
-    ambientPort = AMBIENT_PORT,
+    ambientHost,
+    ambientPort,
+    ambientConfigured,
     paperlessHost = PAPERLESS_HOST,
     paperlessPort = PAPERLESS_PORT,
     aceStepHost = ACESTEP_HOST,
@@ -387,6 +389,12 @@ export function createHmiServer(
     ambientMapJobRunner = null,
   } = {},
 ) {
+  /* Ein ausdrücklich übergebener Ambient-Upstream gilt als konfiguriert;
+     sonst entscheidet die Umgebung (Issue #19). */
+  const ambientUpstreamConfigured = ambientConfigured
+    ?? (AMBIENT_CONFIGURED || ambientHost !== undefined || ambientPort !== undefined);
+  ambientHost ??= AMBIENT_HOST;
+  ambientPort ??= AMBIENT_PORT;
   const normalizedHouseholdConfigMode = normalizeHouseholdConfigMode(householdConfigMode);
   const configMutations = configMutationCoordinator ?? createConfigMutationCoordinator();
   const setupRecoveryResult = setupConfigRecoveryResult ?? configMutations.runSync(
@@ -1224,7 +1232,11 @@ export function createHmiServer(
       res.end('{"error":"Shopping-Route nicht freigegeben"}');
     } else if ((req.url || '') === '/ambient-llm/v1/chat/completions'
         && ambientRequestAllowed(req, allowedOrigins)) {
-      proxyAmbient(req, res, ambientHost, ambientPort, 'ambient', runtimeConfig);
+      /* Ohne konfiguriertes Modell gibt es nichts zu holen: 204 statt 502, damit
+         der Browser keinen Fehler protokolliert und die Oberfläche beim
+         eingebauten Text bleibt (Issue #19). */
+      if (ambientUpstreamConfigured) proxyAmbient(req, res, ambientHost, ambientPort, 'ambient', runtimeConfig);
+      else { res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); }
     } else if ((req.url || '').startsWith('/ambient-llm')) {
       res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
       res.end('{"error":"Ambient-Route nicht freigegeben"}');

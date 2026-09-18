@@ -736,6 +736,22 @@ describe('HMI-Backend-Proxy', () => {
     } });
   });
 
+  it('antwortet ohne konfiguriertes Ambient-Modell mit 204 statt 502', async () => {
+    const server = createHmiServer('server-secret', {
+      allowedOrigins: new Set(['http://test-client.local']),
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    const response = await fetch(`http://127.0.0.1:${port}/ambient-llm/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://test-client.local' },
+      body: JSON.stringify({ messages: [{ role: 'system', content: 'Regeln' }, { role: 'user', content: 'Kontext' }] }),
+    });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+  });
+
   it('pinnt Ambient-Anfragen serverseitig auf GPT-5.6 Luna', async () => {
     let observedBody: any = null;
     const ambientUpstream = http.createServer((req: any, res: any) => {

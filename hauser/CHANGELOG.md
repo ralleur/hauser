@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.20.5 - 2026-09-18
+
+- A fresh install right after a release no longer fails with
+  `manifest unknown`: the image is published before the new version becomes
+  visible.
+- The standby texts no longer ask for a language model that is not
+  configured, so the browser console stays quiet. Docker Compose
+  installations with a hand-written Compose file get the picture wizard
+  without extra variables.
+
 ## 0.20.4 - 2026-09-17
 
 - The energy screen accepts your own photo as the house picture, without the

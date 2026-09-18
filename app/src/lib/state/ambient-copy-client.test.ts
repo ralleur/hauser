@@ -64,6 +64,20 @@ describe('ambient copy client', () => {
     expect(client.state.source).toBe('fallback');
   });
 
+  it('fragt nach einem 204 nicht mehr nach dem Modell und bleibt beim eingebauten Text', async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true, status: 204, json: async () => { throw new SyntaxError('kein Inhalt'); },
+    } as unknown as Response);
+    const client = createAmbientCopyClient({ fetcher, storage: new MemoryStorage() });
+    await client.refresh([event('a')], WEATHER, NOW);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(client.state.source).toBe('fallback');
+    expect(client.state.lines.length).toBeGreaterThan(0);
+    await client.refresh([event('b', 'Q3 Abstimmung')], WEATHER, new Date('2026-07-16T16:30:00+02:00'));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(client.state.source).toBe('fallback');
+  });
+
   it('versucht eine ähnliche oder ungültige Antwort genau einmal neu', async () => {
     const storage = new MemoryStorage();
     storage.setItem('hmi:ambient-copy-history-v2', JSON.stringify([
