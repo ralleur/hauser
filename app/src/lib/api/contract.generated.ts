@@ -98,6 +98,7 @@ export const API_ROUTES = {
   remoteReset: { methods: ['POST'], path: '/api/remote/reset', area: 'app', access: 'origin' },
   appCommand: { methods: ['POST'], path: '/api/app/command', area: 'app', access: 'origin' },
   appStates: { methods: ['GET'], path: '/api/app/states', area: 'app', access: 'origin' },
+  appTodo: { methods: ['GET'], path: '/api/app/todo', area: 'app', access: 'origin' },
   appManifest: { methods: ['GET', 'HEAD'], path: '/api/app/manifest', area: 'app', access: 'origin' },
   appHero: { methods: ['GET', 'HEAD'], path: '/api/app/hero/:roomId/:variant', area: 'app', access: 'origin' },
   hotelTouch: { methods: ['POST'], path: '/api/hotel-mode/touch', area: 'hotel', access: 'guest' },

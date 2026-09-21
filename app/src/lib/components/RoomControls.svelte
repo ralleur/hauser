@@ -7,6 +7,7 @@
   import DeviceTile from './DeviceTile.svelte';
   import CameraFeed from './CameraFeed.svelte';
   import ClimateCard from './ClimateCard.svelte';
+  import RoomStatusStrip from './phone/RoomStatusStrip.svelte';
   import { type Room } from '../state/app.svelte.ts';
   import { mergedClimate, roomTemperature } from '../state/commands.ts';
   import { climateInline, climateTileShows } from '../state/room-display-config.svelte.ts';
@@ -21,14 +22,19 @@
   import { m } from '../../paraglide/messages.js';
   /* `compactClimate` (Panel): Klima ist eine Kachel unter den Geräten, die
      Steuerung liegt im Overlay — außer der Raum will die Karte in der Leiste.
-     `stackedClimate` (Telefon): die Karte bleibt in der Leiste, aber in der
-     gestapelten Fassung des Panel-Overlays (Owner-Ansage 2026-09-14). */
-  let { room, compactClimate = false, stackedClimate = false }: {
-    room: Room; compactClimate?: boolean; stackedClimate?: boolean;
+     `stackedClimate` (Telefon): die Karte in der gestapelten Fassung des
+     Panel-Overlays (Owner-Ansage 2026-09-14).
+     `statusStrip` (Telefon, Owner-Entscheidung 2026-09-20, wie in der App):
+     Temperatur, Luftfeuchte und Anwesenheit stehen als Werteleiste über den
+     Szenen statt als Kacheln; die Klimasteuerung wohnt hinter der Temperatur
+     und liegt nur bei den Geräten, wenn der Raum es so will. */
+  let { room, compactClimate = false, stackedClimate = false, statusStrip = false }: {
+    room: Room; compactClimate?: boolean; stackedClimate?: boolean; statusStrip?: boolean;
   } = $props();
 
   const climate = $derived(mergedClimate(room.id));
   const climateAsTile = $derived(compactClimate && !climateInline(room.id));
+  const climateAsCard = $derived(statusStrip ? climateInline(room.id) : !climateAsTile);
   const temp = $derived(roomTemperature(room.id));
   /* Wert-Zeile der Klima-Kachel: Soll, Ist oder beides (Einstellung je Raum). */
   const climateLine = $derived.by(() => {
@@ -48,7 +54,10 @@
      Haushaltskonfiguration bleibt unverändert, damit ihre Parität hält. */
   const IS_DEMO_BUILD = import.meta.env?.VITE_DEMO === '1';
   const cameraDevices = $derived(IS_DEMO_BUILD ? [] : room.lights.filter((device) => device.category === 'camera' && !cameraPopouts.has(device.entityId)));
-  const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'));
+  /* Was die Werteleiste zeigt, braucht keine Kachel mehr. */
+  const STRIP_CLASSES = new Set(['temperature', 'humidity', 'motion', 'occupancy', 'presence']);
+  const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'
+    && !(statusStrip && device.category === 'info' && STRIP_CLASSES.has(device.deviceClass ?? ''))));
 
   /* Tap wendet die Szene an (echte Einzel-Commands, state/scene-manager);
      Long-Press öffnet den Szenen-Editor (Mitglieder anpassen). */
@@ -62,6 +71,7 @@
 </script>
 
 <div class="room-controls">
+  {#if statusStrip}<RoomStatusStrip {room} />{/if}
   {#if roomScenes.length > 0}
     <section class="detail-section">
       <div class="scene-row">
@@ -122,7 +132,7 @@
     </section>
   {/each}
 
-  {#if climate && !climateAsTile}
+  {#if climate && climateAsCard}
     <section class="detail-section climate-section">
       <ClimateCard {room} stacked={compactClimate || stackedClimate}
                    onLongPress={compactClimate ? whenEditable(() => openRoomClimate(room.id, 'settings')) : undefined} />

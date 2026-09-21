@@ -12,10 +12,11 @@
    - `withViewTransition`              Screen-/Ansichtswechsel als View Transition
    - `animateElement`                  Web-Animations mit Token-Dauer und -Kurve
    - `slideFade`                       Svelte-Transition für Screenwechsel (Phone)
+   - `popAway`                         Svelte-Transition fürs Entfernen einer Listenzeile
    - `createSpring`                    Federphysik für Werte, die dem Finger folgen */
 
 import { tick } from 'svelte';
-import { cubicInOut, cubicOut } from 'svelte/easing';
+import { backIn, cubicInOut, cubicOut } from 'svelte/easing';
 import { Spring } from 'svelte/motion';
 import type { TransitionConfig } from 'svelte/transition';
 
@@ -138,6 +139,39 @@ export function fade(node: Element, options: { duration?: DurationToken } = {}):
     duration: tokenDuration(node, options.duration ?? 'normal'),
     easing: cubicOut,
     css: (t) => `opacity:${t}`,
+  };
+}
+
+export interface PopAwayOptions {
+  duration?: DurationToken;
+  /** Stelle in der Liste, an der die Zeile stand (offsetTop/offsetLeft). */
+  from?: { top: number; left: number } | null;
+}
+
+/** Entfernen einer Listenzeile: Die Zeile holt kurz Schwung (`backIn` zieht
+    sie einen Hauch auf), kippt dann nach rechts aus der Liste, während die
+    Nachbarn per FLIP auf ihren neuen Platz gleiten.
+
+    Zwei Eigenheiten der Kombination mit `animate:`: Svelte nimmt die
+    abgehende Zeile aus dem Fluss, damit die Nachbarn überhaupt gleiten
+    können — ohne Angabe landet sie dann am Anfang der Liste. Die Stelle, an
+    der sie stand, muss deshalb von außen kommen (`from`, beim Auslösen
+    gemessen); danach ist sie nicht mehr zu erfahren. Und `transform` bleibt
+    unberührt, weil Svelte dort seine eigene Lagekorrektur hält:
+    `translate`, `scale` und `rotate` sind eigene Eigenschaften.
+
+    Voraussetzung: Die Liste ist der Bezug der abgehenden Zeile
+    (`position: relative`). */
+export function popAway(node: Element, options: PopAwayOptions = {}): TransitionConfig {
+  const from = options.from ?? null;
+  const place = from ? `position:absolute;top:${from.top}px;left:${from.left}px;` : '';
+  return {
+    duration: tokenDuration(node, options.duration ?? 'slow'),
+    easing: backIn,
+    css: (t, u) => `${place}pointer-events:none;`
+      + `opacity:${Math.max(0, Math.min(1, t))};`
+      + `translate:${u * 28}px 0;rotate:${u * 2.5}deg;scale:${0.8 + 0.2 * Math.max(0, t)};`
+      + 'transform-origin:100% 50%;',
   };
 }
 

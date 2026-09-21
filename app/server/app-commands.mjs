@@ -32,6 +32,29 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
       }
       await haFetch(`services/${domain}/${service}`, { method: 'POST', body: JSON.stringify({ entity_id: entityId, ...(data ?? {}) }) });
     },
+    /** `todo.*`-Listen für die App: ohne Entität die Listen selbst, mit Entität deren Einträge.
+        Die App hat keinen WebSocket; `todo.get_items` liefert die Einträge als Service-Antwort. */
+    async todo(entityId) {
+      if (!entityId) {
+        const all = await (await haFetch('states')).json();
+        return {
+          lists: (Array.isArray(all) ? all : [])
+            .filter((s) => typeof s?.entity_id === 'string' && s.entity_id.startsWith('todo.'))
+            .map((s) => ({ entityId: s.entity_id, name: s.attributes?.friendly_name ?? s.entity_id.slice(5) })),
+        };
+      }
+      if (!ENTITY_ID.test(entityId) || !entityId.startsWith('todo.')) {
+        throw Object.assign(new Error('Ungültige Liste.'), { code: 'COMMAND_INVALID', status: 400 });
+      }
+      const response = await haFetch('services/todo/get_items?return_response', { method: 'POST', body: JSON.stringify({ entity_id: entityId }) });
+      const payload = await response.json();
+      const items = payload?.service_response?.[entityId]?.items;
+      return {
+        items: (Array.isArray(items) ? items : [])
+          .filter((item) => typeof item?.uid === 'string' && typeof item?.summary === 'string')
+          .map((item) => ({ id: item.uid, title: item.summary, checked: item.status === 'completed' })),
+      };
+    },
     /** Bewohner aus Home Assistant (`person.*`) für die Personen-Kopplung. */
     async persons() {
       const response = await haFetch('states');
@@ -76,6 +99,12 @@ export async function serveAppCommands(req, res, { service, allowedOrigins }) {
         jsonResponse(res, 200, { ok: true });
       } catch (error) { fail(res, error); }
     });
+  }
+  if (url.pathname === '/api/app/todo' && req.method === 'GET') {
+    try {
+      jsonResponse(res, 200, { ok: true, ...(await service.todo(String(url.searchParams.get('entity') ?? ''))) }, { 'cache-control': 'no-store' });
+    } catch (error) { fail(res, error); }
+    return;
   }
   if (url.pathname === '/api/app/persons' && req.method === 'GET') {
     try {

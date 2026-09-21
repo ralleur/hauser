@@ -41,7 +41,9 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
     ? null
     : {
         sensors: {
-          productionPower: config.energy.sensors.productionPower,
+          productionPower: Array.isArray(config.energy.sensors.productionPower)
+            ? [...config.energy.sensors.productionPower]
+            : config.energy.sensors.productionPower,
           consumptionPower: config.energy.sensors.consumptionPower
             .map((source) => ({ ...source }))
             .sort(byId),
@@ -140,7 +142,8 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
   }
   if (globalEntities.homeOffScript) addCommand(globalEntities.homeOffScript, 'script', ['turn_on']);
   if (energy) {
-    if (energy.sensors.productionPower) subscriptionEntityIds.add(energy.sensors.productionPower);
+    const producers = energy.sensors.productionPower;
+    for (const entityId of !producers ? [] : typeof producers === 'string' ? [producers] : producers) subscriptionEntityIds.add(entityId);
     for (const source of energy.sensors.consumptionPower) subscriptionEntityIds.add(source.entityId);
     for (const entityId of Object.values(energy.kpis)) {
       if (entityId) subscriptionEntityIds.add(entityId);

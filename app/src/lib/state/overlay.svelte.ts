@@ -34,14 +34,18 @@ export type RoomEditView = 'devices' | 'immersion' | 'background';
 export const roomEdit = $state({
   mode: 'hidden' as 'hidden' | 'open' | 'closing',
   roomId: '',
+  /* Aus dem Raumblatt des Telefons geöffnet: die Konfiguration blendet dann
+     an Ort und Stelle über das Blatt, statt von unten einzufliegen. */
+  origin: 'elsewhere' as 'sheet' | 'elsewhere',
   /* Womit das Overlay aufgeht: der Tap auf das Raumbild landet direkt beim
      Bild, alles andere bei der Geräteliste. */
   view: 'devices' as RoomEditView,
 });
 
-export function openRoomEdit(roomId: string, view: RoomEditView = 'devices') {
+export function openRoomEdit(roomId: string, view: RoomEditView = 'devices', origin: 'sheet' | 'elsewhere' = 'elsewhere') {
   roomEdit.roomId = roomId;
   roomEdit.view = view;
+  roomEdit.origin = origin;
   roomEdit.mode = 'open';
 }
 

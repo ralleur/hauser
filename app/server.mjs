@@ -1095,7 +1095,7 @@ export function createHmiServer(
       void serveRemote(req, res, { tunnel: tunnelSupervisor, allowedOrigins, ownUrl: ownRemoteUrl });
     } else if ((req.url || '').startsWith(`${APP_HERO_ROUTE_PREFIX}/`)) {
       void serveAppHero(req, res, { service: appHero, allowedOrigins });
-    } else if ((req.url || '').startsWith('/api/app/command') || (req.url || '').startsWith('/api/app/states') || (req.url || '').startsWith('/api/app/persons')) {
+    } else if ((req.url || '').startsWith('/api/app/command') || (req.url || '').startsWith('/api/app/states') || (req.url || '').startsWith('/api/app/persons') || (req.url || '').startsWith('/api/app/todo')) {
       void serveAppCommands(req, res, { service: appCommands, allowedOrigins });
     } else if ((req.url || '').startsWith(`${APP_ROUTE_PREFIX}/`)) {
       serveAppBundle(req, res, {
@@ -1151,7 +1151,10 @@ export function createHmiServer(
           code: 'LAUNDRY_NOT_READY',
           message: 'Die Wäsche-Konfiguration ist nur bei aktiver, bereiter Haushaltskonfiguration verfügbar.',
         });
-      } else if (origin && !allowedOrigins.has(origin)) {
+      /* Issue #21: Die feste Liste allein wies jede fremde Installation ab —
+         das Add-on unter seiner eigenen Adresse ist dieselbe Origin wie die
+         Anfrage und damit erlaubt, wie bei allen anderen Routen. */
+      } else if (!requestOriginAllowed(req, allowedOrigins)) {
         jsonResponse(res, 403, {
           ok: false,
           code: 'LAUNDRY_ORIGIN_FORBIDDEN',

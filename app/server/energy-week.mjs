@@ -20,7 +20,7 @@ export function energySensorIds(document) {
   const energy = document?.energy;
   if (!energy) return [];
   const ids = [
-    ...(Array.isArray(energy.sensors?.productionPower) ? energy.sensors.productionPower : []),
+    ...(Array.isArray(energy.sensors?.productionPower) ? energy.sensors.productionPower : [energy.sensors?.productionPower]),
     ...(Array.isArray(energy.sensors?.consumptionPower) ? energy.sensors.consumptionPower : []),
     ...Object.values(energy.kpis ?? {}),
   ];

@@ -5,6 +5,76 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-20
+
+### Added
+
+- **On the phone, configuring a room happens where you control it.** Opened
+  from the room sheet, the configuration no longer flies in: the room picture
+  dissolves in place into its own blueprint — fine light drawing lines on
+  blue, computed from the picture you already have, so it works with your own
+  photos too. The room name, the scene bar, every device tile and the climate
+  card stay exactly where they are when you operate them.
+- **Arrange devices by moving their tiles.** Hold a tile for a moment and drag
+  it to its new place; the others glide aside. A small minus on the corner
+  takes a device out of the room, and a dashed tile after the last device
+  opens the search with its category filters. The quick setup entries follow
+  below the devices.
+- **A scene can set a colour per lamp.** The scene editor now offers colour
+  next to brightness and colour temperature, with the same swatches as the
+  lamp detail; “White” hands the lamp back to its colour temperature. Only
+  what a lamp can do is shown.
+- **On the phone, a room's readings sit under its name.** Temperature,
+  humidity and presence stand above the scenes instead of taking up device
+  tiles — each only if the room measures it, and the presence circle glows
+  green when someone is there. The climate controls live behind the
+  temperature: a tap opens them, and a switch there puts the card back with
+  the devices for rooms that want it.
+- **On the phone, the energy page shows your house.** The picture from the
+  wall panel lies pale behind the figures — your own house if you assigned
+  one — and fades towards the bottom, so the curve and the consumer list stay
+  calm.
+
+### Fixed
+
+- **The hint under “Generation” says which sensor is meant.** It is what your
+  solar system produces right now, not the feed-in to the grid; Hauser derives
+  feed-in and draw from generation and consumption itself.
+- **The laundry notification can be set up on any installation.** Validating
+  or saving the washer or dryer ended in “Laundry setup failed. Try again from
+  a new preview.” wherever Hauser was opened under an address of its own —
+  which is every add-on installation. The setup now accepts the address it is
+  served from, like every other part of the settings (#21).
+- **Saved energy sensors stay visible as saved.** After saving the selection
+  under Services, the page went back to the old selection as soon as you left
+  and returned, so it looked as if nothing had been saved. The selection now
+  stays as you saved it, and the reload hint appears, because the energy page
+  picks up new sensors on the next start.
+- **A room you created yourself can pick its sensors.** Under “Advanced”, a
+  room only offered sensors from the Home Assistant area with the same name —
+  a hand-made room has none, so the list stayed empty or showed a single
+  sensor. The temperature and humidity pickers now also list every other
+  sensor in the home, and sensors and contacts you place in the room count as
+  the room's own.
+
+## [0.20.6] - 2026-09-20
+
+### Changed
+
+- **Removing a device from a room is an animation, not a jump cut.** The row
+  puffs up for a moment, tips out of the list to the right and fades, and the
+  rows below glide up into the gap once it is gone.
+
+### Fixed
+
+- **Dragging devices into order no longer shivers.** The row now hangs on the
+  finger while its neighbours glide aside, and it changes places only after
+  passing a quarter of the next row — before, the list swapped back and forth
+  along the edges of the rows it was measuring against.
+- **The bottom bar on the phone sits evenly.** The navigation pill kept less
+  room above it than below, so on phones with a home indicator it looked
+  pushed towards the quick actions. Both gaps now match on every device.
+
 ## [0.20.5] - 2026-09-18
 
 ### Fixed

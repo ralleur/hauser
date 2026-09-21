@@ -206,12 +206,16 @@
 .phone-library-detail .detail-overview,
 .phone-library-detail .detail-section { margin-inline: 0; }
 
+/* Unten hält die Ansicht die Nav-Zone frei plus denselben Abstand, den die
+   Pille zum unteren Rand hat: So sitzt die Pille zwischen Schnellaktionen und
+   Bildschirmrand mittig. Mit festen 16 px darüber wirkte sie auf Geräten mit
+   Home-Balken (26 px darunter) nach oben gerutscht (Owner-Befund 2026-09-20). */
 .phone-home-feed {
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--space-4)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-4)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--phone-nav-bottom-offset)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
   /* Wisch nach links öffnet das Layout-Blatt; senkrecht scrollt der Browser. */
   touch-action: pan-y pinch-zoom;
 }
@@ -447,7 +451,7 @@
 }
 .phone-quick-actions::after {
   top: 100%;
-  height: calc(var(--phone-nav-height) + var(--space-4));
+  height: calc(var(--phone-nav-height) + var(--phone-nav-bottom-offset));
   background: var(--color-surface-0);
 }
 
@@ -691,26 +695,92 @@
   color: var(--color-text-primary);
 }
 
+/* Werteleiste unter dem Raumnamen (Owner-Entscheidung 2026-09-20, wie in der
+   App): keine Scheibe drumherum — die Werte stehen wie der Name frei auf dem
+   Bild, linksbündig, je ein rundes Zeichen mit Zahl, dazwischen feine Striche.
+   Leiste und Szenen gehören zusammen: 12 px statt des Abschnittsabstands. */
+.room-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: calc(var(--space-3) - var(--space-5));
+}
+.room-status-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+}
+.room-status-field + .room-status-field::before {
+  content: '';
+  width: 1px;
+  height: 22px;
+  margin-right: var(--space-1);
+  background: rgba(255, 255, 255, 0.35);
+}
+.room-status-field:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: var(--space-1);
+  border-radius: var(--radius-full);
+}
+.room-status-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-full);
+  background: rgba(26, 28, 34, 0.42);
+  color: rgba(255, 255, 255, 0.55);
+  transition: background var(--duration-enter) var(--ease-out), box-shadow var(--duration-enter) var(--ease-out), color var(--duration-enter) var(--ease-out);
+}
+.room-status-icon .icon { width: 18px; height: 18px; }
+.room-status-icon.is-warm { color: var(--color-accent-warm); }
+.room-status-icon.is-cool { color: var(--color-accent-cool); }
+.room-status-icon.is-lit {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--color-success);
+  color: #fff;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-success) 55%, transparent);
+}
+.room-status-value {
+  font-size: 17px;
+  font-weight: var(--font-weight-medium);
+  text-shadow: 0 1px 2px rgba(8, 10, 13, 0.6), 0 2px 14px rgba(8, 10, 13, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-status-icon { transition: none; }
+}
+
 /* Thermostat: dieselbe gestapelte Karte wie im Klima-Overlay des Panels
    (room-controls.css `.is-stacked`, Glas in on-image.css) — keine eigene
    Telefon-Fassung mehr (Owner-Ansage 2026-09-14). */
 
 /* Kamera auf dem Phone als kompakte Querkarte statt als vollbreites 16:9-
    Großbild. Das Panel behält unverändert seine bisherige Darstellung. */
-.room-sheet-scroll .camera-feed {
+.room-sheet-scroll .camera-feed,
+.re-mirror .camera-feed {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: stretch;
 }
 
-.room-sheet-scroll .camera-feed-caption {
+.room-sheet-scroll .camera-feed-caption,
+.re-mirror .camera-feed-caption {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   padding: var(--space-3);
 }
 
-.room-sheet-scroll .camera-feed-frame {
+.room-sheet-scroll .camera-feed-frame,
+.re-mirror .camera-feed-frame {
   border-top: 0;
   border-left: 1px solid var(--color-border);
 }
@@ -743,6 +813,121 @@
 .room-edit.is-phone.is-closing .room-edit-panel {
   animation: phone-sheet-exit var(--duration-enter) cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
+/* ── Raum-Konfiguration am Telefon: Blaupause und gespiegelte Ansicht ──
+   Der Grund ist die Blaupause des Raums (components/room-blueprint.ts): hier
+   wird gebaut, nicht gewohnt. Das Blatt füllt denselben Rahmen wie das
+   Raumblatt und trägt denselben Bildausschnitt — aus dem Raum heraus geöffnet
+   blendet es deshalb an Ort und Stelle über, statt von unten einzufliegen.
+   Die Klassen sind bewusst gedoppelt: die Glas-Regeln für `.on-image`-Panels
+   (on-image.css) sind spezifischer als eine einfache Telefon-Regel, und in
+   Produktion entscheidet die Spezifität, nicht die Reihenfolge der Dateien. */
+:root .room-edit.room-edit.is-phone .room-edit-panel.is-blueprint.on-image {
+  height: 100%;
+  background-color: #0a1a36;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px),
+    linear-gradient(rgba(10, 26, 54, 0.5), rgba(10, 26, 54, 0.5)),
+    var(--re-blueprint, none);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px, cover, cover;
+  background-position: 0 0, 0 0, 0 0, 0 0, center, var(--re-blueprint-focus, center);
+  background-repeat: repeat, repeat, repeat, repeat, no-repeat, no-repeat;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.room-edit.is-phone.is-from-sheet .overlay-scrim { background: transparent; }
+.room-edit.room-edit.is-phone.is-from-sheet.is-open .room-edit-panel.is-blueprint {
+  animation: re-blueprint-in calc(var(--duration-emphasis) * 2) var(--ease-in-out) both;
+}
+.room-edit.room-edit.is-phone.is-from-sheet.is-closing .room-edit-panel.is-blueprint {
+  animation: re-blueprint-out calc(var(--duration-emphasis) * 2) var(--ease-in-out) both;
+}
+@keyframes re-blueprint-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes re-blueprint-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Kopf wie im Raumblatt: derselbe Name an derselben Stelle. */
+.room-edit.is-phone .re-mirror-head .room-sheet-title {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(8, 10, 13, 0.6), 0 2px 14px rgba(8, 10, 13, 0.5);
+}
+/* Die Hülle trägt nur die Klassen des Raumblatts, damit dessen Flächen-Regeln
+   greifen — Rahmen, Grund und Auftritt gehören hier dem Blatt der Konfiguration. */
+.room-edit.is-phone .room-sheet.re-mirror {
+  height: auto;
+  overflow: visible;
+  isolation: auto;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  animation: none;
+}
+/* Der Lesbarkeits-Schleier des Raumblatts gehört zum Raumbild; die Blaupause bringt ihren eigenen mit. */
+.room-edit.is-phone .room-sheet.re-mirror::before { content: none; }
+.re-mirror-scene { gap: var(--space-1); }
+.re-mirror-scene .icon { opacity: 0.7; }
+/* Der Platz trägt Griff, Versatz und das Minus; die Kachel darin schneidet ihre Ecken ab. */
+.re-mirror-slot {
+  position: relative;
+  min-width: 0;
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+  -webkit-touch-callout: none;
+  user-select: none;
+  outline: none;
+}
+.re-mirror-slot:focus-visible .re-mirror-tile { outline: 2px solid var(--color-accent-warm); outline-offset: 2px; }
+.re-mirror-slot.is-held { z-index: 2; cursor: grabbing; }
+.re-mirror-tile { width: 100%; transition: box-shadow var(--duration-normal) var(--ease-out); }
+.re-mirror-slot.is-held .re-mirror-tile {
+  border-color: var(--accent-light-on-border);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.re-mirror-card { position: relative; }
+.re-mirror-card[inert], .re-mirror-card > [inert] { opacity: 0.62; }
+/* Das Minus an der Ecke wie auf dem Home-Bildschirm: klein im Bild, groß genug für den Finger. */
+.re-mirror-remove {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 1;
+  width: var(--touch-min, 44px);
+  height: var(--touch-min, 44px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+}
+/* Die Marke ist eine eigene Fläche: das Symbol selbst ist eine Maske und kann keinen Grund tragen. */
+.re-mirror-badge {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-error);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-6px, -6px);
+}
+.re-mirror-badge .icon { width: 14px; height: 14px; }
+/* Im Platz streckt sich die Kachel auf die Zeilenhöhe — wie die Tasten der Steuerung. */
+.re-mirror-slot { display: grid; }
+.re-mirror-slot.is-held .re-mirror-remove { visibility: hidden; }
+.room-edit.is-phone .light-tile.re-mirror-add {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: transparent;
+}
+.re-mirror-add .light-tile-icon { color: var(--color-accent-warm); }
+
 .room-edit.is-phone .re-room {
   transition: transform var(--duration-normal) var(--ease-out);
 }
@@ -1749,6 +1934,18 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
+  /* Das Hausbild als blasser Grund: Der Schleier in der Seitenfarbe nimmt es
+     nach unten hin zurück, damit Kurve und Verbraucherliste ruhig bleiben.
+     Es steht fest, während die Zahlen darüber rollen. */
+  background-image:
+    linear-gradient(to bottom,
+      color-mix(in srgb, var(--color-surface-0) 58%, transparent),
+      color-mix(in srgb, var(--color-surface-0) 80%, transparent) 45%,
+      color-mix(in srgb, var(--color-surface-0) 94%, transparent)),
+    var(--phone-energy-hero, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .phone-energy-header {

@@ -160,6 +160,7 @@ function dimmableOf(entityId: string): boolean | undefined {
 export interface SceneMemberCapabilities {
   dimmable: boolean;
   colorTemp: boolean;
+  color: boolean;
   colorTempMin?: number;
   colorTempMax?: number;
 }
@@ -171,6 +172,7 @@ export function memberCapabilities(entityId: string): SceneMemberCapabilities {
       return {
         dimmable: !!device.dimmable,
         colorTemp: !!device.colorTemp,
+        color: !!device.color,
         colorTempMin: device.colorTempMin,
         colorTempMax: device.colorTempMax,
       };
@@ -180,6 +182,7 @@ export function memberCapabilities(entityId: string): SceneMemberCapabilities {
   return {
     dimmable: !!caps?.dimmable,
     colorTemp: !!caps?.colorTemp,
+    color: !!caps?.color,
     colorTempMin: caps?.colorTempMin,
     colorTempMax: caps?.colorTempMax,
   };

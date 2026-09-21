@@ -29,4 +29,4 @@ In edit mode, press and hold the background: create your own house with the wiza
 
 ## On the phone
 
-The [phone](/hauser/docs/using/phone/) tells the story behind the numbers: power now, the period with a load curve and a comparison with yesterday, and a **Top consumers** list.
+The [phone](/hauser/docs/using/phone/) tells the story behind the numbers: power now, the period with a load curve and a comparison with yesterday, and a **Top consumers** list. The house picture lies pale behind the figures; the notes pinned into it stay on the wall panel.

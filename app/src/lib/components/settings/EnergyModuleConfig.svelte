@@ -1,8 +1,15 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<script module lang="ts">
+  /* Was in dieser Sitzung gespeichert wurde. `ENERGY_SENSORS` kennt den neuen
+     Stand erst nach dem Neuladen — wer die Sektion verließ und zurückkam, sah
+     sonst wieder die alte Auswahl und hielt das Speichern für wirkungslos. */
+  let savedSelection: { production: string[]; consumption: string[] } | null = null;
+</script>
+
 <script lang="ts">
   /* ── Energie · Entitäten ──
-     Welche Home-Assistant-Sensoren die Energie-Seite füllt: eine Quelle für
-     die Erzeugung, beliebig viele Verbraucher. Vorgeschlagen wird alles, was
+     Welche Home-Assistant-Sensoren die Energie-Seite füllt: beliebig viele
+     Erzeuger (ihre Leistungen werden summiert), beliebig viele Verbraucher. Vorgeschlagen wird alles, was
      Home Assistant an Leistungssensoren meldet (device_class `power` bzw.
      Einheit W/kW) — wer nichts einstellt, sieht also alles.
 
@@ -10,6 +17,8 @@
      Modulschalter; die Energie-Seite liest die Auswahl beim nächsten Start. */
   import { deviceManager } from '../../state/device-manager.svelte.ts';
   import { ENERGY_SENSORS } from '../../config/household-runtime-data.ts';
+  import { energyRefIds } from '../../config/legacy-household-data.ts';
+  import { settingsUi } from '../../state/settings.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
 
   interface PowerEntity { entityId: string; name: string }
@@ -29,11 +38,12 @@
 
   /* Startauswahl: der gespeicherte Stand, sonst alles Gefundene. */
   const storedConsumption = new Set(
-    ENERGY_SENSORS.load.map((load) => (typeof load === 'string' ? load : load.entityId)),
+    savedSelection?.consumption
+      ?? ENERGY_SENSORS.load.map((load) => (typeof load === 'string' ? load : load.entityId)),
   );
-  const configured = storedConsumption.size > 0 || Boolean(ENERGY_SENSORS.pv);
+  const configured = savedSelection !== null || storedConsumption.size > 0 || Boolean(ENERGY_SENSORS.pv);
 
-  let production = $state(typeof ENERGY_SENSORS.pv === 'string' ? ENERGY_SENSORS.pv : '');
+  let production = $state(new Set(savedSelection?.production ?? energyRefIds(ENERGY_SENSORS.pv)));
   let consumption = $state(storedConsumption);
   let busy = $state(false);
   let result = $state<'saved' | 'failed' | 'too-many' | null>(null);
@@ -53,6 +63,14 @@
     result = null;
   }
 
+  function toggleProduction(entityId: string): void {
+    const next = new Set(production);
+    if (next.has(entityId)) next.delete(entityId);
+    else next.add(entityId);
+    production = next;
+    result = null;
+  }
+
   function selectAll(): void {
     consumption = new Set(powerEntities.map((entity) => entity.entityId));
     result = null;
@@ -61,6 +79,10 @@
   async function save(): Promise<void> {
     busy = true;
     result = null;
+    const selected = powerEntities
+      .filter((entity) => consumption.has(entity.entityId) && !production.has(entity.entityId))
+      .map((entity) => ({ entityId: entity.entityId, name: entity.name }));
+    const producers = powerEntities.filter((entity) => production.has(entity.entityId)).map((entity) => entity.entityId);
     try {
       const current = await fetch('/api/household-config', {
         headers: { Accept: 'application/json' },
@@ -74,12 +96,7 @@
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'If-Match': etag },
-        body: JSON.stringify({
-          production: production || null,
-          consumption: powerEntities
-            .filter((entity) => consumption.has(entity.entityId) && entity.entityId !== production)
-            .map((entity) => ({ entityId: entity.entityId, name: entity.name })),
-        }),
+        body: JSON.stringify({ production: producers.length === 0 ? null : producers.length === 1 ? producers[0] : producers, consumption: selected }),
       });
       if (!response.ok) {
         /* Der Server kennt seine Grenze; die Oberfläche soll sie nennen statt
@@ -92,6 +109,10 @@
         }
         throw new Error('ENERGY_WRITE_FAILED');
       }
+      savedSelection = { production: producers, consumption: selected.map((entity) => entity.entityId) };
+      /* Die Energie-Seite liest ihre Sensoren beim Start — wie beim
+         Modulschalter sagt der Hinweis oben, dass ein Neuladen ansteht. */
+      settingsUi.needsReload = true;
       result = 'saved';
     } catch {
       result = 'failed';
@@ -106,13 +127,18 @@
     <span class="settings-row-label">{m.sys_energy_production()}</span>
     <span class="settings-row-sub">{m.sys_energy_production_hint()}</span>
   </div>
-  <select class="settings-input" aria-label={m.sys_energy_production()}
-          bind:value={production} onchange={() => (result = null)}>
-    <option value="">{m.sys_energy_none()}</option>
+  <div class="energy-entity-list" role="group" aria-label={m.sys_energy_production()}>
     {#each powerEntities as entity (entity.entityId)}
-      <option value={entity.entityId}>{entity.name}</option>
+      <label class="energy-entity">
+        <input type="checkbox" checked={production.has(entity.entityId)}
+               onchange={() => toggleProduction(entity.entityId)} />
+        <span>
+          <strong>{entity.name}</strong>
+          <small class="num">{entity.entityId}</small>
+        </span>
+      </label>
     {/each}
-  </select>
+  </div>
 </div>
 
 <div class="settings-row is-stacked" data-setting-id="energy-consumption">
@@ -128,7 +154,7 @@
     {#each powerEntities as entity (entity.entityId)}
       <label class="energy-entity">
         <input type="checkbox" checked={consumption.has(entity.entityId)}
-               disabled={entity.entityId === production}
+               disabled={production.has(entity.entityId)}
                onchange={() => toggle(entity.entityId)} />
         <span>
           <strong>{entity.name}</strong>

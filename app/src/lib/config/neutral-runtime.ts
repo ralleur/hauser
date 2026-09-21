@@ -22,6 +22,7 @@ import type {
 import {
   compileHouseholdConfig,
   parseHouseholdConfig,
+  productionSensorIds,
   type ConfigIssue,
   type EntityRole,
   type HouseholdRuntimeModel,
@@ -79,9 +80,7 @@ export function buildNeutralSeed(model: HouseholdRuntimeModel): Map<string, unkn
   const energyPowerIds = new Set<string>();
   const energyKpiIds = new Set<string>();
   if (model.energy) {
-    if (model.energy.sensors.productionPower) {
-      energyPowerIds.add(model.energy.sensors.productionPower);
-    }
+    for (const entityId of productionSensorIds(model.energy.sensors.productionPower)) energyPowerIds.add(entityId);
     for (const source of model.energy.sensors.consumptionPower) {
       energyPowerIds.add(source.entityId);
     }

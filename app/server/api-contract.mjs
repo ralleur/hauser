@@ -133,6 +133,7 @@ export const API_ROUTES = [
   { id: 'remoteReset', methods: ['POST'], path: '/api/remote/reset', area: 'app', access: 'origin', purpose: 'Tunnel-Knoten neu anmelden.' },
   { id: 'appCommand', methods: ['POST'], path: '/api/app/command', area: 'app', access: 'origin', purpose: 'Geräteaktion für Widgets und Kurzbefehle (HA-Service über REST).' },
   { id: 'appStates', methods: ['GET'], path: '/api/app/states', area: 'app', access: 'origin', purpose: 'Zustände ausgewählter Entitäten für Widgets.', response: 'AppStatesResponse' },
+  { id: 'appTodo', methods: ['GET'], path: '/api/app/todo', area: 'app', access: 'origin', purpose: 'Home-Assistant-Listen (`todo.*`) und deren Einträge für die App, die keinen WebSocket hat.' },
   { id: 'appManifest', methods: ['GET', 'HEAD'], path: '/api/app/manifest', area: 'app', access: 'origin', purpose: 'Phone-Varianten der Raumbilder mit Hashes (ETag).', response: 'AppFileListResponse' },
   { id: 'appHero', methods: ['GET', 'HEAD'], path: '/api/app/hero/:roomId/:variant', area: 'app', access: 'origin', purpose: 'Raumbild eines Raums (light, dark, dark-off, overcast) als JPEG in Wunschbreite (?w=) für Geräte ohne AVIF, etwa die Uhr.', cacheable: true },
   { id: 'hotelTouch', methods: ['POST'], path: '/api/hotel-mode/touch', area: 'hotel', access: 'guest', purpose: 'Adminsitzung verlängern.' },

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { m } from '../../../paraglide/messages.js';
-  import { ENERGY_SENSORS } from '../../state/app.svelte.ts';
+  import { ENERGY_SENSORS, appState } from '../../state/app.svelte.ts';
+  import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
+  import { energyAssetUrl, exteriorAssetUrl } from '../energy-hero-assets.ts';
+  import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
   import { energyView, loadBreakdown } from '../../state/energy.svelte.ts';
   import {
     energyCurve, energyPeriodTotals, energyYesterdayCurve, initEnergyHistory, periodWindow,
@@ -10,6 +13,16 @@
   import { projectPhoneEnergy } from '../../state/phone-energy.ts';
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
+
+  /* Das Haus liegt blass unter den Zahlen (Owner-Wunsch 2026-09-21): dasselbe
+     Motiv wie auf dem Panel, das eigene Haus vor dem Platzhalter. Anders als
+     dort folgt die Fassung dem Theme statt der Sonne — hier steht Schrift
+     direkt auf dem Bild, und ein Nachtbild unter hellem Grund wird grau. */
+  const heroDay = $derived(appState.theme === 'light');
+  const exteriorAssetId = $derived(roomHeroConfig(EXTERIOR_HERO_ID)?.assetId ?? null);
+  const heroUrl = $derived(exteriorAssetId
+    ? exteriorAssetUrl(exteriorAssetId, heroDay ? 'day' : 'night')
+    : energyAssetUrl({ baseUrl: import.meta.env.BASE_URL, sun: { day: heroDay }, fallbackTheme: appState.theme }));
 
   /* Der Zeitraum gehört zur Auswertung, nicht zum Live-Wert: „Jetzt" bleibt
      oben stehen, egal was unten gewählt ist. */
@@ -74,7 +87,8 @@
   const visibleConsumers = $derived(showAll ? model.consumers : model.consumers.slice(0, TOP_COUNT));
 </script>
 
-<main class="phone-energy" aria-labelledby="phone-energy-title">
+<main class="phone-energy" aria-labelledby="phone-energy-title"
+      style:--phone-energy-hero={`url("${heroUrl}")`}>
   <header class="phone-energy-header">
     <h1 bind:this={titleAnchor} id="phone-energy-title" tabindex="-1">{m.phone_energy_title()}</h1>
     {#if model.status.kind !== 'available'}

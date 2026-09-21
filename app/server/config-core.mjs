@@ -1201,16 +1201,21 @@ const ENERGY_LOAD_MAX = 256;
 function normalizeEnergySelection(payload) {
   if (!payload || typeof payload !== 'object') return null;
   const entity = (value) => (typeof value === 'string' && /^[a-z_]+\.[a-z0-9_]+$/.test(value) ? value : null);
-  const production = payload.production === null || payload.production === undefined
-    ? null
-    : entity(payload.production);
-  if (payload.production && !production) return null;
+  /* Ein Erzeuger oder mehrere: gespeichert wird eine Zeichenkette, solange es einer ist — so bleibt jede
+     bestehende Konfiguration gültig —, ab zweien die Liste. */
+  const productionInput = payload.production === null || payload.production === undefined
+    ? []
+    : Array.isArray(payload.production) ? payload.production : [payload.production];
+  if (productionInput.length > 8) return null;
+  const producers = [...new Set(productionInput.map(entity))];
+  if (producers.includes(null)) return null;
+  const production = producers.length === 0 ? null : producers.length === 1 ? producers[0] : producers;
   if (!Array.isArray(payload.consumption) || payload.consumption.length > ENERGY_LOAD_MAX) return null;
   const consumption = [];
   const seen = new Set();
   for (const item of payload.consumption) {
     const entityId = entity(item?.entityId ?? item);
-    if (!entityId || seen.has(entityId) || entityId === production) continue;
+    if (!entityId || seen.has(entityId) || producers.includes(entityId)) continue;
     seen.add(entityId);
     const name = typeof item?.name === 'string' && item.name.trim()
       ? item.name.trim().slice(0, 64)

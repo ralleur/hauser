@@ -1141,7 +1141,8 @@ button.security-bar {
 /* Klima-Overlay: die Karte füllt das Blatt, ohne eigenen Kartenhintergrund. */
 .room-climate-card { container-type: inline-size; }
 .room-climate-card .climate-card { margin-top: 0; }
-.room-climate .ld-section + .ld-section { margin-top: var(--space-5); }
+.room-climate .ld-section + .ld-section,
+.room-climate .room-climate-card + .ld-section { margin-top: var(--space-5); }
 
 .ld-section.ld-switch-row {
   display: flex;
@@ -4083,6 +4084,9 @@ button.security-bar {
 }
 
 .re-list {
+  /* Bezug für die abgehende Zeile: Svelte nimmt sie beim Entfernen aus dem
+     Fluss, damit die Nachbarn gleiten können. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -4099,6 +4103,16 @@ button.security-bar {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-2);
+  /* Beim Loslassen gleitet die gezogene Zeile in ihren Platz zurück. */
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+/* Am Finger: die Zeile liegt über den Nachbarn, die ihr gleitend Platz
+   machen, und folgt ohne Nachlauf (Owner-Befund 2026-09-20). */
+.re-row.is-dragging {
+  position: relative;
+  z-index: 2;
+  box-shadow: var(--elevation-overlay-shadow);
+  transition: none;
 }
 .re-icon {
   flex: none;
@@ -4586,6 +4600,18 @@ button.security-bar {
 .se-member-state {
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
+}
+/* Die Farbe, die die Szene der Lampe gibt: ein Punkt an der Ecke des Symbols. */
+.se-member .re-icon { position: relative; }
+.se-member-color {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sw);
+  border: 1px solid color-mix(in srgb, var(--color-surface-inverse) 45%, transparent);
 }
 .se-member.is-expanded > .re-row {
   border-color: var(--color-text-tertiary);

@@ -129,8 +129,12 @@ describe('phone energy shell, source and accessibility boundaries', () => {
     expect(phoneEnergy).not.toContain('Netzrichtung');
     expect(phoneEnergy).not.toContain('phone_energy_available');
 
+    // Das Haus liegt blass unter den Zahlen (Owner-Wunsch 2026-09-21): vom
+    // Panel kommen nur die Bildadressen, nicht die Bühne mit Zetteln und Ankern.
+    expect(phoneEnergy).toMatch(/import \{ energyAssetUrl, exteriorAssetUrl \} from '\.\.\/energy-hero-assets\.ts'/);
+
     for (const forbidden of [
-      'EnergyScreen', 'PanelAppShell', 'EnergyLoadOverlay', 'energy-hero-assets',
+      'EnergyScreen', 'PanelAppShell', 'EnergyLoadOverlay', 'loadEnergyHeroFrame', 'placeFrame', 'energy-marks',
       'ENERGY_CURVE', 'hls.js', 'IconPicker', 'icon-recents', 'runtime', 'entity_id',
     ]) {
       expect(phoneEnergy).not.toContain(forbidden);

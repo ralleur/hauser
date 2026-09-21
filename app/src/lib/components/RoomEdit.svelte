@@ -7,6 +7,12 @@
   import '../../styles/room-images.css';
   import { longpress } from '../actions/longpress.ts';
   import { dragreorder } from '../actions/dragreorder.ts';
+  import { tilereorder } from '../actions/tilereorder.ts';
+  import ClimateCard from './ClimateCard.svelte';
+  import { mergedClimate } from '../state/commands.ts';
+  import { resolvePhoneHero } from '../state/phone-home.ts';
+  import { roomBlueprint } from './room-blueprint.ts';
+  import { tick } from 'svelte';
   import { SHEET_SWIPE_IGNORE, swipedown } from '../actions/swipedown.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
   import { appState } from '../state/app.svelte.ts';
@@ -22,7 +28,8 @@
     categoryOf, CATEGORY_LABELS, type DeviceCategory, type EntityCatalogItem,
   } from '../state/device-config.ts';
   import { m } from '../../paraglide/messages.js';
-  import { prefersReducedMotion } from '../motion/index.ts';
+  import { flip } from 'svelte/animate';
+  import { popAway, prefersReducedMotion, tokenDuration } from '../motion/index.ts';
   import {
     removeLightPlacement,
     roomLightPlacements,
@@ -36,6 +43,7 @@
     autoSensorId,
     contactIdsFor,
     contactsAreAutomatic,
+    otherSensorCandidates,
     roomContactOptions,
     roomSensorCandidates,
     sensorIdFor,
@@ -161,7 +169,31 @@
   /* Reihenfolge der Raumgeräte: Konfig-Overlay-Standard (actions/dragreorder) —
      derselbe Neun-Punkte-Griff wie in der Raumliste und im Szenen-Editor. */
   let dragEntityId = $state<string | null>(null);
+  let dragOffset = $state(0);
   let orderListEl = $state<HTMLElement>();
+
+  /* Die gezogene Zeile hängt am Finger (Versatz aus der Action), die anderen
+     gleiten per FLIP auf ihren neuen Platz. Die gezogene selbst bekommt keine
+     FLIP-Dauer — sonst zöge die Animation gegen den Finger. */
+  const flipMs = $derived(prefersReducedMotion() ? 0 : tokenDuration(orderListEl ?? null, 'normal'));
+  /* Beim Entfernen rücken die Nachbarn erst nach, wenn die Zeile sichtbar
+     weggeflogen ist — sonst gleiten sie durch sie hindurch. Beim Ziehen
+     darf nichts nachhängen, dort bleibt die Verzögerung null. */
+  const REMOVE_LEAD_MS = 90;
+  let removing = $state(false);
+  function rowFlip(id: string) {
+    return { duration: id === dragEntityId ? 0 : flipMs, delay: removing ? REMOVE_LEAD_MS : 0 };
+  }
+  /* Die abgehende Zeile verlässt den Fluss (siehe popAway) und weiß dann
+     nicht mehr, wo sie stand — die Stelle wird beim Klick gemessen. */
+  let removedFrom = $state<{ top: number; left: number } | null>(null);
+  function removeDevice(entityId: string, trigger: HTMLElement) {
+    const row = trigger.closest<HTMLElement>('[data-reorder-row], [data-reorder-tile]');
+    removedFrom = row ? { top: row.offsetTop, left: row.offsetLeft } : null;
+    removing = true;
+    hideDevice(entityId);
+    setTimeout(() => { removing = false; }, REMOVE_LEAD_MS + flipMs + 100);
+  }
 
   function moveDevice(entityId: string, targetIndex: number) {
     if (!room) return;
@@ -182,6 +214,7 @@
     query = '';
     searchOpen = false;
     categoryFilter = null;
+    adding = false;
     releaseSearchLift();
     view = requestedView;
     selectedLightId = '';
@@ -296,6 +329,81 @@
   $effect(() => {
     onPhone = typeof document !== 'undefined'
       && document.querySelector('[data-shell="phone"]') !== null;
+  });
+
+  /* ── Gespiegelte Ansicht (Telefon) ──
+     Die Geräte-Ansicht steht am Telefon wie das Raumblatt: derselbe Kopf,
+     dieselbe Szenen-Leiste, dasselbe Kachelraster, darunter Kamera und Klima —
+     jedes Gerät bleibt beim Überblenden an seinem Platz. Halten und Ziehen
+     ordnet die Kacheln, das Minus an der Ecke nimmt heraus, die Plus-Kachel
+     hinter dem letzten Gerät öffnet die Suche; der Schnelleinstieg folgt
+     darunter. Dieselben Klassen wie im Raumblatt tragen das Aussehen. */
+  const mirrored = $derived(onPhone && view === 'devices');
+  /* Eine Kachel in der Hand gehört dem Ordnen — dort greifen weder Raumwechsel noch Schließen. */
+  const MIRROR_SWIPE_IGNORE = `${SHEET_SWIPE_IGNORE}, [data-reorder-tile]`;
+  /* Wie das Raumblatt: die Demo hat Kameras ohne Bild und zeigt sie deshalb nicht. */
+  const IS_DEMO_BUILD = import.meta.env?.VITE_DEMO === '1';
+  let adding = $state(false);
+  const tileDevices = $derived((room?.lights ?? []).filter((device) => device.category !== 'camera'));
+  const cameraDevices = $derived(IS_DEMO_BUILD ? [] : (room?.lights ?? []).filter((device) => device.category === 'camera'));
+  const roomScenes = $derived(room ? scenes(room.id) : []);
+  const roomClimate = $derived(room ? mergedClimate(room.id) : null);
+  let tileGridEl = $state<HTMLElement>();
+  let tileDragId = $state<string | null>(null);
+  let tileOffset = $state({ x: 0, y: 0 });
+
+  function tileFlip(id: string) {
+    return { duration: id === tileDragId ? 0 : flipMs, delay: removing ? REMOVE_LEAD_MS : 0 };
+  }
+  /* Die Kacheln sind eine Teilfolge der Raumgeräte (ohne Kameras): das Ziel
+     ist der Platz, den die dortige Kachel in der Gesamtreihenfolge hat. */
+  function moveTile(entityId: string, targetTileIndex: number) {
+    const target = tileDevices[targetTileIndex];
+    if (!room || !target) return;
+    moveDevice(entityId, room.lights.findIndex((device) => device.entityId === target.entityId));
+  }
+  function openSceneFromRow(sceneId: string) {
+    if (!room) return;
+    const roomId = room.id;
+    closeRoomEdit(true);
+    openSceneEdit(roomId, sceneId);
+  }
+  async function startAdding() {
+    adding = true;
+    await tick();
+    searchEl?.focus();
+  }
+  function stopAdding() {
+    adding = false;
+    query = '';
+    categoryFilter = null;
+    searchOpen = false;
+    releaseSearchLift();
+  }
+
+  /* Der Grund ist die Blaupause des Raums — aus dem Tagbild gerechnet, mit
+     demselben Bildausschnitt wie das Raumblatt, damit sie deckungsgleich
+     darüber liegt. */
+  let blueprint = $state<{ url: string; position: string } | null>(null);
+  let blueprintKey = '';
+  $effect(() => {
+    if (!onPhone || roomEdit.mode === 'hidden' || !room) return;
+    const roomId = room.id;
+    const config = roomHeroConfig(roomId);
+    const key = [roomId, JSON.stringify(config)].join('|');
+    if (key === blueprintKey) return;
+    blueprintKey = key;
+    blueprint = null;
+    void (async () => {
+      const [resolution, { loadRoomHero }] = await Promise.all([
+        resolvePhoneHero(import.meta.env.BASE_URL, roomId, 'light', config),
+        import('./room-hero-assets.ts'),
+      ]);
+      const candidate = await loadRoomHero(resolution, undefined, () => blueprintKey === key);
+      if (!candidate || blueprintKey !== key) return;
+      const url = await roomBlueprint(candidate.url);
+      if (url && blueprintKey === key) blueprint = { url, position: candidate.position };
+    })().catch(() => {});
   });
 
   /* Wisch nach links oder rechts wechselt den Raum (Owner-Wunsch 2026-09-12),
@@ -423,22 +531,27 @@
 <svelte:window onkeydown={onKeydown} onresize={onViewportResize} />
 
 <div class="room-edit" class:is-open={roomEdit.mode === 'open'} class:is-phone={onPhone}
+     class:is-from-sheet={roomEdit.origin === 'sheet'}
      class:is-closing={roomEdit.mode === 'closing'} hidden={roomEdit.mode === 'hidden'}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
-  <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'} role="dialog" aria-modal="true"
+  <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'}
+       class:is-blueprint={onPhone} class:has-blueprint={blueprint !== null}
+       style:--re-blueprint={blueprint ? `url("${blueprint.url}")` : undefined}
+       style:--re-blueprint-focus={blueprint?.position}
+       role="dialog" aria-modal="true"
        aria-label={m.room_edit_devices_label({ room: room?.name ?? '' })} tabindex="-1" bind:this={panelEl}
        use:swipedown={{ onSwipe: () => closeRoomEdit(), surface: () => panelEl,
                         atTop: (t) => Boolean(t?.closest('.ld-header'))
                                       || (panelEl?.scrollTop ?? 0) <= searchAnchor,
-                        ignore: SHEET_SWIPE_IGNORE, enabled: onPhone }}
+                        ignore: MIRROR_SWIPE_IGNORE, enabled: onPhone }}
        use:swipeleft={{ onSwipe: () => switchRoom(1), move: false, threshold: 48, angle: 60,
-                        enabled: roomSwipeEnabled, ignore: SHEET_SWIPE_IGNORE,
+                        enabled: roomSwipeEnabled, ignore: MIRROR_SWIPE_IGNORE,
                         onDrag: (travel) => { dragging = true; dragLeft = travel; },
                         onDragEnd: endRoomDrag }}
        use:swipeleft={{ onSwipe: () => switchRoom(-1), move: false, threshold: 48, angle: 60, direction: 'right',
-                        enabled: roomSwipeEnabled, ignore: SHEET_SWIPE_IGNORE,
+                        enabled: roomSwipeEnabled, ignore: MIRROR_SWIPE_IGNORE,
                         onDrag: (travel) => { dragging = true; dragRight = travel; },
                         onDragEnd: endRoomDrag }}
        onanimationend={(e) => { if (roomEdit.mode === 'closing' && e.target === e.currentTarget) finishRoomEditClose(); }}>
@@ -446,10 +559,24 @@
       {#key room.id}
         <div class="re-room" class:is-following={dragging} in:roomEnter
              style:transform={dragX === 0 ? undefined : `translateX(${dragX * 0.5}px)`}>
+        {#if mirrored && !adding}
+        <!-- Derselbe Kopf wie im Raumblatt: der Name bleibt stehen, aus den drei Punkten wird das Kreuz. -->
+        <div class="room-sheet-head re-mirror-head">
+          <h2 class="room-sheet-title">{room.name}</h2>
+          <button class="room-sheet-more pressable" type="button" aria-label={m.common_close()} onclick={() => closeRoomEdit()}>
+            <Icon name="i-close" cls="icon icon-md" />
+          </button>
+        </div>
+        {:else}
         <header class="ld-header">
           {#if view !== 'devices'}
             <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
                     onclick={() => { view = 'devices'; selectedLightId = ''; }}>
+              <Icon name="i-chevron-left" cls="icon icon-md" />
+            </button>
+          {:else if adding}
+            <!-- Aus „Gerät hinzufügen" führt der Pfeil zurück in die Konfiguration; das Kreuz schließt sie ganz. -->
+            <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()} onclick={stopAdding}>
               <Icon name="i-chevron-left" cls="icon icon-md" />
             </button>
           {/if}
@@ -457,9 +584,10 @@
           <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                   onclick={() => closeRoomEdit()}>×</button>
         </header>
+        {/if}
 
         <div class="ld-body">
-          {#if view === 'devices'}
+          {#snippet quickSection()}
           <!-- Schnelleinstieg: die vier Einstiege als 2×2-Raster, damit die
                Geräteliste darunter ohne Scrollen sichtbar bleibt. -->
           <section class="ld-section">
@@ -499,6 +627,95 @@
               </button>
             </div>
           </section>
+          {/snippet}
+          {#if view === 'devices'}
+          {#if mirrored && !adding}
+          <!-- Gespiegelte Ansicht: Aufbau und Klassen des Raumblatts, damit jede
+               Kachel genau dort steht, wo man sie bedient. -->
+          <div class="room-sheet on-image re-mirror">
+            <div class="room-controls">
+              {#if roomScenes.length > 0}
+                <section class="detail-section">
+                  <div class="scene-row">
+                    {#each roomScenes as s (s.id)}
+                      <!-- Die Leiste bleibt an ihrem Platz, schaltet hier aber nichts: ein Tipp öffnet die Szene. -->
+                      <button class="scene-btn re-mirror-scene pressable" type="button" onclick={() => openSceneFromRow(s.id)}>
+                        <Icon name="i-pencil" cls="icon icon-sm" />{s.label}
+                      </button>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
+
+              <section class="detail-section">
+                <div class="light-list" bind:this={tileGridEl}>
+                  {#each tileDevices as device (device.entityId)}
+                    <!-- svelte-ignore a11y_no_noninteractive_tabindex
+                         — der Platz ist selbst der Griff und nimmt Pfeiltasten zum Ordnen an (actions/tilereorder) -->
+                    <div class="re-mirror-slot" class:is-held={tileDragId === device.entityId}
+                         data-reorder-tile={device.entityId} role="group" tabindex="0"
+                         aria-label={m.scene_reorder({ name: device.name })}
+                         style:transform={tileDragId === device.entityId
+                           ? `translate3d(${tileOffset.x}px, ${tileOffset.y}px, 0) scale(1.04)` : undefined}
+                         animate:flip={tileFlip(device.entityId)}
+                         out:popAway={{ from: removedFrom }}
+                         use:tilereorder={{
+                           id: device.entityId,
+                           grid: () => tileGridEl,
+                           enabled: tileDevices.length > 1,
+                           onReorder: moveTile,
+                           onDragChange: (dragging) => { tileDragId = dragging ? device.entityId : null; },
+                           onDragOffset: (offset) => { tileOffset = offset; },
+                         }}>
+                      <div class="light-tile re-mirror-tile">
+                        <span class="light-tile-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
+                        <span class="light-tile-label">
+                          <span class="light-tile-name">{device.name}</span>
+                        </span>
+                      </div>
+                      <button class="re-mirror-remove pressable" type="button"
+                              aria-label="{device.name} aus {room.name} entfernen"
+                              onclick={(event) => removeDevice(device.entityId, event.currentTarget)}>
+                        <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
+                      </button>
+                    </div>
+                  {/each}
+                  <!-- Hinter dem letzten Gerät: die Plus-Kachel öffnet die Suche mit ihren Filtern. -->
+                  <button class="light-tile is-placeholder re-mirror-add pressable" type="button" onclick={startAdding}>
+                    <span class="light-tile-icon" aria-hidden="true"><Icon name="i-plus" /></span>
+                    <span class="light-tile-label">
+                      <span class="light-tile-name">{m.room_add_device()}</span>
+                    </span>
+                  </button>
+                </div>
+              </section>
+
+              {#each cameraDevices as camera (camera.entityId)}
+                <!-- Die Kamera hält ihren Platz als ruhende Karte im Maß der Steuerung. -->
+                <section class="detail-section re-mirror-card" out:popAway={{ from: removedFrom }} data-reorder-row={camera.entityId}>
+                  <figure class="camera-feed" inert>
+                    <figcaption class="camera-feed-caption"><span>{camera.name}</span></figcaption>
+                    <div class="camera-feed-frame"><Icon name={camera.icon ?? 'i-camera'} cls="icon icon-lg" /></div>
+                  </figure>
+                  <button class="re-mirror-remove pressable" type="button"
+                          aria-label="{camera.name} aus {room.name} entfernen"
+                          onclick={(event) => removeDevice(camera.entityId, event.currentTarget)}>
+                    <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
+                  </button>
+                </section>
+              {/each}
+
+              {#if roomClimate}
+                <section class="detail-section climate-section re-mirror-card" inert>
+                  <ClimateCard {room} stacked />
+                </section>
+              {/if}
+            </div>
+          </div>
+          {@render quickSection()}
+          {:else}
+          {#if !mirrored}
+          {@render quickSection()}
           <section class="ld-section">
             <span class="caps-label">{m.room_order_label()} · {room.lights.length}</span>
             {#if room.lights.length === 0}
@@ -508,6 +725,10 @@
                 {#each room.lights as device (device.entityId)}
                   <li class="re-row" class:is-dragging={dragEntityId === device.entityId}
                       data-reorder-row={device.entityId}
+                      style:transform={dragEntityId === device.entityId && dragOffset !== 0
+                        ? `translate3d(0, ${dragOffset}px, 0)` : undefined}
+                      animate:flip={rowFlip(device.entityId)}
+                      out:popAway={{ from: removedFrom }}
                       use:longpress={{ onLongPress: () => moveDeviceId = device.entityId }}>
                     <span class="re-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
                     <span class="re-label">
@@ -524,12 +745,13 @@
                                 enabled: room.lights.length > 1,
                                 onReorder: moveDevice,
                                 onDragChange: (dragging) => { dragEntityId = dragging ? device.entityId : null; },
+                                onDragOffset: (offset) => { dragOffset = offset; },
                               }}>
                         <Icon name="i-dots-grid" cls="icon icon-md" />
                       </button>
                       <button class="re-btn re-remove pressable" type="button"
                               aria-label="{device.name} aus {room.name} entfernen"
-                              onclick={() => hideDevice(device.entityId)}>
+                              onclick={(event) => removeDevice(device.entityId, event.currentTarget)}>
                         <Icon name="i-minus" cls="icon icon-md" />
                       </button>
                     </span>
@@ -539,6 +761,7 @@
             {/if}
           </section>
 
+          {/if}
           <section class="ld-section re-add-section">
             <span class="caps-label">{m.room_add_device()}</span>
             <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
@@ -585,6 +808,7 @@
               {/if}
             {/if}
           </section>
+          {/if}
           {:else if view === 'immersion'}
             <div class="re-immersion-editor">
               <aside class="re-immersion-lights" aria-label={m.room_pick_lamps()}>
@@ -638,6 +862,7 @@
             <section class="ld-section">
               {#each ['temperature', 'humidity'] as const as metric (metric)}
                 {@const candidates = roomSensorCandidates(room.id, metric)}
+                {@const others = otherSensorCandidates(room.id, metric)}
                 {@const auto = autoSensorId(room.id, metric)}
                 {@const chosen = sensorIdFor(room.id, metric)}
                 {@const shown = showsMetric(room.id, metric)}
@@ -663,7 +888,7 @@
                   {#if shown}
                     <label class="re-metric-sensor">
                       <span class="caps-label">{m.room_display_sensor()}</span>
-                      {#if candidates.length === 0 && !chosen}
+                      {#if candidates.length === 0 && others.length === 0 && !chosen}
                         <p class="re-empty">{m.room_display_sensor_none()}</p>
                       {:else}
                         <select class="re-search" value={sensorIsAutomatic(room.id, metric) ? '' : chosen}
@@ -674,6 +899,15 @@
                           {#each candidates as item (item.entityId)}
                             <option value={item.entityId}>{item.name}</option>
                           {/each}
+                          <!-- Der Rest des Hauses: ein selbst angelegter Raum hat
+                               keinen HA-Bereich, sein Fühler hängt woanders. -->
+                          {#if others.length > 0}
+                            <optgroup label={m.room_display_sensor_others()}>
+                              {#each others as item (item.entityId)}
+                                <option value={item.entityId}>{item.name}{item.area ? ` · ${item.area}` : ''}</option>
+                              {/each}
+                            </optgroup>
+                          {/if}
                         </select>
                       {/if}
                     </label>

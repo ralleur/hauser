@@ -12,7 +12,7 @@
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
   import { resolvePhoneHero, type PhoneHeroVariant } from '../../state/phone-home.ts';
-  import { closeDeviceDetail, deviceDetail } from '../../state/overlay.svelte.ts';
+  import { closeDeviceDetail, closeRoomClimate, deviceDetail, roomClimate } from '../../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../../state/scene-edit-overlay.svelte.ts';
   import { createRetryableLazyLoader } from '../../state/lazy-loader.ts';
   import { wrappedFocusIndex, type LayerCloseReason } from '../../state/phone-navigation.svelte.ts';
@@ -207,12 +207,13 @@
   let dialog: HTMLElement;
   let scrollEl = $state<HTMLElement>();
   let title = $state<HTMLHeadingElement>();
-  type NestedLayerId = 'device' | 'scene';
+  type NestedLayerId = 'device' | 'scene' | 'climate';
   const nestedLayerLoader = createRetryableLazyLoader({
     device: () => import('../DeviceDetail.svelte'),
     scene: () => import('../SceneEdit.svelte'),
+    climate: () => import('../RoomClimateOverlay.svelte'),
   });
-  let nestedLayerRetries = $state<Record<NestedLayerId, number>>({ device: 0, scene: 0 });
+  let nestedLayerRetries = $state<Record<NestedLayerId, number>>({ device: 0, scene: 0, climate: 0 });
 
   function loadNestedLayer(id: NestedLayerId, _retryVersion: number) {
     return nestedLayerLoader.load(id);
@@ -224,6 +225,7 @@
 
   function closeNestedLayer(id: NestedLayerId): void {
     if (id === 'device') closeDeviceDetail(true);
+    else if (id === 'climate') closeRoomClimate(true);
     else closeSceneEdit(true);
   }
 
@@ -295,6 +297,7 @@
     // werden beim Schließen des Room-Sheets gemeinsam aufgeräumt.
     closeDeviceDetail(true);
     closeSceneEdit(true);
+    closeRoomClimate(true);
   });
 </script>
 
@@ -353,14 +356,14 @@
             <h2 class="room-sheet-title" bind:this={title} id="room-sheet-title" tabindex="-1">{room.name}</h2>
             <!-- Drei Punkte statt Schließen: öffnen die Raumkonfig (Owner-Wunsch
                  2026-09-12). Geschlossen wird per Wisch nach unten oder Tipp daneben. -->
-            <button class="room-sheet-more pressable" type="button" aria-label={m.room_edit_devices_label({ room: room.name })} onclick={() => openRoomEdit(room.id)}>
+            <button class="room-sheet-more pressable" type="button" aria-label={m.room_edit_devices_label({ room: room.name })} onclick={() => openRoomEdit(room.id, 'devices', 'sheet')}>
               <Icon name="i-dots-horizontal" cls="icon icon-md" />
             </button>
           </div>
           <!-- 1:1 die Tablet-Seitenleiste: gleiche Controls, gleiche Long-Press-
                Gesten und Overlays (Geräte-Detail, Szenen-Editor) — eine Erfahrung
                aus einem Guss auf beiden Shells. -->
-          <RoomControls {room} stackedClimate />
+          <RoomControls {room} stackedClimate statusStrip />
         </div>
       {/key}
     </div>
@@ -375,6 +378,16 @@
     <DeviceDetail />
   {:catch}
     {@render nestedLayerLoadState('device', true)}
+  {/await}
+{/if}
+{#if roomClimate.mode !== 'hidden'}
+  {#await loadNestedLayer('climate', nestedLayerRetries.climate)}
+    {@render nestedLayerLoadState('climate', false)}
+  {:then loaded}
+    {@const RoomClimateOverlay = loaded.default}
+    <RoomClimateOverlay />
+  {:catch}
+    {@render nestedLayerLoadState('climate', true)}
   {/await}
 {/if}
 {#if sceneEdit.mode !== 'hidden'}

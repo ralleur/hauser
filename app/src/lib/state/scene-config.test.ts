@@ -167,6 +167,14 @@ describe('buildSceneCommands', () => {
     expect(cmd.optimistic).toEqual({ on: true });
   });
 
+  it('eine Farbe fährt als rgb_color und gilt vor der Farbtemperatur', () => {
+    const [cmd] = buildSceneCommands(sceneDef('gemuetlich'), [
+      { entityId: 'light.bunt', dimmable: true, state: { on: true, brightness: 40, colorTemp: 2700, color: '#4696f0' } },
+    ], now);
+    expect(cmd.command.data).toEqual({ brightness_pct: 40, rgb_color: [70, 150, 240] });
+    expect(cmd.optimistic).toEqual({ on: true, brightness: 40, color: '#4696f0' });
+  });
+
   it('Hell setzt 100 %', () => {
     const [cmd] = buildSceneCommands(sceneDef('hell'), [{ entityId: 'light.dimmbar', dimmable: true }], now);
     expect(cmd.command.data).toEqual({ brightness_pct: 100 });
@@ -194,6 +202,11 @@ describe('sceneMemberStateFromValue (Import aus einer HA-Szene)', () => {
   it('übernimmt Helligkeit und Farbtemperatur eines eingeschalteten Lichts', () => {
     expect(sceneMemberStateFromValue({ on: true, brightness: 42.4, colorTemp: 2703, color: null }))
       .toEqual({ on: true, brightness: 42, colorTemp: 2703 });
+  });
+
+  it('übernimmt eine Farbe statt der Farbtemperatur', () => {
+    expect(sceneMemberStateFromValue({ on: true, brightness: 60, colorTemp: 2703, color: '#FF8C3C' }))
+      .toEqual({ on: true, brightness: 60, color: '#ff8c3c' });
   });
 
   it('ein ausgeschaltetes Gerät trägt nur den Aus-Zustand', () => {

@@ -59,6 +59,12 @@ export interface RoomConfig {
     room may carry this id. */
 export const EXTERIOR_HERO_ID = 'exterior';
 
+/** Die Erzeugungssensoren als Liste — gleich, ob einer (Zeichenkette) oder mehrere gespeichert sind. */
+export function productionSensorIds(value: string | readonly string[] | null | undefined): string[] {
+  if (!value) return [];
+  return typeof value === 'string' ? [value] : [...value];
+}
+
 /** Wo ein Zettel des Energie-Screens hängt: Punkt im Motiv, Platz des
     Zettels, Neigung — alles in Prozent des Bildes (R19, docs/23). */
 export interface EnergyMarkAnchorConfig {
@@ -103,7 +109,8 @@ export interface EnergyLoadConfig {
 
 export interface EnergyConfig {
   sensors: {
-    productionPower: string | null;
+    /** Ein Erzeuger als Zeichenkette (wie bisher) oder mehrere als Liste — die Leistungen werden summiert. */
+    productionPower: string | string[] | null;
     consumptionPower: EnergyLoadConfig[];
   };
   kpis: {
@@ -744,15 +751,24 @@ function parseEnergy(
 
   const sensorsValue = validator.required(object, 'sensors', path);
   const sensors = sensorsValue === MISSING ? undefined : validator.object(sensorsValue, `${path}.sensors`);
-  let productionPower: string | null = null;
+  let productionPower: string | string[] | null = null;
   let consumptionPower: EnergyLoadConfig[] = [];
   if (sensors) {
     validator.exactKeys(sensors, ['productionPower', 'consumptionPower'], `${path}.sensors`);
-    productionPower = validator.nullableEntityId(
-      validator.required(sensors, 'productionPower', `${path}.sensors`),
-      `${path}.sensors.productionPower`,
-      'sensor',
-    );
+    /* Mehrere Erzeuger (PV-Dach, Balkonkraftwerk …) stehen als Liste; ein einzelner bleibt die Zeichenkette,
+       die jede bestehende Konfiguration schon trägt. */
+    const productionValue = validator.required(sensors, 'productionPower', `${path}.sensors`);
+    if (Array.isArray(productionValue)) {
+      const ids = productionValue.map((entry, index) =>
+        validator.entityId(entry, `${path}.sensors.productionPower[${index}]`, 'sensor'));
+      const unique = [...new Set(ids.filter(Boolean))];
+      if (unique.length !== ids.length) {
+        validator.issue('DUPLICATE_ID', `${path}.sensors.productionPower`, 'Production sensors must be unique.');
+      }
+      productionPower = unique.length === 0 ? null : unique.length === 1 ? unique[0] : unique;
+    } else {
+      productionPower = validator.nullableEntityId(productionValue, `${path}.sensors.productionPower`, 'sensor');
+    }
     const loadValue = validator.required(sensors, 'consumptionPower', `${path}.sensors`);
     const loads = loadValue === MISSING ? undefined : validator.array(loadValue, `${path}.sensors.consumptionPower`);
     consumptionPower = (loads ?? []).map((load, index) =>

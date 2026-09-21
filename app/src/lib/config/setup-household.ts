@@ -73,7 +73,9 @@ function cloneHouseholdConfig(config: HouseholdConfigV4): HouseholdConfigV4 {
     enabledModules: [...config.enabledModules],
     energy: config.energy === null ? null : {
       sensors: {
-        productionPower: config.energy.sensors.productionPower,
+        productionPower: Array.isArray(config.energy.sensors.productionPower)
+          ? [...config.energy.sensors.productionPower]
+          : config.energy.sensors.productionPower,
         consumptionPower: config.energy.sensors.consumptionPower.map((source) => ({ ...source })),
       },
       kpis: { ...config.energy.kpis },

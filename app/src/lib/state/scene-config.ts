@@ -203,12 +203,18 @@ export function defaultSceneMembers(devices: readonly { entityId: string }[]): s
    fest, ob es an oder aus ist und — soweit das Gerät es kann — mit welcher
    Helligkeit/Farbtemperatur. Ohne Eintrag gilt weiter der Szenen-Default
    (SceneDef.on/brightness), damit bestehende Szenen unverändert wirken. */
+const SCENE_COLOR = /^#[0-9a-f]{6}$/i;
+
 export interface SceneMemberState {
   on: boolean;
   /** Ziel-Helligkeit in % (nur bei dimmbaren Lichtern) */
   brightness?: number;
   /** Ziel-Farbtemperatur in Kelvin (nur bei farbtemperaturfähigen Lichtern) */
   colorTemp?: number;
+  /** Ziel-Farbe als '#rrggbb' (nur bei farbfähigen Lichtern). Farbe und
+      Farbtemperatur schließen sich aus (HA-color_mode): ist eine Farbe
+      gesetzt, gilt sie. Gesetzt wird sie bisher in der Telefon-App. */
+  color?: string;
 }
 
 export interface SceneOverride {
@@ -530,7 +536,8 @@ function cleanStates(raw: unknown): Record<string, SceneMemberState> | undefined
     if (typeof cand.brightness === 'number' && cand.brightness >= 0 && cand.brightness <= 100) {
       state.brightness = cand.brightness;
     }
-    if (typeof cand.colorTemp === 'number' && cand.colorTemp > 0) state.colorTemp = cand.colorTemp;
+    if (typeof cand.color === 'string' && SCENE_COLOR.test(cand.color)) state.color = cand.color.toLowerCase();
+    else if (typeof cand.colorTemp === 'number' && cand.colorTemp > 0) state.colorTemp = cand.colorTemp;
     states[entityId] = state;
   }
   return Object.keys(states).length > 0 ? states : undefined;
@@ -565,12 +572,13 @@ function browserStorage(): SceneStorage | undefined {
    weiter dem Szenen-Default. */
 export function sceneMemberStateFromValue(value: unknown): SceneMemberState | null {
   if (typeof value !== 'object' || value === null) return null;
-  const current = value as { on?: unknown; brightness?: unknown; colorTemp?: unknown };
+  const current = value as { on?: unknown; brightness?: unknown; colorTemp?: unknown; color?: unknown };
   if (typeof current.on !== 'boolean') return null;
   if (!current.on) return { on: false };
   const state: SceneMemberState = { on: true };
   if (typeof current.brightness === 'number') state.brightness = Math.round(current.brightness);
-  if (typeof current.colorTemp === 'number') state.colorTemp = Math.round(current.colorTemp);
+  if (typeof current.color === 'string' && SCENE_COLOR.test(current.color)) state.color = current.color.toLowerCase();
+  else if (typeof current.colorTemp === 'number') state.colorTemp = Math.round(current.colorTemp);
   return state;
 }
 
@@ -610,8 +618,14 @@ export function buildSceneCommands(
         data.brightness_pct = target.brightness;
         optimistic.brightness = target.brightness;
       }
+      // Eine Farbe gilt vor der Farbtemperatur — beides zugleich kennt HA nicht.
+      if (typeof target.color === 'string' && SCENE_COLOR.test(target.color)) {
+        const hex = target.color.slice(1);
+        data.rgb_color = [0, 2, 4].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+        optimistic.color = target.color;
+      }
       // Farbtemperatur verlässt den Farbmodus (HA-color_mode, docs/04).
-      if (typeof target.colorTemp === 'number') {
+      else if (typeof target.colorTemp === 'number') {
         data.color_temp_kelvin = target.colorTemp;
         optimistic.colorTemp = target.colorTemp;
         optimistic.color = null;

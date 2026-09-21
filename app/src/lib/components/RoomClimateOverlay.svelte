@@ -22,6 +22,15 @@
     { id: 'both', label: () => m.climate_tile_both() },
   ];
 
+  /* Am Telefon wohnt die Steuerung hinter der Temperatur der Werteleiste
+     (Owner-Entscheidung 2026-09-20). Der Schalter am Ende legt die Karte
+     zurück zu den Geräten — Vorgabe aus. */
+  let onPhone = $state(false);
+  $effect(() => {
+    onPhone = typeof document !== 'undefined'
+      && document.querySelector('[data-shell="phone"]') !== null;
+  });
+
   let panelEl = $state<HTMLElement>();
   $effect(() => {
     if (roomClimate.mode === 'open' && panelEl) panelEl.focus();
@@ -91,6 +100,17 @@
         <div class="climate-section room-climate-card">
           <ClimateCard {room} stacked />
         </div>
+        {#if onPhone}
+          <section class="ld-section ld-switch-row">
+            <span id="climate-with-devices-label">{m.climate_show_with_devices()}</span>
+            <button class="re-toggle pressable" type="button" role="switch"
+                    aria-checked={climateInline(room.id)} class:is-on={climateInline(room.id)}
+                    aria-labelledby="climate-with-devices-label"
+                    onclick={() => setClimateInline(room.id, !climateInline(room.id))}>
+              <span class="re-toggle-knob"></span>
+            </button>
+          </section>
+        {/if}
       {/if}
     {/if}
   </div>

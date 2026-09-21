@@ -87,6 +87,18 @@ describe('Energie-Auswahl', () => {
     expect(stored.energy.sensors.productionPower).toBe('sensor.hausanschluss_leistung');
   });
 
+  it('speichert mehrere Erzeuger als Liste und nimmt sie aus den Verbrauchern', async () => {
+    const { base, householdConfigPath } = await start();
+    const response = await putEnergy(base, await etagOf(base), {
+      production: ['sensor.pv_dach_leistung', 'sensor.balkonkraftwerk_leistung'],
+      consumption: [...loads(3), { entityId: 'sensor.pv_dach_leistung', name: 'Dach' }],
+    });
+    expect(response.status).toBe(200);
+    const stored = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(stored.energy.sensors.productionPower).toEqual(['sensor.pv_dach_leistung', 'sensor.balkonkraftwerk_leistung']);
+    expect(stored.energy.sensors.consumptionPower).toHaveLength(3);
+  });
+
   it('nennt die Grenze, statt nur „ungültig" zu sagen', async () => {
     const { base } = await start();
     const response = await putEnergy(base, await etagOf(base), {

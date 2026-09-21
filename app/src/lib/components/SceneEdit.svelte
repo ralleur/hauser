@@ -13,7 +13,7 @@
   import { runtime } from '../adapter/runtime.svelte.ts';
   import type { HaScene } from '../adapter/types.ts';
   import { deviceManager } from '../state/device-manager.svelte.ts';
-  import { tempTint } from '../state/light-presets.ts';
+  import { LIGHT_COLOR_SWATCHES, tempTint } from '../state/light-presets.ts';
   import {
     sceneEdit, closeSceneEdit, finishSceneEditClose,
     sceneMembers, sceneDefaults, sceneCustomized,
@@ -138,7 +138,8 @@
     if (!target.on) return m.dev_off();
     const parts: string[] = [m.dev_on()];
     if (caps.dimmable && typeof target.brightness === 'number') parts.push(`${Math.round(target.brightness)} %`);
-    if (caps.colorTemp && typeof target.colorTemp === 'number') parts.push(`${Math.round(target.colorTemp)} K`);
+    /* Eine Farbe gilt vor der Farbtemperatur; sie zeigt der Punkt am Symbol. */
+    if (!target.color && caps.colorTemp && typeof target.colorTemp === 'number') parts.push(`${Math.round(target.colorTemp)} K`);
     return parts.join(' · ');
   }
 
@@ -365,7 +366,9 @@
                     <div class="re-row">
                       <button class="se-member-main pressable" type="button" aria-expanded={isOpen}
                               onclick={() => toggleExpanded(entityId)}>
-                        <span class="re-icon" aria-hidden="true"><Icon name={view.icon} /></span>
+                        <span class="re-icon" aria-hidden="true"><Icon name={view.icon} />
+                          {#if target.on && target.color}<span class="se-member-color" style="--sw:{target.color}"></span>{/if}
+                        </span>
                         <span class="re-label">
                           <span class="re-name">{view.name}</span>
                           <small class="se-member-state">{stateSummary(caps, target)}</small>
@@ -433,9 +436,33 @@
                                        format={(v) => `${Math.round(v)} K`}
                                        onInput={(val, final) => {
                                          dragTemp = final ? null : val;
-                                         if (final) patchState(entityId, { on: true, colorTemp: val });
+                                         /* Die Farbtemperatur löst eine am Telefon gewählte Farbe ab. */
+                                         if (final) patchState(entityId, { on: true, colorTemp: val, color: undefined });
                                        }} />
                             <div class="ld-scale-ends"><span>{m.dev_warm()}</span><span>{m.dev_cool()}</span></div>
+                          </div>
+                        {/if}
+
+                        <!-- Farbe: dieselben Felder wie im Lampendetail. Eine Farbe löst die
+                             Farbtemperatur ab, „Weiß" gibt sie wieder frei (HA-color_mode). -->
+                        {#if target.on && caps.color}
+                          <div class="se-control">
+                            <span class="caps-label">{m.dev_color()}</span>
+                            <div class="swatch-grid" role="radiogroup" aria-label={m.dev_color()}>
+                              {#each LIGHT_COLOR_SWATCHES as swatch (swatch.hex)}
+                                <button class="swatch pressable" type="button" role="radio"
+                                        aria-checked={target.color === swatch.hex} aria-label={swatch.name}
+                                        style="--sw:{swatch.hex}"
+                                        onclick={() => patchState(entityId, { on: true, color: swatch.hex, colorTemp: undefined })}>
+                                  <span class="swatch-check" aria-hidden="true"><Icon name="i-check" /></span>
+                                </button>
+                              {/each}
+                              <button class="swatch swatch-white pressable" type="button" role="radio"
+                                      aria-checked={!target.color} aria-label={m.dev_white()}
+                                      onclick={() => patchState(entityId, { on: true, color: undefined })}>
+                                <span class="swatch-check" aria-hidden="true"><Icon name="i-check" /></span>
+                              </button>
+                            </div>
                           </div>
                         {/if}
 

@@ -73,12 +73,30 @@ function areaMatchesRoom(area: string | null | undefined, roomId: string): boole
   return !!roomName && normalized === slug(roomName);
 }
 
+/* Was jemand von Hand in den Raum gelegt hat, gehört ihm auch. Ein selbst
+   angelegter Raum hat keinen HA-Bereich — ohne diesen Weg blieb seine
+   Sensorliste leer (Rückmeldung aus der App, 2026-09-15). */
+function placedInRoom(roomId: string): Set<string> {
+  return new Set(appState.rooms.find((r) => r.id === roomId)?.lights.map((device) => device.entityId) ?? []);
+}
+
 /** Sensoren des Raums für eine Messgröße, laut HA-Bereich. Der erste ist die
     Automatik-Wahl; die weiteren stehen im Editor zur Auswahl. */
 export function roomSensorCandidates(roomId: string, metric: RoomMetric): EntityCatalogItem[] {
+  const placed = placedInRoom(roomId);
   return deviceManager.catalog.filter(
-    (item) => item.domain === 'sensor' && item.deviceClass === metric && areaMatchesRoom(item.area, roomId),
+    (item) => item.domain === 'sensor' && item.deviceClass === metric
+      && (areaMatchesRoom(item.area, roomId) || placed.has(item.entityId)),
   );
+}
+
+/** Alle übrigen Sensoren der Messgröße im Haus — zur Wahl im Editor, nie
+    automatisch. */
+export function otherSensorCandidates(roomId: string, metric: RoomMetric): EntityCatalogItem[] {
+  const own = new Set(roomSensorCandidates(roomId, metric).map((item) => item.entityId));
+  return deviceManager.catalog
+    .filter((item) => item.domain === 'sensor' && item.deviceClass === metric && !own.has(item.entityId))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Automatisch gewählter Sensor (erster im Raum) oder '' */
@@ -97,10 +115,11 @@ const CONTACT_DEVICE_CLASSES: Record<RoomContactKind, readonly string[]> = {
 
 export function roomContactCandidates(roomId: string, kind: RoomContactKind): EntityCatalogItem[] {
   const classes = CONTACT_DEVICE_CLASSES[kind];
+  const placed = placedInRoom(roomId);
   return deviceManager.catalog.filter(
     (item) => item.domain === 'binary_sensor'
       && !!item.deviceClass && classes.includes(item.deviceClass)
-      && areaMatchesRoom(item.area, roomId),
+      && (areaMatchesRoom(item.area, roomId) || placed.has(item.entityId)),
   );
 }
 

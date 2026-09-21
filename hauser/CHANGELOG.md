@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## 0.21.0 - 2026-09-20
+
+- On the phone, the room configuration opens in place: the room picture turns
+  into its own blueprint, and the scene bar, device tiles and climate card stay
+  exactly where you operate them.
+- Arrange devices by holding and dragging their tiles, remove one with the
+  minus on its corner, and add one with the dashed tile after the last device.
+- A scene can now set a colour per lamp, next to brightness and colour
+  temperature.
+- On the phone, temperature, humidity and presence now sit under the room name
+  above the scenes; a tap on the temperature opens the climate controls.
+- On the phone, the energy page shows your house pale behind the figures.
+- The laundry notification can be set up again: it no longer ends in
+  “Laundry setup failed” on add-on installations (#21).
+- The hint under “Generation” now says which sensor is meant: what your solar
+  system produces right now, not the feed-in to the grid.
+- Saving the energy sensors under Services now keeps showing what you saved and
+  tells you to reload; before, the page fell back to the old selection.
+- A room you created yourself can now choose its temperature and humidity
+  sensor from every sensor in the home, not only from a matching Home
+  Assistant area.
+
+## 0.20.6 - 2026-09-20
+
+- Sorting the devices of a room by dragging stays calm: the row follows your
+  finger, the others glide aside, and nothing shivers.
+- Removing a device from a room now has a short animation instead of the row
+  disappearing on the spot.
+- The bar at the bottom of the phone view now keeps the same distance above
+  and below itself, instead of sitting closer to the quick actions.
+
 ## 0.20.5 - 2026-09-18
 
 - A fresh install right after a release no longer fails with
