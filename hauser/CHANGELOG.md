@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.21.1 - 2026-09-23
+
+- The standby city map is generated again: Hauser asks a working map service
+  first, falls back to a second mirror and retries once before giving up.
+
 ## 0.21.0 - 2026-09-20
 
 - On the phone, the room configuration opens in place: the room picture turns

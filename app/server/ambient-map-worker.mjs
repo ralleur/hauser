@@ -8,11 +8,17 @@ import {
   validateCoordinates,
 } from './ambient-map-renderer.mjs';
 
+/* Issue #22: overpass.kumi.systems nimmt keine Verbindungen mehr an und hat
+   als erster Eintrag jeden Auftrag 90 s blockiert. overpass-api.de antwortet
+   unter Last mit 504/429 und liefert Sekunden später — deshalb eine zweite
+   Runde nach kurzer Pause statt sofort „nicht erreichbar". */
 export const OVERPASS_ENDPOINTS = Object.freeze([
-  'https://overpass.kumi.systems/api/interpreter',
   'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ]);
 export const OVERPASS_TIMEOUT_MS = 90_000;
+export const OVERPASS_ROUNDS = 2;
+export const OVERPASS_RETRY_DELAY_MS = 5_000;
 /* AMBIENT-MAP S6: Die reale Overpass-Antwort für das Kölner Abfragefenster
    (10.000 × 6.250 m nach §4.1) misst 11.779.915 Bytes. Die vorherigen 8 MiB
    haben den Planfall aus §2 mit RESPONSE_TOO_LARGE abgebrochen. Die Grenze
@@ -122,33 +128,38 @@ export async function fetchOverpassData(latitude, longitude, {
   fetchImpl = globalThis.fetch,
   timeoutMs = OVERPASS_TIMEOUT_MS,
   responseLimitBytes = OVERPASS_RESPONSE_LIMIT_BYTES,
+  retryDelayMs = OVERPASS_RETRY_DELAY_MS,
 } = {}) {
   const query = buildOverpassQuery(latitude, longitude);
   let timeoutCount = 0;
 
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'User-Agent': OVERPASS_USER_AGENT,
-        },
-        body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (!response?.ok) continue;
-
-      const text = await readLimitedResponse(response, responseLimitBytes);
+  for (let round = 0; round < OVERPASS_ROUNDS; round += 1) {
+    if (round > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    timeoutCount = 0;
+    for (const endpoint of OVERPASS_ENDPOINTS) {
       try {
-        return JSON.parse(text);
-      } catch {
-        throw new AmbientMapWorkerError(WORKER_ERROR_CODES.INVALID_JSON);
+        const response = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'User-Agent': OVERPASS_USER_AGENT,
+          },
+          body: new URLSearchParams({ data: query }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (!response?.ok) continue;
+
+        const text = await readLimitedResponse(response, responseLimitBytes);
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new AmbientMapWorkerError(WORKER_ERROR_CODES.INVALID_JSON);
+        }
+      } catch (error) {
+        if (error instanceof AmbientMapWorkerError) throw error;
+        if (isTimeoutError(error)) timeoutCount += 1;
+        continue;
       }
-    } catch (error) {
-      if (error instanceof AmbientMapWorkerError) throw error;
-      if (isTimeoutError(error)) timeoutCount += 1;
-      continue;
     }
   }
 

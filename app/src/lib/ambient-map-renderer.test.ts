@@ -159,8 +159,8 @@ describe('ambient map worker contract', () => {
 
   it('uses only the fixed upstreams, named limits and User-Agent, and retries only after an endpoint failure', async () => {
     expect(OVERPASS_ENDPOINTS).toEqual([
-      'https://overpass.kumi.systems/api/interpreter',
       'https://overpass-api.de/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
     ]);
     expect(OVERPASS_TIMEOUT_MS).toBe(90_000);
     expect(OVERPASS_RESPONSE_LIMIT_BYTES).toBe(24 * 1_024 * 1_024);
@@ -193,20 +193,30 @@ describe('ambient map worker contract', () => {
       Object.assign(new Error('body timed out'), { name: 'TimeoutError' }),
     )));
     const payload = await capturedError(() => fetchOverpassData(
-      centre.latitude, centre.longitude, { fetchImpl: timeoutFetch },
+      centre.latitude, centre.longitude, { fetchImpl: timeoutFetch, retryDelayMs: 0 },
     ));
     expect(payload).toEqual({ errorCode: WORKER_ERROR_CODES.TIMEOUT });
-    expect(timeoutFetch.mock.calls.map(([url]) => url)).toEqual(OVERPASS_ENDPOINTS);
+    expect(timeoutFetch.mock.calls.map(([url]) => url)).toEqual([...OVERPASS_ENDPOINTS, ...OVERPASS_ENDPOINTS]);
+  });
+
+  it('tries every upstream a second time after a busy round (issue #22)', async () => {
+    const busyThenOk = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 504 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(jsonResponse(osmFixture()));
+    await expect(fetchOverpassData(centre.latitude, centre.longitude, { fetchImpl: busyThenOk, retryDelayMs: 0 }))
+      .resolves.toEqual(osmFixture());
+    expect(busyThenOk).toHaveBeenCalledTimes(3);
   });
 
   it.each([
     [WORKER_ERROR_CODES.TIMEOUT, () => capturedError(() => fetchOverpassData(
       centre.latitude, centre.longitude,
-      { fetchImpl: vi.fn().mockRejectedValue(Object.assign(new Error('timeout'), { name: 'TimeoutError' })) },
+      { fetchImpl: vi.fn().mockRejectedValue(Object.assign(new Error('timeout'), { name: 'TimeoutError' })), retryDelayMs: 0 },
     ))],
     [WORKER_ERROR_CODES.UPSTREAMS_FAILED, () => capturedError(() => fetchOverpassData(
       centre.latitude, centre.longitude,
-      { fetchImpl: vi.fn().mockResolvedValue(new Response('', { status: 503 })) },
+      { fetchImpl: vi.fn().mockResolvedValue(new Response('', { status: 503 })), retryDelayMs: 0 },
     ))],
     [WORKER_ERROR_CODES.RESPONSE_TOO_LARGE, () => capturedError(() => fetchOverpassData(
       centre.latitude, centre.longitude,

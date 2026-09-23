@@ -85,7 +85,7 @@ OpenStreetMap — Open Database License (ODbL) 1.0
   is a search term, never a stored address.
 
 Overpass API — the public query service
-  https://overpass-api.de/ and https://overpass.kumi.systems/
+  https://overpass-api.de/ and the VK Maps mirror at https://maps.mail.ru/osm/tools/overpass/
   Hauser sends only a bounding box and a road-type filter, and only when
   someone sets or regenerates the location. No Overpass or OpenStreetMap code
   is included or depended upon; the query is a plain HTTPS request made by the

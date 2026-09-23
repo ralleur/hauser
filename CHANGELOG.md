@@ -5,6 +5,18 @@ Semantic Versioning for its public release line.
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-09-23
+
+### Fixed
+
+- **The standby city map is generated again.** One of the two public map
+  services Hauser asked no longer answers and held every attempt for a minute
+  and a half; the other turns requests away for a few seconds when it is busy.
+  Generation then always ended in “The map service is currently unreachable”,
+  whatever location you chose. Hauser now asks the working service first, falls
+  back to a second mirror, and tries once more after a short pause before it
+  gives up (#22).
+
 ## [0.21.0] - 2026-09-20
 
 ### Added
