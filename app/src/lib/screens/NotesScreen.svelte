@@ -248,7 +248,7 @@
                    statt der Voreinstellungen). -->
               <button class="notes-section-title rem-person-btn pressable" type="button"
                       aria-label={m.notes_person_rename({ person: label })}
-                      onclick={() => { personDialog = person; }}>{label}</button>
+                      onclick={() => { personDialog = person; }}>{label}<Icon name="i-pencil" cls="icon icon-sm rem-person-pencil" /></button>
               <span class="rem-swatch" style={postitStyle(entry.color)} aria-hidden="true"></span>
               <span class="notes-section-count num">{row.open.length || ''}</span>
               <button class="notes-add-btn pressable" type="button"

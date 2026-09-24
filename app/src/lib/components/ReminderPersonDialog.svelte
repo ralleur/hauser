@@ -5,7 +5,7 @@
   import { m } from '../../paraglide/messages.js';
   import { POSTIT_COLORS, personLabel, postitStyle } from '../state/reminder-persons.ts';
   import {
-    addReminderPerson, assignReminderPersonEntity, reminderPersons, renameReminderPerson,
+    addReminderPerson, assignReminderPersonEntity, reminderPersons, removeReminderPerson, renameReminderPerson,
   } from '../state/reminder-persons.svelte.ts';
   import { runtime } from '../adapter/runtime.svelte.ts';
   import type { PersonSource } from '../adapter/types.ts';
@@ -102,6 +102,16 @@
         <span class="settings-row-sub">{m.rem_person_ha_hint()}</span>
       </label>
       {#if error}<p class="notes-add-error" role="alert">{error}</p>{/if}
+      {#if existing && reminderPersons.list.length > 1}
+        <!-- Entfernen (wie die iOS-App): die Erinnerungen bleiben erhalten. -->
+        <div class="rem-person-remove">
+          <button class="rem-person-remove-btn pressable" type="button"
+                  onclick={() => { if (existing && removeReminderPerson(existing.id)) onclose(); }}>
+            {m.rem_person_remove()}
+          </button>
+          <span class="settings-row-sub">{m.rem_person_remove_hint()}</span>
+        </div>
+      {/if}
       <div class="rem-edit-actions">
         <button class="secondary-btn pressable" type="button" onclick={onclose}>{m.rem_edit_cancel()}</button>
         <button class="primary-btn pressable" type="submit" disabled={!name.trim()}>{m.rem_edit_save()}</button>

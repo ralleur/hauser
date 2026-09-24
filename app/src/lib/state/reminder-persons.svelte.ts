@@ -40,6 +40,15 @@ export function renameReminderPerson(id: string, label: string, color: string): 
     : person));
 }
 
+/* Entfernen (wie die iOS-App): ihre Erinnerungen bleiben in der Liste und
+   stehen danach bei den gemeinsamen. Die letzte Person bleibt — eine leere
+   Liste holte sonst die Voreinstellungen zurück. */
+export function removeReminderPerson(id: string): boolean {
+  if (reminderPersons.list.length <= 1) return false;
+  persist(reminderPersons.list.filter((person) => person.id !== id));
+  return true;
+}
+
 /** true, wenn die Person angelegt wurde (leerer Name = keine Person). */
 export function addReminderPerson(
   label: string,

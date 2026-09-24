@@ -230,6 +230,8 @@
   "rem_person_new_title": "Adicionar um residente",
   "rem_person_edit_title": "Mudar o nome do residente",
   "rem_person_name": "Nome",
+  "rem_person_remove": "Remover pessoa",
+  "rem_person_remove_hint": "Os lembretes ficam na lista e passam para os comuns.",
   "rem_person_color": "Cor do papel",
   "rem_person_error": "Esse nome já está em uso.",
   "rem_color_yellow": "Amarelo",

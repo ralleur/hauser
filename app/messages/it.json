@@ -231,6 +231,8 @@
   "rem_person_new_title": "Aggiungi un residente",
   "rem_person_edit_title": "Rinomina residente",
   "rem_person_name": "Nome",
+  "rem_person_remove": "Rimuovi persona",
+  "rem_person_remove_hint": "I suoi promemoria restano nella lista e passano a quelli comuni.",
   "rem_person_color": "Colore del foglietto",
   "rem_person_error": "Questo nome è già in uso.",
   "rem_color_yellow": "Giallo",

@@ -231,6 +231,8 @@
   "rem_person_new_title": "Ajouter un habitant",
   "rem_person_edit_title": "Renommer l’habitant",
   "rem_person_name": "Nom",
+  "rem_person_remove": "Supprimer la personne",
+  "rem_person_remove_hint": "Ses rappels restent dans la liste et rejoignent ceux en commun.",
   "rem_person_color": "Couleur du pense-bête",
   "rem_person_error": "Ce nom est déjà pris.",
   "rem_color_yellow": "Jaune",

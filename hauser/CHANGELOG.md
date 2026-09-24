@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.1 - 2026-09-24
+
+- A person on the reminders board can be removed; their reminders stay and
+  move to the shared ones. A pencil beside the name shows that a tap renames.
+
 ## 0.23.0 - 2026-09-24
 
 - A TV with a remote in Home Assistant, such as an Apple TV, gets a

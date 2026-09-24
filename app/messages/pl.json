@@ -231,6 +231,8 @@
   "rem_person_new_title": "Dodaj domownika",
   "rem_person_edit_title": "Zmień nazwę domownika",
   "rem_person_name": "Imię",
+  "rem_person_remove": "Usuń osobę",
+  "rem_person_remove_hint": "Jej przypomnienia zostają na liście i trafiają do wspólnych.",
   "rem_person_color": "Kolor karteczki",
   "rem_person_error": "Ta nazwa jest już zajęta.",
   "rem_color_yellow": "Żółty",

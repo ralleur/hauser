@@ -230,6 +230,8 @@
   "rem_person_new_title": "Add a resident",
   "rem_person_edit_title": "Rename resident",
   "rem_person_name": "Name",
+  "rem_person_remove": "Remove person",
+  "rem_person_remove_hint": "Their reminders stay in the list and move to the shared ones.",
   "rem_person_color": "Note colour",
   "rem_person_error": "That name is already taken.",
   "rem_color_yellow": "Yellow",

@@ -51,3 +51,17 @@ describe('Bewohner aus Home Assistant übernehmen', () => {
     expect(result).toHaveLength(3);
   });
 });
+
+describe('Person entfernen (wie die iOS-App)', () => {
+  it('entfernt eine Person und lässt die letzte stehen', async () => {
+    const { reminderPersons, removeReminderPerson } = await import('./reminder-persons.svelte.ts');
+    reminderPersons.list = DEFAULT_REMINDER_PERSONS.map((person) => ({ ...person }));
+    const [first, ...rest] = reminderPersons.list.map((person) => person.id);
+    expect(removeReminderPerson(first)).toBe(true);
+    expect(reminderPersons.list.map((person) => person.id)).toEqual(rest);
+    for (const id of rest.slice(0, -1)) removeReminderPerson(id);
+    const last = reminderPersons.list[0].id;
+    expect(removeReminderPerson(last)).toBe(false);
+    expect(reminderPersons.list.map((person) => person.id)).toEqual([last]);
+  });
+});

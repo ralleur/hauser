@@ -3,6 +3,16 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.23.1] - 2026-09-24
+
+### Fixed
+
+- **Remove a person from the reminders board.** The example residents could
+  be renamed but never removed; the person dialog now has “Remove person”.
+  Their reminders stay in the list and move to the shared ones; the last
+  person stays, as in the iOS app. A pencil beside each name shows that a tap
+  renames it. Reported in the simon42 forum.
+
 ## [0.23.0] - 2026-09-24
 
 ### Added

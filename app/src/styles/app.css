@@ -5159,6 +5159,20 @@ button.security-bar {
 .rem-edit-dialog label > span { font-size: var(--text-sm); color: var(--color-text-secondary); }
 .rem-edit-hint { font-size: var(--text-xs); color: var(--color-text-tertiary); }
 .rem-edit-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+/* Person entfernen (wie die iOS-App): leise, unter den Feldern, mit Satz dazu. */
+.rem-person-remove { display: flex; flex-direction: column; gap: var(--space-1); }
+.rem-person-remove .settings-row-sub { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.rem-person-remove-btn {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-error);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+}
 
 /* Bewohner-Dialog: Name + Zettelfarbe. Die Farbfelder tragen die Papierfarbe
    selbst, die Auswahl markiert der Rahmen. */
@@ -5203,6 +5217,8 @@ button.security-bar {
   border: 1px solid var(--postit-muted);
 }
 /* Der Sektionsname ist tippbar (umbenennen) — Knopf ohne Knopf-Optik. */
+/* Der Stift zeigt, dass der Name selbst der Weg zum Umbenennen ist. */
+.rem-person-btn .rem-person-pencil { margin-left: var(--space-2); opacity: 0.55; vertical-align: -2px; }
 .rem-person-btn {
   padding: 0;
   background: none;

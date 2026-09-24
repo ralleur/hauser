@@ -230,6 +230,8 @@
   "rem_person_new_title": "Neuen Bewohner anlegen",
   "rem_person_edit_title": "Bewohner umbenennen",
   "rem_person_name": "Name",
+  "rem_person_remove": "Person entfernen",
+  "rem_person_remove_hint": "Ihre Erinnerungen bleiben in der Liste und stehen danach bei den gemeinsamen.",
   "rem_person_color": "Zettelfarbe",
   "rem_person_error": "Dieser Name ist schon vergeben.",
   "rem_color_yellow": "Gelb",
