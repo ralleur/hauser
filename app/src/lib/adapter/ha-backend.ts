@@ -314,6 +314,7 @@ export class HaBackend implements Backend {
       statistic_ids: request.statisticIds,
       period: request.period,
       types: request.types,
+      ...(request.units ? { units: request.units } : {}),
     });
     const number = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
     const stamp = (value: unknown): number => {
@@ -358,6 +359,17 @@ export class HaBackend implements Backend {
   /* Bewohner (Paket 8): `person.*` aus Home Assistant als Auswahlliste für die
      Zuordnung in den Erinnerungs-Einstellungen. Read-only wie die anderen
      Quellenlisten. */
+  /* Energie-Dashboard (lesend). Nie eingerichtet antwortet Home Assistant
+     mit einem Fehler — das heißt nur: keine Zähler, kein Grund zu scheitern. */
+  async getEnergyPrefs(): Promise<unknown> {
+    if (!this.#conn || this.#status !== 'connected') return null;
+    try {
+      return await this.#conn.sendMessagePromise<unknown>({ type: 'energy/get_prefs' });
+    } catch {
+      return null;
+    }
+  }
+
   async listPersonSources(): Promise<PersonSource[]> {
     if (!this.#conn || this.#status !== 'connected') return [];
     const states = await getStates(this.#conn);
@@ -386,7 +398,7 @@ export class HaBackend implements Backend {
     const result = await this.#conn.sendMessagePromise<{ items?: HaTodoItem[] }>(
       reminderListMessage(entityId),
     );
-    return (result.items ?? []).map((item, index) => reminderFromHa(item, index));
+    return uniqueReminderIds((result.items ?? []).map((item, index) => reminderFromHa(item, index)));
   }
 
   /* ── Einkaufsliste (Schreibrichtung) ──
@@ -404,7 +416,7 @@ export class HaBackend implements Backend {
       this.#conn,
       'todo',
       'update_item',
-      { item: uid, status: completed ? 'completed' : 'needs_action' },
+      { item: haTodoUid(uid), status: completed ? 'completed' : 'needs_action' },
       { entity_id: entityId },
     );
   }
@@ -970,11 +982,38 @@ interface HaTodoItem {
   description?: string;
 }
 
+/* Eine Fälligkeit, die kein Datum ist, zählt als keine: Die Zettel formatieren
+   sie sonst mit Intl, und „Invalid time value" nahm die ganze Notizen-Seite mit. */
+function validDue(due: unknown): string | null {
+  const value = typeof due === 'string' ? due.trim() : '';
+  return value && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+/* Listen schlüsseln ihre Einträge nach der Kennung (Ruhebild, Notizen,
+   Telefon). Zwei Einträge mit derselben uid — eine CalDAV-Liste kann das —
+   ließen die ganze Ebene an each_key_duplicate scheitern. Der zweite bekommt
+   einen Zähler; zurück an Home Assistant geht wieder die echte uid. */
+const DUPLICATE_UID_MARK = '#hauser-';
+
+function uniqueReminderIds(items: Reminder[]): Reminder[] {
+  const seen = new Map<string, number>();
+  return items.map((item) => {
+    const count = seen.get(item.id) ?? 0;
+    seen.set(item.id, count + 1);
+    return count === 0 ? item : { ...item, id: `${item.id}${DUPLICATE_UID_MARK}${count + 1}` };
+  });
+}
+
+function haTodoUid(id: string): string {
+  const mark = id.lastIndexOf(DUPLICATE_UID_MARK);
+  return mark > 0 ? id.slice(0, mark) : id;
+}
+
 function reminderFromHa(item: HaTodoItem, index: number): Reminder {
   return {
     id: item.uid ?? `${item.summary ?? 'reminder'}-${index}`,
     title: item.summary?.trim() || 'Ohne Titel',
-    due: item.due?.trim() || null,
+    due: validDue(item.due),
     completed: item.status === 'completed',
     description: item.description?.trim() || null,
   };

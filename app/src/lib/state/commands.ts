@@ -60,7 +60,8 @@ export function mergedDevice(roomId: string, device: Light): unknown {
 export function mergedClimate(roomId: string): ClimateValue | null {
   const eid = climateEntityId(roomId);
   if (!eid) return null;
-  return runtime.merged(eid) as ClimateValue;
+  /* Ein Thermostat, das HA gerade nicht kennt, ist keines — nicht `undefined` als Klima. */
+  return (runtime.merged(eid) as ClimateValue | undefined) ?? null;
 }
 
 /* Live-Ist-Temperatur eines Raums (docs/07) mit expliziter Priorität:
@@ -245,7 +246,8 @@ export function setColor(roomId: string, lightId: string, hex: string): void {
 export function stepTarget(roomId: string, delta: number): void {
   const entityId = climateEntityId(roomId);
   if (!entityId) return;
-  const cur = runtime.merged(entityId) as ClimateValue;
+  const cur = runtime.merged(entityId) as ClimateValue | undefined;
+  if (!cur) return;
   setTarget(roomId, cur.target + delta);
 }
 

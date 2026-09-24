@@ -1,18 +1,25 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
   /* ── Umschalter Bearbeiten ⇄ Bedienen (Mitte der Kopfzeile) ──
-     Das Zeichen trägt den Zustand: ein Ring mit Kern steht für Bedienen, im
-     Bearbeiten-Modus kommen Strahlen dazu — dieselbe Form, eine Stufe „wach".
+     Das Hauser-h trägt den Zustand: im Bedienen-Modus steht es allein, im
+     Bearbeiten-Modus sitzt der goldene Punkt darüber (Owner-Vorlage
+     2026-09-24).
 
-     Beim Umschalten läuft eine Kreiswelle vom Knopf aus und darunter steht
-     kurz, was jetzt gilt. Dieselbe Zeile erklärt den Weg hierher, wenn jemand
-     im Bedienen-Modus wiederholt eine Konfiguration zu öffnen versucht. */
+     Beim Umschalten federt der Punkt hinein oder poppt nach oben weg, und
+     rechts neben dem h steht zwei Sekunden, was jetzt gilt. Die Zeile unter
+     dem Knopf bleibt dem Hinweis vorbehalten, der im Bedienen-Modus den Weg
+     zur Konfiguration erklärt. */
   import { editMode, modeNotice, dismissNotice } from '../state/edit-mode.svelte.ts';
   import {
     setEditMode, editModeNeedsPin, pinMatches, startAutoLock,
   } from '../state/edit-mode-controls.ts';
   import { m } from '../../paraglide/messages.js';
   import { roomImageActivity } from '../state/room-image-activity.svelte.ts';
+
+  /* Das h des Signets im 512er-Raster — einmal hier, für den Knopf und für
+     den Sperr-Hinweis, der es an die Stelle des Wortes „Bearbeiten" setzt. */
+  const H_PATH = 'M168 96V416M168 300C168 222 344 222 344 300V416';
+  const MARK = '\uE000';
 
   let button = $state<HTMLButtonElement>();
   let ripple = $state<{ x: number; y: number; seq: number } | null>(null);
@@ -27,12 +34,14 @@
     ? m.mode_busy_set()
     : roomImageActivity.stage === 'regions' ? m.mode_busy_regions() : null);
   const action = $derived(editMode.active ? m.mode_switch_to_user() : m.mode_switch_to_edit());
-  const noticeText = $derived.by(() => {
-    if (modeNotice.kind === 'edit') return m.mode_announce_edit();
-    if (modeNotice.kind === 'user') return m.mode_announce_user();
-    if (modeNotice.kind === 'locked') return m.mode_hint_locked();
-    return '';
-  });
+  const lockedHint = $derived(m.mode_hint_locked({ mark: MARK }).split(MARK));
+  const switched = $derived(modeNotice.kind === 'edit' || modeNotice.kind === 'user');
+  /* Der Punkt: ruhend im Bearbeiten-Modus, beim Wechsel mit Auftritt oder
+     Abgang. Der Abgang bleibt stehen, bis die Ansage vorbei ist — seine
+     Animation endet unsichtbar. */
+  const dot = $derived(modeNotice.kind === 'user' ? 'leaving'
+    : !editMode.active ? null
+    : modeNotice.kind === 'edit' ? 'arriving' : 'resting');
 
   /* Der Wachhund wird nach jeder Änderung an Modus oder Dauer neu scharf. */
   $effect(() => {
@@ -82,25 +91,34 @@
   <button bind:this={button} class="mode-toggle pressable" type="button"
           aria-pressed={!editMode.active} aria-label={action} title={`${label} · ${action}`}
           onclick={activate}>
-    <svg class="mode-toggle-mark" class:is-busy={busyText !== null} viewBox="0 0 24 24" aria-hidden="true">
-      {#if editMode.active}
-        <!-- Strahlen nur im Bearbeiten-Modus: der Zustand ist die Form. -->
-        <g class="mode-toggle-rays">
-          <path d="M12 2.6V0M12 21.4V24M2.6 12H0M21.4 12H24M5.4 5.4L3.5 3.5M18.6 18.6l1.9 1.9M18.6 5.4l1.9-1.9M5.4 18.6L3.5 20.5" />
-        </g>
+    <!-- Das Signet im 512er-Raster; das h steht darin genau mittig. -->
+    <svg class="mode-toggle-mark" class:is-busy={busyText !== null} viewBox="0 0 512 512" aria-hidden="true">
+      <g class="mode-toggle-h"><path d={H_PATH} /></g>
+      {#if dot}
+        {#key modeNotice.seq}
+          <circle class="mode-toggle-dot" class:is-arriving={dot === 'arriving'}
+                  class:is-leaving={dot === 'leaving'} cx="344" cy="140" r="44" />
+        {/key}
       {/if}
-      <circle class="mode-toggle-ring" cx="12" cy="12" r="7.4" />
-      <circle class="mode-toggle-core" cx="12" cy="12" r="3.1" />
     </svg>
   </button>
 
-  {#if busyText}
+  {#if busyText && !switched}
     <span class="mode-busy" role="status" aria-live="polite">{busyText}</span>
   {/if}
-  {#if modeNotice.kind}
+  {#if switched}
     {#key modeNotice.seq}
-      <p class="mode-notice" class:is-warning={modeNotice.kind === 'locked'} role="status" aria-live="polite">
-        {noticeText}
+      <p class="mode-label" role="status" aria-live="polite">
+        <span aria-hidden="true">{modeNotice.kind === 'edit' ? m.mode_edit() : m.mode_user()}</span>
+        <span class="mode-label-sr">{modeNotice.kind === 'edit' ? m.mode_announce_edit() : m.mode_announce_user()}</span>
+      </p>
+    {/key}
+  {:else if modeNotice.kind === 'locked'}
+    {#key modeNotice.seq}
+      <!-- Das h steht im Satz dort, wo es oben zu tippen ist. -->
+      <p class="mode-notice is-warning" role="status" aria-live="polite">
+        {lockedHint[0]}<svg class="mode-notice-mark" viewBox="136 64 240 384" role="img"
+             aria-label={m.mode_edit()}><path d={H_PATH} /></svg>{lockedHint.slice(1).join('')}
       </p>
     {/key}
   {/if}

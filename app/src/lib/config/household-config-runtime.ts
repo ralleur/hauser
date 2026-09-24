@@ -316,11 +316,13 @@ export async function bootstrapHouseholdConfigFirstPaint<T>(
     scheduleValidation(() => {
       void validateHouseholdConfigAfterFirstPaint(initialActiveModel, mountedApp, dependencies)
         .then(resolveValidation)
-        .catch(() => resolveValidation({
+        /* Die Uhr-Ansicht sagt nur „Prüfung ausgefallen" — der Grund gehört
+           wenigstens in die Konsole, sonst ist er unauffindbar. */
+        .catch((error) => { console.error('[hauser] Validierung nach dem ersten Bild gescheitert:', error); resolveValidation({
           status: 'blocked',
           mode: 'unknown',
           code: 'HOUSEHOLD_CONFIG_VALIDATION_FAILED',
-        }));
+        }); });
     });
   } catch {
     resolveValidation({

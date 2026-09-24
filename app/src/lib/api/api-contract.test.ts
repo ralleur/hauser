@@ -39,7 +39,9 @@ const serverSources = [
 
 const clientSources = walk(join(appRoot, 'src', 'lib'))
   .filter((file: string) => (file.endsWith('.ts') || file.endsWith('.svelte')) && !file.includes('.test.'))
-  .filter((file: string) => !file.endsWith('contract.generated.ts'));
+  .filter((file: string) => !file.endsWith('contract.generated.ts'))
+  // Das Stresshaus spielt Home Assistant; seine Adressen sind HA-Pfade, keine Hauser-Routen.
+  .filter((file: string) => !file.includes('/stresshaus/'));
 
 describe('API-Vertrag', () => {
   it('hat eindeutige Kennungen und Pfade', () => {

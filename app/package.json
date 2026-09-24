@@ -1,7 +1,7 @@
 {
   "name": "smart-home-hmi",
   "private": true,
-  "version": "0.21.1",
+  "version": "0.23.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "description": "Smart Home HMI — Phase 3 App (Svelte 5 + Vite, ADR-013/014)",
@@ -21,6 +21,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "stresshaus": "node scripts/stresshaus/crawl.mjs",
     "performance:report": "node scripts/performance-budget.mjs",
     "performance:budget": "node scripts/performance-budget.mjs --budget",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --silent",

@@ -129,6 +129,9 @@ export interface Backend {
   /** Langzeitstatistik des Recorders (R21): Mittelwerte und Zuwächse je
       Zeitscheibe für die Energiesensoren. Lesend. */
   getStatistics?(request: StatisticsRequest): Promise<StatisticsResult>;
+  /** Energie-Dashboard von Home Assistant (`energy/get_prefs`), roh: welche
+      Zähler es für Netz, Solar und Akku kennt. Ohne Dashboard null. */
+  getEnergyPrefs?(): Promise<unknown>;
   /* Bewohner aus Home Assistant (Paket 8): Auswahlliste der Einstellungen. */
   listPersonSources?(): Promise<PersonSource[]>;
   getCalendarEvents?(
@@ -423,6 +426,9 @@ export interface StatisticsRequest {
   end?: Date;
   period: StatisticsPeriod;
   types: Array<'mean' | 'change' | 'sum'>;
+  /** Zieleinheit je Einheitenklasse, z. B. `{ energy: 'kWh' }` — Home
+      Assistant rechnet dann selbst um, auch für Zähler in Wh. */
+  units?: Record<string, string>;
 }
 export interface StatisticsBucket {
   /** Beginn der Zeitscheibe in Millisekunden seit Epoche. */

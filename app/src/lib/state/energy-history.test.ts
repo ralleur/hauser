@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { curveFromBuckets, periodWindow } from './energy-history.svelte.ts';
+import { balance, countersFromEnergyPrefs, curveFromBuckets, periodWindow } from './energy-history.svelte.ts';
+import { hostileHome } from '../stresshaus/hostile-home.ts';
 
 const DAY = 86_400_000;
 
@@ -34,5 +35,27 @@ describe('energy history (R21: real curves, no invented ones)', () => {
     expect(month.start).toEqual(new Date(2026, 7, 1));
     expect(month.end).toEqual(new Date(2026, 8, 1));
     expect(periodWindow('total', now).start.getFullYear()).toBe(2000);
+  });
+
+  it('takes the meters for week, month and total from the Home Assistant energy dashboard, even a crooked one', () => {
+    const counters = countersFromEnergyPrefs(hostileHome().energyPrefs);
+    expect(counters).toEqual({
+      produced: ['sensor.pv_ertrag'],
+      drawn: ['sensor.netz_bezug_wh'],
+      fedIn: ['sensor.netz_einspeisung', 'sensor.alter_zaehler'],
+      batteryOut: ['sensor.akku_abgabe'],
+      batteryIn: ['sensor.akku_ladung'],
+    });
+    for (const broken of [null, undefined, 'x', {}, { energy_sources: 'x' }, { energy_sources: [null, 7] }]) {
+      expect(countersFromEnergyPrefs(broken)).toEqual({ produced: [], drawn: [], fedIn: [], batteryOut: [], batteryIn: [] });
+    }
+  });
+
+  it('balances house consumption like the dashboard and stays open when a known meter has no value', () => {
+    const counters = { drawn: ['g'], produced: ['pv'], fedIn: ['out'], batteryOut: ['bo'], batteryIn: ['bi'] };
+    expect(balance(counters, { drawn: 100, produced: 50, fedIn: 30, batteryOut: 10, batteryIn: 12 })).toBe(118);
+    expect(balance(counters, { drawn: 100, produced: null, fedIn: 30, batteryOut: 10, batteryIn: 12 })).toBeNull();
+    expect(balance({ ...counters, produced: [], batteryOut: [], batteryIn: [] }, { drawn: 100, produced: null, fedIn: 30, batteryOut: null, batteryIn: null })).toBe(70);
+    expect(balance(counters, { drawn: null, produced: 50, fedIn: 30, batteryOut: 10, batteryIn: 12 })).toBeNull();
   });
 });

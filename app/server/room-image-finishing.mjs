@@ -48,7 +48,7 @@ export function createRoomImageFinisher({
     if (!result?.ok) state.codes[key] = result?.code ?? 'FINISH_FAILED';
   }
 
-  async function run(assetId) {
+  async function run(assetId, options) {
     const state = {
       assetId, status: 'running', startedAt: now(), finishedAt: null,
       regions: 'pending', overcast: 'pending', codes: {},
@@ -66,7 +66,7 @@ export function createRoomImageFinisher({
       await step(state, 'regions', !!entry.regions, () => detectRegions(assetId));
     } else state.regions = 'skipped';
     if (typeof deriveOvercast === 'function') {
-      await step(state, 'overcast', !!entry.files?.overcast, () => deriveOvercast(assetId));
+      await step(state, 'overcast', !!entry.files?.overcast, () => deriveOvercast(assetId, options));
     } else state.overcast = 'skipped';
     state.status = 'done';
     state.finishedAt = now();
@@ -75,10 +75,10 @@ export function createRoomImageFinisher({
 
   /** Stößt den Feinschliff an. Mehrfachaufrufe für dasselbe Set teilen sich
       einen Durchgang; verschiedene Sets laufen nacheinander. */
-  function finish(assetId) {
+  function finish(assetId, options = {}) {
     const inFlight = running.get(assetId);
     if (inFlight) return inFlight;
-    const started = queue.then(() => run(assetId)).catch(() => states.get(assetId) ?? null);
+    const started = queue.then(() => run(assetId, options)).catch(() => states.get(assetId) ?? null);
     queue = started;
     running.set(assetId, started);
     void started.finally(() => {

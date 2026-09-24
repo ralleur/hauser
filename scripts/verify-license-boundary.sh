@@ -76,14 +76,21 @@ third_party_roots = (
 )
 brand_files = {Path('website/favicon.png'), Path('website/apple-touch-icon.png')}
 third_party_files = {
-    Path('app/public/fonts/InterVariable-subset.woff2'),
-    Path('app/public/fonts/InstrumentSerif-subset.woff2'),
+    # Hausers Handschrift (R48): Alegreya Sans und Alegreya, OFL, siehe NOTICE.
+    # Die Landingpage trägt dieselben Dateien wie das Panel.
+    *(
+        Path(root) / name
+        for root in ('app/public/fonts', 'website/fonts')
+        for name in (
+            'AlegreyaSans-Regular-subset.woff2',
+            'AlegreyaSans-Medium-subset.woff2',
+            'AlegreyaSans-Bold-subset.woff2',
+            'Alegreya-subset.woff2',
+        )
+    ),
     # Handschrift der Demo-Tipps, OFL, siehe NOTICE.
     Path('app/public/fonts/Caveat-latin.woff2'),
     Path('app/public/fonts/Caveat-latin-ext.woff2'),
-    Path('website/fonts/InterVariable-subset.woff2'),
-    # Die Serife der Landingpage: dieselbe Datei wie im Panel, OFL, siehe NOTICE.
-    Path('website/fonts/InstrumentSerif-subset.woff2'),
 }
 
 blueprint_root = Path('app/public/blueprints')

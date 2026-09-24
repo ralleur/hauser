@@ -48,6 +48,34 @@
   mask: var(--icon-url) center / contain no-repeat;
 }
 .phone-home-feed .pressable.is-pressed { transform: scale(0.97); }
+/* Layout-Blatt und Blatt eines eigenen Schnellaktions-Knopfs liegen über dem
+   Zuhause, bevor das volle Stylesheet geladen ist: sie brauchen dieselben
+   Zeichen-Regeln, dazu den Griff zum Ziehen. */
+:is(.phone-layout-sheet, .pqe) .icon { flex: none; }
+:is(.phone-layout-sheet, .pqe) .icon-md { width: var(--icon-md); height: var(--icon-md); }
+:is(.phone-layout-sheet, .pqe) .icon-sm { width: var(--icon-sm); height: var(--icon-sm); }
+:is(.phone-layout-sheet, .pqe) .tabler-icon-mask {
+  display: inline-block;
+  background: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+.phone-layout-sheet .cfg-handle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 44px;
+  color: var(--color-text-tertiary);
+  touch-action: none;
+}
+.pqe .caps-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
 
 @media (display-mode: standalone) {
   .phone-shell {
@@ -414,7 +442,8 @@
    deshalb etwas breiter als die Hälfte, statt ihren Inhalt zu quetschen. */
 .phone-quick-actions {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  /* Vier Felder (wie die iOS-App): die zentrale Temperatur nimmt zwei. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
   gap: var(--space-2);
   flex: none;
@@ -503,6 +532,21 @@
 .phone-quick-action.is-off { padding: var(--space-1); }
 .phone-quick-action.is-off .icon { width: 38px; height: 38px; }
 .phone-quick-action.is-vacation.is-active { color: var(--color-accent-warm); }
+.phone-quick-slot { display: grid; min-width: 0; }
+.phone-quick-slot.is-compact { position: relative; }
+.phone-quick-popover {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  right: 0;
+  width: min(calc(200% + var(--space-2)), 220px);
+  z-index: 2;
+  animation: modal-enter var(--duration-quick) var(--ease-out) both;
+}
+.phone-quick-action.is-compact { gap: 2px; color: var(--color-accent-warm); }
+.phone-quick-temp { color: var(--color-text-primary); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0; }
+.phone-quick-action.is-custom.is-active { color: var(--color-accent-warm); }
+.phone-quick-action.is-custom.is-empty { color: var(--color-text-tertiary); border-style: dashed; }
+.phone-quick-action.is-custom.is-bare .icon { width: 28px; height: 28px; }
 .phone-quick-action:disabled { opacity: 0.5; }
 
 .phone-room-feed .phone-empty-state {
@@ -921,6 +965,23 @@
 /* Im Platz streckt sich die Kachel auf die Zeilenhöhe — wie die Tasten der Steuerung. */
 .re-mirror-slot { display: grid; }
 .re-mirror-slot.is-held .re-mirror-remove { visibility: hidden; }
+/* Kamerakarte vor oder hinter die Kacheln legen (wie die iOS-App): der Pfeil
+   sitzt gegenüber dem Minus. */
+.re-mirror-move {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 1;
+  width: var(--touch-min, 44px);
+  height: var(--touch-min, 44px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+}
+.re-mirror-move .re-mirror-badge { background: var(--color-accent-warm); }
 .room-edit.is-phone .light-tile.re-mirror-add {
   border-style: dashed;
   border-color: rgba(255, 255, 255, 0.45);
@@ -1949,9 +2010,16 @@
 }
 
 .phone-energy-header {
+  position: relative;
   display: grid;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
+}
+/* Sonnenbogen oben rechts neben dem Titel (wie die iOS-App). */
+.phone-energy-sun {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .phone-energy-header h1 {
@@ -2366,6 +2434,53 @@
   transition: background-color var(--duration-normal) var(--ease-out);
 }
 .pls-switch.is-on { background: var(--accent-light-on-fill); }
+/* Felder der Schnellaktions-Leiste (wie die iOS-App). */
+.pls-quick { gap: var(--space-3); }
+.pls-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
+.pls-field { height: 6px; border-radius: var(--radius-full); background: var(--color-border); }
+.pls-field.is-used { background: var(--color-accent-warm); }
+.pls-quick-count { margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
+.pls-quick-list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.pls-quick-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 56px;
+  padding-right: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+}
+.pls-quick-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; text-align: left; color: var(--color-text-primary); }
+.pls-quick-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--color-surface-3, var(--color-surface-1)); color: var(--color-accent-warm); }
+.pls-quick-icon.is-off { color: var(--color-error); }
+.pls-quick-icon.is-action { color: var(--color-text-primary); }
+.pls-quick-label { min-width: 0; display: flex; flex-direction: column; }
+.pls-quick-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--font-weight-medium); }
+.pls-quick-label small { font-size: var(--text-xs); color: var(--color-text-secondary); }
+.pls-quick-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);
+  border-radius: 50%;
+  color: var(--color-error);
+}
+.pls-quick-add { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pls-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--color-accent-warm);
+  border-radius: var(--radius-full);
+  color: var(--color-accent-warm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
 .pls-switch-knob {
   position: absolute;
   top: 3px;

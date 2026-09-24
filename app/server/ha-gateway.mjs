@@ -52,6 +52,9 @@ export const HA_GATEWAY_CLIENT_MESSAGE_TYPES = Object.freeze([
      Langzeitstatistik des Recorders — lesend, für die konfigurierten
      Energiesensoren. */
   'recorder/statistics_during_period',
+  /* Die Zähler dazu aus dem Energie-Dashboard (Netz, Solar, Akku) — lesend,
+     ohne sie bliebe „Gesamt" in jedem Haus leer. */
+  'energy/get_prefs',
 ]);
 
 /* Was Home Assistant an den Browser zurückgeben darf. Auth-Frames stehen

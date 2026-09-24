@@ -7,9 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /* Schriftrollen-Lint (R6, docs/23; Tabelle in docs/01-design-system.md):
-   Inter steuert, Instrument Serif erzählt, Caveat coacht. Die Handschrift
+   Alegreya Sans steuert, Alegreya erzählt, Caveat coacht. Die Handschrift
    gehört allein dem Coach — die gekritzelten Tipps über der Demo. Überall
-   sonst wäre sie eine dritte Stimme in einem Bild, das mit zweien auskommt. */
+   sonst wäre sie eine dritte Stimme in einem Bild, das mit zweien auskommt.
+   Seit R48 ist Hausers Handschrift eine eigene Familie; Inter und Instrument
+   Serif, die Paarung jeder zweiten generierten Seite, kommen nicht zurück. */
 
 const SRC = dirname(fileURLToPath(import.meta.url)).replace(`${sep}lib`, '');
 
@@ -38,6 +40,17 @@ describe('Schriftrollen', () => {
       const rel = relative(SRC, path).split(sep).join('/');
       if (COACH_FILES.has(rel)) continue;
       if (readFileSync(path, 'utf8').includes('Caveat')) strays.push(rel);
+    }
+    expect(strays).toEqual([]);
+  });
+
+  it('Inter und Instrument Serif sind abgelöst', () => {
+    const strays: string[] = [];
+    for (const path of sourceFiles(SRC)) {
+      const rel = relative(SRC, path).split(sep).join('/');
+      if (/'Inter( Variable)?'|Instrument Serif|InterVariable|InstrumentSerif/.test(readFileSync(path, 'utf8'))) {
+        strays.push(rel);
+      }
     }
     expect(strays).toEqual([]);
   });

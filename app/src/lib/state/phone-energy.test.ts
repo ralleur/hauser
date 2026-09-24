@@ -131,7 +131,8 @@ describe('phone energy shell, source and accessibility boundaries', () => {
 
     // Das Haus liegt blass unter den Zahlen (Owner-Wunsch 2026-09-21): vom
     // Panel kommen nur die Bildadressen, nicht die Bühne mit Zetteln und Ankern.
-    expect(phoneEnergy).toMatch(/import \{ energyAssetUrl, exteriorAssetUrl \} from '\.\.\/energy-hero-assets\.ts'/);
+    // Dazu die trübe Fassung bei Wolken (wie die iOS-App).
+    expect(phoneEnergy).toMatch(/import \{ energyAssetUrl, energyOvercastUrl, exteriorAssetUrl \} from '\.\.\/energy-hero-assets\.ts'/);
 
     for (const forbidden of [
       'EnergyScreen', 'PanelAppShell', 'EnergyLoadOverlay', 'loadEnergyHeroFrame', 'placeFrame', 'energy-marks',

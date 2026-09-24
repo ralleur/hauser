@@ -21,6 +21,8 @@ export function openMeteoUrl(coords: { latitude: number; longitude: number }): s
     hourly: 'temperature_2m',
     past_hours: '1',
     forecast_hours: '1',
+    daily: 'sunrise,sunset',
+    forecast_days: '1',
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${p}`;
@@ -34,6 +36,9 @@ interface OpenMeteoResponse {
     wind_speed_10m?: number | null;
   };
   hourly?: { temperature_2m?: (number | null)[] };
+  /* Ortszeit ohne Versatz („2026-09-24T07:18"), dazu der Versatz des Ortes. */
+  daily?: { sunrise?: (string | null)[]; sunset?: (string | null)[] } | null;
+  utc_offset_seconds?: number | null;
 }
 
 export interface OutdoorReading {
@@ -44,6 +49,19 @@ export interface OutdoorReading {
   tempDelta: number | null;
   condition: WeatherCondition | null;
   windSpeed: number | null;
+  /* Heutiger Auf- und Untergang in ms seit Epoche (Sonnenbogen der Energie);
+     fehlt in älteren gespeicherten Ständen. */
+  sunrise?: number | null;
+  sunset?: number | null;
+}
+
+/* Open-Meteo nennt die Zeit des Ortes ohne Versatz; mit `utc_offset_seconds`
+   wird daraus ein Zeitpunkt. Alles andere ist kein Sonnenstand. */
+function localInstant(value: string | null | undefined, offsetSeconds: number | null | undefined): number | null {
+  if (typeof value !== 'string' || typeof offsetSeconds !== 'number' || !Number.isFinite(offsetSeconds)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const utc = Date.parse(`${value}:00Z`);
+  return Number.isFinite(utc) ? utc - offsetSeconds * 1000 : null;
 }
 
 export function classifyTrend(
@@ -88,5 +106,7 @@ export function parseOutdoor(data: OpenMeteoResponse): OutdoorReading {
     condition: weatherCondition(data.current?.weather_code, data.current?.precipitation),
     windSpeed: typeof data.current?.wind_speed_10m === 'number'
       ? data.current.wind_speed_10m : null,
+    sunrise: localInstant(data.daily?.sunrise?.[0], data.utc_offset_seconds),
+    sunset: localInstant(data.daily?.sunset?.[0], data.utc_offset_seconds),
   };
 }

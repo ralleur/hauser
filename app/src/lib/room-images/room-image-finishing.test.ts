@@ -21,12 +21,13 @@ describe('Feinschliff nach der Veröffentlichung', () => {
       deriveOvercast,
     });
 
-    const state = await finisher.finish('a');
+    const state = await finisher.finish('a', { stylePreset: 'hauser-exterior-v1' });
 
     expect(state.regions).toBe('done');
     expect(state.overcast).toBe('done');
     expect(detectRegions).toHaveBeenCalledWith('a');
-    expect(deriveOvercast).toHaveBeenCalledWith('a');
+    /* Das Rezept des Auftrags reist bis zur trüben Fassung mit. */
+    expect(deriveOvercast).toHaveBeenCalledWith('a', { stylePreset: 'hauser-exterior-v1' });
   });
 
   it('überspringt, was der Katalog schon hat', async () => {

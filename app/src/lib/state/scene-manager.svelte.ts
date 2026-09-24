@@ -61,7 +61,7 @@ export function scenes(roomId: string): SceneDef[] {
 }
 
 /** Definition einer Szene in einem Raum. */
-export function sceneDefOf(roomId: string, sceneId: SceneId): SceneDef {
+export function sceneDefOf(roomId: string, sceneId: SceneId): SceneDef | undefined {
   return sceneDefIn(sceneManager.config, roomId, sceneId);
 }
 
@@ -124,7 +124,9 @@ export function memberState(roomId: string, sceneId: SceneId, entityId: string):
 
 /** Zielzustand, den die Szene für das Mitglied fährt (Default eingerechnet). */
 export function memberTarget(roomId: string, sceneId: SceneId, entityId: string): SceneMemberState {
-  return sceneMemberTarget(sceneDefOf(roomId, sceneId), memberState(roomId, sceneId, entityId));
+  const scene = sceneDefOf(roomId, sceneId);
+  const state = memberState(roomId, sceneId, entityId);
+  return scene ? sceneMemberTarget(scene, state) : (state ?? { on: false });
 }
 
 /** Zielzustand setzen (undefined = zurück auf den Szenen-Default) und ihn
@@ -195,8 +197,10 @@ function memberInfo(roomId: string, sceneId: SceneId, entityId: string) {
 /** Szene anwenden: ein optimistischer Command pro Mitglied (Dedup pro Entität
     übernimmt die Queue; rapides Umschalten zweier Szenen kollabiert sauber). */
 export function applyScene(roomId: string, sceneId: SceneId): void {
+  const scene = sceneDefOf(roomId, sceneId);
+  if (!scene) return;
   const members = sceneMembers(roomId, sceneId).map((entityId) => memberInfo(roomId, sceneId, entityId));
-  for (const { command, optimistic } of buildSceneCommands(sceneDefOf(roomId, sceneId), members)) {
+  for (const { command, optimistic } of buildSceneCommands(scene, members)) {
     runtime.dispatch(command, optimistic);
   }
 }
@@ -208,7 +212,7 @@ export function applyScene(roomId: string, sceneId: SceneId): void {
 export function applySceneWithUndo(roomId: string, sceneId: SceneId): void {
   const members = sceneMembers(roomId, sceneId);
   offerUndo(
-    { kind: 'scene', scene: sceneDefOf(roomId, sceneId).label },
+    { kind: 'scene', scene: sceneDefOf(roomId, sceneId)?.label ?? '' },
     members,
     () => applyScene(roomId, sceneId),
   );
@@ -265,8 +269,10 @@ function rememberPreview(entityId: string): void {
 
 /** Ein einzelnes Mitglied auf seinen Szenen-Zielzustand fahren. */
 export function previewMember(roomId: string, sceneId: SceneId, entityId: string): void {
+  const scene = sceneDefOf(roomId, sceneId);
+  if (!scene) return;
   rememberPreview(entityId);
-  const [cmd] = buildSceneCommands(sceneDefOf(roomId, sceneId), [memberInfo(roomId, sceneId, entityId)]);
+  const [cmd] = buildSceneCommands(scene, [memberInfo(roomId, sceneId, entityId)]);
   if (cmd) runtime.dispatch(cmd.command, cmd.optimistic);
 }
 

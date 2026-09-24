@@ -64,7 +64,7 @@ export function buildWidgetSnapshot(): WidgetSnapshot {
         const def = sceneDefOf(room.id, scene.id);
         return {
           id: String(scene.id), label: scene.label,
-          members: sceneMembers(room.id, scene.id).map((entityId) => ({ entityId, on: def.on, brightness: def.brightness })),
+          members: sceneMembers(room.id, scene.id).map((entityId) => ({ entityId, on: def?.on ?? false, brightness: def?.brightness ?? 0 })),
         };
       }),
     };

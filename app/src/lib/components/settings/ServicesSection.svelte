@@ -180,7 +180,7 @@
       <span class="settings-row-label">{m.sys_module_toggle()}</span>
       <span class="settings-row-sub">
         {moduleConfig.error && moduleConfig.busy === null
-          ? m.sys_module_failed()
+          ? (moduleConfig.error === 'HOUSEHOLD_CONFIG_MEDIA_TARGET_REQUIRED' ? m.sys_module_media_no_target() : m.sys_module_failed())
           : moduleConfig.saved ? m.sys_module_saved() : ''}
       </span>
     </div>

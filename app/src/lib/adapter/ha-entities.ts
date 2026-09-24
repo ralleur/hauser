@@ -140,8 +140,12 @@ export function haToLight(raw: RawEntity, prev?: Partial<LightValue>): LightValu
 
 const HVAC_MODES = new Set<HvacMode>(['heat', 'cool', 'off', 'heat_cool', 'auto', 'dry', 'fan_only']);
 
+/* Optionslisten aus HA (Modi, Stufen, Quellen) kommen mitunter doppelt —
+   ein Saugroboter meldete `['quiet', 'quiet', 'max']`. Die Oberfläche
+   schlüsselt ihre Knöpfe nach dem Wert; eine Dublette ließ das Gerätedetail
+   an each_key_duplicate scheitern. Deshalb jede Option nur einmal. */
 function stringList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === 'string'))] : [];
 }
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -388,9 +392,7 @@ export function haToFan(raw: RawEntity): FanValue {
   const a = raw.attributes;
   const features = typeof a.supported_features === 'number' ? a.supported_features : 0;
   const hasPercentage = typeof a.percentage === 'number';
-  const presetModes = Array.isArray(a.preset_modes)
-    ? a.preset_modes.filter((mode): mode is string => typeof mode === 'string')
-    : [];
+  const presetModes = stringList(a.preset_modes);
   return {
     on: raw.state === 'on',
     percentage: hasPercentage ? Math.min(100, Math.max(0, Math.round(a.percentage as number))) : 0,

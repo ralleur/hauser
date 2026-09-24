@@ -9,8 +9,8 @@ One mark in the middle of the title bar carries the mode. Set it up once, then h
 
 | | |
 |---|---|
-| ![Title bar in edit mode: a ring with rays.](/hauser/media/mode-edit.webp) | ![Title bar in use mode: the ring without rays.](/hauser/media/mode-use.webp) |
-| **Edit** – rays on the mark. A long press opens configuration. | **Use** – the same mark one step calmer. Every control keeps working. |
+| ![Title bar in edit mode: the Hauser h with its gold dot.](/hauser/media/mode-edit.webp) | ![Title bar in use mode: the h on its own.](/hauser/media/mode-use.webp) |
+| **Edit** – the gold dot sits on the h. A long press opens configuration. | **Use** – the h on its own. Every control keeps working. |
 
 ## Edit mode
 

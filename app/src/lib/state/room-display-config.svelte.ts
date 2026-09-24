@@ -38,6 +38,9 @@ export interface RoomDisplayEntry {
   climateTileShows?: ClimateTileShows;
   /** Schrittweite der Zieltemperatur in Grad (Default 0,5). */
   climateStep?: number;
+  /** Mehrere Kameras stehen zusammen im geteilten Bild (Default: ja) — die
+      iOS-App liest und schreibt denselben Schalter. */
+  cameraSplit?: boolean;
 }
 
 export type ClimateTileShows = 'target' | 'current' | 'both';
@@ -255,6 +258,18 @@ export function setSensorId(roomId: string, metric: RoomMetric, entityId: string
   writeEntry(roomId, next);
 }
 
+/* ── Kameras im geteilten Bild (wie die iOS-App) ── */
+export function cameraSplit(roomId: string): boolean {
+  return entry(roomId).cameraSplit !== false;
+}
+
+export function setCameraSplit(roomId: string, value: boolean): void {
+  const next = { ...entry(roomId) };
+  if (value) delete next.cameraSplit;
+  else next.cameraSplit = false;
+  writeEntry(roomId, next);
+}
+
 /* ── Klima in der Kontrollfläche (Owner-Entscheidung 2026-09-11) ── */
 export function climateInline(roomId: string): boolean {
   return entry(roomId).climateInline === true;
@@ -347,6 +362,7 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (cand.climateInline === true) next.climateInline = true;
       if (cand.climateTileShows === 'target' || cand.climateTileShows === 'current') next.climateTileShows = cand.climateTileShows;
       if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
+      if (typeof cand.cameraSplit === 'boolean') next.cameraSplit = cand.cameraSplit;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };

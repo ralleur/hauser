@@ -1,6 +1,72 @@
 # Changelog
 
-## Unreleased
+## 0.23.0 - 2026-09-24
+
+- A TV with a remote in Home Assistant, such as an Apple TV, gets a
+  direction pad with select, back, home and play in its device detail.
+- Birthdays, holidays and the first snow greet on the phone too, above the
+  rooms.
+- A device added to a room celebrates briefly: the plus turns into a gold
+  check and six sparks fly up.
+- Energy: a second tap on “Today” shows the day's balance — how much of the
+  use came from your own sun and which gap the grid filled; on the phone it
+  sits right under “Today”.
+- Energy: the sun travels in an arc between sunrise and sunset above the
+  day's figures; under clouds only a pale shimmer remains. The house follows
+  the weather: a grey sky when it is cloudy, rain and snow over the whole
+  picture.
+- The phone's quick bar is yours: fill its four fields with all off, the
+  central temperature (two fields or compact with the home average) and your
+  own buttons that run scenes, devices from any room and vacation mode.
+- Several cameras in one room sit together in a split view; the room
+  configuration can turn it off so each camera stands on its own.
+- A room can be renamed right in its configuration: a tap on its name.
+- Cameras stand before or after the device tiles, wherever you put them in
+  the room's order; on the phone an arrow on the camera card moves it.
+
+## 0.22.1 - 2026-09-24
+
+- Energy totals appear: week, month and total count the meters of Home
+  Assistant's energy dashboard. Before, “Total” stayed empty in every home.
+- The mode switch in the title bar is the h signet: alone in use mode, with
+  the gold dot in edit mode; the dot springs in or pops away as you switch.
+
+## 0.22.0 - 2026-09-24
+
+- Hauser writes in its own hand: Alegreya Sans for controls and Alegreya for
+  the paper replace Inter and Instrument Serif everywhere, including the
+  wordmark beside the h signet.
+- The media screen stays up when a player vanishes while Home Assistant
+  reloads an integration.
+- With a Docker installation, the iOS app can assign devices to rooms and
+  shows camera pictures.
+
+## 0.21.5 - 2026-09-24
+
+- A room called “Constructor” no longer stops Hauser from starting.
+- Shopping and reminder lists with two entries sharing one ID no longer take
+  down the notes page, the standby screen and the phone.
+- The scene editor survives a room without scenes; a device that disappears
+  mid-command no longer crashes its tile or detail.
+- Turning on Media without a media player explains why instead of failing.
+
+## 0.21.4 - 2026-09-24
+
+- A device detail opens even when Home Assistant lists an option twice, such
+  as a vacuum's fan speeds.
+- The notes page no longer fails on a reminder whose due date is unreadable.
+- Energy settings save when the chosen sensor is also shown in a room.
+
+## 0.21.3 - 2026-09-24
+
+- Home opens again when two devices in a room share a name across domains,
+  such as a switch and the light made from it; each tile controls its own
+  device.
+
+## 0.21.2 - 2026-09-23
+
+- A house picture from the assistant gets an overcast version of the house
+  instead of a room: the overcast step keeps the exterior recipe.
 
 ## 0.21.1 - 2026-09-23
 

@@ -62,7 +62,7 @@ describe('energy period panel data', () => {
   it.each<[EnergyPeriod, EnergyPage, string]>([
     ['week', 'flow', 'Für letzte Woche fehlen noch Energy-Statistics-Daten.'],
     ['month', 'consumption', 'Für letzten Monat fehlen noch Energy-Statistics-Daten.'],
-    ['total', 'flow', 'Für Gesamtwerte fehlen noch Energy-Statistics-Daten.'],
+    ['total', 'flow', 'Für Gesamtwerte braucht Hauser die Energiezähler aus dem Energie-Dashboard von Home Assistant.'],
   ])('uses graceful absence for %s/%s until aggregate statistics exist', (period, page, hint) => {
     const data = energyPanelData(baseView, period, page);
 

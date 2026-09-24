@@ -54,7 +54,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.21.1` is current. The first installation by
+normal installation path; `v0.23.0` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -191,8 +191,8 @@ motion and interaction rules are identical to the wall panel's.
 
 | | |
 |---|---|
-| ![Detail of the title bar with the edit mark: a ring with a core and rays around it, and the notice 'Edit mode on' below it.](website/media/mode-edit.webp) | ![The same title bar in use mode: the mark without rays, and the notice 'Use mode on — configuration locked' below it.](website/media/mode-use.webp) |
-| **Edit** — rays on the mark, and a long-press opens configuration | **Use** — the same mark one step calmer; every control keeps working |
+| ![Detail of the title bar in edit mode: the Hauser h with its gold dot, and the word 'Edit' beside it.](website/media/mode-edit.webp) | ![The same title bar in use mode: the h without the dot, and the word 'Use' beside it.](website/media/mode-use.webp) |
+| **Edit** — the gold dot on the h, and a long-press opens configuration | **Use** — the h on its own; every control keeps working |
 
 One mark in the middle of the title bar carries the mode, and the mode belongs
 to the device rather than to the household: the hallway panel can be locked
@@ -300,9 +300,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.21.1` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.23.0` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.21.1` tag, which the Home Assistant Supervisor
+publish the plain `0.23.0` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

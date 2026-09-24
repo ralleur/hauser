@@ -69,10 +69,11 @@
   --color-dot-presence: var(--color-success);
 
   /* ── Typography ──
-     Inter Variable self-hosted (ADR-011) — System-Stack nur als Fallback,
-     Roboto als Primärfont explizit verworfen */
-  --font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
-  --font-family-display: 'Instrument Serif', 'New York', ui-serif, Georgia, serif; /* nur Ambient/Begrüßung — Instrument Serif self-hosted (ADR-012) */
+     Hausers Handschrift (R48, docs/23): eine Familie, zwei Stimmen.
+     Alegreya Sans steuert, Alegreya erzählt — self-hosted, System-Stack nur
+     als Fallback. Inter und Instrument Serif sind abgelöst. */
+  --font-family: 'Alegreya Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-family-display: 'Alegreya', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif; /* Papier: Begrüßung, Zettel, Kalender, Energiezahlen */
   --font-family-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
 
   /* Type Scale — dramatische Spreizung (Mikro-Labels ↔ Hero-Werte).
@@ -102,10 +103,12 @@
   --leading-normal: 1.4;
   --leading-relaxed: 1.5;
 
-  --tracking-tightest: -0.06em; /* nur 4xl */
-  --tracking-tighter: -0.05em;
-  --tracking-tight: -0.03em;
-  --tracking-snug: -0.02em;
+  /* Negative Laufweiten halbiert mit R48: Alegreya Sans läuft von sich aus
+     enger als Inter, für das die alten Werte gemessen waren. */
+  --tracking-tightest: -0.03em; /* nur 4xl */
+  --tracking-tighter: -0.025em;
+  --tracking-tight: -0.015em;
+  --tracking-snug: -0.01em;
   --tracking-normal: 0;
   --tracking-wide: 0.01em;
   --tracking-caps: 0.08em; /* nur uppercase Mikro-Labels (3xs/2xs) */

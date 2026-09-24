@@ -89,6 +89,18 @@ describe('device runtime projection', () => {
     expect(device).toMatchObject({ domain: 'switch', category: 'switch', name: 'Steckdose Test', dimmable: false, icon: 'i-bolt' });
   });
 
+  it('gleicher Name in zwei Domains ergibt im Raum zwei verschiedene Kachel-Ids', () => {
+    const fullCatalog = mergeCatalog(catalog, [
+      { entityId: 'switch.flur_decke', domain: 'switch', name: 'Flur Schalter', area: 'wohnzimmer' },
+      { entityId: 'light.flur_decke', domain: 'light', name: 'Flur Licht', area: 'wohnzimmer' },
+    ]);
+    let config = EMPTY_DEVICE_CONFIG;
+    for (const id of ['switch.flur_decke', 'light.flur_decke']) config = setDeviceVisibility(config, id, true, 'wohnzimmer');
+    const ids = buildRuntimeRooms(rooms, fullCatalog, config)[0].lights.map((l) => l.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(expect.arrayContaining(['flur_decke', 'light.flur_decke']));
+  });
+
   it('sensor/climate/media/camera werden mit Kategorie, Metadaten und Default-Symbol projiziert', () => {
     const fullCatalog = mergeCatalog(catalog, [
       { entityId: 'sensor.aussentemp', domain: 'sensor', name: 'Außen', area: 'wohnzimmer', unit: '°C', deviceClass: 'temperature' },

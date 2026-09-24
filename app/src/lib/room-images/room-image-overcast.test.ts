@@ -63,6 +63,16 @@ describe('Ableitung der trüben Variante', () => {
     expect(seenPhase).toBe('overcast');
   });
 
+  it('zeichnet das Haus von außen mit dem Hausrezept, nicht mit dem Zimmer', async () => {
+    let seenPrompt = '';
+    const provider = { available: true, edit: vi.fn(async (options: { prompt: string }) => { seenPrompt = options.prompt; return { image: new Uint8Array([7]) }; }) };
+    await deriveOvercastVariant('abc', {
+      assetStore: store(), provider, toProviderInput: passthrough, toFinal: passthrough, stylePreset: 'hauser-exterior-v1',
+    });
+    expect(seenPrompt).toContain('overcast-daylight variant of this house');
+    expect(seenPrompt).toContain('uniformly clouded grey sky');
+  });
+
   it('erzeugt nichts doppelt', async () => {
     const assetStore = store({ activeEntry: () => ({ ...entry, files: { overcast: { sha256: 'x' } } }) });
     const provider = { available: true, edit: vi.fn() };

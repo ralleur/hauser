@@ -30,7 +30,11 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
       if (!ENTITY_ID.test(entityId) || !SERVICE_NAME.test(domain) || !SERVICE_NAME.test(service)) {
         throw Object.assign(new Error('Ungültiger Befehl.'), { code: 'COMMAND_INVALID', status: 400 });
       }
-      await haFetch(`services/${domain}/${service}`, { method: 'POST', body: JSON.stringify({ entity_id: entityId, ...(data ?? {}) }) });
+      /* Ein Eintrag mit doppelter uid trägt für die App einen Zähler (siehe todo); an HA geht die echte uid. */
+      const payload = domain === 'todo' && typeof data?.item === 'string'
+        ? { ...data, item: data.item.replace(/#hauser-\d+$/, '') }
+        : data;
+      await haFetch(`services/${domain}/${service}`, { method: 'POST', body: JSON.stringify({ entity_id: entityId, ...(payload ?? {}) }) });
     },
     /** `todo.*`-Listen für die App: ohne Entität die Listen selbst, mit Entität deren Einträge.
         Die App hat keinen WebSocket; `todo.get_items` liefert die Einträge als Service-Antwort. */
@@ -49,10 +53,18 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
       const response = await haFetch('services/todo/get_items?return_response', { method: 'POST', body: JSON.stringify({ entity_id: entityId }) });
       const payload = await response.json();
       const items = payload?.service_response?.[entityId]?.items;
+      /* Zwei Einträge mit derselben uid (CalDAV kann das) bekämen in der App
+         dieselbe ID — SwiftUI verwirft dann Zeilen. Der zweite trägt einen
+         Zähler, wie in der Web-App (ha-backend.ts, uniqueReminderIds). */
+      const seen = new Map();
       return {
         items: (Array.isArray(items) ? items : [])
           .filter((item) => typeof item?.uid === 'string' && typeof item?.summary === 'string')
-          .map((item) => ({ id: item.uid, title: item.summary, checked: item.status === 'completed' })),
+          .map((item) => {
+            const count = seen.get(item.uid) ?? 0;
+            seen.set(item.uid, count + 1);
+            return { id: count ? `${item.uid}#hauser-${count + 1}` : item.uid, title: item.summary, checked: item.status === 'completed' };
+          }),
       };
     },
     /** Bewohner aus Home Assistant (`person.*`) für die Personen-Kopplung. */

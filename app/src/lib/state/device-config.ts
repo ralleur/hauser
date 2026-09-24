@@ -311,8 +311,23 @@ export function buildRuntimeRooms(
       name: room.name,
       presence: room.presence,
       windowOpen: room.windowOpen,
-      lights: sortDevices(devices, config.order[room.id], catalogById),
+      lights: uniqueDeviceIds(sortDevices(devices, config.order[room.id], catalogById)),
     };
+  });
+}
+
+/* Die Kachel-Id lässt die Domain weg: `switch.flur` und `light.flur` (HA-Helfer
+   „Schalter als Licht") oder `media_player.tv` und `remote.tv` bekommen beide
+   `flur` bzw. `tv`. Im selben Raum scheiterte die Startseite dann an
+   each_key_duplicate, und Detail und Schalten trafen das falsche Gerät. Das
+   zweite Gerät trägt deshalb seine volle entity_id — die kennt keinen Punkt-
+   losen Doppelgänger. */
+function uniqueDeviceIds(devices: ManagedDevice[]): ManagedDevice[] {
+  const seen = new Set<string>();
+  return devices.map((device) => {
+    const id = seen.has(device.id) ? device.entityId : device.id;
+    seen.add(id);
+    return id === device.id ? device : { ...device, id };
   });
 }
 

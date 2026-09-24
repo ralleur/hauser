@@ -30,7 +30,8 @@
   import { defaultIconFor, iconForDevice, persistLightIconOverride, resetLightIconOverride } from '../state/light-icons.ts';
 
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
-  import { renameDevice, setDeviceShowName } from '../state/device-manager.svelte.ts';
+  import { deviceManager, renameDevice, setDeviceShowName } from '../state/device-manager.svelte.ts';
+  import { pressRemoteKey, remoteEntityFor, type RemoteKey } from '../state/remote-keys.ts';
   import { fmtTemp } from '../format.ts';
   import type {
     LightValue, SwitchValue, ClimateValue, SensorValue, MediaValue, FanValue, CoverValue, VacuumValue, LockValue,
@@ -54,6 +55,13 @@
   const climate = $derived(category === 'temp' ? (cur as ClimateValue | undefined) : undefined);
   const sensor = $derived(category === 'info' && device?.domain === 'sensor' ? (cur as SensorValue | undefined) : undefined);
   const media = $derived(category === 'media' ? (cur as MediaValue | undefined) : undefined);
+  const remoteId = $derived(category === 'media' ? remoteEntityFor(entityId, deviceManager.catalog) : null);
+  const remoteArrows: { key: RemoteKey; icon: string; label: () => string }[] = [
+    { key: 'up', icon: 'i-chevron-up', label: () => m.dev_remote_up() },
+    { key: 'left', icon: 'i-chevron-left', label: () => m.dev_remote_left() },
+    { key: 'right', icon: 'i-chevron-right', label: () => m.dev_remote_right() },
+    { key: 'down', icon: 'i-chevron-down', label: () => m.dev_remote_down() },
+  ];
   const fan = $derived(category === 'fan' ? (cur as FanValue | undefined) : undefined);
   /* R28: die übrigen steuerbaren Domänen, je eine gemergte Sicht. */
   const cover = $derived(category === 'cover' || category === 'valve' ? (cur as CoverValue | undefined) : undefined);
@@ -905,6 +913,33 @@
                          value={volDisplay} min={0} max={100} step={1} keyStep={5}
                          onInput={onVolume} format={(v) => `${Math.round(v)}%`} />
             </section>
+            {#if remoteId}
+              {@const remote = remoteId}
+              <section class="ld-section">
+                <span class="caps-label">{m.dev_remote()}</span>
+                <div class="remote-pad" role="group" aria-label={m.dev_remote()}>
+                  {#each remoteArrows as arrow (arrow.key)}
+                    <button class="remote-arrow is-{arrow.key} pressable" type="button" aria-label={arrow.label()}
+                            onclick={() => pressRemoteKey(remote, arrow.key)}>
+                      <Icon name={arrow.icon} cls="icon icon-md" />
+                    </button>
+                  {/each}
+                  <button class="remote-select pressable" type="button" aria-label={m.dev_remote_select()}
+                          onclick={() => pressRemoteKey(remote, 'select')}></button>
+                </div>
+                <div class="action-row" role="group" aria-label={m.dev_remote()}>
+                  <button class="action-btn pressable" type="button" onclick={() => pressRemoteKey(remote, 'back')}>
+                    <Icon name="i-arrow-left" cls="icon icon-md" /><span>{m.dev_remote_back()}</span>
+                  </button>
+                  <button class="action-btn pressable" type="button" onclick={() => pressRemoteKey(remote, 'home')}>
+                    <Icon name="i-television" cls="icon icon-md" /><span>{m.dev_remote_home()}</span>
+                  </button>
+                  <button class="action-btn pressable" type="button" onclick={() => pressRemoteKey(remote, 'play_pause')}>
+                    <Icon name="i-play-pause" cls="icon icon-md" /><span>{m.dev_remote_play()}</span>
+                  </button>
+                </div>
+              </section>
+            {/if}
           {/if}
         </div>
       {/key}

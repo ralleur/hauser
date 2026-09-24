@@ -5,6 +5,7 @@ import {
   deleteScene,
   defaultSceneMembers,
   EMPTY_SCENE_CONFIG,
+  sceneDefIn,
   isSceneCustomized,
   loadSceneConfig,
   parseSceneConfig,
@@ -216,5 +217,14 @@ describe('sceneMemberStateFromValue (Import aus einer HA-Szene)', () => {
   it('ohne verwertbaren Zustand bleibt der Szenen-Default stehen', () => {
     expect(sceneMemberStateFromValue(undefined)).toBeNull();
     expect(sceneMemberStateFromValue({ value: 21.5, unit: '°C' })).toBeNull();
+  });
+});
+
+describe('Raum ohne Szenen', () => {
+  it('findet keine Szene statt einer erfundenen — der Editor stürzte daran ab', () => {
+    let config = EMPTY_SCENE_CONFIG;
+    for (const scene of sceneList(config, 'flur')) config = deleteScene(config, 'flur', scene.id);
+    expect(sceneList(config, 'flur')).toEqual([]);
+    expect(sceneDefIn(config, 'flur', 'abend')).toBeUndefined();
   });
 });

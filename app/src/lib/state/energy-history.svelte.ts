@@ -36,6 +36,9 @@ export const energyHistory = $state({
      am Telefon braucht beide Tage aus derselben Quelle. */
   yesterday: null as EnergyCurvePoint[] | null,
   periods: { week: null, month: null, total: null } as Record<HistoryPeriod, EnergyPeriodTotals | null>,
+  /* Heute aus den Dashboard-Zählern (Tagesbilanz), wenn Hauser selbst keine
+     Tageszähler kennt. */
+  today: null as EnergyPeriodTotals | null,
   updatedAt: 0,
   loading: false,
   initialized: false,
@@ -66,12 +69,49 @@ function unitOf(entityId: string): string | null {
 function toKw(entityId: string, value: number): number {
   return unitOf(entityId) === 'W' ? value / 1000 : value;
 }
-function toKwh(entityId: string, value: number): number {
-  return unitOf(entityId) === 'Wh' ? value / 1000 : value;
-}
 
 function ids(ref: EnergySensorRef | readonly LoadSource[]): string[] {
   return energyRefIds(ref);
+}
+
+/* ── Zähler aus dem Energie-Dashboard ──
+   Die Einrichtung trägt keine kWh-Zähler ein: „Gesamt" blieb deshalb in jedem
+   Haus leer, Woche und Monat waren aus der Leistung hochgerechnet. Home
+   Assistant kennt die Zähler aber aus seinem Energie-Dashboard — Netzbezug,
+   Einspeisung, Solar, Akku. Ein in Hauser eingetragener Zähler geht vor. */
+export interface DashboardCounters {
+  produced: string[];
+  drawn: string[];
+  fedIn: string[];
+  /** Akku gibt ab (`stat_energy_from`) bzw. nimmt auf (`stat_energy_to`). */
+  batteryOut: string[];
+  batteryIn: string[];
+}
+
+export function countersFromEnergyPrefs(prefs: unknown): DashboardCounters {
+  const found = { produced: new Set<string>(), drawn: new Set<string>(), fedIn: new Set<string>(), batteryOut: new Set<string>(), batteryIn: new Set<string>() };
+  const add = (set: Set<string>, value: unknown) => {
+    if (typeof value === 'string' && value.trim()) set.add(value.trim());
+  };
+  const list = (value: unknown): Record<string, unknown>[] =>
+    (Array.isArray(value) ? value : []).filter((item): item is Record<string, unknown> => !!item && typeof item === 'object');
+  for (const source of list((prefs as { energy_sources?: unknown } | null)?.energy_sources)) {
+    if (source.type === 'grid') {
+      for (const flow of list(source.flow_from)) add(found.drawn, flow.stat_energy_from);
+      for (const flow of list(source.flow_to)) add(found.fedIn, flow.stat_energy_to);
+      add(found.drawn, source.stat_energy_from);
+      add(found.fedIn, source.stat_energy_to);
+    } else if (source.type === 'solar') {
+      add(found.produced, source.stat_energy_from);
+    } else if (source.type === 'battery') {
+      add(found.batteryOut, source.stat_energy_from);
+      add(found.batteryIn, source.stat_energy_to);
+    }
+  }
+  return {
+    produced: [...found.produced], drawn: [...found.drawn], fedIn: [...found.fedIn],
+    batteryOut: [...found.batteryOut], batteryIn: [...found.batteryIn],
+  };
 }
 
 /* ── Tagesverlauf aus Fünf-Minuten-Mitteln ── */
@@ -101,12 +141,12 @@ export function curveFromBuckets(
 /* ── Summen eines Zeitraums ──
    Zähler (kWh) zählen ihre Tageszuwächse; ohne Zähler wird die Leistung
    über die Stundenmittel integriert (kW · h). */
-function sumChanges(buckets: StatisticsBucket[] | undefined, id: string): number | null {
+function sumChanges(buckets: StatisticsBucket[] | undefined): number | null {
   if (!buckets?.length) return null;
   let sum = 0; let seen = false;
   for (const bucket of buckets) {
     if (bucket.change === null || bucket.change === undefined) continue;
-    sum += toKwh(id, bucket.change); seen = true;
+    sum += bucket.change; seen = true;
   }
   return seen ? Math.round(sum * 10) / 10 : null;
 }
@@ -121,34 +161,93 @@ function integrateMeans(buckets: Record<string, StatisticsBucket[]>, sensorIds: 
   return seen ? Math.round(sum * 10) / 10 : null;
 }
 
-async function loadPeriod(period: HistoryPeriod): Promise<EnergyPeriodTotals | null> {
+async function loadPeriod(period: HistoryPeriod, dashboard: DashboardCounters): Promise<EnergyPeriodTotals | null> {
   const { start, end } = periodWindow(period);
+  const own = (ref: EnergySensorRef, fallback: string[]) => (ids(ref).length ? ids(ref) : fallback);
   const counters = {
-    produced: ids(ENERGY_SENSORS.producedToday),
+    produced: own(ENERGY_SENSORS.producedToday, dashboard.produced),
     consumed: ids(ENERGY_SENSORS.consumedToday),
-    fedIn: ids(ENERGY_SENSORS.fedInToday),
-    drawn: ids(ENERGY_SENSORS.drawnToday),
+    fedIn: own(ENERGY_SENSORS.fedInToday, dashboard.fedIn),
+    drawn: own(ENERGY_SENSORS.drawnToday, dashboard.drawn),
+    batteryOut: dashboard.batteryOut,
+    batteryIn: dashboard.batteryIn,
   };
-  const counterIds = Object.values(counters).flat();
+  const counterIds = [...new Set(Object.values(counters).flat())];
   const powerIds = { load: ids(ENERGY_SENSORS.load), prod: ids(ENERGY_SENSORS.pv) };
+  /* Verbrauch zählt ein eigener Zähler — oder die Bilanz wie im Dashboard. */
+  const consumptionCounted = counters.consumed.length > 0 || counters.drawn.length > 0;
   const [changes, means] = await Promise.all([
-    counterIds.length ? runtime.getStatistics({ statisticIds: counterIds, start, end, period: 'day', types: ['change'] }) : Promise.resolve<StatisticsResult>({}),
+    counterIds.length
+      ? runtime.getStatistics({ statisticIds: counterIds, start, end, period: 'day', types: ['change'], units: { energy: 'kWh' } })
+      : Promise.resolve<StatisticsResult>({}),
     /* Gesamt über Stundenmittel wäre eine Anfrage über Jahre: nur Zähler. */
-    period !== 'total' && (!counters.consumed.length || !counters.produced.length)
+    period !== 'total' && (!consumptionCounted || !counters.produced.length)
       ? runtime.getStatistics({ statisticIds: [...powerIds.load, ...powerIds.prod], start, end, period: 'hour', types: ['mean'] })
       : Promise.resolve<StatisticsResult>({}),
   ]);
   const counterTotal = (key: keyof typeof counters): number | null => {
-    const values = counters[key].map((id) => sumChanges(changes[id], id)).filter((value): value is number => value !== null);
+    const values = counters[key].map((id) => sumChanges(changes[id])).filter((value): value is number => value !== null);
     return values.length ? Math.round(values.reduce((a, b) => a + b, 0) * 10) / 10 : null;
   };
+  const produced = counterTotal('produced');
+  const fedIn = counterTotal('fedIn');
+  const drawn = counterTotal('drawn');
   const totals: EnergyPeriodTotals = {
-    produced: counterTotal('produced') ?? (powerIds.prod.length ? integrateMeans(means, powerIds.prod) : null),
-    consumed: counterTotal('consumed') ?? (powerIds.load.length ? integrateMeans(means, powerIds.load) : null),
-    fedIn: counterTotal('fedIn'),
-    drawn: counterTotal('drawn'),
+    produced: produced ?? (powerIds.prod.length ? integrateMeans(means, powerIds.prod) : null),
+    consumed: counterTotal('consumed') ?? balance(counters, { produced, fedIn, drawn, batteryOut: counterTotal('batteryOut'), batteryIn: counterTotal('batteryIn') })
+      ?? (powerIds.load.length ? integrateMeans(means, powerIds.load) : null),
+    fedIn,
+    drawn,
   };
   return Object.values(totals).some((value) => value !== null) ? totals : null;
+}
+
+/* Hausverbrauch wie im Energie-Dashboard: Bezug + Solar + Akku-Abgabe
+   − Einspeisung − Akku-Aufnahme. Fehlt ein Wert, dessen Zähler es gibt, bleibt
+   die Bilanz offen, statt zu klein zu werden. */
+export function balance(
+  counters: { drawn: string[]; produced: string[]; fedIn: string[]; batteryOut: string[]; batteryIn: string[] },
+  sums: { drawn: number | null; produced: number | null; fedIn: number | null; batteryOut: number | null; batteryIn: number | null },
+): number | null {
+  if (sums.drawn === null) return null;
+  let total = 0;
+  for (const [key, sign] of [['drawn', 1], ['produced', 1], ['batteryOut', 1], ['fedIn', -1], ['batteryIn', -1]] as const) {
+    if (!counters[key].length) continue;
+    const value = sums[key];
+    if (value === null) return null;
+    total += sign * value;
+  }
+  return Math.round(Math.max(0, total) * 10) / 10;
+}
+
+/* Heute seit Mitternacht in Fünf-Minuten-Scheiben, damit der Stand nicht eine
+   Stunde hinterherläuft. Nur Zähler des Dashboards — eingetragene Tageszähler
+   liest die Energie-Seite ohnehin live, und „Verbraucht" bleibt leer, weil
+   ihn dort kein Zähler misst. */
+async function loadToday(dashboard: DashboardCounters): Promise<EnergyPeriodTotals | null> {
+  const counters = { produced: dashboard.produced, fedIn: dashboard.fedIn, drawn: dashboard.drawn };
+  const statisticIds = [...new Set(Object.values(counters).flat())];
+  if (!statisticIds.length) return null;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const changes = await runtime.getStatistics({ statisticIds, start, period: '5minute', types: ['change'], units: { energy: 'kWh' } });
+  const total = (list: string[]): number | null => {
+    const values = list.map((id) => sumChanges(changes[id])).filter((value): value is number => value !== null);
+    return values.length ? Math.round(values.reduce((a, b) => a + b, 0) * 10) / 10 : null;
+  };
+  const totals = { produced: total(counters.produced), consumed: null, fedIn: total(counters.fedIn), drawn: total(counters.drawn) };
+  return Object.values(totals).some((value) => value !== null) ? totals : null;
+}
+
+/** Tageswerte für die Bilanz: eingetragene Tageszähler live, sonst die Dashboard-Zähler seit Mitternacht. */
+export function energyTodayInput(today: { produced: number | null; consumed: number | null; fedIn: number | null; drawn: number | null }) {
+  const counted = energyHistory.today;
+  return {
+    produced: today.produced ?? counted?.produced ?? null,
+    consumed: today.consumed,
+    fedIn: today.fedIn ?? counted?.fedIn ?? null,
+    drawn: today.drawn ?? counted?.drawn ?? null,
+  };
 }
 
 async function loadCurve(dayOffset = 0): Promise<EnergyCurvePoint[] | null> {
@@ -172,9 +271,12 @@ export function refreshEnergyHistory(): Promise<void> {
   energyHistory.loading = true;
   inflight = (async () => {
     try {
-      const [curve, yesterday, week, month, total] = await Promise.all([
-        loadCurve(), loadCurve(-1), loadPeriod('week'), loadPeriod('month'), loadPeriod('total'),
+      const dashboard = countersFromEnergyPrefs(await runtime.getEnergyPrefs().catch(() => null));
+      const [curve, yesterday, week, month, total, today] = await Promise.all([
+        loadCurve(), loadCurve(-1), loadPeriod('week', dashboard), loadPeriod('month', dashboard), loadPeriod('total', dashboard),
+        loadToday(dashboard).catch(() => null),
       ]);
+      energyHistory.today = today;
       energyHistory.curve = curve;
       energyHistory.yesterday = yesterday;
       energyHistory.periods = { week, month, total };

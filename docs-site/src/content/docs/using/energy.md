@@ -16,7 +16,7 @@ Power sensors in Home Assistant. **Settings → Connections → Services → Ene
 ## What it shows
 
 - **Now:** live power. Several plugs are called *Measured devices*, not a house load.
-- **Today, Week, Month, Total:** real sums from Home Assistant's long-term statistics. The day's curve comes from five-minute statistics.
+- **Today, Week, Month, Total:** real sums from Home Assistant's long-term statistics. The day's curve comes from five-minute statistics. Week, month and total count the meters of Home Assistant's energy dashboard (grid, solar, battery); **Total** needs them, week and month fall back to the power sensors.
 - What the house cannot measure gets no note. No dashes, no zeros.
 
 ## Your own house

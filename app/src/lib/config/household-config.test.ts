@@ -241,6 +241,18 @@ describe('household config v4', () => {
     });
   });
 
+  it('lässt einen Energie-Sensor zugleich im Raum stehen, aber nicht doppelt in der Energie', () => {
+    const shared = structuredClone(neutralSmall);
+    const roomSensor = { id: 'kitchen_plug_power', name: 'Plug', entityId: 'sensor.kitchen_plug_power', role: 'other' };
+    shared.rooms[0].visibleEntities.push(roomSensor as (typeof shared.rooms)[0]['visibleEntities'][0]);
+    shared.energy!.sensors.consumptionPower.push({ id: 'plug', name: 'Plug', entityId: 'sensor.kitchen_plug_power' });
+    parseValid(shared);
+
+    const twice = structuredClone(shared);
+    twice.energy!.sensors.consumptionPower.push({ id: 'plug_again', name: 'Plug', entityId: 'sensor.kitchen_plug_power' });
+    expectIssue(twice, 'DUPLICATE_ENTITY_ID', `$.energy.sensors.consumptionPower[${twice.energy!.sensors.consumptionPower.length - 1}].entityId`);
+  });
+
   it('preserves optional energy groups through validation and compilation', () => {
     const grouped = structuredClone(parseValid(neutralSmall));
     grouped.energy!.sensors.consumptionPower[0].group = 'Workshop group';

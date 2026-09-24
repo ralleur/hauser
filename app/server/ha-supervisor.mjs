@@ -129,9 +129,12 @@ export function createHaSupervisorClient({
   timeoutMs = 5_000,
   coreBaseUrl = HA_SUPERVISOR_CORE_URL,
   websocketUrl = HA_SUPERVISOR_WEBSOCKET_URL,
+  /* Direktbetrieb (Docker): der Long-Lived-Token aus der Einrichtung statt des
+     Supervisor-Tokens — gleiche Wege, andere Adresse. */
+  accessToken = null,
 } = {}) {
   /* Einmal beim App-Start gelesen und nur in dieser Closure gehalten. */
-  const token = readSupervisorToken(env);
+  const token = accessToken ?? readSupervisorToken(env);
 
   let socket = null;
   let candidateSocket = null;

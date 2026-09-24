@@ -57,8 +57,9 @@ const expectedMdiAssets = [
 ].map((name) => `mdi-icons/${name}.svg`).sort();
 
 describe('offline start shell assets', () => {
-  it('renders both local fonts without a blocking FOIT period', () => {
-    expect(appCss.split('font-display: swap;')).toHaveLength(3);
+  it('renders every local font face without a blocking FOIT period', () => {
+    /* Hausers Handschrift (R48): drei Schnitte Alegreya Sans, eine Alegreya. */
+    expect(appCss.split('font-display: swap;')).toHaveLength(5);
     expect(appCss).not.toContain('font-display: block;');
   });
 

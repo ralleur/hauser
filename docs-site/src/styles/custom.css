@@ -1,5 +1,29 @@
+/* Hausers Handschrift (R48): Alegreya Sans steuert, Alegreya erzählt —
+   dieselbe Familie wie im Produkt und auf der Projektseite. */
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/AlegreyaSans-Regular-subset.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/AlegreyaSans-Bold-subset.woff2') format('woff2');
+  font-weight: 600 700;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya';
+  src: url('../assets/fonts/Alegreya-subset.woff2') format('woff2');
+  font-weight: 400 600;
+  font-display: swap;
+}
+
 /* Light touch of the Hauser identity: the warm accent from the project website. */
 :root {
+  --sl-font: 'Alegreya Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --sl-color-accent-low: #3a2a0a;
   --sl-color-accent: #f5b03c;
   --sl-color-accent-high: #ffd58a;
@@ -9,7 +33,9 @@
   --sl-color-accent: #b8771a;
   --sl-color-accent-high: #4a2f06;
 }
-.site-title {
-  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  font-weight: 400;
+.site-title,
+.sl-markdown-content :is(h1, h2),
+h1#_top {
+  font-family: 'Alegreya', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-weight: 500;
 }

@@ -8,6 +8,10 @@
   import { momentLine } from '../state/moment-copy.ts';
   import { celebrationDue, currentMoment, dismissMoment, markCelebrated } from '../state/moments.svelte.ts';
 
+  /* Am Telefon steht die Zeile oben im Zuhause und schiebt die Räume nach
+     unten, statt auf der ersten Karte zu liegen (wie die iOS-App). */
+  let { placement = 'panel' }: { placement?: 'panel' | 'phone' } = $props();
+
   const moment = $derived(currentMoment());
   const line = $derived(momentLine(moment));
 
@@ -94,7 +98,7 @@
 </script>
 
 {#if visible && line}
-  <div class="moment-layer" style={`--moment-fade:${fadeMs}ms`}>
+  <div class="moment-layer" class:is-phone={placement === 'phone'} style={`--moment-fade:${fadeMs}ms`}>
     {#if confetti}
       <canvas class="moment-confetti" aria-hidden="true" bind:this={canvas}></canvas>
     {/if}
@@ -143,6 +147,28 @@
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 
+  .moment-layer.is-phone {
+    position: relative;
+    inset: auto;
+    display: flex;
+    justify-content: center;
+    padding-bottom: var(--space-3, 12px);
+  }
+  .moment-layer.is-phone .moment-confetti {
+    position: fixed;
+  }
+  .moment-layer.is-phone .moment-line {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    max-width: 100%;
+    animation-name: moment-appear-phone;
+  }
+  @keyframes moment-appear-phone {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .moment-line { animation: none; }
   }

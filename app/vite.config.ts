@@ -261,8 +261,10 @@ export default defineConfig({
       injectRegister: false,
       manifest: false,
       includeAssets: [
-        'fonts/InterVariable-subset.woff2',
-        'fonts/InstrumentSerif-subset.woff2',
+        'fonts/AlegreyaSans-Regular-subset.woff2',
+        'fonts/AlegreyaSans-Medium-subset.woff2',
+        'fonts/AlegreyaSans-Bold-subset.woff2',
+        'fonts/Alegreya-subset.woff2',
         'icons/apple-touch-icon.png',
         'icons/icon-192.png',
         'icons/icon-512.png',

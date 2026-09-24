@@ -10,7 +10,8 @@
   import RoomStatusStrip from './phone/RoomStatusStrip.svelte';
   import { type Room } from '../state/app.svelte.ts';
   import { mergedClimate, roomTemperature } from '../state/commands.ts';
-  import { climateInline, climateTileShows } from '../state/room-display-config.svelte.ts';
+  import { cameraSplit, climateInline, climateTileShows } from '../state/room-display-config.svelte.ts';
+  import { cardsAroundTiles } from '../state/room-cards.ts';
   import { type SceneId } from '../state/scene-config.ts';
   import { applySceneWithUndo, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
@@ -58,6 +59,13 @@
   const STRIP_CLASSES = new Set(['temperature', 'humidity', 'motion', 'occupancy', 'presence']);
   const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'
     && !(statusStrip && device.category === 'info' && STRIP_CLASSES.has(device.deviceClass ?? ''))));
+  /* Kameras stehen vor oder hinter dem Raster — je nachdem, wo sie in der
+     Reihenfolge des Raums liegen (wie die iOS-App). Das geteilte Bild folgt
+     seiner ersten Kamera. */
+  const cameraPlaces = $derived(cardsAroundTiles(room.lights, cameraDevices, tileDevices));
+  const splitCameras = $derived(cameraDevices.length > 1 && cameraSplit(room.id));
+  const camerasBefore = $derived(splitCameras ? (cameraPlaces.before.length && cameraPlaces.before[0] === cameraDevices[0] ? cameraDevices : []) : cameraPlaces.before);
+  const camerasAfter = $derived(splitCameras ? (camerasBefore.length ? [] : cameraDevices) : cameraPlaces.after);
 
   /* Tap wendet die Szene an (echte Einzel-Commands, state/scene-manager);
      Long-Press öffnet den Szenen-Editor (Mitglieder anpassen). */
@@ -87,6 +95,38 @@
       </div>
     </section>
   {/if}
+
+  {#snippet cameraBlock(list: typeof cameraDevices)}
+    {#if list.length > 1 && splitCameras}
+      <!-- Mehrere Kameras stehen zusammen in einem geteilten Bild (wie die
+           iOS-App); bei ungerader Zahl nimmt die erste die ganze Breite. -->
+      <section class="detail-section camera-split" class:is-odd={list.length % 2 === 1}>
+        {#each list as camera (camera.entityId)}
+          <CameraFeed
+            entityId={camera.entityId}
+            label={camera.name}
+            titlebarVisible={cameraPopouts.titlebarVisible(camera.entityId)}
+            onpopout={() => cameraPopouts.open(camera.entityId, camera.name, room.id)}
+            ontoggletitlebar={() => cameraPopouts.toggleTitlebar(camera.entityId)}
+          />
+        {/each}
+      </section>
+    {:else}
+      {#each list as camera (camera.entityId)}
+        <section class="detail-section">
+          <CameraFeed
+            entityId={camera.entityId}
+            label={camera.name}
+            titlebarVisible={cameraPopouts.titlebarVisible(camera.entityId)}
+            onpopout={() => cameraPopouts.open(camera.entityId, camera.name, room.id)}
+            ontoggletitlebar={() => cameraPopouts.toggleTitlebar(camera.entityId)}
+          />
+        </section>
+      {/each}
+    {/if}
+  {/snippet}
+
+  {@render cameraBlock(camerasBefore)}
 
   <section class="detail-section">
     <div class="light-list">
@@ -120,17 +160,7 @@
     </div>
   </section>
 
-  {#each cameraDevices as camera (camera.entityId)}
-    <section class="detail-section">
-      <CameraFeed
-        entityId={camera.entityId}
-        label={camera.name}
-        titlebarVisible={cameraPopouts.titlebarVisible(camera.entityId)}
-        onpopout={() => cameraPopouts.open(camera.entityId, camera.name, room.id)}
-        ontoggletitlebar={() => cameraPopouts.toggleTitlebar(camera.entityId)}
-      />
-    </section>
-  {/each}
+  {@render cameraBlock(camerasAfter)}
 
   {#if climate && climateAsCard}
     <section class="detail-section climate-section">

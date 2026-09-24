@@ -10,30 +10,37 @@
   } from '../../state/commands.ts';
   import { longpress } from '../../actions/longpress.ts';
   import { whenEditable } from '../../state/edit-mode.svelte.ts';
-  import { openPhoneActionEdit } from '../../state/overlay.svelte.ts';
   import {
-    phoneActionActive,
-    phoneActionDeviceName,
-    phoneActionIcon,
-    togglePhoneAction,
-  } from '../../state/phone-action.svelte.ts';
+    quickActionActive, quickBarItems, quickEdit, quickSpan, runQuickAction, type QuickItem,
+  } from '../../state/phone-quick-bar.svelte.ts';
+  import { fmtTemp } from '../../format.ts';
   import { offerUndo } from '../../state/undo.svelte.ts';
   import { createPhoneSettingsLoader } from '../../state/phone-lazy-loader.ts';
   import { m } from '../../../paraglide/messages.js';
 
   let { online }: { online: boolean } = $props();
 
-  /* Der rechte Knopf ist ab Werk der Urlaubsmodus und trägt nach einem
-     Long-Press ein beliebiges schaltbares Gerät (phone-action.svelte.ts). */
-  const actionActive = $derived(phoneActionActive());
-  const actionDevice = $derived(phoneActionDeviceName());
-  const actionIcon = $derived(phoneActionIcon());
-  const actionLabel = $derived(
-    actionDevice ?? (actionActive ? m.phone_vacation_active() : m.phone_vacation()),
-  );
-  const actionAria = $derived(actionDevice
-    ? m.phone_action_toggle_label({ name: actionDevice })
-    : actionActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label());
+  /* Die Leiste gehört dir (wie die iOS-App): vier Felder, belegt im
+     Layout-Blatt; die Temperatur erscheint nur, wenn es etwas zu steuern gibt. */
+  const items = $derived(quickBarItems().filter((item) =>
+    (item.kind !== 'climate' && item.kind !== 'climateCompact') || centralClimate.hasClimate));
+
+  function openEdit(item: QuickItem): void {
+    quickEdit.id = item.id;
+  }
+  function onAction(item: QuickItem): void {
+    if (item.steps.length === 0) { whenEditable(() => openEdit(item))(); return; }
+    runQuickAction(item);
+  }
+
+  /* Die kompakte Temperatur zeigt den Hausdurchschnitt; ein Tipp legt die
+     Pille mit Minus und Plus über die Leiste. */
+  let compactOpen = $state(false);
+  $effect(() => {
+    if (!compactOpen) return;
+    const timer = setTimeout(() => { compactOpen = false; }, 8000);
+    return () => clearTimeout(timer);
+  });
   const settingsLoader = createPhoneSettingsLoader();
 
   /* Der Befehl geht sofort raus; der Rückgängig-Streifen hält fünf Sekunden
@@ -58,25 +65,52 @@
   }
 </script>
 
-{#if centralClimate.hasClimate}
+{#if items.length > 0}
   <div class="phone-quick-actions">
-    <button class="phone-quick-action is-off pressable" type="button" disabled={!online}
-            aria-label={m.phone_all_off_label()} onclick={onHomeOff}>
-      <!-- Nur das Zeichen, ohne Wort (Owner-Wunsch 2026-09-14); den Text trägt
-           das aria-label. -->
-      <Icon name="i-power" cls="icon icon-md" />
-    </button>
-    <ClimatePill label={m.phone_climate_central()}
-                 coolerLabel={m.phone_climate_colder()}
-                 warmerLabel={m.phone_climate_warmer()}
-                 {online} />
-    <button class="phone-quick-action is-vacation pressable" class:is-active={actionActive}
-            type="button" disabled={!online} aria-pressed={actionActive}
-            aria-label={actionAria}
-            use:longpress={{ onLongPress: whenEditable(openPhoneActionEdit) }}
-            onclick={togglePhoneAction}>
-      <Icon name={actionIcon} cls="icon icon-md" />
-      <span>{actionLabel}</span>
-    </button>
+    {#each items as item (item.id)}
+      {#if item.kind === 'off'}
+        <button class="phone-quick-action is-off pressable" type="button" disabled={!online}
+                aria-label={m.phone_all_off_label()} onclick={onHomeOff}>
+          <!-- Nur das Zeichen, ohne Wort (Owner-Wunsch 2026-09-14); den Text trägt
+               das aria-label. -->
+          <Icon name="i-power" cls="icon icon-md" />
+        </button>
+      {:else if item.kind === 'climate'}
+        <div class="phone-quick-slot" style:grid-column={`span ${quickSpan(item)}`}>
+          <ClimatePill label={m.phone_climate_central()}
+                       coolerLabel={m.phone_climate_colder()}
+                       warmerLabel={m.phone_climate_warmer()}
+                       {online} />
+        </div>
+      {:else if item.kind === 'climateCompact'}
+        <div class="phone-quick-slot is-compact">
+          {#if compactOpen}
+            <div class="phone-quick-popover">
+              <ClimatePill label={m.phone_climate_central()}
+                           coolerLabel={m.phone_climate_colder()}
+                           warmerLabel={m.phone_climate_warmer()}
+                           {online} />
+            </div>
+          {/if}
+          <button class="phone-quick-action is-compact pressable" type="button"
+                  aria-label={m.quick_climate_compact()} aria-expanded={compactOpen}
+                  onclick={() => { compactOpen = !compactOpen; }}>
+            <Icon name="i-thermometer" cls="icon icon-md" />
+            <span class="phone-quick-temp num">{centralClimate.currentValue === null ? '–' : `${fmtTemp(centralClimate.currentValue)}°`}</span>
+          </button>
+        </div>
+      {:else}
+        <button class="phone-quick-action is-custom pressable" type="button"
+                class:is-active={quickActionActive(item)} class:is-empty={item.steps.length === 0}
+                class:is-bare={!item.name} disabled={!online && item.steps.length > 0}
+                aria-pressed={item.steps.length === 1 ? quickActionActive(item) : undefined}
+                aria-label={item.name || m.quick_action()}
+                use:longpress={{ onLongPress: whenEditable(() => openEdit(item)) }}
+                onclick={() => onAction(item)}>
+          <Icon name={item.steps.length === 0 ? 'i-plus' : item.icon} cls="icon icon-md" />
+          {#if item.name}<span>{item.name}</span>{/if}
+        </button>
+      {/if}
+    {/each}
   </div>
 {/if}

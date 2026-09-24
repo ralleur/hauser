@@ -4869,7 +4869,13 @@ async function serveRoomImagePublish(req, res, identity, jobId, context) {
        hängen hinter der Veröffentlichung, nicht darin — der Wizard antwortet
        sofort, die beiden Anbieteraufrufe laufen danach. Ein Fehlschlag bleibt
        für den nächtlichen Nachzug liegen und darf den Publish nicht anfassen. */
-    if (asset?.assetId) void Promise.resolve(context.finishAsset?.(asset.assetId)).catch(() => undefined);
+    if (asset?.assetId) {
+      /* Das Rezept reist mit: ein Außenset bekommt seine trübe Fassung vom Haus,
+         nicht vom Zimmer. Die Zuweisung an „Draußen" kommt erst nach dem Publish. */
+      let stylePreset;
+      try { stylePreset = context.jobStore.getOwn(identity, jobId)?.policy?.spec?.stylePreset; } catch { stylePreset = undefined; }
+      void Promise.resolve(context.finishAsset?.(asset.assetId, { stylePreset })).catch(() => undefined);
+    }
     roomImageJsonResponse(req, res, 200, asset);
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }

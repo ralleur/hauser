@@ -32,7 +32,20 @@ describe('parseOutdoor', () => {
       tempDelta: 2.4,
       condition: 'sunny',
       windSpeed: 12,
+      sunrise: null,
+      sunset: null,
     });
+  });
+
+  it('macht aus Auf- und Untergang in Ortszeit einen Zeitpunkt', () => {
+    const reading = parseOutdoor({
+      daily: { sunrise: ['2026-09-24T07:18'], sunset: ['2026-09-24T19:21'] },
+      utc_offset_seconds: 7200,
+    });
+    expect(reading.sunrise).toBe(Date.parse('2026-09-24T05:18:00Z'));
+    expect(reading.sunset).toBe(Date.parse('2026-09-24T17:21:00Z'));
+    expect(parseOutdoor({ daily: { sunrise: ['kaputt'] }, utc_offset_seconds: 0 }).sunrise).toBeNull();
+    expect(parseOutdoor({ daily: { sunrise: ['2026-09-24T07:18'] } }).sunrise).toBeNull();
   });
 
   it('klassifiziert Regen und windiges Wetter ohne neue Datenquelle', () => {
@@ -58,6 +71,8 @@ describe('parseOutdoor', () => {
       tempDelta: null,
       condition: null,
       windSpeed: null,
+      sunrise: null,
+      sunset: null,
     });
   });
 });

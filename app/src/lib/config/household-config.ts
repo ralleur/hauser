@@ -371,6 +371,9 @@ class ConfigValidator {
     }
     if (!LOCAL_ID.test(value)) {
       this.issue('INVALID_ID', path, 'ID must use lower-case letters, digits, underscores or hyphens.');
+    } else if (Object.hasOwn(Object.prototype, value)) {
+      /* Kennungen werden Objektschlüssel; „constructor" träfe die eingebaute Funktion. */
+      this.issue('INVALID_ID', path, 'ID must not be a reserved JavaScript property name.');
     }
     return value;
   }
@@ -730,13 +733,17 @@ function parseEnergyLoad(
   return {
     id: validator.localId(validator.required(object, 'id', path), `${path}.id`),
     name: validator.string(validator.required(object, 'name', path), `${path}.name`, 'energy source name'),
-    entityId: validator.entityId(
+    entityId: validator.entityIdRef(
       validator.required(object, 'entityId', path),
       `${path}.entityId`,
       'sensor',
     ),
     ...(group === undefined ? {} : { group }),
   };
+}
+
+function nullableSensorRef(validator: ConfigValidator, value: unknown | Missing, path: string): string | null {
+  return value === MISSING || value === null ? null : validator.entityIdRef(value, path, 'sensor');
 }
 
 function parseEnergy(
@@ -757,22 +764,37 @@ function parseEnergy(
     validator.exactKeys(sensors, ['productionPower', 'consumptionPower'], `${path}.sensors`);
     /* Mehrere Erzeuger (PV-Dach, Balkonkraftwerk …) stehen als Liste; ein einzelner bleibt die Zeichenkette,
        die jede bestehende Konfiguration schon trägt. */
+    /* Energie liest Sensoren nur mit: ein Leistungssensor darf zugleich als
+       Gerät in seinem Raum stehen (die Steckdose in der Küche). Als Deklaration
+       gezählt, scheiterte jede solche Auswahl an DUPLICATE_ENTITY_ID und das
+       Speichern mit 500. Doppelt innerhalb der Energie bleibt verboten. */
     const productionValue = validator.required(sensors, 'productionPower', `${path}.sensors`);
     if (Array.isArray(productionValue)) {
       const ids = productionValue.map((entry, index) =>
-        validator.entityId(entry, `${path}.sensors.productionPower[${index}]`, 'sensor'));
+        validator.entityIdRef(entry, `${path}.sensors.productionPower[${index}]`, 'sensor'));
       const unique = [...new Set(ids.filter(Boolean))];
       if (unique.length !== ids.length) {
         validator.issue('DUPLICATE_ID', `${path}.sensors.productionPower`, 'Production sensors must be unique.');
       }
       productionPower = unique.length === 0 ? null : unique.length === 1 ? unique[0] : unique;
     } else {
-      productionPower = validator.nullableEntityId(productionValue, `${path}.sensors.productionPower`, 'sensor');
+      productionPower = productionValue === MISSING || productionValue === null
+        ? null
+        : validator.entityIdRef(productionValue, `${path}.sensors.productionPower`, 'sensor');
     }
     const loadValue = validator.required(sensors, 'consumptionPower', `${path}.sensors`);
     const loads = loadValue === MISSING ? undefined : validator.array(loadValue, `${path}.sensors.consumptionPower`);
     consumptionPower = (loads ?? []).map((load, index) =>
       parseEnergyLoad(validator, load, `${path}.sensors.consumptionPower[${index}]`));
+    const energyIds = new Set([productionPower ?? []].flat());
+    consumptionPower.forEach((load, index) => {
+      if (!load.entityId) return;
+      if (energyIds.has(load.entityId)) {
+        validator.issue('DUPLICATE_ENTITY_ID', `${path}.sensors.consumptionPower[${index}].entityId`,
+          `Entity ID "${load.entityId}" is already used by the energy configuration.`);
+      }
+      energyIds.add(load.entityId);
+    });
     duplicateIds(validator, consumptionPower.map((load, index) => ({
       id: load.id,
       path: `${path}.sensors.consumptionPower[${index}].id`,
@@ -787,14 +809,10 @@ function parseEnergy(
   let drawnToday: string | null = null;
   if (kpis) {
     validator.exactKeys(kpis, ['producedToday', 'consumedToday', 'fedInToday', 'drawnToday'], `${path}.kpis`);
-    producedToday = validator.nullableEntityId(
-      validator.required(kpis, 'producedToday', `${path}.kpis`), `${path}.kpis.producedToday`, 'sensor');
-    consumedToday = validator.nullableEntityId(
-      validator.required(kpis, 'consumedToday', `${path}.kpis`), `${path}.kpis.consumedToday`, 'sensor');
-    fedInToday = validator.nullableEntityId(
-      validator.required(kpis, 'fedInToday', `${path}.kpis`), `${path}.kpis.fedInToday`, 'sensor');
-    drawnToday = validator.nullableEntityId(
-      validator.required(kpis, 'drawnToday', `${path}.kpis`), `${path}.kpis.drawnToday`, 'sensor');
+    producedToday = nullableSensorRef(validator, validator.required(kpis, 'producedToday', `${path}.kpis`), `${path}.kpis.producedToday`);
+    consumedToday = nullableSensorRef(validator, validator.required(kpis, 'consumedToday', `${path}.kpis`), `${path}.kpis.consumedToday`);
+    fedInToday = nullableSensorRef(validator, validator.required(kpis, 'fedInToday', `${path}.kpis`), `${path}.kpis.fedInToday`);
+    drawnToday = nullableSensorRef(validator, validator.required(kpis, 'drawnToday', `${path}.kpis`), `${path}.kpis.drawnToday`);
   }
 
   return {

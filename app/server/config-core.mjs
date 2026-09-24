@@ -1181,6 +1181,11 @@ export async function serveHouseholdModuleToggle(req, res, moduleId, context) {
     }
     jsonResponse(res, 200, { ok: true, module: moduleId, enabled: result.enabled, etag: result.etag });
   } catch (error) {
+    /* Eine fehlende Voraussetzung (etwa Media ohne einen einzigen Mediaplayer)
+       ist kein Serverfehler: 409 mit dem Grund, damit die Oberfläche ihn nennt. */
+    if (typeof error?.code === 'string' && error.code.startsWith('HOUSEHOLD_CONFIG_')) {
+      return jsonResponse(res, 409, { ok: false, code: error.code, message: error.message });
+    }
     console.warn('[hauser] Modulschalter fehlgeschlagen:', error?.code ?? error);
     jsonResponse(res, 500, { ok: false, code: 'MODULE_WRITE_FAILED', message: 'Das Modul konnte nicht geschaltet werden.' });
   }
@@ -1308,6 +1313,57 @@ export async function serveHouseholdEnergyMarks(req, res, context) {
   } catch (error) {
     console.warn('[hauser] Zettelplätze fehlgeschlagen:', error?.code ?? error);
     jsonResponse(res, 500, { ok: false, code: 'ENERGY_MARKS_WRITE_FAILED', message: 'Die Zettelplätze konnten nicht gespeichert werden.' });
+  }
+}
+
+/* Raum umbenennen (wie die iOS-App mit Apple Home): ein Name, getrimmt, mit
+   einfachen Leerzeichen, höchstens 60 Zeichen. Alles andere ist kein Name. */
+export function normalizeRoomRename(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const roomId = typeof payload.roomId === 'string' ? payload.roomId : '';
+  const name = typeof payload.name === 'string' ? payload.name.replace(/\s+/g, ' ').trim() : '';
+  if (!roomId || !name || name.length > 60) return null;
+  return { roomId, name };
+}
+
+export async function serveHouseholdRoomName(req, res, context) {
+  try {
+    context.assertSetupRecoveryHealthy();
+    const rename = normalizeRoomRename(await readRoomImageJsonBody(req));
+    if (!rename) {
+      return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Der Raumname ist ungültig.' });
+    }
+    const matches = rawHeaderValues(req, 'if-match');
+    if (matches.length !== 1) {
+      return jsonResponse(res, 428, { ok: false, code: 'CONFIG_PRECONDITION_REQUIRED', message: 'Der Household-ETag fehlt.' });
+    }
+    const result = await context.configMutations.run(() => {
+      context.assertSetupRecoveryHealthy();
+      const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
+      if (matches[0] !== snapshot.etag) return { type: 'stale' };
+      const document = snapshot.document;
+      const room = Array.isArray(document.rooms) ? document.rooms.find((entry) => entry?.id === rename.roomId) : null;
+      if (!room) return { type: 'missing' };
+      room.name = rename.name;
+      const written = writeRoomImageHousehold(
+        context.householdConfigPath,
+        document,
+        context.publishStep,
+        context.latchSetupRecoveryFailure,
+        context.assertSetupRecoveryHealthy,
+      );
+      return { type: 'written', etag: written.etag };
+    });
+    if (result.type === 'stale') {
+      return jsonResponse(res, 412, { ok: false, code: 'CONFIG_PRECONDITION_FAILED', message: 'Die Household Config wurde zwischenzeitlich geändert.' });
+    }
+    if (result.type === 'missing') {
+      return jsonResponse(res, 404, { ok: false, code: 'ROOM_NOT_FOUND', message: 'Den Raum gibt es nicht.' });
+    }
+    jsonResponse(res, 200, { ok: true, roomId: rename.roomId, name: rename.name, etag: result.etag });
+  } catch (error) {
+    console.warn('[hauser] Raum umbenennen fehlgeschlagen:', error?.code ?? error);
+    jsonResponse(res, 500, { ok: false, code: 'ROOM_RENAME_FAILED', message: 'Der Raum konnte nicht umbenannt werden.' });
   }
 }
 

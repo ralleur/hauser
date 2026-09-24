@@ -33,7 +33,10 @@ export async function deriveOvercastVariant(assetId, {
   provider,
   toProviderInput = finalAvifToProviderJpeg,
   toFinal = providerPngToFinalAvif,
-  buildPrompt = () => buildRoomImagePrompt('overcast', { ...OVERCAST_PROMPT_SPEC, preserveFeatures: [...OVERCAST_PROMPT_SPEC.preserveFeatures] }),
+  /* Das Haus von außen braucht sein eigenes Rezept: mit dem Raumrezept wurde
+     aus dem Außenbild ein Zimmer (R14b). */
+  stylePreset = OVERCAST_PROMPT_SPEC.stylePreset,
+  buildPrompt = () => buildRoomImagePrompt('overcast', { ...OVERCAST_PROMPT_SPEC, stylePreset, preserveFeatures: [...OVERCAST_PROMPT_SPEC.preserveFeatures] }),
   signal,
 } = {}) {
   if (!assetStore) return { ok: false, code: 'ROOM_IMAGE_STORE_INVALID' };

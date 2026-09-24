@@ -201,6 +201,10 @@ export class AdapterRuntime {
     return this.#backend.getStatistics?.(request) ?? {};
   }
 
+  async getEnergyPrefs(): Promise<unknown> {
+    return this.#backend.getEnergyPrefs?.() ?? null;
+  }
+
   /* Bewohner aus Home Assistant (Paket 8). Ohne fähiges Backend leer — die
      Einstellungen zeigen dann nur den Hinweis, dass nichts zu wählen ist. */
   async listPersonSources(): Promise<PersonSource[]> {
@@ -406,7 +410,11 @@ export class AdapterRuntime {
     if (outcome === 'external') return; // fremde Änderung: nur übernehmen
     // confirmed | contradicted → Intent auflösen; bei Widerspruch springt die
     // gemergte Sicht damit auf den Server-Wert zurück (docs/02).
-    if (outcome === 'contradicted') {
+    /* Ein Widerspruch braucht einen Server-Wert: verschwindet das Gerät (HA lädt
+       eine Integration neu), gibt es nichts, worauf die Oberfläche zurückspringen
+       und wackeln könnte — Kachel, Detail und Klimakarte lasen sonst `.on` von
+       nichts (Stresshaus, Unruhe 2026-09-24). Der Intent verfällt trotzdem. */
+    if (outcome === 'contradicted' && value !== undefined) {
       const optimistic = this.#intents.get(entityId)?.value;
       this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic, server: value });
     }
@@ -423,7 +431,7 @@ export class AdapterRuntime {
     const intent = this.#intents.get(entityId);
     if (!intent) return; // kein offener Intent (schon bestätigt/verworfen)
     const server = this.store.get(entityId)?.value;
-    this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic: intent.value, server });
+    if (server !== undefined) this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic: intent.value, server });
     this.#intents.delete(entityId);
     this.#clearTimers(entityId);
   }

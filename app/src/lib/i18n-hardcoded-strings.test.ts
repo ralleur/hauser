@@ -38,6 +38,8 @@ const ALLOWED_FILES: Readonly<Record<string, string>> = {
   'lib/components/ai/AiNewFeatureDialog.svelte': 'Werkstatt-Funktion „KI-Anpassung“',
   'neutral/NeutralHarness.svelte': 'Test-Harness, nicht Teil der Oberfläche',
   'lib/components/SimulationPanel.svelte': 'Werkstatt-Simulator hinter einer versteckten Geste, kein Teil der Oberfläche',
+  'lib/stresshaus/hostile-home.ts': 'Testdaten des Stresshauses — Namen, wie sie in Home Assistant stehen',
+  'lib/stresshaus/grossrunde.ts': 'Testdaten der Stresshaus-Großrunde',
 };
 
 /* Die KI-Werkstatt bleibt im Public-Export außen vor (tools/public-export).

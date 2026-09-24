@@ -114,6 +114,7 @@ import {
   serveHouseholdConfigMode,
   serveHouseholdEnergy,
   serveHouseholdEnergyMarks,
+  serveHouseholdRoomName,
   serveHouseholdModuleToggle,
   setupRecoveryFailure,
   setupRecoveryRequiredError,
@@ -633,10 +634,19 @@ export function createHmiServer(
   /* Trübe Bildvariante (Paket 13): ein weiterer Anbieteraufruf aus dem fertigen
      Tagbild. Läuft über denselben Provider wie die Generierung — also auch mit
      der ChatGPT-Anmeldung, anders als die Fenstererkennung. */
-  const deriveOvercastForRoomImage = async (assetId) => deriveOvercastVariant(assetId, {
+  const deriveOvercastForRoomImage = async (assetId, { stylePreset } = {}) => deriveOvercastVariant(assetId, {
     assetStore: roomImageAssets,
     provider: resolvedRoomImageProvider,
+    stylePreset: stylePreset ?? overcastPresetFromHousehold(assetId),
   });
+  /* Nachtlauf und Knopfdruck kennen den Auftrag nicht mehr: dort sagt der
+     Haushalt, ob das Set das Haus von außen ist. */
+  const overcastPresetFromHousehold = (assetId) => {
+    const read = householdConfigReader.read();
+    try {
+      return read.ok && JSON.parse(read.body)?.exterior?.hero?.assetId === assetId ? 'hauser-exterior-v1' : undefined;
+    } catch { return undefined; }
+  };
 
   /* Feinschliff frisch veröffentlichter Bildsets (Paket 13): Flächenerkennung
      und trübe Variante laufen direkt nach dem Wizard, damit ein neues Set
@@ -925,6 +935,7 @@ export function createHmiServer(
       void serveHaCameraProxy(req, res, {
         connectionMode: haConnectionMode,
         supervisorClientFactory: haSupervisorClientFactory,
+        directAccess: () => resolveServerHaAccess(configStore, haConnectionMode),
       });
     } else if (ambientMapPublicRoute(req.url || '/')) {
       /* Plan §6.1/§6.3: Status und Asset des Ambient-Screens liest auch ein
@@ -972,6 +983,18 @@ export function createHmiServer(
       });
     } else if ((req.url || '').split('?')[0] === '/api/household-energy') {
       jsonResponse(res, 403, { ok: false, code: 'ENERGY_ROUTE_FORBIDDEN', message: 'Energie-Auswahl nicht freigegeben.' });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room-name' && req.method === 'PUT'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdRoomName(req, res, {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room-name') {
+      jsonResponse(res, 403, { ok: false, code: 'ROOM_RENAME_FORBIDDEN', message: 'Raum umbenennen nicht freigegeben.' });
     } else if ((req.url || '').split('?')[0] === '/api/household-energy-marks' && req.method === 'PUT'
         && requestOriginAllowed(req, allowedOrigins)
         && normalizedHouseholdConfigMode === 'active') {
@@ -1023,6 +1046,7 @@ export function createHmiServer(
       void serveSetupDiscovery(res, {
         connectionMode: haConnectionMode,
         supervisorClientFactory: haSupervisorClientFactory,
+        directAccess: () => resolveServerHaAccess(configStore, haConnectionMode),
       });
     } else if (setupIsRequired && (req.url || '') === '/api/setup/activate'
         && setupRequestAllowed(req, allowedOrigins)) {

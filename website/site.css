@@ -5,22 +5,40 @@
    statt importiert, damit die Seite unabhängig vom App-Build ausgeliefert
    werden kann (GitHub Pages serviert dieses Verzeichnis direkt).
 
-   Zwei Stimmen wie im Produkt: Instrument Serif spricht für das Haus und
-   die Haushaltsaussagen (Hauptzeilen, Manifest), Inter für alles, was
-   bedient wird (Knöpfe, Umschalter, Fließtext).
+   Zwei Stimmen wie im Produkt, aus einer Familie (R48): Alegreya spricht für
+   das Haus und die Haushaltsaussagen (Hauptzeilen, Manifest), Alegreya Sans
+   für alles, was bedient wird (Knöpfe, Umschalter, Fließtext).
    ============================================ */
 
 @font-face {
-  font-family: 'Inter Variable';
-  src: url('fonts/InterVariable-subset.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Instrument Serif';
-  src: url('fonts/InstrumentSerif-subset.woff2') format('woff2');
+  font-family: 'Alegreya Sans';
+  src: url('fonts/AlegreyaSans-Regular-subset.woff2') format('woff2');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('fonts/AlegreyaSans-Medium-subset.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('fonts/AlegreyaSans-Bold-subset.woff2') format('woff2');
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya';
+  src: url('fonts/Alegreya-subset.woff2') format('woff2');
+  font-weight: 400 600;
+  font-style: normal;
   font-display: swap;
 }
 
@@ -38,8 +56,8 @@
   --accent-cool: #4e9cd0;
   --border: #2c353f;
 
-  --font-body: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Instrument Serif', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'Alegreya Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Alegreya', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   /* Die Dämmerung des Produkts, hier als Überblendzeit der Bühne. */

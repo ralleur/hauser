@@ -49,8 +49,17 @@ export function fittext(node: HTMLElement, params: FitTextParams = {}) {
         return range.getBoundingClientRect().width;
       } catch { return node.scrollWidth; }
     };
+    /* Die Box ebenso exakt: clientWidth rundet, und ein Wert, dessen Kasten
+       sich an den Text schmiegt (55,17 px), galt abgerundet (55) als zu breit
+       und schrumpfte bis zur Untergrenze. */
+    const boxWidth = () => {
+      const box = getComputedStyle(node);
+      return node.getBoundingClientRect().width
+        - (Number.parseFloat(box.paddingLeft) || 0) - (Number.parseFloat(box.paddingRight) || 0)
+        - (Number.parseFloat(box.borderLeftWidth) || 0) - (Number.parseFloat(box.borderRightWidth) || 0);
+    };
     const clipped = () => (
-      node.scrollHeight > node.clientHeight + 1 || textWidth() > node.clientWidth
+      node.scrollHeight > node.clientHeight + 1 || textWidth() > boxWidth() + 0.01
     );
 
     let size = base;

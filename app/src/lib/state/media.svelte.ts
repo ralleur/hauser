@@ -19,8 +19,15 @@ import { MEDIA_SEED } from './app.svelte.ts';
 import type { MediaValue, ReconcileEvent } from '../adapter/types.ts';
 
 /* ── Lesen: gemergte Sicht ── */
+/* Kennt Home Assistant den Player gerade nicht (Integration lädt neu, Gerät
+   entfernt), gilt er als nicht verfügbar — statt `undefined`, an dem der
+   Medien-Bildschirm abstürzte (Stresshaus, Unruhe 2026-09-24). */
+const UNAVAILABLE_MEDIA: MediaValue = {
+  playing: false, volume: 0, source: null, available: false, track: null, artist: null, duration: 0,
+};
+
 export function mergedMedia(playerId: string): MediaValue {
-  return runtime.merged(mediaEntityId(playerId)) as MediaValue;
+  return (runtime.merged(mediaEntityId(playerId)) as MediaValue | undefined) ?? UNAVAILABLE_MEDIA;
 }
 
 export function mediaStateLabel(v: MediaValue): string {

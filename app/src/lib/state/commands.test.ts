@@ -1,3 +1,4 @@
+import { pressRemoteKey, remoteEntityFor } from './remote-keys.ts';
 import { describe, expect, it, vi } from 'vitest';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import {
@@ -64,6 +65,26 @@ describe('Mobiler Urlaubsmodus', () => {
       { on: false },
     );
 
+    dispatch.mockRestore();
+  });
+});
+
+describe('Fernbedienung eines Fernsehers', () => {
+  it('findet das remote-Geschwister eines Medienspielers und sonst nichts', () => {
+    const known = [{ entityId: 'media_player.apple_tv' }, { entityId: 'remote.apple_tv' }, { entityId: 'remote.soundbar_x' }];
+    expect(remoteEntityFor('media_player.apple_tv', known)).toBe('remote.apple_tv');
+    expect(remoteEntityFor('media_player.soundbar', known)).toBeNull();
+    expect(remoteEntityFor('remote.apple_tv', known)).toBeNull();
+  });
+
+  it('schickt „Zurück" als menu, alles andere unverändert', () => {
+    const dispatch = vi.spyOn(runtime, 'dispatch').mockImplementation(() => {});
+    pressRemoteKey('remote.apple_tv', 'back');
+    pressRemoteKey('remote.apple_tv', 'select');
+    expect(dispatch.mock.calls.map(([cmd]) => [cmd.domain, cmd.service, cmd.data])).toEqual([
+      ['remote', 'send_command', { command: 'menu' }],
+      ['remote', 'send_command', { command: 'select' }],
+    ]);
     dispatch.mockRestore();
   });
 });

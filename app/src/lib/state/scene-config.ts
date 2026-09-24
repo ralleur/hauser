@@ -134,7 +134,10 @@ export function deleteScene(config: SceneConfig, roomId: string, id: SceneId): S
   return cleared;
 }
 
-export function sceneDefIn(config: SceneConfig, roomId: string, id: SceneId): SceneDef {
+/* Hat ein Raum keine Szene mehr (alle ausgeblendet oder gelöscht), gibt es
+   nichts zu finden — der Szenen-Editor stürzte daran ab, als er annahm, es
+   komme immer eine zurück (Stresshaus, Großrunde 2026-09-24). */
+export function sceneDefIn(config: SceneConfig, roomId: string, id: SceneId): SceneDef | undefined {
   const list = sceneList(config, roomId);
   return list.find((s) => s.id === id) ?? list[0];
 }

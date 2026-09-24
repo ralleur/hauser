@@ -34,6 +34,8 @@ export const outdoor = $state<OutdoorReading>({
   tempDelta: null,
   condition: null,
   windSpeed: null,
+  sunrise: null,
+  sunset: null,
 });
 
 const restoredOutdoor = snapshot.restoreSync();
@@ -68,6 +70,8 @@ export async function refreshWeather(): Promise<void> {
       outdoor.tempDelta = reading.tempDelta;
       outdoor.condition = reading.condition;
       outdoor.windSpeed = reading.windSpeed;
+      outdoor.sunrise = reading.sunrise ?? null;
+      outdoor.sunset = reading.sunset ?? null;
       void snapshot.save({ ...reading });
     }
   } catch { /* offline / Timeout: letzter Wert bleibt stehen */ }

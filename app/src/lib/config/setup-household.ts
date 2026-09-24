@@ -285,10 +285,16 @@ export function omitSetupEntity(
   return next;
 }
 
+/* Eine Kennung wird Objektschlüssel (Gerätereihenfolge, Anzeige je Raum).
+   „constructor" gibt es auf jedem Objekt schon — ein Raum dieses Namens legte
+   die App beim Start lahm (Stresshaus, Großrunde 2026-09-24). */
+const RESERVED_IDS = new Set(Object.getOwnPropertyNames(Object.prototype).map((key) => key.toLowerCase()));
+
 function slug(value: string, fallback: string): string {
   const normalized = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  return normalized || fallback;
+  if (!normalized) return fallback;
+  return RESERVED_IDS.has(normalized) ? `${normalized}_1` : normalized;
 }
 
 function uniqueSlug(value: string, fallback: string, used: Set<string>): string {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import phoneHome from '../components/phone/PhoneHomeFeed.svelte?raw';
 import phoneQuickActions from '../components/phone/PhoneQuickActions.svelte?raw';
+import phoneHomeExtras from '../components/phone/PhoneHomeExtras.svelte?raw';
 import climatePill from '../components/ClimatePill.svelte?raw';
 import roomCard from '../components/phone/RoomSummaryCard.svelte?raw';
 import roomSheet from '../components/phone/RoomControlSheet.svelte?raw';
@@ -138,20 +139,21 @@ describe('phone home source, command and modal boundaries', () => {
     );
   });
 
-  it('keeps the mobile quick action enabled as a bidirectional toggle', () => {
-    expect(phoneQuickActions).toMatch(/onclick=\{togglePhoneAction\}/);
-    expect(phoneQuickActions).toMatch(/disabled=\{!online\}/);
-    expect(phoneQuickActions).not.toMatch(/disabled=\{!online \|\| actionActive\}/);
-    expect(phoneQuickActions).toContain('actionActive ? m.phone_vacation_off_label() : m.phone_vacation_on_label()');
+  it('lets each custom quick button run its steps and show a single switch as pressed', () => {
+    // Die Leiste gehört dir (wie die iOS-App): ein eigener Knopf löst seine
+    // Schritte aus; gesperrt ist er nur offline und nur, wenn er etwas tut.
+    expect(phoneQuickActions).toMatch(/onclick=\{\(\) => onAction\(item\)\}/);
+    expect(phoneQuickActions).toMatch(/disabled=\{!online && item\.steps\.length > 0\}/);
+    expect(phoneQuickActions).toMatch(/aria-pressed=\{item\.steps\.length === 1 \? quickActionActive\(item\) : undefined\}/);
   });
 
   it('opens the quick-action editor on long press, locked in operate mode', () => {
     // Gleicher Griff wie auf der Raum-Kachel: konfigurieren nur im
-    // Bearbeiten-Modus, der kurze Tipp bleibt das Schalten.
+    // Bearbeiten-Modus, der kurze Tipp bleibt das Auslösen.
     expect(phoneQuickActions).toMatch(
-      /use:longpress=\{\{ onLongPress: whenEditable\(openPhoneActionEdit\) \}\}/,
+      /use:longpress=\{\{ onLongPress: whenEditable\(\(\) => openEdit\(item\)\) \}\}/,
     );
-    expect(phoneShell).toMatch(/<PhoneActionEdit\s*\/>/);
+    expect(phoneHomeExtras).toMatch(/<QuickActionEdit\s*\/>/);
   });
 
   it('implements the shared modal lifecycle, focus trap, close paths and outer outro', () => {

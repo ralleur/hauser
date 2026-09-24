@@ -7,6 +7,7 @@ import {
   HA_SUPERVISOR_WEBSOCKET_URL,
   readHaDiscoverySnapshot,
   readSupervisorToken,
+  createHaSupervisorClient,
 } from './ha-supervisor.mjs';
 import { HA_GATEWAY_PATH } from './ha-gateway.mjs';
 import {
@@ -471,14 +472,27 @@ export function haCameraProxyRoute(url) {
   return HA_CAMERA_PROXY_PATTERN.test(url) || HA_HLS_PROXY_PATTERN.test(url);
 }
 
-export async function serveHaCameraProxy(req, res, { connectionMode, supervisorClientFactory }) {
-  if (connectionMode !== 'supervisor') {
+/* Derselbe Zugang im Docker-Betrieb: HA-Adresse und Token aus der Einrichtung.
+   Die iOS-App hat keinen WebSocket und keinen HA-Token — Kamerabild und
+   Hausstruktur kommen für sie immer über den Server (Gegenprobe 2026-09-24). */
+function directHaClientFactory(access) {
+  const base = access.baseUrl.replace(/\/+$/, '');
+  return () => createHaSupervisorClient({
+    accessToken: access.token,
+    coreBaseUrl: `${base}/`,
+    websocketUrl: `${base.replace(/^http/, 'ws')}/api/websocket`,
+  });
+}
+
+export async function serveHaCameraProxy(req, res, { connectionMode, supervisorClientFactory, directAccess = () => null }) {
+  const access = connectionMode === 'supervisor' ? null : directAccess();
+  if (connectionMode !== 'supervisor' && !access) {
     jsonResponse(res, 404, { ok: false, code: 'HA_CAMERA_PROXY_NOT_AVAILABLE' });
     return;
   }
   const controller = new AbortController();
   res.on('close', () => controller.abort());
-  const client = supervisorClientFactory();
+  const client = (access ? directHaClientFactory(access) : supervisorClientFactory)();
   try {
     const upstream = await client.stream(req.url, { signal: controller.signal });
     if (controller.signal.aborted) return;
@@ -513,17 +527,25 @@ export function serveHaConnection(res, { connectionMode, supervisorAvailable }) 
 
 /* Areas, Geräte, Entitäten und States über den internen Zugang. Nur im
    App-Modus erreichbar; im direkten Modus entdeckt weiterhin der Browser. */
-export async function serveSetupDiscovery(res, { connectionMode, supervisorClientFactory }) {
-  if (connectionMode !== 'supervisor') {
+/* Die iOS-App hat keinen WebSocket und fragt die Struktur des Hauses über den
+   Server ab (Raumbearbeitung: Geräte hinzufügen). Im Docker-Betrieb kennt der
+   Server HA-Adresse und Token aus der Einrichtung — dieselben, mit denen er für
+   die App schaltet. Vorher gab es die Abfrage nur im Add-on, und in der iOS-App
+   ließ sich bei einer Docker-Installation kein Gerät einem Raum zuordnen
+   (Stresshaus-Gegenprobe 2026-09-24). */
+export async function serveSetupDiscovery(res, { connectionMode, supervisorClientFactory, directAccess = () => null }) {
+  const access = connectionMode === 'supervisor' ? null : directAccess();
+  if (connectionMode !== 'supervisor' && !access) {
     jsonResponse(res, 404, {
       ok: false,
       code: 'SETUP_DISCOVERY_NOT_AVAILABLE',
-      message: 'Die serverseitige Entdeckung gibt es nur im Home-Assistant-App-Modus.',
+      message: 'Die serverseitige Entdeckung braucht den App-Modus oder eine eingerichtete Home-Assistant-Verbindung.',
     });
     return;
   }
+  const factory = access ? directHaClientFactory(access) : supervisorClientFactory;
   try {
-    const snapshot = await withSupervisorClient(supervisorClientFactory, readHaDiscoverySnapshot);
+    const snapshot = await withSupervisorClient(factory, readHaDiscoverySnapshot);
     jsonResponse(res, 200, { ok: true, ...snapshot }, { 'cache-control': 'no-store' });
   } catch (error) {
     jsonResponse(res, Number.isInteger(error?.status) ? error.status : 502, {

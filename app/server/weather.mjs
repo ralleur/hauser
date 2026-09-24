@@ -27,6 +27,9 @@ export function openMeteoForecastUrl({ latitude, longitude }) {
     hourly: 'temperature_2m',
     past_hours: '1',
     forecast_hours: '1',
+    /* Auf- und Untergang für den Sonnenbogen über der Energie. */
+    daily: 'sunrise,sunset',
+    forecast_days: '1',
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${params}`;
@@ -100,6 +103,8 @@ export function createWeatherService({
           updatedAt: new Date(now()).toISOString(),
           current: forecast.current ?? null,
           hourly: forecast.hourly ?? null,
+          daily: forecast.daily ?? null,
+          utc_offset_seconds: forecast.utc_offset_seconds ?? null,
         };
         cache = { data, at: now() };
         return data;

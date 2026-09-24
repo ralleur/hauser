@@ -10,13 +10,14 @@ own terms.
 Fonts (bundled in app/public/fonts/ and, for the project page, website/fonts/)
 ------------------------------------------------------------------------------
 
-Inter — SIL Open Font License 1.1
-  Copyright (c) The Inter Project Authors
-  Full license: app/public/fonts/LICENSE-Inter-OFL.txt
+Alegreya Sans — SIL Open Font License 1.1
+  Copyright 2013 The Alegreya Sans Project Authors (https://github.com/huertatipografica/Alegreya-Sans)
+  Full license: app/public/fonts/LICENSE-Alegreya-OFL.txt
 
-Instrument Serif — SIL Open Font License 1.1
-  Copyright (c) The Instrument Serif Project Authors
-  Full license: app/public/fonts/LICENSE-InstrumentSerif-OFL.txt
+Alegreya — SIL Open Font License 1.1
+  Copyright 2011 The Alegreya Project Authors (https://github.com/huertatipografica/Alegreya)
+  Full license: app/public/fonts/LICENSE-Alegreya-OFL.txt
+  Also bundled with the documentation site (docs-site/src/assets/fonts/).
 
 Caveat — SIL Open Font License 1.1
   Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)

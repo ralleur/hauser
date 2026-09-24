@@ -119,6 +119,14 @@ export function exteriorAssetUrl(assetId: string, variant: EnergyVariant): strin
   return `/assets/room-images/${assetId}/${variant === 'day' ? 'light' : 'dark'}.avif`;
 }
 
+/* Die trübe Fassung des Hauses (wie die iOS-App): der Assistent zeichnet das
+   eigene Haus auch bewölkt, der Platzhalter bringt seine mit. Fehlt sie beim
+   eigenen Haus, lädt das Bild nicht und das Tagbild bleibt sichtbar. */
+export function energyOvercastUrl(baseUrl: string, assetId: string | null): string {
+  if (assetId) return `/assets/room-images/${assetId}/overcast.avif`;
+  return `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}energy/overcast.avif`;
+}
+
 function polygonArea(points: RegionLike['points']): number {
   let area = 0;
   for (let i = 0; i < points.length; i++) {

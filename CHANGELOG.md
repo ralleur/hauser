@@ -3,7 +3,179 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
-## [Unreleased]
+## [0.23.0] - 2026-09-24
+
+### Added
+
+- **The TV gets its remote.** When Home Assistant places a remote beside a
+  media player, as it does for an Apple TV, the device detail shows a
+  direction pad with select in the middle and back, home and play below —
+  as in the iOS app.
+- **The phone greets on special days.** Birthdays, holidays and the first
+  snow now show their line at the top of the phone's home, with the same
+  confetti as the panel; the rooms move down instead of being covered.
+- **Adding a device celebrates.** In the room configuration the plus springs
+  into a gold check, six sparks fly up, and the device moves into the room.
+- **Today's energy balance.** A second tap on “Today” lays the day's balance
+  beside the energy wall: the share of your use that came from your own sun,
+  the gap the grid filled, and two bars on one kWh axis — produced above,
+  consumed below, the part used at home bridged in gold. A tap on a piece
+  shows its paper note with share and whether it was measured or calculated.
+  On the phone the balance sits directly under “Today”. It reads the daily
+  meters Hauser knows or, without them, the meters of Home Assistant's energy
+  dashboard since midnight — as in the iOS app.
+- **The sun above the energy.** An arc between sunrise and sunset sits under
+  the day's figures on the panel and beside the title on the phone: the path
+  already walked drawn through, the one ahead dotted, flatter in winter; under
+  clouds only a pale shimmer, at night the sun rests. Hauser asks the weather
+  service it already uses for the times.
+- **The house follows the weather.** When it is cloudy the energy screen
+  shows the overcast version of the house (the placeholder brings its own, a
+  house drawn by the assistant has one too), and rain and snow fall over the
+  whole picture — as in the iOS app, and switched off with the weather on the
+  stage.
+- **The phone's quick bar is yours.** Its four fields are filled in “Adjust
+  home” (swipe left on the rooms): all off, the central temperature over two
+  fields or compact as a thermometer with the home average, and your own
+  buttons. A button of your own runs its steps with one tap — scenes and
+  devices from any room (toggle, on or off) and vacation mode — and a long
+  press in edit mode opens its sheet with name, symbol and steps. The fixed
+  vacation button is gone; a device you had placed on it becomes a button of
+  your own, and a running vacation keeps its button so you can end it.
+- **Cameras together.** When a room has several cameras, they sit side by
+  side in one split view with fine seams; with an odd number the first takes
+  the full width. The room configuration switches it off, and the iOS app
+  reads the same switch.
+- **Rename a room where you set it up.** A tap on the room's name (with the
+  pencil) in the room configuration renames it for the whole household — on
+  the panel, the phone and in the iOS app, which now uses the same way on a
+  Home Assistant server instead of keeping the name on one device.
+- **Cameras before or after the tiles.** A camera stands above the device
+  tiles when it comes before the first tile in the room's order, otherwise
+  below — as in the iOS app. On the panel you drag it in the device list; in
+  the phone's room configuration an arrow on the camera card moves it.
+
+## [0.22.1] - 2026-09-24
+
+### Fixed
+
+- **Energy totals appear.** Week, month and total now count the meters Home
+  Assistant already knows from its energy dashboard: grid import and feed-in,
+  solar and battery; house consumption is balanced the way the dashboard does
+  it. Setup never recorded such meters, so “Total” stayed empty in every home
+  and week and month were estimated from power sensors. Where no dashboard is
+  set up, the note under “Total” now says what it needs.
+
+### Changed
+
+- **The mode switch in the title bar is the h signet.** In use mode the h
+  stands alone; in edit mode the gold dot sits on it. Switching lets the dot
+  spring in or pop away, and the new mode shows beside the h for two seconds.
+  The h takes the colour of the date on the left, light over an image and dark
+  on a plain surface, on the panel and in the iOS app.
+
+## [0.22.0] - 2026-09-24
+
+### Changed
+
+- **Hauser writes in its own hand.** One type family now carries both voices:
+  Alegreya Sans for everything you operate, Alegreya for the paper — the
+  greeting in standby, notes, the calendar sheet and the energy figures. It
+  replaces Inter and Instrument Serif on the panel, the phone, the iOS app, the
+  project page and the docs. Figures stand upright and keep their width, so a
+  clock or a slider value never jumps; every letter of the six languages is
+  part of the font.
+- **The wordmark “hauser” beside the h signet is drawn from the same family**
+  and no longer depends on a font installed on the viewer's device.
+
+### Fixed
+
+- **A sensor tile keeps its value at full size.** A value whose box was a
+  fraction of a pixel wider than a whole pixel counted as too long and shrank
+  to the smallest size, for example “21 °C”.
+- **The media screen stays up when a player vanishes for a moment.** While
+  Home Assistant reloads an integration, the player shows as unavailable
+  instead of taking the screen down; the climate stepper ignores a thermostat
+  it cannot see.
+- **The iOS app works with a Docker installation, too.** Adding devices to a
+  room and camera pictures reached Home Assistant through Hauser only in the
+  Home Assistant app setup; with Docker the iOS app could not assign a device
+  and cameras stayed black. Hauser now uses the connection from setup for both.
+
+## [0.21.5] - 2026-09-24
+
+### Fixed
+
+- **A room called “Constructor” no longer stops Hauser from starting.** The
+  name became an internal ID that every JavaScript object already carries, and
+  the start check failed with “The safe check failed”. Setup now gives such a
+  room a safe ID, and the configuration check refuses reserved IDs.
+- **Lists with two entries sharing one ID keep working.** A CalDAV list can
+  hand out the same ID twice; the notes page, the standby screen and the phone
+  then failed with “each_key_duplicate”. The second entry gets a counter, and
+  ticking it off still reaches the right item — in the web app and the iOS app.
+- **The scene editor survives a room without scenes**, and a device that
+  disappears while its command is under way (Home Assistant reloads an
+  integration) no longer takes its tile or detail down.
+- **Turning on Media without any media player now says so** instead of just
+  failing: “No media player found. Media can be turned on after ‘Reload rooms
+  and devices’.”
+
+### Added
+
+- **Stress house, big round.** Every device type with every kind of broken
+  data, forty more rooms, floods of events and list entries, every button and
+  slider inside every device detail, scenes and room editing, a Home Assistant
+  that restarts and drops devices, an empty house, an all-unavailable house and
+  an imperial one — in the web app and the iOS app. The fixes above are what it
+  found.
+
+## [0.21.4] - 2026-09-24
+
+### Fixed
+
+- **A device detail opens even when Home Assistant lists an option twice.**
+  A robot vacuum reporting its fan speeds as `quiet, quiet, max` took the whole
+  view down with "each_key_duplicate"; modes, presets, sources and speeds are
+  now listed once each.
+- **The notes page survives a reminder with an unreadable due date.** A to-do
+  item whose due value is not a date stopped the page with "Invalid time
+  value"; such an item now simply shows no due date.
+- **Energy settings save when a sensor also appears in a room.** Choosing the
+  power sensor of a plug that is already shown in its room as a consumer was
+  rejected as a duplicate and the save ended in an error. Energy only reads a
+  sensor, so it may appear in a room as well; the same sensor twice within the
+  energy selection is still refused.
+
+### Added
+
+- **Stress house.** Before each release the built app is set up against a
+  simulated Home Assistant full of real-world pitfalls and clicked through
+  end to end — every room, every tile with its detail, every tab and settings
+  section, the standby screen and the phone layout. The three fixes above are
+  its first findings.
+
+## [0.21.3] - 2026-09-24
+
+### Fixed
+
+- **Home opens again when two devices share a name across domains.** Hauser
+  named its device tiles after the entity ID without the domain, so
+  `switch.hallway` and `light.hallway` (Home Assistant's "switch as light"
+  helper) or `media_player.tv` and `remote.tv` got the same name. In one room
+  the home screen then failed with "each_key_duplicate", and tapping one tile
+  could switch or open the other device. The second device now keeps its full
+  entity ID.
+
+## [0.21.2] - 2026-09-23
+
+### Fixed
+
+- **A house picture from the assistant turns grey on cloudy days as a house.**
+  The overcast version that follows every new picture set was drawn with the
+  room recipe, so an exterior set could come back as a room. It now keeps the
+  recipe of the job that created the set, and the nightly run and the manual
+  button recognise the picture assigned to "Outside (energy)".
 
 ## [0.21.1] - 2026-09-23
 

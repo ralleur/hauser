@@ -2,13 +2,20 @@
   import { m } from '../../../paraglide/messages.js';
   import { ENERGY_SENSORS, appState } from '../../state/app.svelte.ts';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
-  import { energyAssetUrl, exteriorAssetUrl } from '../energy-hero-assets.ts';
+  import { energyAssetUrl, energyOvercastUrl, exteriorAssetUrl } from '../energy-hero-assets.ts';
+  import { settingsValues } from '../../state/settings.svelte.ts';
+  import { simulation } from '../../state/simulation.svelte.ts';
+  import { outdoor } from '../../state/weather.svelte.ts';
+  import { resolvedWeatherCondition } from '../../state/hero-weather.ts';
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
   import { energyView, loadBreakdown } from '../../state/energy.svelte.ts';
   import {
-    energyCurve, energyPeriodTotals, energyYesterdayCurve, initEnergyHistory, periodWindow,
+    energyCurve, energyPeriodTotals, energyTodayInput, energyYesterdayCurve, initEnergyHistory, periodWindow,
   } from '../../state/energy-history.svelte.ts';
   import { energyPanelData, type EnergyPeriod } from '../../state/energy-periods.ts';
+  import { energyBalanceToday } from '../../state/energy-balance.ts';
+  import EnergyBalanceView from '../EnergyBalanceView.svelte';
+  import SunArc from '../SunArc.svelte';
   import { intlLocale } from '../../state/locale.svelte.ts';
   import { projectPhoneEnergy } from '../../state/phone-energy.ts';
 
@@ -20,9 +27,17 @@
      direkt auf dem Bild, und ein Nachtbild unter hellem Grund wird grau. */
   const heroDay = $derived(appState.theme === 'light');
   const exteriorAssetId = $derived(roomHeroConfig(EXTERIOR_HERO_ID)?.assetId ?? null);
-  const heroUrl = $derived(exteriorAssetId
-    ? exteriorAssetUrl(exteriorAssetId, heroDay ? 'day' : 'night')
-    : energyAssetUrl({ baseUrl: import.meta.env.BASE_URL, sun: { day: heroDay }, fallbackTheme: appState.theme }));
+  /* Bei Wolken, Regen oder Schnee die trübe Fassung des Hauses (wie die iOS-App). */
+  const dull = $derived.by(() => {
+    if (!settingsValues.ambientWeather) return false;
+    const sky = resolvedWeatherCondition(simulation.weather, typeof location === 'undefined' ? '' : location.search, outdoor.condition);
+    return sky !== null && sky !== 'sunny';
+  });
+  const heroUrl = $derived(heroDay && dull
+    ? energyOvercastUrl(import.meta.env.BASE_URL, exteriorAssetId)
+    : exteriorAssetId
+      ? exteriorAssetUrl(exteriorAssetId, heroDay ? 'day' : 'night')
+      : energyAssetUrl({ baseUrl: import.meta.env.BASE_URL, sun: { day: heroDay }, fallbackTheme: appState.theme }));
 
   /* Der Zeitraum gehört zur Auswertung, nicht zum Live-Wert: „Jetzt" bleibt
      oben stehen, egal was unten gewählt ist. */
@@ -48,6 +63,9 @@
   const e = $derived(energyView());
   const sums = $derived(period === 'today' ? null : energyPeriodTotals(period));
   const panel = $derived(energyPanelData(e, period, 'flow', sums));
+  /* Heute steht die Tagesbilanz wie in der iOS-App: Sonnenanteil und Lücke
+     statt einzelner Tageszahlen. */
+  const balance = $derived(period === 'today' ? energyBalanceToday(energyTodayInput(e.today)) : null);
   const curve = $derived(energyCurve());
   const model = $derived(projectPhoneEnergy(e, loadBreakdown(), panel, {
     curve, yesterday: energyYesterdayCurve(), nowFraction, loadSourceCount: ENERGY_SENSORS.load.length,
@@ -91,6 +109,7 @@
       style:--phone-energy-hero={`url("${heroUrl}")`}>
   <header class="phone-energy-header">
     <h1 bind:this={titleAnchor} id="phone-energy-title" tabindex="-1">{m.phone_energy_title()}</h1>
+    <div class="phone-energy-sun"><SunArc width={136} height={58} /></div>
     {#if model.status.kind !== 'available'}
       <p class="phone-energy-status" role="status">{model.status.text}</p>
     {/if}
@@ -123,7 +142,9 @@
     </div>
     <p class="phone-energy-range">{rangeLabel}</p>
 
-    {#if model.lead}
+    {#if balance}
+      <div class="phone-energy-balance"><EnergyBalanceView {balance} compact /></div>
+    {:else if model.lead}
       <p class="phone-energy-lead">
         <span class="phone-energy-lead-label">{model.lead.label}</span>
         <span class="phone-energy-lead-value num">{model.lead.value}<span class="phone-energy-unit">{model.lead.unit}</span></span>
@@ -154,7 +175,7 @@
       </p>
     {/if}
 
-    {#if model.rest.length}
+    {#if model.rest.length && !balance}
       <dl class="phone-energy-kpis">
         {#each model.rest as metric (metric.label)}
           <div>

@@ -30,7 +30,7 @@
   import { m } from '../../paraglide/messages.js';
   const room = $derived(appState.rooms.find((r) => r.id === sceneEdit.roomId));
   const sceneOptions = $derived(scenes(sceneEdit.roomId));
-  const scene = $derived(sceneOptions.length > 0 ? sceneDefOf(sceneEdit.roomId, sceneEdit.sceneId) : null);
+  const scene = $derived(sceneOptions.length > 0 ? sceneDefOf(sceneEdit.roomId, sceneEdit.sceneId) ?? null : null);
   const members = $derived(room ? sceneMembers(room.id, sceneEdit.sceneId) : []);
   const defaults = $derived(new Set(room ? sceneDefaults(room.id) : []));
   const customized = $derived(room ? sceneCustomized(room.id, sceneEdit.sceneId) : false);
@@ -215,7 +215,7 @@
     importOpen = false;
     importFailed = false;
     // untrack: der Name ändert sich beim Tippen — sonst liefe der Effect mit.
-    untrack(() => { nameDraft = scenes(sceneEdit.roomId).length ? sceneDefOf(sceneEdit.roomId, sceneId).label : ''; });
+    untrack(() => { nameDraft = scenes(sceneEdit.roomId).length ? sceneDefOf(sceneEdit.roomId, sceneId)?.label ?? '' : ''; });
   });
 
   /* Die gewählte Szene wird als Vorschau gefahren (Öffnen + Tab-Wechsel).

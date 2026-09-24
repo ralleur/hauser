@@ -37,11 +37,16 @@
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
   );
   let QuickActionsComponent = $state<Component<QuickActionsProps> | null>(null);
+  let HomeExtras = $state<Component<{ currentRoom: string | null }> | null>(null);
 
   onMount(() => {
     let cancelled = false;
     void import('./PhoneQuickActions.svelte').then(({ default: component }) => {
       if (!cancelled) QuickActionsComponent = component;
+    }).catch(() => {});
+    /* Gruß und Knopf-Blatt (wie die iOS-App) kommen mit der Leiste nach dem ersten Bild. */
+    void import('./PhoneHomeExtras.svelte').then(({ default: component }) => {
+      if (!cancelled) HomeExtras = component;
     }).catch(() => {});
     return () => { cancelled = true; };
   });
@@ -134,6 +139,8 @@
         onDragEnd: () => { layoutDrag = null; },
       }}>
   <h1 bind:this={titleAnchor} id="phone-target-title" class="phone-visually-hidden" tabindex="-1">{m.phone_home()}</h1>
+
+  {#if HomeExtras}<HomeExtras {currentRoom} />{/if}
 
   {#if openWindows > 0}
     <aside class="phone-home-notice is-warning" aria-label={m.phone_security_note()}>

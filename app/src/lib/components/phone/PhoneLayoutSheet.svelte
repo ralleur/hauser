@@ -14,6 +14,55 @@
     PHONE_ROOMS_PER_ROW, phoneLayout, resetPhoneLayout, setPhoneQuickActions, setPhoneRoomsPerRow,
   } from '../../state/phone-layout.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+  import Icon from '../Icon.svelte';
+  import { dragreorder } from '../../actions/dragreorder.ts';
+  import { openCentralClimateEdit } from '../../state/overlay.svelte.ts';
+  import {
+    QUICK_FIELDS, addQuickItem, canAddQuick, moveQuickItem, quickBarItems, quickEdit, removeQuickItem, resetQuickBar,
+    usedFields, type QuickItem, type QuickKind,
+  } from '../../state/phone-quick-bar.svelte.ts';
+
+  /* Die vier Felder der Schnellaktions-Leiste (wie die iOS-App): belegt in
+     Gold, jede Belegung eine Zeile mit Griff und Minus, darunter was noch
+     passt. Ein Tipp auf die Zeile öffnet, was dahinter liegt. */
+  const quickItems = $derived(quickBarItems());
+  const used = $derived(usedFields(quickItems));
+  let quickListEl = $state<HTMLElement>();
+  const ADD_OPTIONS: { kind: QuickKind; label: () => string }[] = [
+    { kind: 'off', label: () => m.quick_off() },
+    { kind: 'climate', label: () => m.quick_add_climate() },
+    { kind: 'climateCompact', label: () => m.quick_climate_compact() },
+    { kind: 'action', label: () => m.quick_action() },
+  ];
+  const addable = $derived(ADD_OPTIONS.filter((option) => canAddQuick(quickItems, option.kind)));
+  function quickTitle(item: QuickItem): string {
+    if (item.kind === 'off') return m.quick_off();
+    if (item.kind === 'climate') return m.quick_climate();
+    if (item.kind === 'climateCompact') return m.quick_climate_compact();
+    return item.name || m.quick_action();
+  }
+  function quickMeta(item: QuickItem): string {
+    if (item.kind === 'off') return m.quick_meta_off();
+    if (item.kind === 'climate') return m.quick_meta_climate();
+    if (item.kind === 'climateCompact') return m.quick_meta_compact();
+    const steps = item.steps.length === 0 ? m.quick_meta_empty() : item.steps.length === 1 ? m.quick_meta_step() : m.quick_meta_steps({ count: String(item.steps.length) });
+    return `${m.quick_meta_off()} · ${steps}`;
+  }
+  function quickIcon(item: QuickItem): string {
+    if (item.kind === 'off') return 'i-power';
+    if (item.kind === 'climate') return 'i-plus-minus';
+    if (item.kind === 'climateCompact') return 'i-thermometer';
+    return item.icon;
+  }
+  function openQuick(item: QuickItem): void {
+    if (item.kind === 'action') quickEdit.id = item.id;
+    else if (item.kind === 'climate' || item.kind === 'climateCompact') openCentralClimateEdit();
+  }
+  function addQuick(kind: QuickKind): void {
+    const item = addQuickItem(kind);
+    /* Ein neuer Knopf ist leer — gleich belegen, statt ihn erst suchen zu müssen. */
+    if (item && kind === 'action') quickEdit.id = item.id;
+  }
 
   let { open, drag, onclose }: { open: boolean; drag: number | null; onclose: () => void } = $props();
   let dialog = $state<HTMLElement>();
@@ -77,7 +126,7 @@
         <h2>{m.phone_layout_title()}</h2>
       </div>
       <div class="more-sheet-header-actions">
-        <button class="pls-reset pressable" type="button" onclick={resetPhoneLayout}>{m.layout_default()}</button>
+        <button class="pls-reset pressable" type="button" onclick={() => { resetPhoneLayout(); resetQuickBar(); }}>{m.layout_default()}</button>
         <button class="more-sheet-action pressable" type="button" aria-label={m.common_close()} onclick={close}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg>
         </button>
@@ -104,5 +153,47 @@
         <span class="pls-switch-knob"></span>
       </button>
     </div>
+
+    {#if phoneLayout.quickActions}
+      <div class="pls-row pls-quick">
+        <div class="pls-fields" aria-hidden="true">
+          {#each Array.from({ length: QUICK_FIELDS }, (_, index) => index) as field (field)}
+            <span class="pls-field" class:is-used={field < used}></span>
+          {/each}
+        </div>
+        <p class="pls-quick-count">{m.quick_fields_used({ used: String(used), all: String(QUICK_FIELDS) })}</p>
+        <ul class="pls-quick-list" bind:this={quickListEl}>
+          {#each quickItems as item (item.id)}
+            <li class="pls-quick-row" data-reorder-row={item.id}>
+              <button class="cfg-handle" type="button" aria-label={quickTitle(item)} disabled={quickItems.length < 2}
+                      use:dragreorder={{ id: item.id, list: () => quickListEl, enabled: quickItems.length > 1, onReorder: moveQuickItem }}>
+                <Icon name="i-dots-grid" cls="icon icon-sm" />
+              </button>
+              <button class="pls-quick-open pressable" type="button" onclick={() => openQuick(item)}>
+                <span class="pls-quick-icon is-{item.kind}" aria-hidden="true"><Icon name={quickIcon(item)} cls="icon icon-md" /></span>
+                <span class="pls-quick-label">
+                  <span>{quickTitle(item)}</span>
+                  <small>{quickMeta(item)}</small>
+                </span>
+              </button>
+              <button class="pls-quick-remove pressable" type="button" aria-label={m.quick_remove()} onclick={() => removeQuickItem(item.id)}>
+                <Icon name="i-minus" cls="icon icon-sm" />
+              </button>
+            </li>
+          {/each}
+        </ul>
+        {#if addable.length === 0}
+          <p class="pls-quick-count">{m.quick_full()}</p>
+        {:else}
+          <div class="pls-quick-add">
+            {#each addable as option (option.kind)}
+              <button class="pls-quick-chip pressable" type="button" onclick={() => addQuick(option.kind)}>
+                <Icon name="i-plus" cls="icon icon-sm" />{option.label()}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>

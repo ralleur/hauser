@@ -4,20 +4,39 @@
    Animationen NUR transform + opacity (docs/01, docs/03)
    ============================================ */
 
-/* ── ADR-011: Inter Variable, self-hosted, ohne blockierende FOIT-Phase ── */
+/* ── R48 (docs/23): Hausers Handschrift — eine Familie, zwei Stimmen ──
+   Alegreya Sans steuert, Alegreya erzählt. Self-hosted, Subsets aus
+   tools/subset-alegreya.py (Latin + Latin-Ext, Versalziffern als Grundform).
+   size-adjust gleicht die kleinere x-Höhe der Sans an, damit die Typo-Skala
+   ihre Größen behält. */
 @font-face {
-  font-family: 'Inter Variable';
-  src: url('/fonts/InterVariable-subset.woff2') format('woff2');
-  font-weight: 400 700;
+  font-family: 'Alegreya Sans';
+  src: url('/fonts/AlegreyaSans-Regular-subset.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
+  size-adjust: 106%;
 }
-
-/* ── ADR-012: Instrument Serif, nur für die Ambient-Begrüßung ── */
 @font-face {
-  font-family: 'Instrument Serif';
-  src: url('/fonts/InstrumentSerif-subset.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Alegreya Sans';
+  src: url('/fonts/AlegreyaSans-Medium-subset.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('/fonts/AlegreyaSans-Bold-subset.woff2') format('woff2');
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+@font-face {
+  font-family: 'Alegreya';
+  src: url('/fonts/Alegreya-subset.woff2') format('woff2');
+  font-weight: 400 600;
   font-style: normal;
   font-display: swap;
 }
@@ -124,9 +143,9 @@ button {
 .status-group-end { justify-self: end; }
 
 /* ── Modus-Umschalter (Bearbeiten ⇄ Bedienen) ──
-   Zeichen statt Beschriftung: Ring mit Kern, im Bearbeiten-Modus zusätzlich
-   Strahlen. Ring in der kühlen Akzentfarbe, Kern in der Textfarbe — dieselbe
-   Paarung wie in der Vorlage. */
+   Das Hauser-h statt einer Beschriftung: allein im Bedienen-Modus, mit dem
+   goldenen Punkt im Bearbeiten-Modus. Es nimmt die Farbe des Datums links —
+   auf Bild hell, auf Fläche dunkel, ohne eigene Regel je Screen. */
 .mode-toggle-wrap {
   position: relative;
   display: grid;
@@ -141,48 +160,85 @@ button {
   background: none;
 }
 .mode-toggle-mark {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   overflow: visible;
+  color: var(--color-text-secondary);
 }
-.mode-toggle-ring {
+.mode-toggle-h path {
   fill: none;
-  stroke: var(--color-accent-warm);
-  stroke-width: 2.6;
-}
-.mode-toggle-core { fill: var(--color-text-primary); }
-/* Getrennt: Ring und Strahlen in der Fehlerfarbe — das Rad ist die einzige
-   Verbindungsanzeige der Kopfzeile (Owner-Wunsch 2026-09-12). */
-.app.is-disconnected .mode-toggle-ring,
-.app.is-disconnected .mode-toggle-rays path { stroke: var(--color-error); }
-.mode-toggle-rays path {
-  fill: none;
-  stroke: var(--color-accent-warm);
-  stroke-width: 2.2;
+  stroke: currentColor;
+  stroke-width: 64;
   stroke-linecap: round;
-  animation: mode-rays-in var(--duration-normal) var(--ease-out) both;
 }
-@keyframes mode-rays-in {
-  from { opacity: 0; transform: scale(0.72); }
-  to { opacity: 1; transform: scale(1); }
+/* Getrennt: das h in der Fehlerfarbe — das Zeichen ist die einzige
+   Verbindungsanzeige der Kopfzeile (Owner-Wunsch 2026-09-12). */
+.app.is-disconnected .mode-toggle-mark { color: var(--color-error); }
+.mode-toggle-dot {
+  fill: var(--color-accent-warm);
+  transform-box: fill-box;
+  transform-origin: center;
 }
-.mode-toggle-rays { transform-origin: 50% 50%; }
+/* Auftritt und Abgang des Punkts aus der Owner-Vorlage; Längen in Einheiten
+   des 512er-Rasters. Nur Transform und Opacity. */
+.mode-toggle-dot.is-arriving { animation: mode-dot-in 0.64s ease-in-out both; }
+.mode-toggle-dot.is-leaving { animation: mode-dot-out 0.64s ease-in-out both; }
+@keyframes mode-dot-in {
+  0% { transform: translateY(-76px) scale(0.12); opacity: 0; }
+  55% { transform: translateY(5px) scale(1.12, 0.9); opacity: 1; }
+  80% { transform: translateY(-4px) scale(0.97, 1.03); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes mode-dot-out {
+  0% { transform: none; opacity: 1; }
+  14% { transform: translateY(7px) scale(1.12, 0.86); opacity: 1; }
+  38% { transform: translateY(-10px) scale(1.18); opacity: 1; }
+  100% { transform: translateY(-76px) scale(0.12); opacity: 0; }
+}
+
+/* Rechts neben dem h steht zwei Sekunden, was jetzt gilt — absolut gesetzt,
+   damit das h in der Mitte bleibt. */
+.mode-label {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  translate: 0 -50%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: mode-label 2s ease-in-out both;
+}
+.mode-label-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@keyframes mode-label {
+  0% { opacity: 0; transform: translateX(7px); }
+  12% { opacity: 1; transform: none; }
+  84% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(3px); }
+}
+@keyframes mode-label-reduced {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-toggle-dot.is-arriving { animation: none; }
+  .mode-toggle-dot.is-leaving { animation: none; opacity: 0; }
+  .mode-label { animation: mode-label-reduced 2s step-end both; }
+}
 
 /* ── „Arbeitet" (Paket 13) ──
-   Läuft im Hintergrund ein Raumbild-Auftrag, dreht sich dasselbe Zeichen. Ein
-   voller Ring sähe beim Drehen still aus, deshalb wird er zum angeschnittenen
-   Bogen — die vertraute Sprache fürs Warten, ohne die Form zu verlassen. Nur
-   Transform, also reine Compositor-Arbeit. */
+   Läuft im Hintergrund ein Raumbild-Auftrag, atmet dasselbe Zeichen im Takt
+   der Zeile daneben. Nur Opacity, also reine Compositor-Arbeit. */
 .mode-toggle-mark.is-busy {
-  animation: mode-busy-spin 2.4s linear infinite;
-  transform-origin: 50% 50%;
-}
-.mode-toggle-mark.is-busy .mode-toggle-ring {
-  stroke-dasharray: 33 14;
-  stroke-linecap: round;
-}
-@keyframes mode-busy-spin {
-  to { transform: rotate(360deg); }
+  animation: mode-busy-pulse 2.8s var(--ease-in-out) infinite;
 }
 
 /* Steht neben dem Zeichen, ohne es aus der Mitte zu schieben: absolut gesetzt
@@ -256,6 +312,20 @@ button {
 .mode-notice.is-warning {
   border-color: color-mix(in srgb, var(--color-warning) 55%, transparent);
   color: var(--color-warning);
+}
+/* Das h im Satz: eng beschnitten, Unterkante auf der Grundlinie wie ein
+   Buchstabe, Farbe aus dem Text. */
+.mode-notice-mark {
+  width: 0.66em;
+  height: 1.05em;
+  margin-inline: 0.12em;
+  overflow: visible;
+}
+.mode-notice-mark path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 64;
+  stroke-linecap: round;
 }
 @keyframes mode-notice-in {
   from { opacity: 0; transform: translate(-50%, -6px); }
@@ -1532,6 +1602,43 @@ button.security-bar {
   transition: background-color var(--duration-normal) var(--ease-out);
 }
 .action-btn:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+/* Fernbedienung (wie die iOS-App): Steuerkreuz im Kreis, Auswahl in der
+   Mitte; Zurück, Home und Play stehen darunter in der Aktionsreihe. */
+.remote-pad {
+  position: relative;
+  width: 216px;
+  aspect-ratio: 1;
+  margin: 0 auto var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface-2);
+}
+.remote-arrow,
+.remote-select {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text-primary);
+}
+.remote-arrow { width: 56px; height: 56px; }
+.remote-arrow.is-up { top: 6px; left: calc(50% - 28px); }
+.remote-arrow.is-down { bottom: 6px; left: calc(50% - 28px); }
+.remote-arrow.is-left { left: 6px; top: calc(50% - 28px); }
+.remote-arrow.is-right { right: 6px; top: calc(50% - 28px); }
+.remote-select {
+  width: 40%;
+  height: 40%;
+  top: 30%;
+  left: 30%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-1);
+}
+.remote-arrow:focus-visible,
+.remote-select:focus-visible {
   outline: 2px solid var(--color-accent-warm);
   outline-offset: 2px;
 }
@@ -3361,7 +3468,7 @@ button.security-bar {
   font-size: var(--text-lg);
 }
 
-/* Serif-Begrüßung (ADR-012) — einziger Einsatzort von --font-family-display */
+/* Serif-Begrüßung — die erzählende Stimme (Alegreya, R48) */
 .ambient-greeting {
   font-family: var(--font-family-display);
   font-size: var(--text-3xl);
@@ -4232,9 +4339,72 @@ button.security-bar {
 
 .re-suggest { animation: modal-enter var(--duration-quick) var(--ease-out) both; }
 .re-suggest-btn { cursor: pointer; }
+/* Raum umbenennen (wie die iOS-App): der Name selbst ist der Knopf, der Stift
+   daneben sagt es; die Eingabe steht an seiner Stelle im selben Maß. */
+.re-rename {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+.re-rename .icon { flex: none; opacity: 0.6; }
+.re-rename .room-sheet-title { margin: 0; }
+.re-rename-input {
+  min-width: 0;
+  width: min(100%, 22ch);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-accent-warm);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.re-rename-failed { margin: var(--space-2) 0 0; color: var(--color-error); }
 .re-icon-add {
   border-style: dashed;
   color: var(--color-text-tertiary);
+}
+.re-suggest-btn.is-celebrating .re-icon-add {
+  position: relative;
+  border-style: solid;
+  border-color: var(--color-accent-warm);
+  background: var(--color-accent-warm);
+  color: var(--color-text-on-accent);
+  animation: re-add-pop 260ms var(--ease-spring, var(--ease-out)) both;
+}
+.re-suggest-btn.is-celebrating {
+  animation: re-add-rise 180ms var(--ease-out) 240ms both;
+}
+.re-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--color-accent-warm);
+  transform: rotate(calc(var(--spark) * 60deg)) translateY(0);
+  animation: re-add-spark 380ms var(--ease-out) both;
+}
+@keyframes re-add-pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes re-add-spark {
+  from { opacity: 1; transform: rotate(calc(var(--spark) * 60deg)) translateY(0); }
+  to { opacity: 0; transform: rotate(calc(var(--spark) * 60deg)) translateY(-30px); }
+}
+@keyframes re-add-rise {
+  to { opacity: 0; transform: translateY(-12px); }
 }
 .re-tag {
   flex: none;

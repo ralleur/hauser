@@ -41,7 +41,10 @@ export async function setModuleEnabled(
       headers: { 'Content-Type': 'application/json', 'If-Match': etag },
       body: JSON.stringify({ enabled, name: label }),
     });
-    if (!written.ok) throw new Error('HOUSEHOLD_CONFIG_WRITE_FAILED');
+    if (!written.ok) {
+      const reason = await written.json().catch(() => null) as { code?: unknown } | null;
+      throw new Error(typeof reason?.code === 'string' ? reason.code : 'HOUSEHOLD_CONFIG_WRITE_FAILED');
+    }
 
     if (enabled) {
       moduleConfig.enabled.add(id);

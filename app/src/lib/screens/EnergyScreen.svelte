@@ -1,13 +1,17 @@
 <script lang="ts">
   import { SUN_ENTITY, appState } from '../state/app.svelte.ts';
-  import { energyCurve, energyPeriodTotals, initEnergyHistory } from '../state/energy-history.svelte.ts';
+  import { energyCurve, energyPeriodTotals, energyTodayInput, initEnergyHistory } from '../state/energy-history.svelte.ts';
+  import { energyBalanceToday } from '../state/energy-balance.ts';
   import { runtime } from '../adapter/runtime.svelte.ts';
   import { energyView, loadBreakdown } from '../state/energy.svelte.ts';
   import EnergyLoadOverlay from '../components/EnergyLoadOverlay.svelte';
+  import EnergyBalanceOverlay from '../components/EnergyBalanceOverlay.svelte';
+  import SunArc from '../components/SunArc.svelte';
   import {
     ENERGY_HERO_DEFAULT_RATIO,
     energyAssetUrl,
     energyFrameUrl,
+    energyOvercastUrl,
     exteriorAssetUrl,
     exteriorHeroFrame,
     loadEnergyHeroFrame,
@@ -34,6 +38,13 @@
   import { fmtKw } from '../format.ts';
 
   import { m } from '../../paraglide/messages.js';
+  import type { Component } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { settingsValues } from '../state/settings.svelte.ts';
+  import { simulation } from '../state/simulation.svelte.ts';
+  import { outdoor, refreshWeather } from '../state/weather.svelte.ts';
+  import { heroWeatherLayer, resolvedWeatherCondition } from '../state/hero-weather.ts';
+  import { prefersReducedMotion } from '../motion/index.ts';
   let period = $state<EnergyPeriod>('today');
 
   /* Live-Sicht aus realen HA-Sensoren (ADR-018); null = nicht konfiguriert
@@ -49,6 +60,16 @@
   }
   function closeLoadOverlay() {
     if (loadOverlay === 'open') loadOverlay = 'closing';
+  }
+
+  /* Tagesbilanz (wie die iOS-App): auf „Heute" tippt man ein zweites Mal,
+     dann legt sich die Bilanz als Scheibe rechts neben die Wand. Ohne
+     Erzeugungszähler gibt es sie nicht — dann ist „Heute" nur ein Zeitraum. */
+  const balance = $derived(energyBalanceToday(energyTodayInput(e.today)));
+  let balanceOverlay = $state<'hidden' | 'open' | 'closing'>('hidden');
+  function choosePeriod(id: EnergyPeriod) {
+    if (id === 'today' && period === 'today' && balance && !arrange) { balanceOverlay = 'open'; return; }
+    period = id;
   }
 
   /* Sonne und Dämmerung kommen aus derselben Quelle wie beim Raum (theme.svelte.ts):
@@ -67,6 +88,27 @@
   const energyHeroUrl = $derived(exteriorAssetId
     ? exteriorAssetUrl(exteriorAssetId, variant)
     : energyAssetUrl({ baseUrl: import.meta.env.BASE_URL, sun, fallbackTheme: appState.theme }));
+  /* Das Wetter über dem Haus (wie die iOS-App): bei Wolken die trübe Fassung
+     — anders als im Raum schon ohne Regen, denn draußen ist der Himmel das
+     halbe Bild —, Regen und Schnee fallen über das ganze Motiv. Folgt dem
+     Schalter für das Wetter auf der Bühne. */
+  const sky = $derived(settingsValues.ambientWeather
+    ? resolvedWeatherCondition(simulation.weather, typeof location === 'undefined' ? '' : location.search, outdoor.condition)
+    : null);
+  const overcastUrl = $derived(sky !== null && sky !== 'sunny' && variant === 'day'
+    ? energyOvercastUrl(import.meta.env.BASE_URL, exteriorAssetId) : null);
+  const weatherLayer = $derived.by(() => {
+    const layer = heroWeatherLayer(sky, outdoor.windSpeed, prefersReducedMotion());
+    return layer && !layer.still && !arrange ? layer : null;
+  });
+  let HeroWeather = $state<Component<{ layer: NonNullable<typeof weatherLayer> }> | null>(null);
+  $effect(() => { void refreshWeather(); });
+  $effect(() => {
+    if (!weatherLayer || HeroWeather) return;
+    void import('../components/HeroWeatherLayer.svelte')
+      .then((loaded) => { HeroWeather = loaded.default; })
+      .catch(() => { /* rein dekorativ */ });
+  });
   const counterHeroUrl = $derived(exteriorAssetId
     ? exteriorAssetUrl(exteriorAssetId, counterVariant)
     : energyAssetUrl({ baseUrl: import.meta.env.BASE_URL, sun: { day: counterVariant === 'day' }, fallbackTheme: appState.theme }));
@@ -325,9 +367,16 @@
      style={`--hero-ratio:${heroRatio.toFixed(4)}`} bind:this={stageEl}>
   <div class="energy-hero" aria-hidden="true">
     <div class="energy-hero-img" style:background-image={`url("${energyHeroUrl}")`}></div>
+    {#if overcastUrl}
+      <div class="energy-hero-img is-overcast" transition:fade={{ duration: 1200 }}
+           style:background-image={`url("${overcastUrl}")`}></div>
+    {/if}
     {#if counterOpacity > 0.005}
       <div class="energy-hero-img is-counter" style:opacity={counterOpacity}
            style:background-image={`url("${counterHeroUrl}")`}></div>
+    {/if}
+    {#if HeroWeather && weatherLayer}
+      <HeroWeather layer={weatherLayer} />
     {/if}
     <div class="energy-hero-scrim"></div>
   </div>
@@ -417,7 +466,8 @@
       {#each ENERGY_PERIODS as p (p.id)}
         <button class="scene-btn energy-period-btn pressable" type="button" role="radio"
                 aria-checked={period === p.id} class:is-active={period === p.id}
-                onclick={() => (period = p.id)}>
+                title={p.id === 'today' && period === 'today' && balance ? m.energy_balance_open() : undefined}
+                onclick={() => choosePeriod(p.id)}>
           {p.label}
         </button>
       {/each}
@@ -443,6 +493,9 @@
     {#if panel.hint}
       <p class="energy-hint">{panel.hint}</p>
     {/if}
+    <!-- Der Sonnenstand über dem Tag (wie die iOS-App); die Wand bleibt auch
+         beim Anordnen gleich groß, damit die Zettel nicht springen. -->
+    <SunArc width={300} height={104} />
   </div>
 
   {#if showCurve}
@@ -522,3 +575,8 @@
 <EnergyLoadOverlay mode={loadOverlay} {breakdown}
                    onRequestClose={closeLoadOverlay}
                    onClosed={() => (loadOverlay = 'hidden')} />
+{#if balance && balanceOverlay !== 'hidden'}
+  <EnergyBalanceOverlay mode={balanceOverlay} {balance}
+                        onRequestClose={() => { if (balanceOverlay === 'open') balanceOverlay = 'closing'; }}
+                        onClosed={() => (balanceOverlay = 'hidden')} />
+{/if}
