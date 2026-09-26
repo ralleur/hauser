@@ -423,6 +423,12 @@ async function main() {
         ],
       };
     const todos = home.states.filter((s) => s.entity_id.startsWith('todo.')).map((s) => s.entity_id);
+    /* Läden mit feindlichen Namen an die Listen binden: 60 Zeichen mit Emoji und ł, dazu einer ohne Liste — Web und iOS lesen dieselbe Konfiguration. */
+    const shoppingConfig = { version: 1, provider: 'ha', stores: [
+      { id: 'laden', label: '🛒 Łukasz’ Gemüseladen an der Straße mit dem sehr langen Namen', categories: [], entityId: 'todo.einkaufsliste' },
+      { id: 'leer', label: 'Leer', categories: [], entityId: 'todo.leer' },
+      { id: 'ohne', label: 'Ohne Liste', categories: [], entityId: null },
+    ] };
     const outfit = await evaluate(`(async () => {
       const out = [];
       const etagOf = async (path) => { const r = await fetch(path, { cache: 'no-store' }); await r.text(); return r.headers.get('etag'); };
@@ -438,6 +444,7 @@ async function main() {
       await put('/api/config', '/api/config', { updates: {
         'hmi:calendar-selected': ${JSON.stringify(JSON.stringify(calendars))},
         'hmi:reminders-selected': ${JSON.stringify(JSON.stringify(todos))},
+        'hmi:shopping-config:v1': ${JSON.stringify(JSON.stringify(shoppingConfig))},
       } });
       return out;
     })()`);

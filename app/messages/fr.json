@@ -690,6 +690,7 @@
   "sys_no_store": "Aucun magasin créé.",
   "sys_add_store": "Ajouter un magasin",
   "sys_new_store_name": "Nom du nouveau magasin",
+  "sys_store_name": "Nom du magasin",
   "sys_create": "Créer",
   "sys_store_note": "L'ordre des magasins et le parcours à travers les rayons valent sur tous les appareils. « Trier » sur la liste de courses classe les articles ouverts avec GPT‑5.6 Luna sans thinking ; « Annuler » rétablit l'ordre initial.",
   "sys_store_list": "Liste dans Home Assistant",

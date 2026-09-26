@@ -676,6 +676,7 @@
   "sys_no_store": "Nessun negozio creato.",
   "sys_add_store": "Aggiungi negozio",
   "sys_new_store_name": "Nome del nuovo negozio",
+  "sys_store_name": "Nome del negozio",
   "sys_create": "Crea",
   "sys_store_note": "L’ordine dei negozi e il percorso tra i reparti valgono su tutti i dispositivi. «Ordina» sulla lista della spesa dispone gli articoli aperti con GPT‑5.6 Luna senza thinking; «Annulla» ripristina l’ordine iniziale.",
   "sys_store_list": "Elenco in Home Assistant",

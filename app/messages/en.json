@@ -689,6 +689,7 @@
   "sys_no_store": "No shop created yet.",
   "sys_add_store": "Add shop",
   "sys_new_store_name": "Name of the new shop",
+  "sys_store_name": "Shop name",
   "sys_create": "Create",
   "sys_store_note": "Shop order and the route through the categories apply on every device. “Sort” on the shopping list arranges open items with GPT‑5.6 Luna without thinking; “Undo” restores the original order.",
   "sys_store_list": "List in Home Assistant",

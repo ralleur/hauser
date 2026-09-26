@@ -676,6 +676,7 @@
   "sys_no_store": "Nie utworzono jeszcze żadnego sklepu.",
   "sys_add_store": "Dodaj sklep",
   "sys_new_store_name": "Nazwa nowego sklepu",
+  "sys_store_name": "Nazwa sklepu",
   "sys_create": "Utwórz",
   "sys_store_note": "Kolejność sklepów i trasa przez kategorie obowiązują na wszystkich urządzeniach. „Sortuj” na liście zakupów porządkuje otwarte pozycje przy użyciu GPT‑5.6 Luna bez thinking; „Cofnij” przywraca pierwotną kolejność.",
   "sys_store_list": "Lista w Home Assistant",

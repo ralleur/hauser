@@ -86,6 +86,14 @@ export function deleteShoppingStore(id: StoreId): void {
   persist(shoppingConfig.stores.filter((entry) => entry.id !== id));
 }
 
+/* Umbenennen ändert nur die Anzeige; Kennung und zugeordnete Liste bleiben. */
+export function renameShoppingStore(id: StoreId, label: string): boolean {
+  const clean = label.trim().slice(0, 60);
+  if (!clean) return false;
+  persist(shoppingConfig.stores.map((store) => store.id === id ? { ...store, label: clean } : store));
+  return true;
+}
+
 export function setShoppingStoreEntity(id: StoreId, entityId: string | null): void {
   persist(shoppingConfig.stores.map((store) => store.id === id ? { ...store, entityId } : store));
 }

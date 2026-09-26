@@ -10,8 +10,9 @@ Status vocabulary:
 |---|---|
 | **Live** | Running daily on the author's wall panel |
 | **Built** | Implemented and working, less thoroughly exercised |
-| **Next** | Prioritised for the next beta feature slice |
-| **Planned** | Intended, designed, not built |
+| **Experimental** | Off by default, needs extra pieces, or not yet confirmed on real devices |
+| **Next** | The package being built now |
+| **Planned** | Intended, not built yet |
 | **Maybe** | Idea with merit, no decision |
 | **Not planned** | Deliberately out of scope |
 
@@ -19,58 +20,132 @@ Status vocabulary:
 
 ## Where the project is today
 
-Hauser is in its public technical beta, and it is what the author's own house
-runs on every day. The design system, Home Assistant and Jellyfin integrations,
-deterministic setup wizard, landscape panel, compact phone shell and everyday
-household screens are implemented. Two installation paths are built and
-exercised: a **Home Assistant App** that talks to Home Assistant through the
-Supervisor with no token in the browser, and Docker Compose for Container, NAS
-and plain Docker hosts. One external household has installed and run a published
-release independently ([#7](https://github.com/ralleur/hauser/issues/7), Docker
-Compose on Linux x86_64, roughly 370 entities across 8 areas).
+Hauser is in its public beta, and it is what the author's own house runs on
+every day. It comes two ways: as a **self-hosted panel for Home Assistant**,
+installed as a Home Assistant App or with Docker Compose, and as an **iOS app**
+for iPhone and iPad that runs with **Apple Home or Home Assistant**. The iOS app
+is a separate project and not part of the Hauser release; it is in beta through
+[TestFlight](https://testflight.apple.com/join/WPcA1eE1).
 
-No alpha was published; `v0.4.0-beta.1` was the first public release, and the
-beta line ran through `v0.4.0-beta.10`. From `v0.5.0` on the `-beta.N` suffix is
-gone: every release below `v1.0.0` is a beta, so the version number says it on
-its own.
+Other households now run Hauser as a Home Assistant App and with Docker
+Compose, including on a NAS, and their bug reports shape the releases
+([#7](https://github.com/ralleur/hauser/issues/7) was the first). Releases come
+in small packages, often several a week; the [changelog](CHANGELOG.md) carries
+every one of them. Recent packages gave Hauser its own typeface, let devices
+follow their Home Assistant areas, put a presence dot on room tiles, laid the
+standby week open on the street map, kept ticked-off shopping items in view for
+a day and made shops renamable.
 
-Since `v0.9.0` the work ships in small packages, one release each, rather than
-in milestones. Recent releases brought the layout menu and the swipe-away
-control surface on the panel, an all-rooms tile view beside the room picture,
-blinds as a household role handed over by the setup wizard, the thermostat as a
-tile with its own sheet, sensors that pick their own symbol, soft room
-transitions, and the layout and shopping sheets on the phone. The
-[changelog](CHANGELOG.md) carries every one of them.
+Every release is set up and clicked through against a simulated, deliberately
+hostile Home Assistant — broken devices, odd names, floods of entries, a server
+that restarts — in the web app and in the iOS app. Every fault a user reports
+becomes a permanent case there.
+
+No alpha was published; `v0.4.0-beta.1` was the first public release. From
+`v0.5.0` on the `-beta.N` suffix is gone: every release below `v1.0.0` is a
+beta, so the version number says it on its own.
 
 ---
 
-## Core interface
+## Next: a place for what the house wants to say
+
+Today a notification from Home Assistant appears as a floating tile. Two fit on
+screen; a third waits unseen, and the "open notifications" link of a push lands
+on the home screen because there is nothing else to open. The next package
+gives notifications a place:
+
+- **A Notifications screen** with everything open and a history, reached from a
+  "+N" beside the tiles and from the push link.
+- **A note from Home Assistant.** Pick a text entity; whatever Home Assistant
+  writes into it — "Paper bin tomorrow" — stands on the standby screen and the
+  pinboard until it is empty again. States become notes, events stay tiles.
+- **Home Assistant notifications in the iOS app**, through the Hauser server.
+  With Apple Home the app keeps showing what the device itself can see, and
+  says so.
+
+Home Assistant keeps doing the thinking; Hauser shows it.
+
+---
+
+## Rooms and control
 
 | Item | Status |
 |---|---|
-| Design tokens, motion spec, component catalog | **Live** |
-| Room overview with climate, lights, presence, window state | **Live** |
-| Data-driven room control surface with per-room controls | **Live** |
-| Optimistic UI with reconciliation and command queue | **Live** |
-| Home Assistant WebSocket integration, reconnect handling | **Live** |
-| Day/night theming driven by `sun.sun` | **Live** |
-| Five-state home appearance cycle: auto, UI-only light/dark, fixed day/evening | **Live** |
-| Device management in the UI — add, hide, assign to room, reorder | **Live** |
-| Custom room-background upload, replacement and default restore | **Live** |
-| Phone shell alongside the tablet panel shell | **Live** |
-| Layout menu on the stage: rooms per row, second control surface, all applied as you set them | **Live** |
-| All-rooms view: every room as a tile instead of one room picture | **Live** |
-| Swipe the control surface out of the picture, tap anywhere to bring it back | **Live** |
-| Phone: scrolling room grid with fixed quick actions and a layout sheet per device | **Live** |
-| Thermostat as a device-sized tile, controls in a sheet | **Live** |
-| Sensors pick their symbol from device class, unit or name | **Live** |
-| Blinds, shutters and awnings as a household role from the setup wizard | **Built** |
-| Weather over the room picture: rain, snow or a veil, off under reduced motion | **Built** |
-| Drag-and-drop reordering of rooms, devices, scenes and the phone bottom bar | **Built** |
-| Guided, OpenAI-assisted room image wizard in the HMI style | **Built** |
-| Hotel mode: a dedicated panel as a guest surface for one holiday apartment | **Built** |
-| Swipe navigation between screens | **Planned** |
-| Dynamic tile heights and a combined tile | **Maybe** |
+| Design tokens, motion system, own typeface (Alegreya Sans and Alegreya) | **Live** |
+| The room picture is the state: light, dusk, weather in the windows | **Live** |
+| Data-driven room control surface; every device type has a second level with everything it supports | **Live** |
+| Optimistic UI with undo instead of confirmation, reconnect handling | **Live** |
+| Day/night theming driven by `sun.sun`, five-state appearance cycle | **Live** |
+| Device management in the UI — add, hide, assign to room, drag to reorder | **Live** |
+| Layout menu on the stage, all-rooms tile view, swipe the control surface away | **Live** |
+| Phone: room grid, quick bar with four fields of your choice, room sheet configured in place | **Live** |
+| Thermostat as a tile, one central climate control for the house | **Live** |
+| Devices follow their Home Assistant area without reloading | **Built** |
+| Room tiles show presence while a sensor reports someone, and whether the room has a camera | **Built** |
+| Blinds, shutters and awnings as a household role; stop a moving blind with a tap | **Built** |
+| Scenes with a colour per lamp | **Built** |
+| Camera streams with still images as fallback | **Built** |
+| Hotel mode: a panel as a guest surface for one holiday apartment | **Experimental** |
+| A new Home Assistant area becomes a room of its own | **Planned** |
+| Swipe navigation between screens | **Maybe** |
+| A combined tile for several devices | **Maybe** |
+
+## Room pictures
+
+Every room has a picture in three lighting states. There are several ways to get
+your own rooms on screen: keep the bundled illustrations, upload your own JPEG,
+PNG, WebP or AVIF, or let a wizard turn a photo of your room into an
+illustration in the interface's style. The bundled illustrations are licensed
+under the repository's CC BY 4.0 asset boundary.
+
+The wizard currently needs an OpenAI account. That is meant as an interim
+solution: the goal is a picture of your own room without paying anyone.
+
+| Item | Status |
+|---|---|
+| Bundled illustrations, local upload, replacement and default restore | **Live** |
+| Guided room-image wizard with your own OpenAI account | **Built** |
+| iOS app: free drawing through Apple Intelligence on iOS 27 | **Experimental** |
+| iOS app: drawing with a free Cloudflare account | **Experimental** |
+| iOS app: copy the prompt into any image service, bring the picture back, mark the windows with a finger | **Built** |
+| Panel: the same copy-the-prompt path and marking windows by hand | **Planned** |
+| Panel: local models and your own API keys for other providers | **Planned** |
+
+## Everyday screens
+
+| Item | Status |
+|---|---|
+| Standby with clock, week strip, notes, shopping list, weather and moments | **Live** |
+| Optional street map of your own surroundings behind the standby screen | **Built** |
+| Calendar as one sheet of paper from your Home Assistant calendars | **Built** |
+| Shopping list: one Home Assistant to-do list per shop (Bring! works through its integration), Notion as an alternative, shops can be renamed | **Built** |
+| Phone shopping list as a checklist: tap to tick, undo, done items stay a day | **Built** |
+| Reminders as sticky notes per person | **Built** |
+| Presence and moments: greeting the first person home, birthdays, the first snow | **Built** |
+| Document access via Paperless-ngx, PIN protected | **Built** |
+| Reminders written back to Home Assistant to-do lists, so one list serves panel, phone and iPhone | **Planned** |
+| Film and episode dates from Radarr and Sonarr in the calendar | **Maybe** |
+
+## Notifications
+
+| Item | Status |
+|---|---|
+| Notification rules: you choose the entity and trigger, Home Assistant does the waiting, the panel shows a tile, optionally a push | **Built** |
+| Guided, portable laundry setup | **Built** |
+| Any automation can send its own notification with a `hauser_` id | **Built** |
+| Notifications screen with history, "+N" and a working push link | **Next** |
+| A note from Home Assistant on standby and pinboard | **Next** |
+| Home Assistant notifications in the iOS app | **Next** |
+| Quiet hours and dismissal across all devices | **Planned** |
+
+## Energy
+
+| Item | Status |
+|---|---|
+| Live load, solar and grid as notes pinned into a picture of your own house | **Live** |
+| Graceful empty states when PV or grid sensors are absent | **Live** |
+| Phone: watts now, a period with its curve and yesterday for comparison, the biggest consumers | **Built** |
+| Today's balance and the sun's arc above the house | **Built** |
 
 ## Media
 
@@ -78,75 +153,26 @@ transitions, and the layout and shopping sheets on the phone. The
 |---|---|
 | Jellyfin library, shelves, detail view | **Live** |
 | HLS playback with resume and progress | **Live** |
-| Room audio via Home Assistant media players | **Live** |
 | Player controls: audio track and subtitle language | **Built** |
+| Room audio via Home Assistant media players | **Experimental** |
 | Player volume control | **Planned** |
 | Request and recommendation integration | **Maybe** |
 
-## Energy
+## iOS app
+
+A native SwiftUI app, not a web view: the same rooms, words and gestures as the
+panel. It lives in its own repository and has its own release rhythm. Every
+fault found in the web app is checked in the iOS app and the other way round.
 
 | Item | Status |
 |---|---|
-| Live load and daily consumption from real sensors | **Live** |
-| Graceful empty states when PV or grid sensors are absent | **Live** |
-| Weather variants for the ambient room backgrounds | **Built** |
-
-## Everyday screens
-
-| Item | Status |
-|---|---|
-| Calendar, notes, reminders, shopping list | **Built** |
-| Phone shopping list as a checklist: tap a row to tick it, five seconds to undo | **Built** |
-| Laundry notifications from preconfigured Home Assistant status helpers | **Built** |
-| Guided, portable Home Assistant laundry setup | **Built** |
-| Generic notification core beyond laundry | **Planned** |
-| Document access via Paperless-ngx, PIN protected | **Built** |
-| Standby screen with clock, week strip, notes and shopping list | **Live** |
-| Optional street map of your own surroundings behind the standby screen | **Built** |
-| Aggregated daily events from multiple calendar sources | **Planned** |
-
-### Built for the first public beta: portable laundry notifications
-
-The guided setup is available under **System → Notifications → Laundry** without
-source-code or manual JSON changes. Households can bind compatible status entities
-or use the bundled power-sensor blueprint path.
-
-Users choose the sensor, review thresholds and hold times, preview the exact HA
-objects, then confirm explicitly. Cycle detection stays in Home Assistant so it
-keeps working while every Hauser screen is offline. The isolated integration
-smoke covers `running → done`, marker restoration after an HA restart and complete
-cleanup. Multi-device dismissal, quiet hours, browser push and additional
-notification channels remain later work.
-
-### Room images
-
-Hauser ships the existing AI-generated project illustrations as its room-image
-defaults and fallbacks. They are licensed under the repository's CC BY 4.0 asset
-boundary. One of the source photographs is published on the project website to
-show what the room-image wizard takes as input; the remaining private source
-photographs are not included.
-
-There are three ways to get your own rooms on screen. You can keep the bundled
-illustrations. You can upload, replace and remove a local JPEG, PNG, WebP or AVIF
-background under room editing without touching files or JSON. Or you can use the
-guided room-image wizard, which turns a photograph of your own room into an
-illustration in the interface's style and derives its lighting variants. The
-wizard needs your own OpenAI credentials, is entirely optional, and every other
-part of the product works without it.
-
-### Live beta polish: five-state home appearance cycle
-
-The Home appearance button rotates through five explicit states: **Auto** (the default, shown with
-the same A icon as Settings), **light interface with automatic backgrounds**,
-**dark interface with automatic backgrounds**, **light interface with the day
-background fixed**, and **dark interface with the evening background fixed**.
-The next tap returns to Auto.
-
-Interface and room-background policy are stored separately. Manual choices remain
-active until changed instead of silently expiring after 24 hours. The Home
-button and **Appearance** settings expose the same five-state source of truth;
-fixed-background states receive an additional non-colour indicator so the two
-light and two dark modes remain distinguishable.
+| Apple Home directly, without any server | **Built** |
+| Home Assistant through the Hauser App, paired with a QR code | **Built** |
+| Phone layout on iPhone, wall-panel layout on iPad | **Built** |
+| Widgets, Live Activity, Siri shortcut, share sheet for the shopping list | **Built** |
+| Shopping list sorted by aisle on the device with Apple Intelligence, offline | **Built** |
+| Six languages, like the panel | **Built** |
+| An Apple Watch app | **Planned** |
 
 ## Installation and operation
 
@@ -157,7 +183,10 @@ light and two dark modes remain distinguishable.
 | Guided setup wizard for Home Assistant and optional Jellyfin | **Live** |
 | Versioned household configuration with migration and fail-closed start | **Live** |
 | Persistent config, data and asset volumes; backup, restore, manual rollback | **Built** |
-| Multi-architecture images (`amd64`, `aarch64`) | **Built** |
+| Multi-architecture images (`amd64`, `aarch64`), a GitHub release per version | **Built** |
+| The question mark in the title bar sends a problem or a wish, no account needed | **Live** |
+| Companion app pairing with a one-time QR code and device tokens | **Experimental** |
+| Remote access through Tailscale, only for paired devices | **Experimental** |
 
 ---
 
@@ -166,31 +195,24 @@ light and two dark modes remain distinguishable.
 | Stage | Target | Exit evidence |
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
-| Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits; project illustrations remain the defaults and users can upload local room backgrounds |
-| Beta stabilisation | `v0.28.0` and later `v0.x` | An external real-home installation is done ([#7](https://github.com/ralleur/hauser/issues/7)); a release-to-release upgrade, backup/restore and rollback on an external installation are still outstanding before RC |
+| Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
+| Beta stabilisation | `v0.30.0` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
 | Release candidate | `v0.x.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
-The critical path is configuration, installation and upgrade evidence — not
-adding every feature in the backlog. The versioned external household
-configuration core is built and exercised with independent neutral fixtures.
-The source-built container/Compose installation path, persistent volumes,
-readiness contract, backup/restore helpers and deterministic Home Assistant setup
-wizard are built. Room creation, renaming, ordering and controlled deletion are
-available inside the product, and panel/phone layouts have been exercised from
-zero to twelve rooms. The isolated development pilot has passed both
-explicit-Area and no-Area onboarding, command/state echo, reconnect and
-persistence. Beta versioning, changelog, release-note structure and tag-gated
-quality/image automation are active. The Home Assistant App path is built and
-runs the author's own installation, so the browser no longer holds a Home
-Assistant token there. Portable laundry setup and the guided room-image wizard
-shipped as optional post-beta slices; neither is a v1 gate.
+Hauser stays below 1.0 for a good while yet, at least through the coming
+winter. 1.0 is meant as a stability promise to the people who use it, so it
+comes after months of daily use and feedback from other households, not on a
+date. Until then the work goes into details, design and speed rather than new
+modules, and the iOS app grows alongside.
 
-The mandatory external household has since installed and run a published release
-independently. What beta stabilisation still owes is the harder half of that
-evidence: an upgrade from one published release to the next, plus backup,
-restore and rollback, carried out on an installation the author does not
-operate.
+The critical path is configuration, installation and upgrade evidence — not
+adding every feature on this page. The versioned household configuration, the
+Home Assistant App, the Compose path with persistent volumes and backup and
+restore helpers, and the deterministic setup wizard are built and in use outside
+the author's home. Room creation, renaming, ordering and deletion happen inside
+the product, and panel and phone layouts are exercised from zero to twelve rooms
+and, in the simulated house, far beyond.
 
 A code-modifying AI agent that commits, pushes and redeploys the application is
 deliberately **not part of the portable product**. It remains an operator-owned
@@ -200,10 +222,11 @@ development workflow rather than a capability of the read-only Docker runtime.
 
 **Status: Built.**
 
-The interface ships in German, English, French, Italian, Portuguese and Polish.
-It follows the browser language unless a language is chosen in the settings, and
-switches without reloading — the wall panel keeps its connection and its entity
-cache. Dates, times and numbers follow the chosen language as well.
+The interface ships in German, English, French, Italian, Portuguese and Polish,
+on the panel and in the iOS app. It follows the browser language unless a
+language is chosen in the settings, and switches without reloading — the wall
+panel keeps its connection and its entity cache. Dates, times and numbers follow
+the chosen language as well.
 
 Translations live in `app/messages/` and are compiled into plain functions at
 build time, so six languages cost the initial bundle about 50 bytes. Adding a
@@ -211,9 +234,11 @@ language means adding one JSON file.
 
 Two honest caveats. The German and English catalogues are first-hand; French,
 Italian, Portuguese and Polish were written carefully but have not been reviewed
-by native speakers — corrections are very welcome. And Polish has three plural
-forms, which the message format does not yet express; the affected strings are
-phrased to avoid the plural rather than get it wrong.
+by native speakers — corrections are very welcome
+([#1](https://github.com/ralleur/hauser/issues/1)–[#4](https://github.com/ralleur/hauser/issues/4)).
+And Polish has three plural forms, which the message format does not yet
+express; the affected strings are phrased to avoid the plural rather than get it
+wrong.
 
 Room, device and scene names are **not** translated. They come from your own
 configuration, not from the interface.
@@ -222,16 +247,16 @@ configuration, not from the interface.
 
 ## Known gaps
 
-- The clean-room pilot proves the technical setup contract, not yet usability by
-  an external person or compatibility with a second real device topology.
-
-- A release-to-release upgrade, backup/restore and rollback have not yet been
-  carried out on an **external** installation. This is the main piece of evidence
-  still missing before a release candidate.
-- The first complete external contribution cycle has not happened yet; it remains
-  a goal of the beta rather than a claim made here.
-- The Home Assistant App path has been exercised by the author and by one
-  external bug report, not across a range of Home Assistant OS hardware.
+- A backup, restore and rollback has not yet been carried out and documented on
+  an **external** installation. External households do update from release to
+  release; this is the main piece of evidence still missing before a release
+  candidate.
+- Usability by someone new is known from bug reports and forum posts, not from
+  watching a first setup.
+- The first complete external contribution cycle has not happened yet; it
+  remains a goal of the beta rather than a claim made here.
+- The Home Assistant App path runs in the author's home and in a handful of
+  others, not across a range of Home Assistant OS hardware.
 - The full kiosk hardware measurement matrix remains incomplete; the
   instrumentation remains in the code.
 - The full icon catalogue is loaded lazily but still creates a large optional
@@ -246,6 +271,8 @@ configuration, not from the interface.
 | A Lovelace card version | The whole point is not being Lovelace — see `docs/00-architecture.md` |
 | Cloud accounts or hosted service | Local-first is a design constraint, not a stage |
 | Telemetry or analytics in the app | Same |
+| A separate Bring! connection | Bring! already reaches Hauser as a Home Assistant to-do list per shop |
+| Grocy | Pantry, best-before dates and recipes are outside what Hauser shows |
 | Support for backends the author cannot test against | Cannot be maintained honestly |
 | Gating features behind a paid tier in the public build | Every feature in the public repository stays available under the AGPL |
 

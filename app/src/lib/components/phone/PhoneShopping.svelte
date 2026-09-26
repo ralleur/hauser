@@ -25,18 +25,16 @@
   const sections = $derived(projectPhoneShoppingSections(
     shopping.sections, shopping.doneLog, now, shoppingConfig.stores, shoppingItemOrder(shopping.sections),
   ));
-  /* Erledigtes sammelt sich in einer Gruppe am Ende, der Laden steht klein daneben. */
-  const doneEntries = $derived(sections.flatMap((section) =>
-    section.done.map((item) => ({ store: section.id, storeTitle: section.title, item }))));
-
   const updatedLabel = $derived(shopping.updatedAt
     ? m.notes_shopping_updated({
         time: new Date(shopping.updatedAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' }),
       })
     : m.notes_not_loaded());
 
-  /* Abhaken: der Kreis füllt sich kurz, dann wandert die Zeile nach „Erledigt";
-     fünf Sekunden lang steht ein Rückweg bereit. */
+  /* Abhaken: der Kreis füllt sich kurz, dann rückt die Zeile durchgestrichen
+     unter die offenen Artikel ihres Ladens und bleibt dort einen Tag — ein Tipp
+     holt sie zurück, falls der Finger daneben lag. Fünf Sekunden lang steht
+     außerdem ein Rückweg bereit. */
   const SETTLE_MS = prefersReducedMotion() ? 0 : 320;
   const UNDO_MS = 5000;
   let settlingId = $state<string | null>(null);
@@ -168,6 +166,16 @@
             </button>
           </li>
         {/each}
+        {#each section.done as item (item.id)}
+          <li class="shop-row is-done">
+            <button class="shop-row-btn" type="button" aria-pressed="true"
+                    aria-label={m.shopping_done_item_label({ title: item.title })}
+                    onclick={() => uncheck(section.id, item)}>
+              <span class="shop-ring" aria-hidden="true"><Icon name="i-check" cls="icon" /></span>
+              <span class="shop-row-title">{item.title}</span>
+            </button>
+          </li>
+        {/each}
         {#if addTarget === section.id}
           <li class="shop-row">
             <form class="shop-add-form" onsubmit={submitAdd}>
@@ -193,28 +201,6 @@
       </ul>
     </section>
   {/each}
-
-  {#if doneEntries.length}
-    <section class="shop-section is-done-group">
-      <header class="shop-section-head">
-        <h3 class="shop-section-title">{m.shopping_done_title()}</h3>
-        <span class="shop-section-count num">{doneEntries.length}</span>
-      </header>
-      <ul class="shop-items">
-        {#each doneEntries as entry (entry.item.id)}
-          <li class="shop-row is-done">
-            <button class="shop-row-btn" type="button" aria-pressed="true"
-                    aria-label={m.shopping_done_item_label({ title: entry.item.title })}
-                    onclick={() => uncheck(entry.store, entry.item)}>
-              <span class="shop-ring" aria-hidden="true"><Icon name="i-check" cls="icon" /></span>
-              <span class="shop-row-title">{entry.item.title}</span>
-              <span class="shop-row-meta">{entry.storeTitle}</span>
-            </button>
-          </li>
-        {/each}
-      </ul>
-    </section>
-  {/if}
 
   {#if undo}
     <div class="shop-undo" role="status" aria-live="polite">

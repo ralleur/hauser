@@ -35,6 +35,21 @@ Cycle detection stays in Home Assistant.
 
 As tiles in the notification layer on the panel, and flowing with the content on the phone.
 
+## Send your own notification
+
+You do not need a rule for everything. Any automation in Home Assistant can put a tile on the panel: create a persistent notification whose `notification_id` starts with `hauser_`. Hauser mirrors exactly these, with the title and message you give it, and dismissing the tile removes the notification in Home Assistant again. The same id replaces the previous tile, so a recurring reminder does not pile up.
+
+```yaml
+actions:
+  - action: persistent_notification.create
+    data:
+      notification_id: hauser_muell
+      title: Bins tomorrow
+      message: Paper and packaging go out tonight.
+```
+
+Use it for what only your home knows: the mailbox sensor, the bin calendar, a leak detector, an awning still open in the evening. At most two tiles are visible at once; the panel and the phone in the browser show them, the iOS app does not yet.
+
 ## Not yet
 
 Multi-device dismissal, quiet hours, browser push and other channels are later work.

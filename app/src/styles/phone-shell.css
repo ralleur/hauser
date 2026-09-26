@@ -1843,12 +1843,14 @@
   outline-offset: -2px;
 }
 
+/* Der Ring ist der Anker fürs Auge, groß genug, um ihn im Laden zu treffen;
+   den Tipp nimmt die ganze Zeile an. */
 .phone-shopping .shop-ring {
   flex: none;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border: 1.5px solid color-mix(in srgb, var(--color-text-tertiary) 85%, transparent);
   border-radius: var(--radius-full);
   color: transparent;
@@ -1859,8 +1861,8 @@
 }
 
 .phone-shopping .shop-ring .icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .phone-shopping .shop-row.is-settling .shop-ring {
@@ -1874,12 +1876,6 @@
   min-width: 0;
   line-height: var(--leading-snug);
   overflow-wrap: anywhere;
-}
-
-.phone-shopping .shop-row-meta {
-  flex: none;
-  font-size: var(--text-2xs);
-  color: var(--color-text-tertiary);
 }
 
 .phone-shopping .shop-row.is-done .shop-row-btn {

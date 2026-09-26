@@ -38,6 +38,15 @@ How it works:
 The wizard needs your own OpenAI access, either an API key or a signed-in ChatGPT account. Your photo is sent there to be redrawn. Hauser says so before anything is uploaded, every paid step is confirmed by hand, and a running count of provider calls stays on screen. No other feature calls OpenAI. See [OpenAI](/hauser/docs/integrations/openai/).
 :::
 
+:::note[ChatGPT is an interim solution]
+OpenAI is the only way the wizard draws today. It is a bridge, not the final answer.
+
+- **iOS app:** a completely free way through Apple Intelligence is in development. No plan, no key, nothing to pay, on iPhones and iPads that support Apple Intelligence.
+- **Web app and Home Assistant app:** support for local models and your own API keys for other providers is planned.
+
+Neither is available yet. The default pictures and your own uploads are free today.
+:::
+
 ## The library
 
 Finished sets stay in the library under **Rooms & devices**. Assign a set to a room, switch between sets, delete old ones. A set assigned to a room takes effect immediately.

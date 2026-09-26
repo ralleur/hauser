@@ -3,6 +3,32 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.30.0] - 2026-09-26
+
+### Added
+
+- **Shops can be renamed.** Under Settings → Content → Shopping list, open a
+  shop and change its name; the bound list and the category order stay. Name a
+  shop after the list it shows, for example one "Groceries" instead of three
+  supermarkets.
+
+## [0.29.0] - 2026-09-26
+
+### Changed
+
+- **Ticking off on the phone holds.** A tick no longer bounces back when the
+  list happens to refresh at the same moment, and the ring is larger so it is
+  easier to hit in the shop; the whole row still takes the tap.
+- **Done items stay under their shop for a day**, struck through, and a tap
+  brings one back if a finger slipped. The separate "Done" group at the end of
+  the page is gone.
+
+### Documentation
+
+- The wiki explains how a **Bring!** list becomes a shop through the Home
+  Assistant integration, and how any automation can **send its own
+  notification** to the panel with a `hauser_` notification id.
+
 ## [0.28.0] - 2026-09-25
 
 ### Changed

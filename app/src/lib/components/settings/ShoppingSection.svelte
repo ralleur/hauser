@@ -5,7 +5,7 @@
   import Icon from '../Icon.svelte';
   import { categoryLabel } from '../../state/shopping-config.ts';
   import {
-    shoppingConfig, addShoppingStore, deleteShoppingStore, moveShoppingStore, moveShoppingCategory,
+    shoppingConfig, addShoppingStore, deleteShoppingStore, renameShoppingStore, moveShoppingStore, moveShoppingCategory,
     setShoppingStoreEntity, setShoppingProvider, createShoppingList, saveNotionAccess, notionAccess,
   } from '../../state/shopping-settings.svelte.ts';
   import { availableReminderLists, loadAvailableReminderLists } from '../../state/reminders.svelte.ts';
@@ -29,6 +29,12 @@
 
   function selectStoreList(id: string, entityId: string): void {
     setShoppingStoreEntity(id, entityId || null);
+    void refreshShopping();
+  }
+
+  /* Der Name ist frei; ein leerer Name fällt auf den bisherigen zurück. */
+  function renameStore(id: string, input: HTMLInputElement): void {
+    if (!renameShoppingStore(id, input.value)) input.value = shoppingConfig.stores.find((store) => store.id === id)?.label ?? '';
     void refreshShopping();
   }
 
@@ -122,6 +128,14 @@
       </div>
     </div>
     {#if expandedStore === store.id}
+      <div class="settings-row shopping-list-row">
+        <span class="settings-row-text">
+          <span class="settings-row-label">{m.sys_store_name()}</span>
+        </span>
+        <input class="settings-input" type="text" maxlength="60" value={store.label}
+               aria-label="{m.sys_store_name()}: {store.label}"
+               onchange={(event) => renameStore(store.id, event.currentTarget)} />
+      </div>
       {#if shoppingConfig.provider === 'ha'}
         <div class="settings-row shopping-list-row">
           <span class="settings-row-text">

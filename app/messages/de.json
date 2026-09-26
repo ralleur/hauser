@@ -334,6 +334,7 @@
   "sys_no_store": "Noch kein Supermarkt angelegt.",
   "sys_add_store": "Supermarkt hinzufügen",
   "sys_new_store_name": "Name des neuen Supermarkts",
+  "sys_store_name": "Name des Supermarkts",
   "sys_create": "Anlegen",
   "sys_store_note": "Die Ladenreihenfolge und der Laufweg durch die Kategorien gelten auf allen Geräten. „Sortieren“ auf der Einkaufsliste ordnet offene Artikel mit GPT‑5.6 Luna ohne Thinking; „Rückgängig“ stellt die ursprüngliche Reihenfolge wieder her.",
   "sys_store_list": "Liste in Home Assistant",

@@ -37,6 +37,10 @@ No. Home Assistant, Jellyfin, Paperless and Notion are your own services. Weathe
 
 Three ways: keep the defaults, upload your own, or let the wizard draw one from a photo with your own OpenAI access. See [Room pictures](/hauser/docs/using/room-images/).
 
+### Will the room-image wizard become free?
+
+That is the goal. OpenAI is an interim solution. For the iOS app, a completely free way through Apple Intelligence is in development. For the web app and the Home Assistant app, local models and your own API keys for other providers are planned. Neither is available yet. See [OpenAI](/hauser/docs/integrations/openai/).
+
 ### What happens when Home Assistant is unreachable?
 
 The room picture stays, the controls dim, the title bar says *Disconnected*. Hauser reconnects on its own and never shows fake data.

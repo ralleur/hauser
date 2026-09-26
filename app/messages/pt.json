@@ -675,6 +675,7 @@
   "sys_no_store": "Ainda não há lojas criadas.",
   "sys_add_store": "Adicionar loja",
   "sys_new_store_name": "Nome da nova loja",
+  "sys_store_name": "Nome da loja",
   "sys_create": "Criar",
   "sys_store_note": "A ordem das lojas e o percurso pelas categorias aplicam-se em todos os dispositivos. «Ordenar» na lista de compras organiza os artigos abertos com o GPT‑5.6 Luna sem thinking; «Anular» repõe a ordem original.",
   "sys_store_list": "Lista no Home Assistant",

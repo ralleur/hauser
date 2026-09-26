@@ -436,6 +436,8 @@ export function hostileHome(now: Date = new Date()): HostileHome {
         { uid: 'b', summary: 'Milch', status: 'needs_action' },
         { uid: 'c', summary: '', status: 'completed' },
         { uid: 'd', summary: '🥖 Brot mit einem sehr langen Namen, der nicht in die Zeile passt', status: 'needs_action', due: 'kein-datum' },
+        /* Erledigt ohne Zeitpunkt (HA nennt keinen): steht durchgestrichen unter dem Laden, in beiden Apps. */
+        { uid: 'e', summary: 'Butter', status: 'completed' },
       ],
       'todo.leer': [],
     },

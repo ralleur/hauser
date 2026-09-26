@@ -7,6 +7,15 @@ sidebar:
 
 OpenAI is inert until you supply your own access. Only the [room-image wizard](/hauser/docs/using/room-images/) uses it.
 
+## An interim solution
+
+OpenAI is the only way to draw room pictures today. It is a bridge, not the plan:
+
+- **iOS app:** a completely free way through Apple Intelligence is in development. No plan, no key, nothing to pay, on iPhones and iPads that support Apple Intelligence.
+- **Web app and Home Assistant app:** support for local models and your own API keys for other providers is planned.
+
+Neither is available yet. Until then, the wizard needs one of the two kinds of OpenAI access below.
+
 ## Access
 
 **Settings → Home → Rooms & devices → Create room images**, then either:
