@@ -272,6 +272,8 @@ export interface CoverValue {
   supportsStop: boolean;
   supportsPosition: boolean;
   supportsTilt: boolean;
+  /** Lamellen nur auf/zu (OPEN_TILT/CLOSE_TILT ohne SET_TILT_POSITION). */
+  supportsTiltButtons?: boolean;
 }
 
 /* vacuum.*: `on` = unterwegs (cleaning/returning), `state` roh aus HA. */

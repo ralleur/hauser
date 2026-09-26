@@ -73,12 +73,26 @@ export function lightEntityId(roomId: string, lightId: string): string {
   return entityId;
 }
 
-export function climateEntityId(roomId: string): string {
+/* Die Raum-Konfig kann das Klimagerät eines Raums ausblenden — etwa eine
+   Wärmepumpe, die Home Assistant dem Raum zugeordnet hat. Sie liegt in
+   room-display-config, das hierher importiert; deshalb ein Resolver. */
+let climateHiddenResolver: ((roomId: string) => boolean) | null = null;
+
+export function setClimateHiddenResolver(resolver: (roomId: string) => boolean): void {
+  climateHiddenResolver = resolver;
+}
+
+/** Klimagerät laut Haushalts-Config, auch wenn es ausgeblendet ist. */
+export function configuredClimateEntityId(roomId: string): string {
   return climateIds.get(roomId) ?? '';
 }
 
+export function climateEntityId(roomId: string): string {
+  return climateHiddenResolver?.(roomId) ? '' : configuredClimateEntityId(roomId);
+}
+
 export function roomHasClimate(roomId: string): boolean {
-  return climateIds.has(roomId);
+  return climateEntityId(roomId) !== '';
 }
 
 /* Dedizierter Raum-Temperatursensor (leer, wenn keiner gemappt ist). */

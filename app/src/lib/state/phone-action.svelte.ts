@@ -66,6 +66,11 @@ function load(): PhoneActionConfig {
 
 export const phoneActionConfig = $state(load());
 
+/** Nach dem Laden der Haushalts-Config neu lesen (`ralleur/hauser#24`). */
+export function rehydratePhoneAction(): void {
+  Object.assign(phoneActionConfig, load());
+}
+
 function save(): void {
   if (phoneActionConfig.entityId === null && phoneActionConfig.icon === null) {
     sharedStorage.removeItem(PHONE_ACTION_CONFIG_KEY);

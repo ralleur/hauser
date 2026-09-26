@@ -70,6 +70,11 @@ function load(): CentralClimateConfig {
 
 export const centralClimateConfig = $state(load());
 
+/** Nach dem Laden der Haushalts-Config neu lesen (`ralleur/hauser#24`). */
+export function rehydrateCentralClimate(): void {
+  Object.assign(centralClimateConfig, load());
+}
+
 function save(): void {
   if (Object.keys(centralClimateConfig.rooms).length === 0 && centralClimateConfig.customEntityId === null) {
     sharedStorage.removeItem(CENTRAL_CLIMATE_CONFIG_KEY);

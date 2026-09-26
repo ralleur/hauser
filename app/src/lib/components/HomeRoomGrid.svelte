@@ -1,7 +1,7 @@
 <script lang="ts">
   import RoomSummaryCard from './phone/RoomSummaryCard.svelte';
   import { appState, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature, roomWindowOpen } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
   import { phoneHeroVariantForRoom, projectPhoneRooms, type PhoneHeroVariant } from '../state/phone-home.ts';
   import { m } from '../../paraglide/messages.js';
 
@@ -26,6 +26,7 @@
     light: mergedLight,
     climate: mergedClimate,
     windowOpen: roomWindowOpen,
+    presence: roomPresence,
   }));
   const heroVariant = $derived<PhoneHeroVariant>(
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,

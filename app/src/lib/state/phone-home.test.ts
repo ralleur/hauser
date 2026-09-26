@@ -53,12 +53,12 @@ describe('phone home room projection', () => {
       {
         id: 'living', name: 'Wohnzimmer', temperature: 21.4,
         lightsOn: 1, lightsKnown: 1, lightsTotal: 2,
-        windowOpen: true, presence: true, climateAvailable: false,
+        windowOpen: true, presence: true, camera: false, climateAvailable: false,
       },
       {
         id: 'empty', name: 'Flur', temperature: null,
         lightsOn: 0, lightsKnown: 0, lightsTotal: 0,
-        windowOpen: false, presence: false, climateAvailable: false,
+        windowOpen: false, presence: false, camera: false, climateAvailable: false,
       },
     ]);
   });

@@ -1532,6 +1532,7 @@
   "room_display_temp_hint": "Mostrar no cartão",
   "room_display_humidity": "Umidade",
   "room_display_humidity_hint": "Mostrar no cartão",
+  "room_display_climate": "Mostrar aquecimento",
   "room_display_sensor": "Sensor",
   "room_display_sensor_auto": "Automático do Home Assistant",
   "room_display_sensor_none": "Nenhum sensor encontrado neste cômodo",

@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.28.0 - 2026-09-25
+
+- The week on the standby screen lies open on the map, times in amber or gold.
+- Room configuration on the panel and arranging the energy notes sit on a blueprint.
+
+## 0.27.0 - 2026-09-25
+
+- Room tiles show a green dot while a motion or presence sensor in the room
+  reports someone, and a quiet camera symbol when the room has a camera.
+
+## 0.26.1 - 2026-09-25
+
+- Notification rules can be saved again and survive a restart of the App (#25).
+- A birthday with letters such as "Ł" or an emoji in the name no longer stops
+  the server.
+
+## 0.26.0 - 2026-09-24
+
+- Hauser follows Home Assistant: a device moved to another area moves to that
+  room; new lights, switches, blinds and vacuums appear in the room of their area.
+- Room sensors, the phone action and central climate are saved for the whole
+  household, not only on one device (#24).
+
+## 0.25.0 - 2026-09-24
+
+- Rain on the standby screen is now visible, still quieter than the clock.
+
+## 0.24.1 - 2026-09-24
+
+- A heat pump or boiler is no longer taken for a room's heating; the room
+  configuration can hide a heater with “Show heating”.
+
+## 0.24.0 - 2026-09-24
+
+- A moving blind or motorised door stops with a tap on its tile; slats that
+  only open and close get two tilt buttons in the device detail.
+
+## 0.23.2 - 2026-09-24
+
+- A room's chosen temperature and humidity sensor now shows on every device, not only the browser it was picked in (#24).
+
 ## 0.23.1 - 2026-09-24
 
 - A person on the reminders board can be removed; their reminders stay and

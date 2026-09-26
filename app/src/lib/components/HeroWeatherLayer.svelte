@@ -34,9 +34,12 @@
      deckend, mit einem hauchdünnen kühlen Rand, der sie auf hellem Grund
      hält — schwarze Flocken lesen sich als Ruß, nicht als Schnee. */
   .hero-weather {
-    --hero-weather-ink-strong: color-mix(in srgb, var(--color-text-primary) calc(42% * var(--hero-weather-intensity)), transparent);
-    --hero-weather-ink: color-mix(in srgb, var(--color-text-primary) calc(34% * var(--hero-weather-intensity)), transparent);
-    --hero-weather-ink-soft: color-mix(in srgb, var(--color-text-primary) calc(26% * var(--hero-weather-intensity)), transparent);
+    /* R27: bei einem Fünftel Deckkraft war der Regen auf keiner Aufnahme zu
+       sehen. Die Spur trägt jetzt etwa die Hälfte der Schrift — sichtbar,
+       aber leiser als die Uhr. */
+    --hero-weather-ink-strong: color-mix(in srgb, var(--color-text-primary) calc(30% + 40% * var(--hero-weather-intensity)), transparent);
+    --hero-weather-ink: color-mix(in srgb, var(--color-text-primary) calc(24% + 32% * var(--hero-weather-intensity)), transparent);
+    --hero-weather-ink-soft: color-mix(in srgb, var(--color-text-primary) calc(18% + 24% * var(--hero-weather-intensity)), transparent);
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -117,11 +120,11 @@
 
   .hero-weather[data-kind='rain'] .hero-weather-fall {
     background-image:
-      radial-gradient(ellipse 1px 8px at 18% 12%, var(--hero-weather-ink-strong), transparent),
-      radial-gradient(ellipse 1px 10px at 63% 38%, var(--hero-weather-ink), transparent),
-      radial-gradient(ellipse 1px 7px at 41% 71%, var(--hero-weather-ink-soft), transparent),
-      radial-gradient(ellipse 1px 9px at 86% 84%, var(--hero-weather-ink), transparent);
-    background-size: 120px 150px, 170px 210px, 140px 180px, 200px 240px;
+      radial-gradient(ellipse 1.5px 12px at 18% 12%, var(--hero-weather-ink-strong), transparent),
+      radial-gradient(ellipse 1.5px 14px at 63% 38%, var(--hero-weather-ink), transparent),
+      radial-gradient(ellipse 1.2px 10px at 41% 71%, var(--hero-weather-ink-soft), transparent),
+      radial-gradient(ellipse 1.5px 13px at 86% 84%, var(--hero-weather-ink), transparent);
+    background-size: 84px 110px, 118px 150px, 98px 128px, 140px 176px;
   }
 
   .hero-weather[data-kind='snow'] {

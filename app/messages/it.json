@@ -1533,6 +1533,7 @@
   "room_display_temp_hint": "Mostra sulla scheda",
   "room_display_humidity": "Umidità",
   "room_display_humidity_hint": "Mostra sulla scheda",
+  "room_display_climate": "Mostra riscaldamento",
   "room_display_sensor": "Sensore",
   "room_display_sensor_auto": "Automatico da Home Assistant",
   "room_display_sensor_none": "Nessun sensore trovato in questa stanza",

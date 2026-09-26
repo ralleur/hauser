@@ -244,9 +244,11 @@ describe('R28: weitere steuerbare Domänen', () => {
     expect(haToCover({ state: 'opening', attributes: { supported_features: 143, current_position: 40.4, current_tilt_position: 10 } }))
       .toEqual({
         on: true, position: 40, tilt: 10, moving: 'opening',
-        supportsOpen: true, supportsClose: true, supportsStop: true, supportsPosition: true, supportsTilt: true,
+        supportsOpen: true, supportsClose: true, supportsStop: true, supportsPosition: true, supportsTilt: true, supportsTiltButtons: false,
       });
     // Ohne Maske: Auf/Zu gelten als gegeben, Position nur mit Attribut.
+    expect(haToCover({ state: 'closing', attributes: { supported_features: 63 } }))
+      .toMatchObject({ moving: 'closing', supportsStop: true, supportsTilt: false, supportsTiltButtons: true });
     expect(haToCover({ state: 'closed', attributes: {} })).toMatchObject({ on: false, position: 0, supportsOpen: true, supportsPosition: false, supportsTilt: false });
   });
   it('vacuum: Zustand, Akku, Saugstufen', () => {

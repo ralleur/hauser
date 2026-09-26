@@ -7,6 +7,7 @@
    Quellen sind Home Assistant selbst: die Kalender-REST-Route für die Termine
    des Tages und die Template-Route für die Wetterlage. Beide Antworten sind
    klein; `/api/states` bliebe ungenutzt groß. */
+import { createHash } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { MOMENTS_STATE_PATH } from './runtime-env.mjs';
@@ -267,8 +268,11 @@ export function createMomentsService({
   return { read };
 }
 
-function momentsEtag(data) {
-  return `"${data.day}:${data.moments.map((moment) => moment.id).join('|')}"`;
+/* Gehasht, weil Momente-Ids Namen aus dem Kalender tragen: „Łukasz“ oder ein
+   Emoji im Kopf lässt Node werfen und beendete den ganzen Server. */
+export function momentsEtag(data) {
+  const key = `${data.day}:${data.moments.map((moment) => moment.id).join('|')}`;
+  return `"${createHash('sha256').update(key).digest('hex').slice(0, 32)}"`;
 }
 
 export async function serveMoments(req, res, service) {

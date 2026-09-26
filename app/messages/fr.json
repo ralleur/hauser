@@ -1533,6 +1533,7 @@
   "room_display_temp_hint": "Afficher sur la tuile",
   "room_display_humidity": "Humidité",
   "room_display_humidity_hint": "Afficher sur la tuile",
+  "room_display_climate": "Afficher le chauffage",
   "room_display_sensor": "Capteur",
   "room_display_sensor_auto": "Automatique depuis Home Assistant",
   "room_display_sensor_none": "Aucun capteur trouvé dans cette pièce",

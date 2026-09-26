@@ -12,7 +12,7 @@
 import { appState } from './app.svelte.ts';
 import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
-import { presenceEntityIds, windowEntityIds } from './entities.ts';
+import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './entities.ts';
 import { sharedStorage } from './shared-config.ts';
 import type { EntityCatalogItem } from './fake-discovery-catalog.ts';
 
@@ -41,6 +41,9 @@ export interface RoomDisplayEntry {
   /** Mehrere Kameras stehen zusammen im geteilten Bild (Default: ja) — die
       iOS-App liest und schreibt denselben Schalter. */
   cameraSplit?: boolean;
+  /** Klimagerät des Raums ausblenden (etwa eine Wärmepumpe, die HA dem Raum
+      zugeordnet hat) — die iOS-App liest denselben Schalter. */
+  hideClimate?: boolean;
 }
 
 export type ClimateTileShows = 'target' | 'current' | 'both';
@@ -216,6 +219,13 @@ export const roomDisplay = $state({
   config: load(),
 });
 
+/** Nach dem Laden der Haushalts-Config neu lesen — sonst bliebe der Stand
+    stehen, den dieses Gerät vor dem Serverabgleich im Browser hatte
+    (`ralleur/hauser#24`). */
+export function rehydrateRoomDisplay(): void {
+  roomDisplay.config = load();
+}
+
 function entry(roomId: string): RoomDisplayEntry {
   return roomDisplay.config.rooms[roomId] ?? {};
 }
@@ -269,6 +279,20 @@ export function setCameraSplit(roomId: string, value: boolean): void {
   else next.cameraSplit = false;
   writeEntry(roomId, next);
 }
+
+/* ── Klimagerät des Raums zeigen ── */
+export function climateHidden(roomId: string): boolean {
+  return entry(roomId).hideClimate === true;
+}
+
+export function setClimateHidden(roomId: string, value: boolean): void {
+  const next = { ...entry(roomId) };
+  if (value) next.hideClimate = true;
+  else delete next.hideClimate;
+  writeEntry(roomId, next);
+}
+
+setClimateHiddenResolver(climateHidden);
 
 /* ── Klima in der Kontrollfläche (Owner-Entscheidung 2026-09-11) ── */
 export function climateInline(roomId: string): boolean {
@@ -363,6 +387,7 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (cand.climateTileShows === 'target' || cand.climateTileShows === 'current') next.climateTileShows = cand.climateTileShows;
       if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
       if (typeof cand.cameraSplit === 'boolean') next.cameraSplit = cand.cameraSplit;
+      if (cand.hideClimate === true) next.hideClimate = true;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };

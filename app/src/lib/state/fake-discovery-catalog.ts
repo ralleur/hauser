@@ -19,6 +19,8 @@ export interface EntityCatalogItem {
   domain: ManagedDomain;
   name: string;
   area?: string | null;
+  /** Wann HA die Entität angelegt hat (ms); fehlt bei älteren HA-Ständen. */
+  createdAt?: number | null;
   unit?: string | null;
   deviceClass?: string | null;
   capabilities?: Partial<{

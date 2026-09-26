@@ -16,7 +16,7 @@
   import ScreenBoundary from '../components/ScreenBoundary.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
   import { appState } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature, roomWindowOpen } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
   import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
@@ -76,6 +76,7 @@
     light: mergedLight,
     climate: mergedClimate,
     windowOpen: roomWindowOpen,
+    presence: roomPresence,
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));
   /* Bildfassung für das Raumblatt: dieselbe wie auf der Kachel des Raums. */

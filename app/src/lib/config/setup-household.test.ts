@@ -44,6 +44,30 @@ function snapshot(): SetupDiscoverySnapshot {
 }
 
 describe('deterministic setup household suggestion', () => {
+  it('does not take a heating plant as the room heating (heat pump in the utility room)', () => {
+    const base = snapshot();
+    const suggestion = buildSetupHouseholdSuggestion({
+      areas: [{ area_id: 'utility', name: 'Hauswirtschaft' }],
+      devices: [{ id: 'pump', area_id: 'utility' }],
+      entities: [
+        { entity_id: 'climate.heizkreis_1', area_id: null, device_id: 'pump' },
+        { entity_id: 'water_heater.warmwasser', area_id: null, device_id: 'pump' },
+        { entity_id: 'sensor.vorlauf', area_id: null, device_id: 'pump' },
+        { entity_id: 'climate.waermepumpe', area_id: 'utility', device_id: null },
+        { entity_id: 'sensor.raum_temperatur', area_id: 'utility', device_id: null },
+      ],
+      states: [
+        ...base.states,
+        { entity_id: 'climate.heizkreis_1', attributes: { friendly_name: 'Heating' } },
+        { entity_id: 'water_heater.warmwasser', attributes: {} },
+        { entity_id: 'sensor.vorlauf', attributes: { device_class: 'temperature' } },
+        { entity_id: 'climate.waermepumpe', attributes: { friendly_name: 'Wärmepumpe' } },
+        { entity_id: 'sensor.raum_temperatur', attributes: { device_class: 'temperature' } },
+      ],
+    });
+    expect(suggestion.config.rooms[0].visibleEntities.map(({ entityId }) => entityId)).toEqual(['sensor.raum_temperatur']);
+  });
+
   it('uses HA areas, device inheritance and only unambiguous productive roles', () => {
     const suggestion = buildSetupHouseholdSuggestion(snapshot());
 

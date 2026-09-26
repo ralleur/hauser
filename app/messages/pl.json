@@ -1533,6 +1533,7 @@
   "room_display_temp_hint": "Pokaż na kafelku",
   "room_display_humidity": "Wilgotność",
   "room_display_humidity_hint": "Pokaż na kafelku",
+  "room_display_climate": "Pokaż ogrzewanie",
   "room_display_sensor": "Czujnik",
   "room_display_sensor_auto": "Automatycznie z Home Assistant",
   "room_display_sensor_none": "Nie znaleziono czujnika w tym pokoju",

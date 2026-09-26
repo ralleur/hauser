@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Native Node ESM Servermodul.
-import { easterSunday, holidayOn, momentDayKey, momentSeasonKey, parseBirthdayTitle, selectedHolidays, selectMoments } from '../../server/moments.mjs';
+import { easterSunday, holidayOn, momentDayKey, momentSeasonKey, momentsEtag, parseBirthdayTitle, selectedHolidays, selectMoments } from '../../server/moments.mjs';
+// @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
+import { validateHeaderValue } from 'node:http';
 
 function event(summary: string, day: string) {
   return { summary, start: { date: day }, end: { date: day } };
@@ -69,5 +71,13 @@ describe('Kalendermomente', () => {
     const nextWinter = selectMoments({ now: new Date(2027, 11, 4), weatherConditions: ['snowy-rainy'], seenSnowSeason: first.snowSeason });
     expect(nextWinter.moments.map((moment: { kind: string }) => moment.kind)).toContain('first-snow');
     expect(momentSeasonKey(new Date(2027, 11, 4))).toBe('2027/2028');
+  });
+
+  it('trägt Namen außerhalb von Latin-1 nicht in den ETag-Kopf', () => {
+    const moments = selectMoments({ now: new Date(2026, 8, 25), events: [event('Geburtstag Łukasz 🎂', '2026-09-25')] });
+    expect(moments.moments).toHaveLength(1);
+    const etag = momentsEtag(moments);
+    expect(() => validateHeaderValue('ETag', etag)).not.toThrow();
+    expect(momentsEtag(moments)).toBe(etag);
   });
 });

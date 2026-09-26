@@ -1,6 +1,8 @@
 // @ts-expect-error Vitest runs in Node; production app types intentionally exclude Node globals.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+// @ts-expect-error -- Servermodul ohne Typdeklaration; der Test prüft nur die Schlüsselliste.
+import { SHARED_CONFIG_KEYS as SERVER_SHARED_CONFIG_KEYS } from '../../../server/runtime-env.mjs';
 import { sharedStorage } from './shared-config.ts';
 import {
   bootstrapSharedConfig,
@@ -624,5 +626,17 @@ describe('zentrale HMI-Konfiguration', () => {
     expect(SHARED_CONFIG_KEYS).not.toContain('hmi:jf-device');
     expect(SHARED_CONFIG_KEYS).not.toContain('hmi:ui-mode');
     expect(SHARED_CONFIG_KEYS).not.toContain('hmi:notion-bridge-url');
+  });
+});
+
+describe('Schlüsselliste Client und Server', () => {
+  it('der Server nimmt jeden Schlüssel an, den der Client teilt (ralleur/hauser#24)', () => {
+    for (const key of SHARED_CONFIG_KEYS) expect(SERVER_SHARED_CONFIG_KEYS.has(key), key).toBe(true);
+    // Was die iOS-App teilt, muss der Server ebenso kennen.
+    for (const key of ['hmi:light-icon-overrides:v1', 'hmi:phone-action:v1', 'hmi:room-display:v1', 'hmi:central-climate:v1',
+      'hmi:reminder-persons:v1', 'hmi:calendar-selected', 'hmi:reminders-selected', 'hmi:moment-holidays:v1',
+      'hmi:device-config:v1', 'hmi:security-sensors:v1', 'hmi:media-presets:v1', 'hmi:room-list:v1', 'hmi:home-off:v1']) {
+      expect(SERVER_SHARED_CONFIG_KEYS.has(key), key).toBe(true);
+    }
   });
 });

@@ -40,6 +40,7 @@
   import { m } from '../../paraglide/messages.js';
   import type { Component } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { roomBlueprint } from '../components/room-blueprint.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { simulation } from '../state/simulation.svelte.ts';
   import { outdoor, refreshWeather } from '../state/weather.svelte.ts';
@@ -249,6 +250,16 @@
      beim Zuschnitt am Motiv bleiben. „Fertig" schreibt den Entwurf in den
      Haushalt, „Zurücksetzen" nimmt ihn zurück auf die Vorlage. */
   let arrange = $state(false);
+  /* Beim Anordnen taucht das Haus in die Blaupause wie die Räume in ihrer
+     Konfiguration (iOS-App): gerechnet aus dem Tagbild, der untersten Ebene,
+     deckungsgleich über dem Motiv. */
+  const dayHeroUrl = $derived(variant === 'day' ? energyHeroUrl : counterHeroUrl);
+  let blueprintUrl = $state<string | null>(null);
+  $effect(() => {
+    if (!arrange) return;
+    const source = dayHeroUrl;
+    void roomBlueprint(source).then((url) => { if (arrange && source === dayHeroUrl) blueprintUrl = url; });
+  });
   let draft = $state<EnergyHeroFrame | null>(null);
   let arrangeBusy = $state(false);
   let arrangeError = $state<string | null>(null);
@@ -363,7 +374,7 @@
      Tag, das Motiv die Live-Werte — jeder Zettel per Haarlinie an seine Stelle
      geheftet, der Tagesverlauf als Linie am unteren Rand. Keine Kachelspalte,
      keine dritte Stimme. Was nicht gemessen wird, bekommt keine Marke. ── -->
-<div class="energy-stage" class:is-night={isNight} class:is-arranging={arrange}
+<div class="energy-stage" class:is-night={isNight || arrange} class:is-arranging={arrange}
      style={`--hero-ratio:${heroRatio.toFixed(4)}`} bind:this={stageEl}>
   <div class="energy-hero" aria-hidden="true">
     <div class="energy-hero-img" style:background-image={`url("${energyHeroUrl}")`}></div>
@@ -377,6 +388,10 @@
     {/if}
     {#if HeroWeather && weatherLayer}
       <HeroWeather layer={weatherLayer} />
+    {/if}
+    {#if arrange}
+      <div class="energy-hero-img is-blueprint" transition:fade={{ duration: 400 }}
+           style:--energy-blueprint={blueprintUrl ? `url("${blueprintUrl}")` : undefined}></div>
     {/if}
     <div class="energy-hero-scrim"></div>
   </div>

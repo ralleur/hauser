@@ -1,5 +1,6 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import { iconAssetUrlFromId } from '../../state/icon-path.ts';
   import { whenEditable } from '../../state/edit-mode.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
@@ -106,23 +107,27 @@
   <span class="phone-room-hero-layer" class:is-front={front === 'b'} aria-hidden="true"
         style:--phone-room-hero={layerB ? `url("${layerB.url}")` : undefined}
         style:--phone-room-focus={layerB?.position}></span>
+  {#if summary.camera}
+    <span class="phone-room-camera" aria-hidden="true"><span class="icon tabler-icon-mask" style={`--icon-url:url("${iconAssetUrlFromId('i-video')}")`}></span></span>
+  {/if}
   <span class="phone-room-card-info">
     <!-- Status steht über dem Namen: der Raumname bleibt so in jeder Kachel auf
-         derselben Höhe, egal ob es etwas zu melden gibt. -->
-    {#if summary.lightsOn > 0 || summary.windowOpen}
-      <span class="phone-room-facts">
-        {#if summary.lightsOn > 0}
-          <span class="phone-room-fact">
-            <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_lights_on({ count: summary.lightsOn })}
-          </span>
-        {/if}
-        {#if summary.windowOpen}
-          <span class="phone-room-fact is-warning">
-            <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_window_open()}
-          </span>
-        {/if}
-      </span>
-    {/if}
+         derselben Höhe, egal ob es etwas zu melden gibt. Die Zeile bleibt
+         stehen, damit der Anwesenheitspunkt per CSS auf- und abtauchen kann
+         statt umzuspringen; leer ist sie unsichtbar. -->
+    <span class="phone-room-facts">
+      <span class="phone-room-presence" class:is-on={summary.presence} aria-hidden="true"></span>
+      {#if summary.lightsOn > 0}
+        <span class="phone-room-fact">
+          <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_lights_on({ count: summary.lightsOn })}
+        </span>
+      {/if}
+      {#if summary.windowOpen}
+        <span class="phone-room-fact is-warning">
+          <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_window_open()}
+        </span>
+      {/if}
+    </span>
     <strong class="phone-room-card-name" title={summary.name}>{summary.name}</strong>
   </span>
 </button>

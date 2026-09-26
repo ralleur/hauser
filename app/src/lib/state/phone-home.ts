@@ -14,6 +14,8 @@ export interface PhoneHomeReaders {
   climate(roomId: string): ClimateValue | null | undefined;
   /** Live-Kontakte des Raums; ohne Reader gilt der Seed-Wert. */
   windowOpen?(roomId: string, fallback: boolean): boolean;
+  /** Live-Melder des Raums (Rolle `presence`); ohne Reader gilt der Seed-Wert. */
+  presence?(roomId: string, fallback: boolean): boolean;
 }
 
 export interface PhoneRoomSummary {
@@ -25,10 +27,15 @@ export interface PhoneRoomSummary {
   lightsTotal: number;
   windowOpen: boolean;
   presence: boolean;
+  /** Dem Raum ist eine Kamera zugeordnet — egal, ob sie gerade ein Bild liefert. */
+  camera: boolean;
   climateAvailable: boolean;
 }
 
 export type PhoneHeroVariant = SharedPhoneHeroVariant;
+
+/* Die Demo zeigt im Raum keine Kamera (RoomControls) — dann auch kein Symbol. */
+const IS_DEMO_BUILD = import.meta.env?.VITE_DEMO === '1';
 
 /* Wie auf der grossen Buehne: Brennt nachts im Raum keine bekannte Lampe, zeigt
    die Kachel die unbeleuchtete Nachtfassung. Kennt Hauser dort gar keine
@@ -86,7 +93,8 @@ export function projectPhoneRooms(
       lightsKnown: values.filter((light) => light !== undefined).length,
       lightsTotal: lights.length,
       windowOpen: safely(() => readers.windowOpen?.(room.id, room.windowOpen) ?? room.windowOpen, room.windowOpen),
-      presence: room.presence,
+      presence: safely(() => readers.presence?.(room.id, room.presence) ?? room.presence, room.presence),
+      camera: !IS_DEMO_BUILD && room.lights.some((device) => device.category === 'camera'),
       climateAvailable: safely(() => readers.climate(room.id), null) != null,
     };
   });

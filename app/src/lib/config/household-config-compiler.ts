@@ -108,7 +108,7 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
       } else if (entity.role === 'vacuum') {
         addCommand(entity.entityId, 'vacuum', ['start', 'return_to_base']);
       } else if (entity.role === 'cover') {
-        addCommand(entity.entityId, 'cover', ['open_cover', 'close_cover', 'stop_cover', 'set_cover_position', 'set_cover_tilt_position']);
+        addCommand(entity.entityId, 'cover', ['open_cover', 'close_cover', 'stop_cover', 'set_cover_position', 'set_cover_tilt_position', 'open_cover_tilt', 'close_cover_tilt']);
       }
     }
   }

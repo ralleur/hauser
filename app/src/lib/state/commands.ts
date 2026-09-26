@@ -179,6 +179,8 @@ export function toggleDevice(roomId: string, device: Light): void {
   // Hauptaktion, die Detail-Ebene kennt den Rest.
   if (domain === 'cover' || domain === 'valve') {
     const cur = runtime.merged(device.entityId) as CoverValue | undefined;
+    // Fährt er gerade, hält ein Tipp ihn an — wie der Taster an der Wand.
+    if (cur?.moving && cur.supportsStop) return coverCommand(device.entityId, domain, 'stop');
     return coverCommand(device.entityId, domain, cur?.on ? 'close' : 'open');
   }
   if (domain === 'vacuum') {
@@ -397,6 +399,14 @@ export function setCoverTilt(entityId: string, pct: number): void {
   runtime.dispatch(
     { entityId, domain: 'cover', service: 'set_cover_tilt_position', data: { tilt_position }, queuedAt: Date.now() },
     { tilt: tilt_position },
+  );
+}
+
+/* Lamellen, die nur auf- und zugehen (ohne Neigungswert). */
+export function coverTiltCommand(entityId: string, action: 'open' | 'close'): void {
+  runtime.dispatch(
+    { entityId, domain: 'cover', service: `${action}_cover_tilt`, data: {}, queuedAt: Date.now() },
+    { tilt: action === 'open' ? 100 : 0 },
   );
 }
 

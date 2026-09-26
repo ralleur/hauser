@@ -16,7 +16,7 @@
     setClimateTarget, setClimateHvac, setClimateFanMode, setClimatePreset, setClimateSwing,
     toggleMediaEntity, setMediaVolume,
     setFanPercentage, setFanPreset, setFanOscillating, setFanDirection,
-    coverCommand, setCoverPosition, setCoverTilt, vacuumCommand, setVacuumFanSpeed, lockCommand,
+    coverCommand, coverTiltCommand, setCoverPosition, setCoverTilt, vacuumCommand, setVacuumFanSpeed, lockCommand,
     setHumidifierTarget, setHumidifierMode, setWaterHeaterTarget, setWaterHeaterMode, setWaterHeaterOn,
     mowerCommand, alarmCommand, setNumberValue, selectOption, pressButton, type AlarmAction,
   } from '../state/commands.ts';
@@ -636,6 +636,18 @@
                   <TickScale ariaLabel={m.dev_tilt()} orientation="horizontal" mode="fill"
                              value={tiltDisplay} min={0} max={100} step={1} keyStep={5}
                              onInput={onTilt} format={(v) => `${Math.round(v)}%`} />
+                </section>
+              {:else if cover.supportsTiltButtons}
+                <section class="ld-section">
+                  <span class="caps-label">{m.dev_tilt()}</span>
+                  <div class="action-row" role="group" aria-label={m.dev_tilt()}>
+                    <button class="action-btn pressable" type="button" onclick={() => coverTiltCommand(entityId, 'open')}>
+                      <Icon name="i-arrow-up" cls="icon icon-md" /><span>{m.dev_open()}</span>
+                    </button>
+                    <button class="action-btn pressable" type="button" onclick={() => coverTiltCommand(entityId, 'close')}>
+                      <Icon name="i-arrow-down" cls="icon icon-md" /><span>{m.dev_close()}</span>
+                    </button>
+                  </div>
                 </section>
               {/if}
             {/if}

@@ -152,6 +152,69 @@
   background: currentColor;
 }
 
+/* Anwesenheit: ein grüner Punkt ohne Text, vorn in der Statuszeile. Er
+   taucht federnd auf, sobald ein Melder des Raums anschlägt, und sinkt weg,
+   wenn der Melder ruht. Aus ist er null breit und hebt die Lücke zum nächsten
+   Fakt auf, damit nichts verrutscht; unter reduzierter Bewegung sind alle
+   Dauern 0. */
+.phone-room-presence {
+  --phone-room-presence: var(--color-success);
+  --phone-room-presence-glow: rgba(70, 184, 118, 0.7);
+  flex: none;
+  align-self: center;
+  width: 0;
+  height: 7px;
+  margin-inline-end: calc(-1 * var(--space-3));
+  border-radius: var(--radius-full);
+  background: var(--phone-room-presence);
+  box-shadow: 0 0 6px var(--phone-room-presence-glow);
+  opacity: 0;
+  transform: scale(0.2);
+  transition:
+    width var(--duration-enter) var(--ease-in-out),
+    margin var(--duration-enter) var(--ease-in-out),
+    opacity var(--duration-enter) var(--ease-out),
+    transform var(--duration-enter) var(--ease-in-out);
+}
+
+.phone-room-presence.is-on {
+  width: 7px;
+  margin-inline-end: 0;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    width var(--duration-quick) var(--ease-out),
+    margin var(--duration-quick) var(--ease-out),
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-enter) var(--ease-spring);
+}
+
+.phone-room-card.has-hero .phone-room-presence {
+  --phone-room-presence: #5fd68f;
+  --phone-room-presence-glow: rgba(95, 214, 143, 0.7);
+}
+
+/* Kamera im Raum: ein leises Symbol oben links, bündig mit dem Namen. Es
+   sagt nur, dass es sie gibt — kein Zustand, keine Farbe. */
+.phone-room-card > .phone-room-camera {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.phone-room-camera .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.phone-room-card.has-hero > .phone-room-camera {
+  color: rgba(255, 255, 255, 0.72);
+  filter: drop-shadow(0 1px 2px rgba(8, 10, 13, 0.6));
+}
+
 .phone-room-card.has-hero .phone-room-card-name {
   color: #fff;
   text-shadow: var(--phone-room-ink-shadow);

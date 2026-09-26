@@ -49,12 +49,15 @@
     roomSensorCandidates,
     sensorIdFor,
     sensorIsAutomatic,
+    climateHidden,
     setCameraSplit,
+    setClimateHidden,
     setContactIds,
     setSensorId,
     setShowsMetric,
     showsMetric,
   } from '../state/room-display-config.svelte.ts';
+  import { configuredClimateEntityId } from '../state/entities.ts';
   import type { RoomContactKind } from '../state/commands.ts';
   import { ROOM_NAME_MAX, cleanRoomName, renameRoom } from '../state/room-rename.ts';
   import { cardsAroundTiles } from '../state/room-cards.ts';
@@ -434,22 +437,25 @@
 
   /* Der Grund ist die Blaupause des Raums — aus dem Tagbild gerechnet, mit
      demselben Bildausschnitt wie das Raumblatt, damit sie deckungsgleich
-     darüber liegt. */
+     darüber liegt. Am Panel liegt sie hinter dem Glas statt des dunklen
+     Schleiers, aus dem Panel-Bild gerechnet — wie in der iOS-App. */
   let blueprint = $state<{ url: string; position: string } | null>(null);
   let blueprintKey = '';
   $effect(() => {
-    if (!onPhone || roomEdit.mode === 'hidden' || !room) return;
+    if (roomEdit.mode === 'hidden' || !room) return;
     const roomId = room.id;
     const config = roomHeroConfig(roomId);
-    const key = [roomId, JSON.stringify(config)].join('|');
+    const phone = onPhone;
+    const key = [roomId, phone ? 'phone' : 'panel', JSON.stringify(config)].join('|');
     if (key === blueprintKey) return;
     blueprintKey = key;
     blueprint = null;
     void (async () => {
-      const [resolution, { loadRoomHero }] = await Promise.all([
-        resolvePhoneHero(import.meta.env.BASE_URL, roomId, 'light', config),
-        import('./room-hero-assets.ts'),
-      ]);
+      const assets = await import('./room-hero-assets.ts');
+      const { loadRoomHero } = assets;
+      const resolution = phone
+        ? await resolvePhoneHero(import.meta.env.BASE_URL, roomId, 'light', config)
+        : assets.resolveRoomHero({ target: 'panel', baseUrl: import.meta.env.BASE_URL, roomId, config, sun: undefined, fallbackTheme: 'light' });
       const candidate = await loadRoomHero(resolution, undefined, () => blueprintKey === key);
       if (!candidate || blueprintKey !== key) return;
       const url = await roomBlueprint(candidate.url);
@@ -582,15 +588,15 @@
 <svelte:window onkeydown={onKeydown} onresize={onViewportResize} />
 
 <div class="room-edit" class:is-open={roomEdit.mode === 'open'} class:is-phone={onPhone}
-     class:is-from-sheet={roomEdit.origin === 'sheet'}
+     class:is-from-sheet={roomEdit.origin === 'sheet'} class:has-blueprint={blueprint !== null}
+     style:--re-blueprint={blueprint ? `url("${blueprint.url}")` : undefined}
+     style:--re-blueprint-focus={blueprint?.position}
      class:is-closing={roomEdit.mode === 'closing'} hidden={roomEdit.mode === 'hidden'}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
   <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'}
        class:is-blueprint={onPhone} class:has-blueprint={blueprint !== null}
-       style:--re-blueprint={blueprint ? `url("${blueprint.url}")` : undefined}
-       style:--re-blueprint-focus={blueprint?.position}
        role="dialog" aria-modal="true"
        aria-label={m.room_edit_devices_label({ room: room?.name ?? '' })} tabindex="-1" bind:this={panelEl}
        use:swipedown={{ onSwipe: () => closeRoomEdit(), surface: () => panelEl,
@@ -966,6 +972,26 @@
                  automatisch aus der HA-Bereichszuordnung; die Auswahl ist nur
                  nötig, wenn mehrere infrage kommen oder HA nichts weiß. -->
             <section class="ld-section">
+              <!-- Ein Klimagerät, das HA dem Raum zugeordnet hat, ist nicht
+                   immer seine Heizung — eine Wärmepumpe etwa. -->
+              {#if configuredClimateEntityId(room.id)}
+                {@const climateShown = !climateHidden(room.id)}
+                <div class="re-metric-box">
+                  <div class="re-row re-metric-head">
+                    <span class="re-icon" aria-hidden="true"><Icon name="i-thermostat" /></span>
+                    <span class="re-label">
+                      <span class="re-name">{m.room_display_climate()}</span>
+                      <small class="re-meta">{sensorName(configuredClimateEntityId(room.id))}</small>
+                    </span>
+                    <button class="re-toggle pressable" type="button" role="switch" aria-checked={climateShown}
+                            class:is-on={climateShown}
+                            aria-label={m.room_display_climate()}
+                            onclick={() => setClimateHidden(room.id, climateShown)}>
+                      <span class="re-toggle-knob"></span>
+                    </button>
+                  </div>
+                </div>
+              {/if}
               {#each ['temperature', 'humidity'] as const as metric (metric)}
                 {@const candidates = roomSensorCandidates(room.id, metric)}
                 {@const others = otherSensorCandidates(room.id, metric)}

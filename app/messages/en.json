@@ -1532,6 +1532,7 @@
   "room_display_temp_hint": "Show on the room tile",
   "room_display_humidity": "Humidity",
   "room_display_humidity_hint": "Show on the room tile",
+  "room_display_climate": "Show heating",
   "room_display_sensor": "Sensor",
   "room_display_sensor_auto": "Automatic from Home Assistant",
   "room_display_sensor_none": "No sensor found in this room",

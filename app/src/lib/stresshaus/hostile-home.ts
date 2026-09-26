@@ -180,6 +180,7 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   const devices = [
     { id: 'dev_appletv', area_id: 'wohnzimmer', name: 'Apple TV', name_by_user: null, manufacturer: 'Apple', model: 'Apple TV 4K' },
     { id: 'dev_wintergarten', area_id: 'wintergarten', name: 'Tür Wintergarten', name_by_user: null, manufacturer: null, model: null },
+    { id: 'dev_waermepumpe', area_id: 'wintergarten', name: 'Wärmepumpe', name_by_user: null, manufacturer: null, model: null },
     // Gerät in einem gelöschten Bereich.
     { id: 'dev_verwaist', area_id: 'geloescht', name: 'Verwaist', name_by_user: null, manufacturer: null, model: null },
     { id: 'dev_bad', area_id: 'bad', name: 'Thermostat Bad', name_by_user: 'Heizung', manufacturer: 'Tado', model: null },
@@ -238,6 +239,8 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('light.kueche', 'unknown', { friendly_name: 'Küche', supported_color_modes: ['brightness'] }, { area_id: 'kueche' });
   add('light.kueche_insel', 'on', { friendly_name: 'Insel', brightness: 300, color_mode: 'brightness', supported_color_modes: ['brightness'] }, { area_id: 'kueche' });
   add('switch.kuche_kaffee', 'on', { friendly_name: 'Kaffeemaschine' }, { area_id: 'kuche' });
+  // Melder weg: die Kachel zeigt keinen grünen Anwesenheitspunkt, statt „jemand da" zu raten.
+  add('binary_sensor.kueche_bewegung', 'unavailable', { friendly_name: 'Bewegung', device_class: 'motion' }, { area_id: 'kueche' });
   add('sensor.kuche_temperatur', 'abc', { friendly_name: 'Temperatur', unit_of_measurement: '°C', device_class: 'temperature' }, { area_id: 'kuche' });
   add('sensor.kuche_leistung', '1e308', { friendly_name: 'Leistung', unit_of_measurement: 'W', device_class: 'power', state_class: 'measurement' }, { area_id: 'kuche' });
   add('sensor.netz_bezug_wh', '8123456', { friendly_name: 'Netzbezug', unit_of_measurement: 'Wh', device_class: 'energy', state_class: 'total_increasing' }, { area_id: null });
@@ -307,8 +310,20 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('cover.wintergarten_tur', 'open', {
     friendly_name: 'Tür', current_position: 40, device_class: 'door', supported_features: 15,
   }, { area_id: 'wintergarten', device_id: 'dev_wintergarten' });
+  /* Jalousie mit Lamellen nur auf/zu, gerade in Fahrt: ein Tipp muss sie anhalten. */
+  add('cover.wintergarten_jalousie', 'closing', {
+    friendly_name: 'Jalousie', current_position: 60, device_class: 'blind', supported_features: 63,
+  }, { area_id: 'wintergarten' });
   add('binary_sensor.wintergarten_tur', 'off', { friendly_name: 'Tür', device_class: 'door' }, { device_id: 'dev_wintergarten' });
   add('sensor.wintergarten_tur', '87', { friendly_name: 'Tür', unit_of_measurement: '%', device_class: 'battery' }, { device_id: 'dev_wintergarten', entity_category: 'diagnostic' });
+
+  /* ── Hauswirtschaft: Wärmepumpe mit Heizkreis und Warmwasser (Rückmeldung aus der App) ──
+     Sie ist nicht die Heizung des Raums; ihr Ein/Aus-Knopf gehört nicht auf die Kachel. */
+  add('climate.waermepumpe_heizkreis', 'heat', {
+    friendly_name: 'Wärmepumpe Heizkreis', current_temperature: 34, temperature: 35, hvac_modes: ['off', 'heat'], supported_features: 385,
+  }, { area_id: 'wintergarten', device_id: 'dev_waermepumpe' });
+  add('water_heater.waermepumpe_warmwasser', 'heat_pump', { friendly_name: 'Warmwasser', temperature: 48 }, { device_id: 'dev_waermepumpe' });
+  add('sensor.waermepumpe_vorlauf', '34.2', { friendly_name: 'Vorlauf', unit_of_measurement: '°C', device_class: 'temperature' }, { device_id: 'dev_waermepumpe' });
 
   /* ── Kinderzimmer ── */
   add('light.kinderzimmer_nacht', 'on', { friendly_name: 'Nachtlicht', brightness: 3, color_mode: 'hs', hs_color: null, supported_color_modes: ['hs'] }, { area_id: 'kinderzimmer' });
@@ -403,6 +418,8 @@ export function hostileHome(now: Date = new Date()): HostileHome {
         { start: at(now, 1, 9), end: at(now, 1, 10), summary: '', uid: 'leer' },
         { start: at(now, 1, 12), end: at(now, 1, 13), summary: LONG_NAME, description: '<b>fett</b>', location: '📍', uid: 'lang' },
         { start: isoDay(now, 3), end: isoDay(now, 4), summary: 'Geburtstag Alex', uid: 'geburtstag' },
+        // Heute, Name außerhalb von Latin-1: stand als Momente-ETag im Kopf und beendete den Server.
+        { start: isoDay(now, 0), end: isoDay(now, 1), summary: 'Geburtstag Łukasz', uid: 'geburtstag-heute' },
         ...busyDay,
       ],
       'calendar.muell': [

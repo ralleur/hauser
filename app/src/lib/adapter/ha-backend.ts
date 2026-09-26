@@ -83,6 +83,8 @@ const CONNECT_TIMEOUT_MS = 20_000;
 /* B-27 A3: Der initiale Daten-Burst liefert Dutzende Diffs in Folge; jeder
    davon hätte die komplette Entity-Map synchron serialisiert. */
 const CACHE_FLUSH_DEBOUNCE_MS = 500;
+/* R43: Registry-Ereignisse kommen in Schüben; so viel Ruhe, bevor neu gelesen wird. */
+const REGISTRY_REFRESH_DELAY_MS = 1_500;
 
 /* B-08E11: Im App-Modus läuft der Live-Kanal über das Same-Origin-Gateway des
    Hauser-Servers; die Basis ist damit die eigene Origin. Der Access-Token des
@@ -188,6 +190,8 @@ export class HaBackend implements Backend {
   #persistentCb: ((items: PersistentNotification[]) => void) | null = null;
   #persistent = new Map<string, PersistentNotification>();
   #persistentUnsub: Unsub | null = null;
+  #registryConn: Connection | null = null;
+  #registryTimer: ReturnType<typeof setTimeout> | null = null;
 
   #status: ConnectionStatus = 'connecting';
   #conn: Connection | null = null;
@@ -453,7 +457,7 @@ export class HaBackend implements Backend {
       .map((state) => ({
         entityId: state.entity_id,
         name: String(state.attributes.friendly_name ?? state.entity_id),
-        area: areas.get(state.entity_id) ?? null,
+        area: areas.get(state.entity_id)?.area ?? null,
         members: (Array.isArray(state.attributes.entity_id) ? state.attributes.entity_id : [])
           .filter((id): id is string => typeof id === 'string'),
       }))
@@ -792,6 +796,7 @@ export class HaBackend implements Backend {
       this.#setStatus('connected');
       this.#resetRetry();
       void this.#refreshCatalog();
+      void this.#subscribeRegistry();
     } catch (err) {
       const failedConnection = this.#conn;
       this.#conn = null;
@@ -838,15 +843,48 @@ export class HaBackend implements Backend {
     );
   }
 
+  /* R43: Hauser folgt Home Assistant. Ordnet jemand dort ein Gerät einem
+     Bereich zu, legt eines an oder benennt einen Bereich um, liest Hauser
+     Katalog und Bereiche neu — ohne Neuladen. Die Ereignisse kommen oft in
+     Schüben (ein Gerät bringt fünf Entitäten mit), deshalb gebündelt. */
+  async #subscribeRegistry(): Promise<void> {
+    const conn = this.#conn;
+    if (!conn || this.#registryConn === conn) return;
+    this.#registryConn = conn;
+    const schedule = () => {
+      if (this.#registryTimer) clearTimeout(this.#registryTimer);
+      this.#registryTimer = setTimeout(() => {
+        this.#registryTimer = null;
+        void this.#refreshCatalog();
+      }, REGISTRY_REFRESH_DELAY_MS);
+    };
+    for (const type of ['area_registry_updated', 'device_registry_updated', 'entity_registry_updated']) {
+      try {
+        await conn.subscribeEvents(schedule, type);
+      } catch (err) {
+        // Ohne Recht auf das Ereignis bleibt es beim Einlesen je Verbindung.
+        console.warn(`[HaBackend] ${type} nicht abonnierbar:`, err);
+      }
+    }
+  }
+
   async #refreshCatalog(): Promise<void> {
     if (!this.#conn || !this.#catalogCb) return;
     try {
       const states = await getStates(this.#conn);
-      const areas = await this.#entityAreas();
+      const registry = await this.#entityAreas();
       const items = states
         .map(catalogItemFromHaState)
         .filter((x): x is EntityCatalogItem => x !== null)
-        .map((item) => (areas.has(item.entityId) ? { ...item, area: areas.get(item.entityId)! } : item));
+        .map((item) => {
+          const entry = registry.get(item.entityId);
+          if (!entry) return item;
+          return {
+            ...item,
+            ...(entry.area ? { area: entry.area } : {}),
+            ...(entry.createdAt !== null ? { createdAt: entry.createdAt } : {}),
+          };
+        });
       this.#catalogCb(items);
     } catch (err) {
       console.warn('[HaBackend] Entity-Katalog konnte nicht geladen werden:', err);
@@ -859,14 +897,14 @@ export class HaBackend implements Backend {
      ist stabiler als die area_id, deshalb wird er zurückgegeben.
      Scheitert der Abruf (fehlende Rechte, alte HA-Version), bleibt der Katalog
      ohne Bereiche — die Automatik greift dann eben nicht. */
-  async #entityAreas(): Promise<Map<string, string>> {
-    const map = new Map<string, string>();
+  async #entityAreas(): Promise<Map<string, { area: string | null; createdAt: number | null }>> {
+    const map = new Map<string, { area: string | null; createdAt: number | null }>();
     if (!this.#conn) return map;
     try {
       const [areas, devices, entities] = await Promise.all([
         this.#conn.sendMessagePromise<{ area_id: string; name: string }[]>({ type: 'config/area_registry/list' }),
         this.#conn.sendMessagePromise<{ id: string; area_id: string | null }[]>({ type: 'config/device_registry/list' }),
-        this.#conn.sendMessagePromise<{ entity_id: string; area_id: string | null; device_id: string | null }[]>(
+        this.#conn.sendMessagePromise<{ entity_id: string; area_id: string | null; device_id: string | null; created_at?: unknown }[]>(
           { type: 'config/entity_registry/list' },
         ),
       ]);
@@ -874,8 +912,10 @@ export class HaBackend implements Backend {
       const deviceArea = new Map(devices.map((d) => [d.id, d.area_id]));
       for (const entry of entities) {
         const areaId = entry.area_id ?? (entry.device_id ? deviceArea.get(entry.device_id) ?? null : null);
-        const name = areaId ? areaName.get(areaId) : undefined;
-        if (name) map.set(entry.entity_id, name);
+        const name = areaId ? areaName.get(areaId) ?? null : null;
+        // HA führt `created_at` (Sekunden) seit 2024.x; ältere Stände kennen es nicht.
+        const createdAt = typeof entry.created_at === 'number' && Number.isFinite(entry.created_at) ? entry.created_at * 1000 : null;
+        if (name || createdAt !== null) map.set(entry.entity_id, { area: name, createdAt });
       }
     } catch (err) {
       console.warn('[HaBackend] area mapping unavailable:', err);

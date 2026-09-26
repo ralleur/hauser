@@ -12,7 +12,9 @@ import { rehydrateImmersionLight } from './immersion-light.svelte.ts';
 import { notifications } from './notifications.svelte.ts';
 import { adoptHaPersonsOnce, rehydrateReminderPersons } from './reminder-persons.svelte.ts';
 import { initReminders } from './reminders.svelte.ts';
-import { configuredRoomSensorIds } from './room-display-config.svelte.ts';
+import { configuredRoomSensorIds, rehydrateRoomDisplay } from './room-display-config.svelte.ts';
+import { rehydratePhoneAction } from './phone-action.svelte.ts';
+import { rehydrateCentralClimate } from './climate-central-config.svelte.ts';
 import {
   haCredentialsAvailableLocally,
   syncConfiguredBackend,
@@ -49,6 +51,9 @@ export function rehydrateSharedConfigConsumers(): void {
   rehydrateLayoutManager();
   rehydrateImmersionLight();
   sceneManager.config = loadSceneConfig();
+  rehydrateRoomDisplay();
+  rehydratePhoneAction();
+  rehydrateCentralClimate();
   rehydrateShoppingConfig();
   rehydrateReminderPersons();
   settingsValues.demoMode = readShared('hmi:backend') === 'fake';

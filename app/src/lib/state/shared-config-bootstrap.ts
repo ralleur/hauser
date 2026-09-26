@@ -18,6 +18,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:library',
   'hmi:lock-button',
   'hmi:device-config:v1',
+  'hmi:ha-follow:v1',
   'hmi:scene-config:v1',
   'hmi:room-display:v1',
   'hmi:home-layout:v1',
@@ -33,6 +34,8 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:reminder-persons:v1',
   'hmi:notion-token',
   'hmi:notion-page',
+  'hmi:phone-action:v1',
+  'hmi:central-climate:v1',
 ] as const;
 
 type FetchLike = typeof fetch;

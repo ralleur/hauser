@@ -350,6 +350,8 @@ export class FakeBackend implements Backend {
       if (service === 'open_cover' || service === 'open_valve') { v.on = true; v.position = 100; v.moving = null; }
       else if (service === 'close_cover' || service === 'close_valve') { v.on = false; v.position = 0; v.moving = null; }
       else if (service === 'stop_cover' || service === 'stop_valve') v.moving = null;
+      else if (service === 'open_cover_tilt') v.tilt = 100;
+      else if (service === 'close_cover_tilt') v.tilt = 0;
       else if ((service === 'set_cover_position' || service === 'set_valve_position') && typeof data.position === 'number') {
         v.position = data.position;
         v.on = data.position > 0;

@@ -13,11 +13,11 @@ import { ImportType, init, parse } from 'es-module-lexer';
    Initialroute steht weiter auf den dokumentierten 80 KiB — sie hat dort
    reichlich Luft, und ein Gate, das großzügiger ist als sein Dokument, ist kein
    Gate. ADR-034 hebt den kombinierten Startpfad auf 115 KiB, mit Startmessung
-   als Beleg. */
+   als Beleg; ADR-035 auf 118 KiB. */
 export const DEFAULT_BUDGETS = Object.freeze({
   initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
-  combinedPhoneStartupJsGzipBytes: 115 * 1024,
+  combinedPhoneStartupJsGzipBytes: 118 * 1024,
 });
 
 function emptyReport(budgets) {

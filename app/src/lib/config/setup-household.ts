@@ -323,6 +323,8 @@ function entityRole(state: SetupState): EntityRole | null {
   return null;
 }
 
+const HEATING_PLANT_NAME = /w(ä|ae|a)rme[\s_]?pumpe|heat[\s_]?pump|heizkreis|heating[\s_]?circuit|heizkessel|boiler|pompe[\s_]?(à|a)[\s_]?chaleur|pompa[\s_]?di[\s_]?calore|pompa[\s_]?ciep(ł|l)a|bomba[\s_]?de[\s_]?calor/i; // i18n-ignore: Erkennung, keine Anzeige
+
 function inferredRoomName(entityId: string): string {
   const objectId = entityId.slice(entityId.indexOf('.') + 1);
   const prefix = objectId.includes('_') ? objectId.slice(0, objectId.indexOf('_')) : 'home';
@@ -350,6 +352,16 @@ export function buildSetupHouseholdSuggestion(
   // Rollen, die mehrfach im selben Raum auftreten dürfen (wie 'light'); alle
   // anderen sind Singleton pro Raum (z. B. genau ein Klima-/Kamera-Entity).
   const multiInstanceRoles = new Set<EntityRole>(['light', 'switch', 'cover']);
+  /* Eine Heizanlage (Wärmepumpe, Kessel) ist nicht die Heizung des Raums, in
+     dem sie steht: Hauser setzte sonst ihren Ein/Aus-Knopf und ihre Vorlauf-
+     temperatur auf die Raum-Kachel (Rückmeldung aus der App, 2026-09-24).
+     Erkannt am Warmwasser-Gerät desselben Geräts oder am Namen. */
+  const plantDevices = new Set(snapshot.entities
+    .filter((entry) => entry.entity_id.startsWith('water_heater.') && entry.device_id)
+    .map((entry) => entry.device_id!));
+  const isHeatingPlant = (entry: SetupEntityRegistryEntry, state: SetupState) =>
+    (!!entry.device_id && plantDevices.has(entry.device_id))
+    || HEATING_PLANT_NAME.test(`${entry.entity_id} ${displayName(entry, state)}`);
 
   function resolveAreaKey(entityId: string, areaId: string | null, deviceId: string | null): string | null {
     const explicitAreaId = areaId ?? (deviceId ? deviceArea.get(deviceId) ?? null : null);
@@ -373,6 +385,7 @@ export function buildSetupHouseholdSuggestion(
     }
     const role = entityRole(state);
     if (!role) continue;
+    if ((role === 'climate' || role === 'temperature') && isHeatingPlant(entry, state)) continue;
     const areaKey = resolveAreaKey(entry.entity_id, entry.area_id, entry.device_id);
     if (!areaKey) {
       ignored.add(entry.entity_id);

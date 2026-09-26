@@ -2216,6 +2216,14 @@ button.security-bar {
    Deckkraft kommt direkt vom Sonnenstand — keine eigene Transition, sonst
    liefe sie dem Band hinterher. */
 .energy-hero-img.is-counter { transition: none; }
+/* Anordnen: das Haus als Blaupause — Papier, Zeichnung, ein leichter
+   Papierschleier darüber, wie in der iOS-App und der Raum-Konfiguration. */
+.energy-hero-img.is-blueprint {
+  background-color: #0a1a36;
+  background-image:
+    linear-gradient(rgba(10, 26, 54, 0.28), rgba(10, 26, 54, 0.28)),
+    var(--energy-blueprint, none);
+}
 /* Die Ecke oben links trägt Chips und Tageszeile, das Band unten die
    Verlaufslinie. Sonne, Balkon und Stadt bleiben unangetastet — deshalb eine
    Ecke und keine durchgehende Bahn. */
@@ -4150,6 +4158,24 @@ button.security-bar {
   animation: modal-exit var(--duration-fast) var(--ease-in) both;
 }
 .room-edit.is-closing { pointer-events: none; }
+/* Am Panel liegt hinter dem Glas die Blaupause des Raums statt des dunklen
+   Schleiers — hier wird gebaut, nicht gewohnt (wie am Telefon und in der
+   iOS-App). Bis das Bild gerechnet ist, trägt das Papier mit Raster allein. */
+.room-edit.room-edit:not(.is-phone) > .overlay-scrim {
+  background-color: #0a1a36;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px),
+    linear-gradient(rgba(10, 26, 54, 0.5), rgba(10, 26, 54, 0.5)),
+    var(--re-blueprint, none);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px, cover, cover;
+  background-position: 0 0, 0 0, 0 0, 0 0, center, var(--re-blueprint-focus, center);
+  background-repeat: repeat, repeat, repeat, repeat, no-repeat, no-repeat;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .room-edit-panel {
   width: min(100%, 560px);
   outline: none;

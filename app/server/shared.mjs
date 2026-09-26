@@ -386,14 +386,14 @@ export function readRoomImageJsonBody(req, { allowEmpty = false, maxBytes = 64 *
   });
 }
 
-export function readSmallJson(req, res, callback) {
+export function readSmallJson(req, res, callback, maxBytes = ABLAGE_BODY_MAX) {
   let body = '';
   let oversized = false;
   req.setEncoding('utf8');
   req.on('data', (chunk) => {
     if (oversized) return;
     body += chunk;
-    if (Buffer.byteLength(body) > ABLAGE_BODY_MAX) oversized = true;
+    if (Buffer.byteLength(body) > maxBytes) oversized = true;
   });
   req.on('end', () => {
     if (oversized) return jsonResponse(res, 413, { error: 'Anfrage zu groß' });

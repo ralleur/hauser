@@ -449,8 +449,7 @@
    Zeichnung: eine unscharfe Kopie über die ganze Fläche, darüber eine
    schärfere, die zum Rand hin ausblendet — die Mitte ist klar, der Rand
    verschwimmt. Zwei hauchfeine radiale Verläufe heben die Mitte und dunkeln
-   den Rand ab. Das Wochenband ist dieselbe Milchglasscheibe wie die
-   Gerätesteuerung. Einkaufszettel und Post-its bleiben, wie sie sind. */
+   den Rand ab. Das Wochenband liegt offen darauf. Einkaufszettel und Post-its bleiben, wie sie sind. */
 :root:not([data-card-style="standard"]) .ambient {
   /* Karte: helles, entsättigtes Taupe auf warmem Creme, deutlich zurück-
      genommen — Struktur, kein Motiv. */
@@ -458,8 +457,6 @@
   --ambient-glass-ink: #b8a996;
   --ambient-glass-soft: 0.38;
   --ambient-glass-sharp: 0.3;
-  --ambient-glass-divider: rgba(255, 255, 255, 0.16);
-  --ambient-glass-time: #e3c9a0;
   --ambient-glass-vignette: rgba(80, 55, 30, 0.08);
   /* Breite, sehr weiche Verläufe in Creme und Sand; die Aufhellung hinter
      der Uhr läuft ohne sichtbare Grenze aus. Zuoberst eine feinkörnige
@@ -477,8 +474,6 @@
   --ambient-glass-ink: #8a7f73;
   --ambient-glass-soft: 0.34;
   --ambient-glass-sharp: 0.24;
-  --ambient-glass-divider: rgba(255, 255, 255, 0.14);
-  --ambient-glass-time: #e3c9a0;
   --ambient-glass-vignette: rgba(0, 0, 0, 0.22);
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.3  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>"),
@@ -535,61 +530,44 @@
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
 }
-/* Das Wochenband ist exakt die Scheibe der Gerätesteuerung: dunkles Glas,
-   helle Schrift, derselbe Blur — in beiden Themes (Owner-Ansage 2026-09-12). */
+/* Das Wochenband liegt offen auf dem Grund (Owner, iOS-App Build 66,
+   2026-09-23): sieben Spalten ohne Scheibe, je Tag eine Haarlinie oben,
+   Wochentag und Tageszahl leise, die Titel in der Schrift der Uhr. Uhrzeiten
+   und der heutige Tag tragen das warme Akzent — auf Sand ein dunkles
+   Bernstein, das lesbar bleibt, auf dem dunklen Grund das Gold des Logos. */
 :root:not([data-card-style="standard"]) .ambient-week {
-  --color-text-primary: #fff;
-  --color-text-secondary: rgba(255, 255, 255, 0.78);
-  --color-text-tertiary: rgba(255, 255, 255, 0.6);
-  color: var(--color-text-primary);
-  gap: 0;
-  width: min(94vw, 1600px);
-  padding: var(--space-4) 0;
-  border: 1px solid var(--overlay-border, rgba(255, 255, 255, 0.22));
-  border-radius: var(--radius-2xl);
-  background: rgba(26, 28, 34, 0.3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  /* Dünner und weniger Blur als auf der Bühne: hinter dem Band liegt kein
-     Foto, sondern nur die feine Karte — bei 18 px löst sie sich vollständig
-     auf und das Band wirkt wie eine deckende Fläche. Bei 4 px bleibt ihre
-     Struktur als weiches Muster im Glas erkennbar. */
-  -webkit-backdrop-filter: blur(4px) saturate(1.2);
-  backdrop-filter: blur(4px) saturate(1.2);
+  --week-ink: #212121;
+  --week-ink-soft: #494949;
+  --week-accent: #7f5220;
+  --week-hairline: rgba(0, 0, 0, 0.14);
+  color: var(--week-ink);
 }
-:root:not([data-card-style="standard"]) .ambient-week-title { color: var(--color-text-primary); }
-:root:not([data-card-style="standard"]) .ambient-week-more { color: var(--color-text-tertiary); }
-:root:not([data-card-style="standard"]) .ambient-week-day {
-  min-height: 7lh;
-  padding: 0 var(--space-4);
-  border-top: 0;
-  border-left: 1px solid var(--ambient-glass-divider);
+:root:not([data-card-style="standard"])[data-theme='dark'] .ambient-week {
+  --week-ink: #f0e6d6;
+  --week-ink-soft: rgba(240, 230, 214, 0.8);
+  --week-accent: #f5b03c;
+  --week-hairline: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 2px 8px rgba(8, 10, 13, 0.6);
 }
-:root:not([data-card-style="standard"]) .ambient-week-day:first-child {
-  border-left: 0;
-}
-:root:not([data-card-style="standard"]) .ambient-week-head {
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-:root:not([data-card-style="standard"]) .ambient-week-name,
+:root:not([data-card-style="standard"]) .ambient-week-day { border-top-color: var(--week-hairline); }
+:root:not([data-card-style="standard"]) .ambient-week-name { color: var(--week-ink-soft); }
 :root:not([data-card-style="standard"]) .ambient-week-num {
-  font-family: inherit;
-  font-size: var(--text-sm);
-  letter-spacing: 0.04em;
-  color: var(--color-text-primary);
+  color: var(--week-ink-soft);
+  opacity: 0.75;
 }
-:root:not([data-card-style="standard"]) .ambient-week-name { font-weight: var(--font-weight-semibold); }
-:root:not([data-card-style="standard"]) .ambient-week-num { color: var(--color-text-secondary); }
-/* Das Band beginnt heute: die erste Spalte trägt die warme Akzentfarbe. */
+:root:not([data-card-style="standard"]) .ambient-week-title { color: var(--week-ink); }
+:root:not([data-card-style="standard"]) .ambient-week-more { color: var(--week-ink-soft); }
+/* Das Band beginnt heute: die erste Spalte trägt das Akzent. */
 :root:not([data-card-style="standard"]) .ambient-week-day:first-child .ambient-week-name,
 :root:not([data-card-style="standard"]) .ambient-week-day:first-child .ambient-week-num {
-  color: var(--color-accent-warm);
+  color: var(--week-accent);
+  opacity: 1;
 }
 /* Spezifischer als die Quellenfarbe der Termine und die Dark-Regel in
    app.css: im Glas-Sperrbildschirm sind alle Uhrzeiten warm. */
 :root:not([data-card-style="standard"])[data-theme] .ambient .ambient-week-time:not(.is-accent),
 :root:not([data-card-style="standard"]) .ambient .ambient-week-time {
-  color: var(--ambient-glass-time);
+  color: var(--week-accent);
   font-weight: var(--font-weight-medium);
 }
 

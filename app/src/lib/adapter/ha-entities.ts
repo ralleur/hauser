@@ -216,6 +216,7 @@ export function haToCover(raw: RawEntity): CoverValue {
     supportsStop: (f & 8) !== 0,
     supportsPosition: (f & 4) !== 0 || position !== null,
     supportsTilt: (f & 128) !== 0 || tilt !== null,
+    supportsTiltButtons: (f & 128) === 0 && tilt === null && (f & 48) === 48,
   };
 }
 

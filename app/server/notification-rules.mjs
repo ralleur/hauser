@@ -9,6 +9,7 @@ import {
   NOTIFICATION_CATEGORY_IDS,
   NOTIFICATION_COLORS,
   NOTIFICATION_ID_PREFIX,
+  NOTIFICATION_RULES_BODY_MAX,
   NOTIFICATION_RULES_PATH,
 } from './runtime-env.mjs';
 import { jsonResponse, readSmallJson } from './shared.mjs';
@@ -272,5 +273,5 @@ export function serveNotifications(req, res, service) {
     jsonResponse(res, 200, {
       ok: true, version: 1, updatedAt: data.updatedAt, rules: data.rules, colors: data.colors ?? {}, push: data.push ?? { service: null }, sync, syncError,
     });
-  });
+  }, NOTIFICATION_RULES_BODY_MAX);
 }

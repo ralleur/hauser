@@ -1532,6 +1532,7 @@
   "room_display_temp_hint": "Auf der Raum-Kachel anzeigen",
   "room_display_humidity": "Luftfeuchte",
   "room_display_humidity_hint": "Auf der Raum-Kachel anzeigen",
+  "room_display_climate": "Heizung zeigen",
   "room_display_sensor": "Sensor",
   "room_display_sensor_auto": "Automatisch aus Home Assistant",
   "room_display_sensor_none": "Kein Sensor im Raum gefunden",

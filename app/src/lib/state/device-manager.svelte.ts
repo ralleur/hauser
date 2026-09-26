@@ -23,6 +23,9 @@ import {
   type EntityCatalogItem,
 } from './device-config.ts';
 
+import { followHomeAssistant, HA_FOLLOW_KEY, parseHaFollowState } from './ha-follow.ts';
+import { sharedStorage } from './shared-config.ts';
+
 const seedItems = seedCatalog(ROOM_SEED);
 
 export const deviceManager = $state({
@@ -41,6 +44,7 @@ export function initDeviceManager(): void {
   subscribed = true;
   runtime.subscribeCatalog((items) => {
     deviceManager.catalog = mergeCatalog(seedItems, items as EntityCatalogItem[]);
+    followHa(items as EntityCatalogItem[]);
     applyProjection();
   });
   applyProjection();
@@ -104,6 +108,22 @@ function updateConfig(config: DeviceConfig): void {
   deviceManager.config = config;
   saveDeviceConfig(config);
   applyProjection();
+}
+
+/* R43: Nur ein echter HA-Katalog trägt `createdAt`; Demo und Offline-Seed
+   lassen den Abgleich aus. */
+function followHa(items: readonly EntityCatalogItem[]): void {
+  if (!items.some((item) => typeof item.createdAt === 'number')) return;
+  const shown = new Set(appState.rooms.flatMap((room) => room.lights.map((device) => device.entityId)));
+  const result = followHomeAssistant(
+    deviceManager.config, deviceManager.catalog, appState.rooms, shown,
+    parseHaFollowState(sharedStorage.getItem(HA_FOLLOW_KEY)), Date.now(),
+  );
+  if (result.stateChanged) sharedStorage.setItem(HA_FOLLOW_KEY, JSON.stringify(result.state));
+  if (result.configChanged) {
+    deviceManager.config = result.config;
+    saveDeviceConfig(result.config);
+  }
 }
 
 function applyProjection(): void {

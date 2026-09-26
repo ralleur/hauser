@@ -3,6 +3,93 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.28.0] - 2026-09-25
+
+### Changed
+
+- **The week on the standby screen lies open on the map.** Seven columns with a
+  fine line per day instead of a dark glass band; times and today stand in dark
+  amber on the light ground and in the gold of the logo at night.
+- **Configuring happens on the blueprint.** On the panel, room configuration now
+  sits on a blueprint of the room instead of a dark veil, and moving the notes on
+  the energy screen turns the house into a blueprint — as on the phone and in the
+  iOS app.
+
+## [0.27.0] - 2026-09-25
+
+### Added
+
+- **Room tiles show who is around.** A green dot appears on a room tile while
+  a motion or presence sensor in that room reports someone, and fades away
+  once the sensor goes idle. Rooms with a camera carry a quiet camera symbol
+  in the top left corner. Both appear on the phone and in "All rooms".
+
+## [0.26.1] - 2026-09-25
+
+### Fixed
+
+- **Notification rules save again.** Saving a new rule ended in "Saving failed"
+  as soon as the list held more than the laundry rule, and the rules were
+  lost whenever the App restarted. The server now accepts the full list and
+  keeps it with the other household data (#25).
+- **A birthday no longer stops Hauser.** A birthday in the calendar whose name
+  contains letters such as "Ł" or an emoji stopped the server on that day.
+
+## [0.26.0] - 2026-09-24
+
+### Added
+
+- **Hauser follows Home Assistant.** Move a device to another area in Home
+  Assistant and it moves to that room in Hauser, without reloading. A light,
+  switch, blind or vacuum added to Home Assistant from now on appears in the
+  room of its area. A device placed or hidden by hand in Hauser stays where
+  it is until its area changes in Home Assistant.
+
+### Fixed
+
+- **Room settings are stored for the whole household.** The chosen room
+  sensors, the phone action, central climate and several settings of the iOS
+  app were kept only on the device that set them. They are now saved centrally
+  and shown the same everywhere
+  ([#24](https://github.com/ralleur/hauser/issues/24)).
+
+## [0.25.0] - 2026-09-24
+
+### Changed
+
+- **Rain shows on the standby screen.** The rain over the standby screen was
+  so faint that it showed on no screenshot. Its streaks are now clearly
+  visible and still quieter than the clock.
+
+## [0.24.1] - 2026-09-24
+
+### Fixed
+
+- **A heat pump is no longer taken for a room's heating.** Setup used to put
+  a heat pump or boiler found in a room on its tile, power button and flow
+  temperature included. Setup now skips heating plants, and the room
+  configuration has a “Show heating” switch to hide a heater that is already
+  there.
+
+## [0.24.0] - 2026-09-24
+
+### Added
+
+- **A moving blind stops with a tap.** While a blind, shutter or motorised
+  door is opening or closing, tapping its tile stops it, like the switch on
+  the wall. Blinds whose slats can only open and close get two tilt buttons
+  in the device detail.
+
+## [0.23.2] - 2026-09-24
+
+### Fixed
+
+- **A room's chosen sensor shows on every device.** The temperature and
+  humidity sensor picked for a room was stored centrally, but other browsers
+  kept showing their old choice until their site data was cleared. Every
+  device now picks up the household's choice on start
+  ([#24](https://github.com/ralleur/hauser/issues/24)).
+
 ## [0.23.1] - 2026-09-24
 
 ### Fixed

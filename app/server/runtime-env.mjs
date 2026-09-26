@@ -177,9 +177,13 @@ export const LAUNDRY_SESSION_TTL_MS = 2 * 60 * 1000;
 export const LAUNDRY_BLUEPRINT_PATH = 'hauser/laundry-power-cycle-v1.yaml';
 export const LAUNDRY_BLUEPRINT_FILE = fileURLToPath(new URL('../public/blueprints/automation/laundry-power-cycle-v1.yaml', import.meta.url));
 /* Benachrichtigungsregeln (B-04B): Regelliste als kleine JSON-Datei, die
-   Auslösung selbst liegt als Blueprint-Automation in Home Assistant. */
+   Auslösung selbst liegt als Blueprint-Automation in Home Assistant. Sie liegt
+   neben den Familiendaten, damit sie im Add-on unter /data den Neustart
+   übersteht (ralleur/hauser#25). 64 Regeln mit je 8 Auslösern brauchen mehr
+   als das Kilobyte der kleinen Formulare. */
 export const NOTIFICATION_RULES_PATH = process.env.HMI_NOTIFICATION_RULES_PATH
-  || resolve(homedir(), '.local', 'share', 'smart-home-hmi', 'notification-rules.json');
+  || resolve(dirname(FAMILY_DATA_PATH), 'notification-rules.json');
+export const NOTIFICATION_RULES_BODY_MAX = 256 * 1024;
 export const NOTIFICATION_BLUEPRINT_DIR = fileURLToPath(new URL('../public/blueprints/automation/', import.meta.url));
 export const NOTIFICATION_BLUEPRINTS = Object.freeze({
   state: { path: 'hauser/notify-state-v1.yaml', file: 'notify-state-v1.yaml' },
@@ -272,6 +276,14 @@ export const SHARED_CONFIG_KEYS = new Set([
   'hmi:shopping-config:v1', 'hmi:reminder-persons:v1',
   'hmi:paperless-url', 'hmi:paperless-token', 'hmi:ablage-pin',
   'hmi:notion-token', 'hmi:notion-page',
+  /* Bis 0.25.0 fehlten hier Schlüssel, die Web und iOS schreiben — der Server
+     verwarf sie stillschweigend, die Wahl blieb auf dem Gerät
+     (`ralleur/hauser#24`). Der Test in shared-config.test.ts hält die Listen
+     jetzt deckungsgleich. */
+  'hmi:room-display:v1', 'hmi:immersion-light:v1', 'hmi:ha-follow:v1',
+  'hmi:phone-action:v1', 'hmi:central-climate:v1',
+  // Nur die iOS-App (HouseholdStore.sharedKeys):
+  'hmi:security-sensors:v1', 'hmi:media-presets:v1', 'hmi:room-list:v1', 'hmi:home-off:v1',
 ]);
 const SHARED_CONFIG_VALUE_MAX = 256 * 1024;
 

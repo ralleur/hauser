@@ -291,7 +291,7 @@ export function buildRuntimeRooms(
     const seedVisible = !!seed;
     const visible = override?.visible ?? seedVisible;
     if (!visible) continue;
-    const suggestedRoom = seed?.roomId ?? normalizeRoomId(item.area, roomIds) ?? rooms[0]?.id;
+    const suggestedRoom = seed?.roomId ?? roomIdForArea(item.area, rooms) ?? rooms[0]?.id;
     const roomId = override?.roomId && roomIds.has(override.roomId) ? override.roomId : suggestedRoom;
     if (!roomId) continue;
     byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName));
@@ -525,6 +525,20 @@ export function deviceIdOf(entityId: string): string {
 
 function stableDeviceId(entityId: string): string {
   return entityId.replace(/^[^.]+\./, '').replace(/[^a-zA-Z0-9_-]+/g, '_');
+}
+
+/* Raum zu einem HA-Bereich. Die Einrichtung nennt den Raum wie den Bereich
+   und bildet die Id per NFKD („Küche" → `kuche`), ältere Stände schrieben
+   `kueche` — der Name trägt deshalb zuerst, die Id-Formen danach (R43). */
+export function roomIdForArea(area: string | null | undefined, rooms: readonly { id: string; name: string }[]): string | null {
+  if (!area) return null;
+  const wanted = area.trim().toLowerCase();
+  const byName = rooms.find((room) => room.name.trim().toLowerCase() === wanted);
+  if (byName) return byName.id;
+  const ids = new Set(rooms.map((room) => room.id));
+  const nfkd = area.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (ids.has(nfkd)) return nfkd;
+  return normalizeRoomId(area, ids);
 }
 
 function normalizeRoomId(area: string | null | undefined, roomIds: Set<string>): string | null {
