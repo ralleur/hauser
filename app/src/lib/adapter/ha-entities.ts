@@ -11,6 +11,7 @@ import type {
   ClimateValue, MediaValue, MowerValue, NumberValue, PersonValue, SelectValue, SunValue, SensorValue, SwitchValue,
   VacuumValue, WaterHeaterValue,
 } from './types.ts';
+import { reportError } from '../state/error-book.ts';
 
 /* Roher HA-Entity-Zustand, wie ihn `subscribe_entities` transportiert. */
 export interface RawEntity {
@@ -464,6 +465,20 @@ export function haToCamera(raw: RawEntity): CameraValue {
     available: raw.state !== 'unavailable',
     entityPicture: typeof picture === 'string' ? picture : null,
   };
+}
+
+/* Eingang für Daten aus Home Assistant (R58): ein Gerät, das der Adapter
+   nicht versteht, fällt allein heraus und landet im Fehlerbuch, statt die
+   ganze Runde abzubrechen — vorher blieben alle folgenden Geräte eines
+   Updates auf ihrem alten Stand. Im Buch steht nur die Domäne, nie die
+   Entität. `haToValue` selbst wirft weiter, damit das Stresshaus es sieht. */
+export function haToValueSafe(entityId: string, raw: RawEntity, prev?: unknown): unknown {
+  try {
+    return haToValue(entityId, raw, prev);
+  } catch (error) {
+    reportError(`ha:${entityId.split('.')[0]}`, error);
+    return undefined;
+  }
 }
 
 /* Domänen-Routing über das entity_id-Präfix (ADR-018 §4). `undefined` =

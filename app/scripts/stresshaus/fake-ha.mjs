@@ -245,7 +245,9 @@ export function startFakeHa({ port = 0, host = '127.0.0.1', home = hostileHome()
         let data = {};
         try { data = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { /* leer */ }
         const wantsResponse = url.searchParams.has('return_response');
-        if (unruhe && rng() < 0.1) return json(500, { message: 'Unruhe: Dienst gescheitert' });
+        /* 503 statt 500: gewollte Unruhe ist ein überlastetes Home Assistant, kein
+           Fehler im Dienst — der Crawler zählt sie nicht als Befund (Stresshaus #15). */
+        if (unruhe && rng() < 0.1) return json(503, { message: 'Unruhe: Dienst gescheitert' });
         const out = callService({ domain: service[1], service: service[2], service_data: data, target: data.entity_id ? { entity_id: data.entity_id } : undefined, return_response: wantsResponse });
         if (out.error) return json(500, { message: out.error.message });
         return wantsResponse ? json(200, { changed_states: [], service_response: out.result.response ?? {} }) : json(200, []);

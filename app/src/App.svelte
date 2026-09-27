@@ -5,6 +5,7 @@
   import { configuredCentralClimateIds } from './lib/state/climate-central-config.svelte.ts';
   import { configuredPhoneActionIds } from './lib/state/phone-action.svelte.ts';
   import { initTheme } from './lib/state/theme.svelte.ts';
+  import { installErrorCatcher } from './lib/state/error-book.ts';
   import { initDeviceManager } from './lib/state/device-manager.svelte.ts';
   import { measurePressedPaint } from './lib/state/phase4-metrics.svelte.ts';
   import { nav } from './lib/state/nav.svelte.ts';
@@ -27,6 +28,8 @@
 
   initLocale();
   initTheme();
+  /* Fehlerbuch (R58): ab hier landen ungefangene Fehler im Buch statt nur in der Konsole. */
+  installErrorCatcher();
   initDeviceManager();
   initUiMode();
   onDestroy(destroyUiMode);

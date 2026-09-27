@@ -172,6 +172,7 @@ fault found in the web app is checked in the iOS app and the other way round.
 | Widgets, Live Activity, Siri shortcut, share sheet for the shopping list | **Built** |
 | Shopping list sorted by aisle on the device with Apple Intelligence, offline | **Built** |
 | Six languages, like the panel | **Built** |
+| Dutch, like the panel | **Planned** |
 | An Apple Watch app | **Planned** |
 
 ## Installation and operation
@@ -196,7 +197,7 @@ fault found in the web app is checked in the iOS app and the other way round.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
-| Beta stabilisation | `v0.30.2` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
+| Beta stabilisation | `v0.32.0` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
 | Release candidate | `v0.x.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
@@ -223,19 +224,21 @@ development workflow rather than a capability of the read-only Docker runtime.
 **Status: Built.**
 
 The interface ships in German, English, French, Italian, Portuguese and Polish,
-on the panel and in the iOS app. It follows the browser language unless a
+on the panel and in the iOS app, and in Dutch on the panel. It follows the browser language unless a
 language is chosen in the settings, and switches without reloading — the wall
 panel keeps its connection and its entity cache. Dates, times and numbers follow
 the chosen language as well.
 
 Translations live in `app/messages/` and are compiled into plain functions at
-build time, so six languages cost the initial bundle about 50 bytes. Adding a
+build time, so seven languages cost the initial bundle about 50 bytes. Adding a
 language means adding one JSON file.
 
 Two honest caveats. The German and English catalogues are first-hand; French,
 Italian, Portuguese and Polish were written carefully but have not been reviewed
 by native speakers — corrections are very welcome
 ([#1](https://github.com/ralleur/hauser/issues/1)–[#4](https://github.com/ralleur/hauser/issues/4)).
+Dutch was contributed by [@pservais](https://github.com/pservais)
+([#26](https://github.com/ralleur/hauser/issues/26)).
 And Polish has three plural forms, which the message format does not yet
 express; the affected strings are phrased to avoid the plural rather than get it
 wrong.

@@ -190,6 +190,9 @@ export const LAUNDRY_BLUEPRINT_FILE = join(BLUEPRINT_DIR, 'laundry-power-cycle-v
    als das Kilobyte der kleinen Formulare. */
 export const NOTIFICATION_RULES_PATH = process.env.HMI_NOTIFICATION_RULES_PATH
   || resolve(dirname(FAMILY_DATA_PATH), 'notification-rules.json');
+/* Fehlerbuch (docs/23 R58); ein leerer Wert hält es nur im Speicher. */
+export const ERROR_BOOK_PATH = process.env.HMI_ERROR_BOOK_PATH
+  ?? resolve(dirname(FAMILY_DATA_PATH), 'error-book.json');
 export const NOTIFICATION_RULES_BODY_MAX = 256 * 1024;
 export const NOTIFICATION_BLUEPRINT_DIR = BLUEPRINT_DIR;
 export const NOTIFICATION_BLUEPRINTS = Object.freeze({

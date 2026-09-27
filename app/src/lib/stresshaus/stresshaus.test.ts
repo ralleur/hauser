@@ -6,6 +6,7 @@ import { parseHouseholdConfig } from '../config/household-config.ts';
 import { haToValue } from '../adapter/ha-entities.ts';
 import { catalogItemFromHaState } from '../adapter/capabilities.ts';
 import { buildRuntimeRooms, EMPTY_DEVICE_CONFIG, mergeCatalog, setDeviceVisibility } from '../state/device-config.ts';
+import { groupAgendaDays, isValidCalendarEvent, projectAmbientWeek, projectCalendarWeeks, type CalendarEvent } from '../state/calendar.ts';
 import type { RoomSeed } from '../state/app.svelte.ts';
 
 /* Die schnelle Schicht des Stresshauses: gewürfelte Häuser durch Einrichtung
@@ -131,4 +132,40 @@ describe('Stresshaus', () => {
       expect(() => buildRuntimeRooms(rooms, catalog, EMPTY_DEVICE_CONFIG)).not.toThrow();
     },
   );
+
+  it.each(SEEDS)('Startzahl %i: kein Termin bringt Wochenband, Kalender oder Agenda zu Fall', (seed) => {
+    const home = hostileHomeWith({ seed }, NOW);
+    const events: CalendarEvent[] = Object.values(home.calendarEvents).flat().map((item, index) => ({
+      id: `${item.uid ?? 'ohne'}-${index}`, title: item.summary, start: item.start, end: item.end, allDay: !item.start.includes('T'),
+      location: null, description: null,
+    }));
+    const kept = events.filter(isValidCalendarEvent);
+    expect(kept.length).toBeLessThan(events.length);
+    expect(() => projectAmbientWeek(kept, NOW)).not.toThrow();
+    expect(() => projectCalendarWeeks(kept, NOW)).not.toThrow();
+    expect(() => groupAgendaDays(kept, NOW)).not.toThrow();
+  });
+
+  it('ein hinzugefügtes Thermostat ist das Klima eines Raums ohne Klima, eine Wärmepumpe nicht', () => {
+    const home = hostileHomeWith({}, NOW);
+    const catalog = mergeCatalog([], home.states
+      .map((s) => catalogItemFromHaState(s as never))
+      .filter((item): item is NonNullable<typeof item> => item !== null));
+    const rooms = [
+      { id: 'buro', name: 'Büro', presence: false, windowOpen: false, lights: [] },
+      { id: 'wintergarten', name: 'Wintergarten', presence: false, windowOpen: false, lights: [] },
+      { id: 'bad', name: 'Bad', presence: false, windowOpen: false, lights: [], climateEntityId: 'climate.bad' },
+    ] as unknown as RoomSeed[];
+    let config = EMPTY_DEVICE_CONFIG;
+    config = setDeviceVisibility(config, 'climate.vtherm_arbeitszimmer', true, 'buro');
+    config = setDeviceVisibility(config, 'climate.waermepumpe_heizkreis', true, 'wintergarten');
+    config = setDeviceVisibility(config, 'climate.wohnzimmer', true, 'bad');
+    const built = new Map(buildRuntimeRooms(rooms, catalog, config).map((room) => [room.id, room]));
+    expect(built.get('buro')?.climateEntityId).toBe('climate.vtherm_arbeitszimmer');
+    expect(built.get('buro')?.lights.map((d) => d.entityId)).not.toContain('climate.vtherm_arbeitszimmer');
+    expect(built.get('wintergarten')?.climateEntityId).toBeUndefined();
+    expect(built.get('wintergarten')?.lights.map((d) => d.entityId)).toContain('climate.waermepumpe_heizkreis');
+    expect(built.get('bad')?.climateEntityId).toBeUndefined();
+    expect(built.get('bad')?.lights.map((d) => d.entityId)).toContain('climate.wohnzimmer');
+  });
 });

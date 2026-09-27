@@ -1431,6 +1431,8 @@
   "feedback_contact_label": "Reply address (optional)",
   "feedback_contact_placeholder": "Email, in case we may ask back",
   "feedback_attached": "Included: version {version} · {language} · {viewport} · {connection}",
+  "feedback_errors_attach": "Include {count} errors from the error log",
+  "feedback_errors_show": "What gets sent",
   "feedback_send": "Send",
   "feedback_sending": "Sending …",
   "feedback_sent": "Thank you, received.",

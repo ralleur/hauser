@@ -9,10 +9,11 @@
      kann nicht einmal sagen, was schiefging.
 
      Hier bekommt der Fehler eine Zeile und einen Knopf. Die Ursache steht im
-     Klartext dabei, damit sie sich abschreiben lässt; zusätzlich landet sie
-     weiterhin in der Konsole, wo Stapelzeilen und Zeitpunkt hängen. */
+     Klartext dabei, damit sie sich abschreiben lässt; zusätzlich geht sie ins
+     Fehlerbuch (R58) und in die Konsole, wo Stapelzeilen und Zeitpunkt hängen. */
   import type { Snippet } from 'svelte';
   import { m } from '../../paraglide/messages.js';
+  import { reportError } from '../state/error-book.ts';
 
   let { children }: { children: Snippet } = $props();
 
@@ -22,7 +23,7 @@
   }
 </script>
 
-<svelte:boundary onerror={(error) => console.error('[hauser] Bereich konnte nicht aufgebaut werden:', error)}>
+<svelte:boundary onerror={(error) => reportError('screen', error)}>
   {@render children()}
 
   {#snippet failed(error, reset)}

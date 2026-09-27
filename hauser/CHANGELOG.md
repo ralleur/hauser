@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.32.0 - 2026-09-27
+
+- Hauser speaks Dutch: Nederlands under Settings → Appearance → Interface
+  language, contributed by @pservais (#26).
+- A thermostat added to a room without climate becomes the room's climate
+  (heat pumps stay devices); an unreadable calendar entry no longer breaks the
+  standby week.
+
+## 0.31.0 - 2026-09-27
+
+- Errors write themselves down: an error log on the server, in the browser and
+  in the iOS app, free of names, readings and addresses; the question mark
+  offers to include it and shows every line first. Nothing leaves on its own.
+- One device Home Assistant describes in an unexpected way no longer stops the
+  update of all devices after it.
+
 ## 0.30.2 - 2026-09-27
 
 - Notification rules and the laundry assistant reach Home Assistant again:

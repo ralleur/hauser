@@ -1432,6 +1432,8 @@
   "feedback_contact_label": "Adres do odpowiedzi (opcjonalnie)",
   "feedback_contact_placeholder": "E-mail, jeśli możemy dopytać",
   "feedback_attached": "Dołączone: wersja {version} · {language} · {viewport} · {connection}",
+  "feedback_errors_attach": "Dołącz błędy z dziennika błędów ({count})",
+  "feedback_errors_show": "Co zostanie wysłane",
   "feedback_send": "Wyślij",
   "feedback_sending": "Wysyłanie …",
   "feedback_sent": "Dziękujemy, dotarło.",

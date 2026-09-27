@@ -1,22 +1,27 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
   /* Rückmeldung (docs/23 R40): zwei Tipps und ein Satz. Was automatisch
-     mitgeht, steht unter dem Textfeld — nichts reist unsichtbar. */
+     mitgeht, steht unter dem Textfeld — nichts reist unsichtbar. Hat das
+     Fehlerbuch Einträge (R58), bietet ein Haken an, sie mitzuschicken; die
+     Einträge lassen sich vorher aufklappen. */
   import { onMount } from 'svelte';
   import { m } from '../../paraglide/messages.js';
   import { IS_DEMO } from '../demo/demo-mode.ts';
   import { buildInfo, loadBuildInfo } from '../state/build-info.svelte.ts';
   import { localeLabel } from '../state/locale.svelte.ts';
-  import { closeFeedback, feedbackClientInfo, sendFeedback, type FeedbackKind, type FeedbackOutcome } from '../state/feedback.svelte.ts';
+  import { closeFeedback, feedbackClientInfo, loadErrorBook, sendFeedback, type ErrorBookEntry, type FeedbackKind, type FeedbackOutcome } from '../state/feedback.svelte.ts';
 
   let kind = $state<FeedbackKind>('problem');
   let text = $state('');
   let contact = $state('');
   let phase = $state<'edit' | 'sending' | FeedbackOutcome>('edit');
   let textarea = $state<HTMLTextAreaElement | null>(null);
+  let errors = $state<ErrorBookEntry[]>([]);
+  let attachErrors = $state(true);
 
   onMount(() => {
     void loadBuildInfo();
+    void loadErrorBook().then((entries) => { errors = entries; });
     textarea?.focus();
   });
 
@@ -31,7 +36,7 @@
   async function send() {
     if (!text.trim() || phase === 'sending') return;
     phase = 'sending';
-    phase = await sendFeedback({ kind, text: text.trim(), contact: contact.trim() });
+    phase = await sendFeedback({ kind, text: text.trim(), contact: contact.trim(), attachErrors: attachErrors && errors.length > 0 });
   }
 
   function onKeydown(event: KeyboardEvent) {
@@ -70,6 +75,23 @@
       </label>
 
       <p class="fb-note">{attached}</p>
+
+      {#if errors.length > 0}
+        <div class="fb-errors">
+          <label class="fb-errors-toggle">
+            <input type="checkbox" bind:checked={attachErrors} />
+            <span>{m.feedback_errors_attach({ count: errors.length })}</span>
+          </label>
+          <details>
+            <summary>{m.feedback_errors_show()}</summary>
+            <ul>
+              {#each errors as entry (entry.fp)}
+                <li><span>{entry.where} · {entry.kind}{entry.count > 1 ? ` · ×${entry.count}` : ''}</span>{#if entry.detail}<span>{entry.detail}</span>{/if}</li>
+              {/each}
+            </ul>
+          </details>
+        </div>
+      {/if}
 
       {#if phase === 'failed'}<p class="fb-result is-error">{m.feedback_failed()}</p>{/if}
       {#if phase === 'too-many'}<p class="fb-result is-error">{m.feedback_too_many()}</p>{/if}
@@ -162,6 +184,40 @@
     margin: 0;
     font-size: var(--font-size-small, 0.875rem);
     opacity: 0.6;
+  }
+
+  .fb-errors {
+    display: grid;
+    gap: var(--space-1, 4px);
+    font-size: var(--font-size-small, 0.875rem);
+  }
+
+  .fb-errors-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    min-height: var(--touch-min, 44px);
+  }
+
+  .fb-errors summary {
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  .fb-errors ul {
+    display: grid;
+    gap: var(--space-2, 8px);
+    max-height: 12rem;
+    margin: var(--space-2, 8px) 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    opacity: 0.7;
+  }
+
+  .fb-errors li {
+    display: grid;
+    overflow-wrap: anywhere;
   }
 
   .fb-result {

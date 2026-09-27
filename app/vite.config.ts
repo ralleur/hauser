@@ -341,6 +341,10 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     setupFiles: ['./src/test-setup.ts'],
+    /* Testserver schreiben ihr Fehlerbuch nur in den Speicher (R58): der
+       Standardpfad ist der echte Haushalt, und die Werkstatt schickt ihr Buch
+       von selbst ins Postfach. */
+    env: { HMI_ERROR_BOOK_PATH: '' },
     environment: 'node',
     testTimeout: CI_TEST_TIMEOUT,
     hookTimeout: CI_TEST_TIMEOUT,

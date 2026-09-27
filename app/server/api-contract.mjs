@@ -37,6 +37,7 @@ export const API_ROUTES = [
   { id: 'haCameraProxy', methods: ['GET'], path: '/api/camera_proxy/:entityId', area: 'core', access: 'origin', purpose: 'Kamerabild aus Home Assistant im Supervisor-Modus.' },
   { id: 'haCameraProxyStream', methods: ['GET'], path: '/api/camera_proxy_stream/:entityId', area: 'core', access: 'origin', purpose: 'Kamerastrom aus Home Assistant im Supervisor-Modus.' },
   { id: 'feedback', methods: ['POST'], path: '/api/feedback', area: 'core', access: 'origin', purpose: 'Problem oder Vorschlag aus der App an das Postfach weiterreichen (R40).' },
+  { id: 'errors', methods: ['GET', 'POST'], path: '/api/errors', area: 'core', access: 'origin', purpose: 'Fehlerbuch: Oberfläche und App tragen ein, das Fragezeichen zeigt, was mitgehen würde (R58).' },
   { id: 'haCaldavFlow', methods: ['POST'], path: '/api/ha/caldav-flow', area: 'core', access: 'origin', purpose: 'iCloud-Kalender über den HA-Config-Flow einrichten.' },
 
   /* ── Konfiguration ── */

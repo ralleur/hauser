@@ -3,6 +3,50 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.32.0] - 2026-09-27
+
+### Added
+
+- **Hauser speaks Dutch.** Choose Nederlands under Settings → Appearance →
+  Interface language; dates and times follow, and a Belgian device gets the
+  Belgian format. The translation was contributed by
+  [@pservais](https://github.com/pservais)
+  ([#26](https://github.com/ralleur/hauser/issues/26)); the texts for today's
+  energy balance, the Apple TV remote and the quick-action bar were added
+  since and still wait for a native review. The iOS app follows.
+
+### Fixed
+
+- **A thermostat you add to a room becomes its climate.** A thermostat added
+  to a room without one, for example a Versatile Thermostat, used to stay a
+  plain device tile. It now drives the room's climate tile, target
+  temperature and central climate control. Heat pumps and boilers stay
+  devices, as in the setup.
+- **One unreadable calendar entry no longer breaks the standby week.** An
+  event whose start Home Assistant sends in a form no date can be read from
+  is left out, also from the stored calendar, instead of stopping the week on
+  the standby screen and the agenda.
+
+## [0.31.0] - 2026-09-27
+
+### Added
+
+- **Errors write themselves down.** Hauser keeps an error log: when something
+  fails on the server, in the browser or in the iOS app, it notes where and
+  what kind of error it was, and repeats only raise a counter. Entity IDs,
+  names, readings, addresses and keys are removed before anything is written.
+  The log stays in your home; the question mark offers to include it and
+  shows every line first. Nothing leaves on its own.
+
+### Fixed
+
+- **One odd device no longer freezes the rest.** When Home Assistant sent a
+  state the panel could not read, the whole update stopped and every device
+  after it kept its old state. That device now drops out alone and lands in
+  the error log.
+- **Feedback from the iOS app without a Hauser server** goes straight to the
+  inbox instead of opening a GitHub form.
+
 ## [0.30.2] - 2026-09-27
 
 ### Fixed

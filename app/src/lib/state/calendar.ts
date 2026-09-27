@@ -424,6 +424,15 @@ export function calendarMoment(value: string): Date {
   if (!parts) return new Date(value);
   return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
 }
+/* Ein Termin ohne lesbaren Anfang oder Ende ist keiner (Stresshaus #13):
+   Intl wirft bei „Invalid Date“, und ein einziger solcher Termin nahm das
+   Wochenband im Ruhebild und die Agenda mit. Aussortiert wird beim Eingang
+   in den Kalenderzustand, auch im gespeicherten Altbestand. */
+export function isValidCalendarEvent(item: CalendarEvent): boolean {
+  return typeof item?.start === 'string' && typeof item?.end === 'string'
+    && Number.isFinite(calendarMoment(item.start).getTime())
+    && Number.isFinite(calendarMoment(item.end).getTime());
+}
 export function eventStart(item: CalendarEvent): Date { return calendarMoment(item.start); }
 export function eventEnd(item: CalendarEvent): Date { return calendarMoment(item.end); }
 export function localDayKey(date: Date): string { return dayKeyFormatter.format(date); }

@@ -3,6 +3,7 @@ import { reminderPersons } from './reminder-persons.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import {
   calendarMoment,
+  isValidCalendarEvent,
   calendarWindow,
   selectCalendars,
   type CalendarEvent,
@@ -138,6 +139,7 @@ async function refresh(): Promise<void> {
     }));
     familyCalendar.sources = sources;
     familyCalendar.events = perSource.flat()
+      .filter(isValidCalendarEvent)
       .sort((a, b) => calendarMoment(a.start).getTime() - calendarMoment(b.start).getTime());
     familyCalendar.updatedAt = Date.now();
     familyCalendar.error = null;
@@ -153,7 +155,7 @@ function restoreCache(): void {
   const restored = snapshot.restoreSync();
   if (!restored) return;
   familyCalendar.sources = restored.value.sources;
-  familyCalendar.events = restored.value.events;
+  familyCalendar.events = restored.value.events.filter(isValidCalendarEvent);
   familyCalendar.updatedAt = restored.updatedAt;
 }
 

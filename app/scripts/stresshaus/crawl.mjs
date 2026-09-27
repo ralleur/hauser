@@ -192,7 +192,7 @@ async function main() {
      dieselbe Nachricht wie der sichtbare Absturz und wird nicht doppelt
      gezählt. */
   const record = (kind, detail) => {
-    const text = String(detail).replace(/^\[hauser\] Bereich konnte nicht aufgebaut werden: /, '').slice(0, 600);
+    const text = String(detail).replace(/^\[hauser\] (?:Bereich konnte nicht aufgebaut werden|screen): /, '').slice(0, 600);
     const key = text.replace(/^Diese Ansicht ist beim Aufbau gescheitert\. /, '').replace(/ Erneut versuchen$/, '').split('\n')[0];
     const known = findings.find((f) => f.key === key);
     if (known) { known.count++; return; }
@@ -213,7 +213,7 @@ async function main() {
   if (HOUSE) applyVariant(home, HOUSE);
   const rng = seededRandom(SEED ?? 1);
   const pickOne = (list) => list[Math.floor(rng() * list.length)];
-  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt']);
+  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt', 'nl']);
   const panelSize = SEED === null ? { width: 1280, height: 800 } : pickOne([
     { width: 1280, height: 800 }, { width: 1194, height: 834 }, { width: 1920, height: 1080 }, { width: 1024, height: 600 }, { width: 2560, height: 1440 },
   ]);
@@ -690,10 +690,27 @@ async function main() {
 
     /* ── iOS-App: dieselbe Runde im Simulator ── */
     if (IOS) {
+      /* Unruhe lässt jeden zehnten Dienstaufruf mit 503 scheitern; dass der
+         Server das als 502 HA_ERROR an die App weitergibt, ist richtig und
+         kein Befund (Stresshaus #15). Ein 500 aus Home Assistant bleibt einer. */
+      const iosRecord = UNREST
+        ? (kind, detail) => { if (!(kind === 'iOS-Server' && /HA_ERROR.*antwortet mit 503/.test(String(detail)))) record(kind, detail); }
+        : record;
       await crawlIos({
-        apiOrigin: hauser.apiOrigin, record, coverage, tileLimit: TILE_LIMIT, seed: SEED, operate: OPERATE,
+        apiOrigin: hauser.apiOrigin, record: iosRecord, coverage, tileLimit: TILE_LIMIT, seed: SEED, operate: OPERATE,
         setStep: (value) => { step = value; },
       });
+    }
+
+    /* ── Fehlerbuch (R58): was Oberfläche, App und Server selbst eingetragen
+       haben — auch Fehler, die nichts Sichtbares kaputt machen. Bereiche, die
+       nicht aufbauen, hat die Runde oben schon gesehen. */
+    step = 'Fehlerbuch';
+    await sleep(6000);
+    const book = await fetch(`${hauser.apiOrigin}/api/errors`).then((r) => r.json()).catch(() => ({ entries: [] }));
+    for (const entry of book.entries ?? []) {
+      if (entry.source === 'web' && entry.where === 'screen') continue;
+      record(`Fehlerbuch ${entry.source}`, `${entry.where} · ${entry.kind} · ${entry.detail}${entry.count > 1 ? ` (×${entry.count})` : ''}`);
     }
   } catch (err) {
     record('Crawler', err.stack ?? err);

@@ -325,6 +325,12 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('water_heater.waermepumpe_warmwasser', 'heat_pump', { friendly_name: 'Warmwasser', temperature: 48 }, { device_id: 'dev_waermepumpe' });
   add('sensor.waermepumpe_vorlauf', '34.2', { friendly_name: 'Vorlauf', unit_of_measurement: '°C', device_class: 'temperature' }, { device_id: 'dev_waermepumpe' });
 
+  /* Versatile Thermostat, das jemand einem zweiten Raum hinzufügt (Postfach
+     2026-09-27): es soll dort das Klima sein, nicht nur eine Entität. */
+  add('climate.vtherm_arbeitszimmer', 'heat', {
+    friendly_name: 'VTherm Arbeitszimmer', current_temperature: 20.5, temperature: 21, hvac_modes: ['off', 'heat'], preset_mode: 'comfort', supported_features: 401,
+  }, { area_id: 'buro' });
+
   /* ── Kinderzimmer ── */
   add('light.kinderzimmer_nacht', 'on', { friendly_name: 'Nachtlicht', brightness: 3, color_mode: 'hs', hs_color: null, supported_color_modes: ['hs'] }, { area_id: 'kinderzimmer' });
   add('media_player.kinderzimmer_box', 'idle', {
@@ -420,6 +426,9 @@ export function hostileHome(now: Date = new Date()): HostileHome {
         { start: isoDay(now, 3), end: isoDay(now, 4), summary: 'Geburtstag Alex', uid: 'geburtstag' },
         // Heute, Name außerhalb von Latin-1: stand als Momente-ETag im Kopf und beendete den Server.
         { start: isoDay(now, 0), end: isoDay(now, 1), summary: 'Geburtstag Łukasz', uid: 'geburtstag-heute' },
+        // Beginn, den kein Datum lesen kann (Stresshaus #13): Intl warf im Wochenband des Ruhebilds.
+        { start: at(now, 1, 9) + 'Z-kaputt', end: at(now, 1, 10), summary: 'Kaputter Beginn', uid: 'kaputt-beginn' },
+        { start: '', end: at(now, 2, 10), summary: 'Ohne Beginn', uid: 'ohne-beginn' },
         ...busyDay,
       ],
       'calendar.muell': [
@@ -678,3 +687,33 @@ export function hostileHomeWith(options: HostileOptions = {}, now: Date = new Da
   for (const scenario of options.scenarios ?? []) applyScenario(home, scenario, now);
   return home;
 }
+
+/* Fehlertexte, wie sie draußen entstehen (R58): das Fehlerbuch muss sie
+   haushaltsfrei machen, bevor sie das Haus verlassen können. `keep` bleibt
+   lesbar (Code), `drop` darf nicht im Buch stehen. Dieselben Fälle prüft die
+   iOS-App gegen ihre Bereinigung (tools/errorbook-check.sh im Swift-Repo). */
+export interface HostileError { name: string; where: string; kind: string; detail: string; keep: string[]; drop: string[] }
+
+export const HOSTILE_ERRORS: HostileError[] = [
+  { name: 'Entität und Name im Text', where: 'ha:light', kind: 'TypeError',
+    detail: "Cannot read properties of undefined (reading 'brightness') at light.kueche_insel „Küche Insel“",
+    keep: ['brightness', '<entity>'], drop: ['kueche_insel', 'Küche Insel'] },
+  { name: 'Raumname im JSON-Fehler', where: 'screen', kind: 'SyntaxError',
+    detail: 'Unexpected token \'W\', "Wohnzimmer oben" is not valid JSON',
+    keep: ['not valid JSON'], drop: ['Wohnzimmer'] },
+  { name: 'Adresse und Schlüssel', where: 'promise', kind: 'TypeError',
+    detail: 'fetch failed http://homeassistant.local:8123/api/states?token=abcdefghijklmnopqrstuvwxyz123456 and 10.0.0.5:8123 key eyJhbGciOiJIUzI1NiJ9abcdefghijklmn',
+    keep: ['fetch failed'], drop: ['192.168', '10.0.0.5', 'abcdefghijklmnopqrstuvwxyz', 'eyJhbGci'] },
+  { name: 'Messwerte', where: 'ha:sensor', kind: 'RangeError',
+    detail: 'Temperatur 21.5 außerhalb von -40,5 bis 1234567',
+    keep: ['außerhalb'], drop: ['21.5', '40,5', '1234567'] },
+  { name: 'Polnisch mit Emoji', where: 'ha:climate', kind: 'Error',
+    detail: 'Nie można odczytać „Salon 🛋️“ ani «Kuchnia»',
+    keep: ['Nie można odczytać'], drop: ['Salon', 'Kuchnia'] },
+  { name: 'Mail und Heimordner', where: 'server', kind: 'Error',
+    detail: 'ENOENT: /Users/sam/Library/Hauser/x.json für sam@example.org',
+    keep: ['ENOENT'], drop: ['sam'] },
+  { name: 'Zweitausend Zeichen', where: 'screen', kind: 'Error',
+    detail: 'x'.repeat(10) + ' ' + 'Lang '.repeat(400),
+    keep: [], drop: [] },
+];

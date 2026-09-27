@@ -9,6 +9,7 @@ import deMessages from '../../messages/de.json';
 import enMessages from '../../messages/en.json';
 import frMessages from '../../messages/fr.json';
 import itMessages from '../../messages/it.json';
+import nlMessages from '../../messages/nl.json';
 import plMessages from '../../messages/pl.json';
 import ptMessages from '../../messages/pt.json';
 
@@ -93,13 +94,13 @@ describe('Endgeräte-Adresse', () => {
     expect(token).toBeLessThan(conditionalEnd);
   });
 
-  it('ist in allen sechs Sprachen übersetzt', () => {
+  it('ist in allen sieben Sprachen übersetzt', () => {
     const keys = [
       'device_address_hint', 'device_address_copy', 'device_address_copied',
       'device_address_qr_label', 'setup_done_title', 'setup_done_open',
       'sys_device_address', 'sys_ha_managed_by_app',
     ];
-    for (const catalog of [deMessages, enMessages, frMessages, itMessages, plMessages, ptMessages]) {
+    for (const catalog of [deMessages, enMessages, frMessages, itMessages, plMessages, ptMessages, nlMessages]) {
       for (const key of keys) {
         expect(typeof (catalog as Record<string, unknown>)[key]).toBe('string');
         expect((catalog as Record<string, string>)[key].length).toBeGreaterThan(0);

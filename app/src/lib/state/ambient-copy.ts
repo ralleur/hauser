@@ -516,7 +516,7 @@ export function buildAmbientCopyMessages(
     ? '\nVariation-Hinweis: Der erste Entwurf war ungültig oder zu ähnlich. Wähle einen klar anderen Satzanfang und eine andere Pointe.'
     : '';
   const language = ({
-    de: 'Deutsch', en: 'Englisch', fr: 'Französisch', it: 'Italienisch', pt: 'Portugiesisch', pl: 'Polnisch',
+    de: 'Deutsch', en: 'Englisch', fr: 'Französisch', it: 'Italienisch', pt: 'Portugiesisch', pl: 'Polnisch', nl: 'Niederländisch',
   } as Record<string, string>)[locale] ?? locale;
   return [
     { role: 'system', content: `${SYSTEM_PROMPT}\nAntworte ausschließlich auf ${language}.` },

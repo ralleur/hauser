@@ -38,6 +38,7 @@ import {
   MOMENTS_STATE_PATH,
   NOTIFICATION_BLUEPRINT_DIR,
   NOTIFICATION_RULES_PATH,
+  ERROR_BOOK_PATH,
   PAPERLESS_HOST,
   PAPERLESS_PORT,
   PORT,
@@ -124,6 +125,7 @@ import { notionShoppingRoute, serveNotionShopping } from './server/shopping-noti
 import { createMomentsService, MOMENT_HOLIDAYS_CONFIG_KEY, serveMoments } from './server/moments.mjs';
 import { createWeatherService, serveWeather } from './server/weather.mjs';
 import { createFeedbackService, serveFeedback } from './server/feedback.mjs';
+import { createErrorBook, serveErrors, startErrorReports } from './server/error-book.mjs';
 import { applyAppCors, authenticateRequest, CLAIM_LIMIT_PER_MINUTE, createDeviceStore, createRateLimiter, PAIRING_ROUTE_PREFIX, remoteGateAllows, remoteGateReject, servePairing, TOKEN_FAILURE_LIMIT_PER_MINUTE } from './server/pairing.mjs';
 import { APP_ROUTE_PREFIX, createFileIndex, readTextIfExists, serveAppBundle } from './server/app-bundle.mjs';
 import { createTunnelSupervisor, REMOTE_ROUTE_PREFIX, serveRemote } from './server/remote.mjs';
@@ -321,6 +323,7 @@ export function createHmiServer(
     notificationSync = null,
     notificationBlueprintDir = NOTIFICATION_BLUEPRINT_DIR,
     momentsStatePath = MOMENTS_STATE_PATH,
+    errorBookPath = ERROR_BOOK_PATH,
     pairingDevicesPath = PAIRING_DEVICES_PATH,
     deviceStore = null,
     remoteUrl = REMOTE_URL,
@@ -784,7 +787,11 @@ export function createHmiServer(
   };
   /* Kalendermomente: Erkennung gehört dem Server, nicht dem Browser. Er liest
      Termine und Wetterlage selbst und merkt sich nur die Schneesaison. */
-  const feedback = createFeedbackService({ buildInfo, haConnectionMode });
+  /* Fehlerbuch (R58): Server, Oberfläche und App tragen ein; die Werkstatt
+     schickt es von selbst ins Postfach, alle anderen nur mit dem Fragezeichen. */
+  const errorBook = createErrorBook({ path: errorBookPath, version: buildInfo.version ?? '' });
+  const feedback = createFeedbackService({ buildInfo, haConnectionMode, errorBook });
+  const stopErrorReports = startErrorReports(errorBook, { send: (errors) => feedback.sendErrors(errors) });
   const moments = momentsService ?? createMomentsService({
     clientFactory: laundryClientFactory,
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode),
@@ -872,6 +879,7 @@ export function createHmiServer(
     /* Gerätetoken vor allem anderen: er ersetzt die Origin-Grenze und ist
        über den Tunnel Pflicht. */
     if (applyAppCors(req, res)) return;
+    noteInternalErrors(req, res, errorBook);
     authenticateRequest(req, devices, { failures: tokenFailureLimiter });
     if (!remoteGateAllows(req)) {
       remoteGateReject(res, req);
@@ -1137,6 +1145,16 @@ export function createHmiServer(
       } else {
         void serveWeather(req, res, weather);
       }
+    } else if ((req.url || '') === '/api/errors') {
+      if (!requestOriginAllowed(req, allowedOrigins)) {
+        jsonResponse(res, 403, {
+          ok: false,
+          code: 'ERRORS_ORIGIN_FORBIDDEN',
+          message: 'Der Eintrag stammt nicht von einer freigegebenen Origin.',
+        });
+      } else {
+        serveErrors(req, res, errorBook);
+      }
     } else if ((req.url || '') === '/api/feedback') {
       if (!requestOriginAllowed(req, allowedOrigins)) {
         jsonResponse(res, 403, {
@@ -1301,8 +1319,26 @@ export function createHmiServer(
     /* Kartenjob und sein kurzlebiger Worker enden mit dem Server. */
     void Promise.resolve(ambientMap?.close?.()).catch(() => {});
     stopNightly();
+    stopErrorReports();
   });
+  httpServer.errorBook = errorBook;
   return httpServer;
+}
+
+/* Jede 500er-Antwort ist ein Fehler im Server: sie landet mit Route und Code
+   im Fehlerbuch. Nur die ersten zwei Pfadteile, denn dahinter stehen Raum-
+   und Geräte-Ids aus dem Haushalt. */
+function noteInternalErrors(req, res, errorBook) {
+  const end = res.end.bind(res);
+  res.end = (chunk, ...rest) => {
+    if (res.statusCode === 500) {
+      let code = '';
+      try { code = JSON.parse(String(chunk ?? '')).code ?? ''; } catch { /* kein JSON */ }
+      const route = new URL(req.url || '/', 'http://hmi.local').pathname.split('/').slice(0, 3).join('/');
+      errorBook.note(`${req.method} ${route}`, Object.assign(new Error(String(code)), { name: 'status-500' }));
+    }
+    return end(chunk, ...rest);
+  };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
@@ -1313,6 +1349,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const logFatal = (kind, error) => {
     const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
     console.error(`[hauser] ${kind}: ${detail}`);
+    server?.errorBook?.note(kind, error);
     process.exit(1);
   };
   process.on('uncaughtException', (error) => logFatal('uncaughtException', error));

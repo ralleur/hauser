@@ -35,7 +35,22 @@ export function feedbackClientInfo(): { language: string; viewport: string; user
   };
 }
 
-export async function sendFeedback(input: { kind: FeedbackKind; text: string; contact: string }): Promise<FeedbackOutcome> {
+/** Ein Eintrag des Fehlerbuchs, so wie er das Haus verlassen darf (R58). */
+export interface ErrorBookEntry { fp: string; source: string; where: string; kind: string; detail: string; count: number; last: string }
+
+/** Was „Fehler mitschicken" anhängen würde — leer in der Demo und ohne Server. */
+export async function loadErrorBook(): Promise<ErrorBookEntry[]> {
+  if (IS_DEMO) return [];
+  try {
+    const response = await fetch('/api/errors', { headers: { accept: 'application/json' }, cache: 'no-store' });
+    const payload = await response.json() as { entries?: ErrorBookEntry[] };
+    return Array.isArray(payload.entries) ? payload.entries : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function sendFeedback(input: { kind: FeedbackKind; text: string; contact: string; attachErrors?: boolean }): Promise<FeedbackOutcome> {
   /* Die Demo zeigt das Blatt, schickt aber nichts ab. */
   if (IS_DEMO) {
     await new Promise((resolve) => setTimeout(resolve, 600));

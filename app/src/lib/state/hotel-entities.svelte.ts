@@ -8,7 +8,7 @@
    Gastpanel braucht keinen generischen Realtime-Hub, und der Server sammelt die
    erlaubten Entities ohnehin kurz zwischen. */
 
-import { haToValue, type RawEntity } from '../adapter/ha-entities.ts';
+import { haToValueSafe, type RawEntity } from '../adapter/ha-entities.ts';
 import type { HotelGuestAction, HotelTemperatureRange } from '../config/household-config.ts';
 
 export interface HotelGuestEntityPolicy {
@@ -197,7 +197,7 @@ function applyProjection(next: HotelGuestProjection): void {
   const known = new Set<string>();
   for (const entity of next.entities) {
     const raw: RawEntity = { state: entity.state, attributes: entity.attributes };
-    const value = haToValue(entity.entityId, raw, values[entity.entityId]);
+    const value = haToValueSafe(entity.entityId, raw, values[entity.entityId]);
     if (value === undefined) continue;
     const changed = JSON.stringify(values[entity.entityId]) !== JSON.stringify(value);
     values[entity.entityId] = value;

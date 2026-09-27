@@ -1,4 +1,5 @@
 import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
+import { HEATING_PLANT_NAME } from './heating-plant.ts';
 import type {
   EntityRole,
   HouseholdConfigV4,
@@ -323,7 +324,6 @@ function entityRole(state: SetupState): EntityRole | null {
   return null;
 }
 
-const HEATING_PLANT_NAME = /w(ä|ae|a)rme[\s_]?pumpe|heat[\s_]?pump|heizkreis|heating[\s_]?circuit|heizkessel|boiler|pompe[\s_]?(à|a)[\s_]?chaleur|pompa[\s_]?di[\s_]?calore|pompa[\s_]?ciep(ł|l)a|bomba[\s_]?de[\s_]?calor/i; // i18n-ignore: Erkennung, keine Anzeige
 
 function inferredRoomName(entityId: string): string {
   const objectId = entityId.slice(entityId.indexOf('.') + 1);

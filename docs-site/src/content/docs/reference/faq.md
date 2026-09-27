@@ -65,6 +65,8 @@ No. The [demo](https://ralleur.github.io/hauser/demo/) runs against simulated de
 
 Tap the question mark at the top right of the title bar. Choose **Something is wrong** or **I would like …**, write a sentence, optionally leave a reply address and send. Hauser attaches its version, language, screen size and connection mode, nothing else. The message reaches the author's inbox without a GitHub account. In the demo nothing is sent. Bugs with details are still welcome as [GitHub issues](https://github.com/ralleur/hauser/issues).
 
+Hauser also keeps an error log: when something fails on the server, in the browser or in the iOS app, it notes where and what kind of error it was. Repeats of the same error only raise a counter. Entity IDs, room and device names, readings, addresses and keys are removed before anything is written. The log stays in your home. If it has entries, the sheet offers **Include errors from the error log**, and **What gets sent** shows every line before you send. Nothing leaves on its own. The same applies to the iOS app, which also sends without a Hauser server.
+
 ### What licence is it under?
 
 AGPL-3.0-only. Every running instance shows its licence, version and source link under **Status & Updates**.

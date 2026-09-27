@@ -1431,6 +1431,8 @@
   "feedback_contact_label": "Antwortadresse (freiwillig)",
   "feedback_contact_placeholder": "E-Mail, falls wir nachfragen dürfen",
   "feedback_attached": "Mit dabei: Version {version} · {language} · {viewport} · {connection}",
+  "feedback_errors_attach": "{count} Fehler aus dem Fehlerbuch mitschicken",
+  "feedback_errors_show": "Was mitgeht",
   "feedback_send": "Senden",
   "feedback_sending": "Wird gesendet …",
   "feedback_sent": "Danke, angekommen.",

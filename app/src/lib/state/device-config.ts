@@ -2,6 +2,7 @@ import { m } from '../../paraglide/messages.js';
 import { iconForDevice, sensorIconFor } from './light-icons.ts';
 import type { LightSeed, RoomSeed, Room } from './app.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
+import { HEATING_PLANT_NAME } from '../config/heating-plant.ts';
 import {
   MANAGED_DOMAINS,
   type EntityCatalogItem,
@@ -271,11 +272,14 @@ export function mergeCatalog(seed: readonly EntityCatalogItem[], discovered: rea
   return [...map.values()];
 }
 
+/** Ein Raum zur Laufzeit; `climateEntityId` nur, wenn ein hinzugefügtes Thermostat sein Klima ist. */
+export type RuntimeRoom = Room & { climateEntityId?: string };
+
 export function buildRuntimeRooms(
   rooms: readonly RoomSeed[],
   catalog: readonly EntityCatalogItem[],
   config: DeviceConfig,
-): Room[] {
+): RuntimeRoom[] {
   const roomIds = new Set(rooms.map((r) => r.id));
   const seedByEntity = new Map<string, { roomId: string; light?: LightSeed }>();
   for (const room of rooms) for (const light of room.lights) seedByEntity.set(light.entityId, { roomId: room.id, light });
@@ -284,6 +288,12 @@ export function buildRuntimeRooms(
 
   const byRoom = new Map<string, ManagedDevice[]>();
   for (const room of rooms) byRoom.set(room.id, []);
+  /* Ein Thermostat, das jemand einem Raum ohne Klima hinzufügt (oder das dem
+     HA-Bereich folgt), ist dessen Klima — Kachel, Soll-Temperatur, zentrale
+     Steuerung —, nicht eine weitere Gerätekachel. Vorher blieb es „nur eine
+     Entität" (Postfach 2026-09-27); die iOS-App machte es schon so. */
+  const climateByRoom = new Map<string, string>();
+  const configuredClimate = new Set(rooms.filter((room) => room.climateEntityId).map((room) => room.id));
 
   for (const item of catalog) {
     const seed = seedByEntity.get(item.entityId);
@@ -294,6 +304,11 @@ export function buildRuntimeRooms(
     const suggestedRoom = seed?.roomId ?? roomIdForArea(item.area, rooms) ?? rooms[0]?.id;
     const roomId = override?.roomId && roomIds.has(override.roomId) ? override.roomId : suggestedRoom;
     if (!roomId) continue;
+    if (item.domain === 'climate' && !seed && !configuredClimate.has(roomId) && !climateByRoom.has(roomId)
+      && !HEATING_PLANT_NAME.test(`${item.entityId} ${override?.name ?? item.name}`)) {
+      climateByRoom.set(roomId, item.entityId);
+      continue;
+    }
     byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName));
   }
 
@@ -312,6 +327,7 @@ export function buildRuntimeRooms(
       presence: room.presence,
       windowOpen: room.windowOpen,
       lights: uniqueDeviceIds(sortDevices(devices, config.order[room.id], catalogById)),
+      ...(climateByRoom.has(room.id) ? { climateEntityId: climateByRoom.get(room.id) } : {}),
     };
   });
 }

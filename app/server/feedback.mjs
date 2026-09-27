@@ -4,7 +4,10 @@
    der Server hängt an, was er sicher weiß — Version, Revision, Betriebsart
    des Home-Assistant-Zugangs — und reicht alles an das Postfach weiter
    (Cloudflare Worker, tools/feedback-worker). Kein Token im Add-on: das
-   Postfach nimmt ohne Anmeldung an und begrenzt je Absenderadresse. */
+   Postfach nimmt ohne Anmeldung an und begrenzt je Absenderadresse.
+
+   Wer „Fehler mitschicken" anhakt, bekommt das Fehlerbuch dazu (R58) — aus
+   dem Buch des Servers, nicht aus dem, was die Oberfläche behauptet. */
 import { jsonResponse } from './shared.mjs';
 
 /* Adresse des Postfachs (Cloudflare Worker `hauser-feedback`). Eine leere
@@ -18,13 +21,14 @@ const TEXT_MAX = 2000;
 const BODY_MAX = 16 * 1024;
 const FIELD_MAX = 300;
 const CLIENT_FIELDS = ['contact', 'language', 'viewport', 'userAgent', 'screen', 'connection'];
+const ATTACHED_ERRORS_MAX = 20;
 
 function clip(value, max) {
   return typeof value === 'string' ? value.slice(0, max) : '';
 }
 
 /** Prüft die Meldung der Oberfläche und ergänzt die Serverwerte — oder `null`. */
-export function feedbackEnvelope(payload, { buildInfo = {}, haConnectionMode = 'direct' } = {}) {
+export function feedbackEnvelope(payload, { buildInfo = {}, haConnectionMode = 'direct', errorBook = null } = {}) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
   const kind = payload.kind === 'problem' || payload.kind === 'wish' ? payload.kind : null;
   const text = clip(payload.text, TEXT_MAX).trim();
@@ -37,6 +41,7 @@ export function feedbackEnvelope(payload, { buildInfo = {}, haConnectionMode = '
     haMode: clip(haConnectionMode, FIELD_MAX),
   };
   for (const field of CLIENT_FIELDS) envelope[field] = clip(payload[field], FIELD_MAX);
+  if (payload.attachErrors === true && errorBook) envelope.errors = errorBook.list().slice(0, ATTACHED_ERRORS_MAX);
   return envelope;
 }
 
@@ -44,29 +49,44 @@ export function createFeedbackService({
   postboxUrl = FEEDBACK_POSTBOX_URL,
   buildInfo = {},
   haConnectionMode = 'direct',
+  errorBook = null,
   fetchImpl = fetch,
 } = {}) {
   return {
     async send(payload) {
-      const envelope = feedbackEnvelope(payload, { buildInfo, haConnectionMode });
+      const envelope = feedbackEnvelope(payload, { buildInfo, haConnectionMode, errorBook });
       if (!envelope) return { ok: false, status: 400, code: 'FEEDBACK_INVALID', message: 'Art und Text fehlen.' };
-      if (!postboxUrl) return { ok: false, status: 503, code: 'FEEDBACK_POSTBOX_UNCONFIGURED', message: 'Kein Postfach eingerichtet.' };
-      let response;
-      try {
-        response = await fetchImpl(postboxUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(envelope),
-          signal: AbortSignal.timeout(POSTBOX_TIMEOUT_MS),
-        });
-      } catch {
-        return { ok: false, status: 502, code: 'FEEDBACK_POSTBOX_UNREACHABLE', message: 'Das Postfach ist nicht erreichbar.' };
-      }
-      if (response.status === 429) return { ok: false, status: 429, code: 'FEEDBACK_TOO_MANY', message: 'Genug für jetzt.' };
-      if (!response.ok) return { ok: false, status: 502, code: 'FEEDBACK_POSTBOX_FAILED', message: 'Das Postfach hat die Meldung nicht angenommen.' };
-      return { ok: true, status: 200 };
+      return post(envelope);
+    },
+    /** Das Fehlerbuch der Werkstatt, ohne Text — das Postfach zählt gleiche Fehler zusammen. */
+    async sendErrors(errors) {
+      return post({
+        kind: 'error',
+        errors,
+        version: clip(buildInfo.version, FIELD_MAX),
+        revision: clip(buildInfo.revision, FIELD_MAX),
+        haMode: clip(haConnectionMode, FIELD_MAX),
+      });
     },
   };
+
+  async function post(envelope) {
+    if (!postboxUrl) return { ok: false, status: 503, code: 'FEEDBACK_POSTBOX_UNCONFIGURED', message: 'Kein Postfach eingerichtet.' };
+    let response;
+    try {
+      response = await fetchImpl(postboxUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(envelope),
+        signal: AbortSignal.timeout(POSTBOX_TIMEOUT_MS),
+      });
+    } catch {
+      return { ok: false, status: 502, code: 'FEEDBACK_POSTBOX_UNREACHABLE', message: 'Das Postfach ist nicht erreichbar.' };
+    }
+    if (response.status === 429) return { ok: false, status: 429, code: 'FEEDBACK_TOO_MANY', message: 'Genug für jetzt.' };
+    if (!response.ok) return { ok: false, status: 502, code: 'FEEDBACK_POSTBOX_FAILED', message: 'Das Postfach hat die Meldung nicht angenommen.' };
+    return { ok: true, status: 200 };
+  }
 }
 
 export function serveFeedback(req, res, service) {

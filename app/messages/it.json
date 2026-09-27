@@ -1432,6 +1432,8 @@
   "feedback_contact_label": "Indirizzo di risposta (facoltativo)",
   "feedback_contact_placeholder": "E-mail, se possiamo ricontattarti",
   "feedback_attached": "Incluso: versione {version} · {language} · {viewport} · {connection}",
+  "feedback_errors_attach": "Allega {count} errori dal registro errori",
+  "feedback_errors_show": "Cosa viene inviato",
   "feedback_send": "Invia",
   "feedback_sending": "Invio …",
   "feedback_sent": "Grazie, ricevuto.",

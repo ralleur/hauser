@@ -20,8 +20,8 @@ The most useful contributions currently are:
   controls.
 - **Documentation improvements** that remove ambiguity from installation,
   onboarding, backup, restore or rollback.
-- **Translation reviews** for French, Italian, Portuguese and Polish by native
-  speakers.
+- **Translation reviews** for French, Italian, Portuguese, Polish and Dutch by
+  native speakers.
 - **Accessibility fixes** for keyboard navigation, focus, contrast and reduced
   motion.
 - **Tests and release tooling** that make failures reproducible.
@@ -111,7 +111,8 @@ The active boundaries are documented in
 
 ## Language and translations
 
-The interface ships in German, English, French, Italian, Portuguese and Polish.
+The interface ships in German, English, French, Italian, Portuguese, Polish and
+Dutch.
 Message catalogues live in `app/messages/`. Public documentation and
 contributor-facing prose are in English; existing inline code comments may still
 be German.

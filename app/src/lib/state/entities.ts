@@ -82,9 +82,19 @@ export function setClimateHiddenResolver(resolver: (roomId: string) => boolean):
   climateHiddenResolver = resolver;
 }
 
-/** Klimagerät laut Haushalts-Config, auch wenn es ausgeblendet ist. */
+/** Klimagerät laut Haushalts-Config oder das dem Raum hinzugefügte
+    Thermostat, auch wenn es ausgeblendet ist. */
 export function configuredClimateEntityId(roomId: string): string {
-  return climateIds.get(roomId) ?? '';
+  return climateIds.get(roomId)
+    ?? appState.rooms.find((room) => room.id === roomId)?.climateEntityId
+    ?? '';
+}
+
+/* Alle Klimageräte der Räume — Haushalts-Config und hinzugefügte Thermostate. */
+function roomClimateIds(): string[] {
+  const ids = new Set(climateIds.values());
+  for (const room of appState.rooms) if (room.climateEntityId) ids.add(room.climateEntityId);
+  return [...ids];
 }
 
 export function climateEntityId(roomId: string): string {
@@ -193,7 +203,7 @@ export function allEntityIds(): string[] {
 export function visibleEntityIds(screen: string): string[] {
   const ambient = ambientEntityIds();
   const lightIds = currentLightIds();
-  if (screen === 'home') return [...climateIds.values(), ...tempSensorIds.values(), ...lightIds.values(), ...mediaIds.values(), ...Object.values(ROOM_CAMERA_ENTITIES), ...(VACATION_MODE_ENTITY ? [VACATION_MODE_ENTITY] : []), ...ambient];
+  if (screen === 'home') return [...roomClimateIds(), ...tempSensorIds.values(), ...lightIds.values(), ...mediaIds.values(), ...Object.values(ROOM_CAMERA_ENTITIES), ...(VACATION_MODE_ENTITY ? [VACATION_MODE_ENTITY] : []), ...ambient];
   if (screen === 'media') return [...mediaIds.values(), ...ambient];
   return ambient;
 }

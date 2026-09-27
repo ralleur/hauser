@@ -39,7 +39,7 @@ import { AUTOMATION_ID_PREFIX } from '../state/notification-rules.ts';
 import {
   applyEntitiesDiff,
   haToLaundryState,
-  haToValue,
+  haToValueSafe,
   type RawEntity,
   type EntitiesDiff,
 } from './ha-entities.ts';
@@ -476,7 +476,7 @@ export class HaBackend implements Backend {
     const result: Record<string, unknown> = {};
     for (const state of states) {
       if (!wanted.has(state.entity_id)) continue;
-      const value = haToValue(state.entity_id, {
+      const value = haToValueSafe(state.entity_id, {
         state: state.state,
         attributes: state.attributes as Record<string, unknown>,
       });
@@ -934,7 +934,7 @@ export class HaBackend implements Backend {
       }
       const value = this.#laundryEntityIds.has(id)
         ? haToLaundryState(raw)
-        : haToValue(id, raw, this.#last.get(id));
+        : haToValueSafe(id, raw, this.#last.get(id));
       if (value === undefined) continue; // nicht steuerbare Domäne
       this.#last.set(id, value);
       this.#onUpdate?.(id, value);

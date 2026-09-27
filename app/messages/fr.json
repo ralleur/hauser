@@ -1432,6 +1432,8 @@
   "feedback_contact_label": "Adresse de réponse (facultatif)",
   "feedback_contact_placeholder": "E-mail, si nous pouvons vous recontacter",
   "feedback_attached": "Joint : version {version} · {language} · {viewport} · {connection}",
+  "feedback_errors_attach": "Joindre {count} erreurs du journal d’erreurs",
+  "feedback_errors_show": "Ce qui est envoyé",
   "feedback_send": "Envoyer",
   "feedback_sending": "Envoi …",
   "feedback_sent": "Merci, bien reçu.",

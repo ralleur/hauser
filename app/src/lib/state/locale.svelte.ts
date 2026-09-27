@@ -24,6 +24,7 @@ export const LOCALE_LABELS: Readonly<Record<string, string>> = {
   it: 'Italiano',
   pt: 'Português',
   pl: 'Polski',
+  nl: 'Nederlands',
 };
 
 export const AVAILABLE_LOCALES: readonly AppLocale[] = locales;
@@ -82,7 +83,7 @@ export function initLocale(): void {
    Gerät „Wednesday 2 September“. Passt keine Gerätesprache zur gewählten
    Sprache, gilt die Vorgabe je Sprache. */
 const INTL_TAGS: Readonly<Record<string, string>> = {
-  de: 'de-DE', en: 'en-GB', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT', pl: 'pl-PL',
+  de: 'de-DE', en: 'en-GB', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT', pl: 'pl-PL', nl: 'nl-NL',
 };
 
 /** Wählt das Intl-Tag zur Oberflächensprache; `candidates` sind die

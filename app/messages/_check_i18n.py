@@ -2,7 +2,7 @@ import json, os, re
 
 base = os.path.dirname(os.path.abspath(__file__))
 root = os.path.abspath(os.path.join(base, ".."))
-langs = ["de", "en", "fr", "it", "pl", "pt"]
+langs = ["de", "en", "fr", "it", "pl", "pt", "nl"]
 data = {}
 for l in langs:
     with open(os.path.join(base, l + ".json"), "r") as f:

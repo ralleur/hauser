@@ -16,6 +16,7 @@ export const API_ROUTES = {
   haCameraProxy: { methods: ['GET'], path: '/api/camera_proxy/:entityId', area: 'core', access: 'origin' },
   haCameraProxyStream: { methods: ['GET'], path: '/api/camera_proxy_stream/:entityId', area: 'core', access: 'origin' },
   feedback: { methods: ['POST'], path: '/api/feedback', area: 'core', access: 'origin' },
+  errors: { methods: ['GET', 'POST'], path: '/api/errors', area: 'core', access: 'origin' },
   haCaldavFlow: { methods: ['POST'], path: '/api/ha/caldav-flow', area: 'core', access: 'origin' },
   config: { methods: ['GET', 'PUT'], path: '/api/config', area: 'config', access: 'origin' },
   householdConfigMode: { methods: ['GET'], path: '/api/household-config-mode', area: 'config', access: 'origin' },

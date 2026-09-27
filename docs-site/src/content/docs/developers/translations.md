@@ -5,13 +5,13 @@ sidebar:
   order: 5
 ---
 
-Translations live in `app/messages/<lang>.json`. They are compiled into plain functions at build time with Paraglide, so six languages cost about 50 bytes in the initial bundle.
+Translations live in `app/messages/<lang>.json`. They are compiled into plain functions at build time with Paraglide, so seven languages cost about 50 bytes in the initial bundle.
 
 ## Fixing a string
 
 1. Find the key in `app/messages/en.json`.
 2. Change the value in the language file.
-3. Run `npm test` in `app/`. A test checks that every language has every key.
+3. Run `npm test` in `app/`. A test checks that every language has every key and keeps its placeholders.
 
 ## Adding a language
 
@@ -24,4 +24,4 @@ Translations live in `app/messages/<lang>.json`. They are compiled into plain fu
 
 Polish has three plural forms, which the message format does not express yet. Affected strings avoid the plural. Room, device and scene names are never translated.
 
-Native-speaker reviews are welcome for French, Italian, Portuguese and Polish. See the [translation issues](https://github.com/ralleur/hauser/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation).
+Native-speaker reviews are welcome for French, Italian, Portuguese, Polish and Dutch. See the [translation issues](https://github.com/ralleur/hauser/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation).

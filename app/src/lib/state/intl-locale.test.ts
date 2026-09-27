@@ -7,6 +7,7 @@ describe('resolveIntlTag', () => {
     expect(resolveIntlTag('en', ['de-DE', 'en-AU'])).toBe('en-AU');
     expect(resolveIntlTag('de', ['de-AT'])).toBe('de-AT');
     expect(resolveIntlTag('pt', ['pt-BR'])).toBe('pt-BR');
+    expect(resolveIntlTag('nl', ['nl-BE'])).toBe('nl-BE');
   });
 
   it('fällt auf die Vorgabe je Sprache zurück, wenn keine Gerätesprache passt', () => {
@@ -14,6 +15,7 @@ describe('resolveIntlTag', () => {
     expect(resolveIntlTag('en', [])).toBe('en-GB');
     expect(resolveIntlTag('de', ['en-US'])).toBe('de-DE');
     expect(resolveIntlTag('pl')).toBe('pl-PL');
+    expect(resolveIntlTag('nl')).toBe('nl-NL');
   });
 
   it('ignoriert Gerätesprachen ohne Region und unbekannte Sprachen', () => {
