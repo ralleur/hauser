@@ -1,8 +1,8 @@
 /* Laufzeitumgebung: Umgebungsvariablen, Pfade, Grenzwerte und die kompilierten Verträge.
    Herausgelöst aus server.mjs (technische Basis 1.x); Verhalten unverändert. */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHaConnectionMode } from './ha-supervisor.mjs';
 import { AMBIENT_MAP_ASSET_DIRECTORY, AMBIENT_MAP_CONFIG_PATH } from './ambient-map-service.mjs';
@@ -175,7 +175,14 @@ export const SETUP_TRANSACTION_MAX_BYTES = (CONFIG_BODY_MAX + HOUSEHOLD_CONFIG_B
 export const LAUNDRY_BODY_MAX = 16 * 1024;
 export const LAUNDRY_SESSION_TTL_MS = 2 * 60 * 1000;
 export const LAUNDRY_BLUEPRINT_PATH = 'hauser/laundry-power-cycle-v1.yaml';
-export const LAUNDRY_BLUEPRINT_FILE = fileURLToPath(new URL('../public/blueprints/automation/laundry-power-cycle-v1.yaml', import.meta.url));
+/* Blueprints liegen im Quellbaum unter public/; das Add-on-Image kopiert nur
+   das gebaute dist/, in das Vite public/ hineinlegt (ralleur/hauser#25: „Der
+   mitgelieferte Blueprint fehlt"). Der Quellbaum gewinnt, damit die Werkstatt
+   nie eine veraltete gebaute Fassung nach Home Assistant schreibt. */
+const BLUEPRINT_DIR_CANDIDATES = ['../public/blueprints/automation/', '../dist/blueprints/automation/']
+  .map((path) => fileURLToPath(new URL(path, import.meta.url)));
+export const BLUEPRINT_DIR = BLUEPRINT_DIR_CANDIDATES.find((path) => existsSync(path)) ?? BLUEPRINT_DIR_CANDIDATES[0];
+export const LAUNDRY_BLUEPRINT_FILE = join(BLUEPRINT_DIR, 'laundry-power-cycle-v1.yaml');
 /* Benachrichtigungsregeln (B-04B): Regelliste als kleine JSON-Datei, die
    Auslösung selbst liegt als Blueprint-Automation in Home Assistant. Sie liegt
    neben den Familiendaten, damit sie im Add-on unter /data den Neustart
@@ -184,7 +191,7 @@ export const LAUNDRY_BLUEPRINT_FILE = fileURLToPath(new URL('../public/blueprint
 export const NOTIFICATION_RULES_PATH = process.env.HMI_NOTIFICATION_RULES_PATH
   || resolve(dirname(FAMILY_DATA_PATH), 'notification-rules.json');
 export const NOTIFICATION_RULES_BODY_MAX = 256 * 1024;
-export const NOTIFICATION_BLUEPRINT_DIR = fileURLToPath(new URL('../public/blueprints/automation/', import.meta.url));
+export const NOTIFICATION_BLUEPRINT_DIR = BLUEPRINT_DIR;
 export const NOTIFICATION_BLUEPRINTS = Object.freeze({
   state: { path: 'hauser/notify-state-v1.yaml', file: 'notify-state-v1.yaml' },
   above: { path: 'hauser/notify-above-v1.yaml', file: 'notify-above-v1.yaml' },

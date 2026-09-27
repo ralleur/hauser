@@ -3,6 +3,30 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.30.2] - 2026-09-27
+
+### Fixed
+
+- **Notification rules reach Home Assistant again in the Add-on.** Saving a
+  rule ended with "The rules were saved, but Home Assistant did not apply
+  them" and a note that a bundled blueprint was missing. The Add-on image
+  ships the built app only, and the server looked for its blueprints next to
+  the source tree; it now finds them in the built app. The laundry assistant
+  installed its automation over the same path and is fixed with it (#25).
+
+## [0.30.1] - 2026-09-26
+
+### Changed
+
+- **The project page reflects the current release.** It now names both ways
+  to Hauser — the panel for Home Assistant and the iOS app for Apple Home or
+  Home Assistant, with the public TestFlight link — and walks through what
+  changed since its last update: configuring on the blueprint and the mode
+  mark in the title bar, the day's energy balance and the sun arc, the phone's
+  quick bar, room sheet and in-place configuration, the week lying open on the
+  standby map, presence dots on room tiles and the one type family. Every
+  screenshot was retaken from this release and from the current iOS build.
+
 ## [0.30.0] - 2026-09-26
 
 ### Added

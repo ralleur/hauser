@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.2 - 2026-09-27
+
+- Notification rules and the laundry assistant reach Home Assistant again:
+  the Add-on ships the built app only, and the server now finds its
+  blueprints there instead of reporting a missing blueprint (#25).
+
 ## 0.28.0 - 2026-09-25
 
 - The week on the standby screen lies open on the map, times in amber or gold.

@@ -21,6 +21,7 @@ Hauser is a web app. Any current browser can open it. In practice it is made for
 
 - **Wall panels and tablets** in landscape. Run the browser in kiosk or full-screen mode.
 - **Phones** as a home-screen app. Add it to the home screen and it runs standalone, with safe areas and the phone layout.
+- **iPhone and iPad** with the native [Hauser app](/hauser/docs/integrations/companion-app/) from TestFlight. It pairs with the server above, or runs directly with Apple Home, with no server at all.
 
 Room pictures are delivered in AVIF, with JPEG for devices that cannot decode AVIF.
 

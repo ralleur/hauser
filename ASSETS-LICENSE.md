@@ -32,7 +32,7 @@ produced for this project and depict stylized interiors; they are not
 photographs and are not stock imagery.
 
 The files in `website/media/` are screenshots or presentation images derived
-from the Hauser interface. Some of them contain the AI-generated artwork above.
+from the Hauser interface — the panel, the phone layout and the iOS app. Some of them contain the AI-generated artwork above.
 
 The `before` file in `app/public/wizard/` is an actual photograph of a private
 home, contributed by the project author for this purpose; the `after` file next

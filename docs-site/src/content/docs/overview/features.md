@@ -53,7 +53,7 @@ Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/RO
 | [Home Assistant App](/hauser/docs/getting-started/home-assistant-app/) | Install from the app store, no token, no URL. | Live |
 | [Docker Compose](/hauser/docs/getting-started/docker-compose/) | Versioned image, three volumes, backup and restore scripts. | Built |
 | [Setup wizard](/hauser/docs/getting-started/first-setup/) | Discovers Areas and entities, proposes rooms, activates a validated configuration. | Live |
-| [Companion app pairing](/hauser/docs/integrations/companion-app/) | Pair a phone with a QR code. The app itself is a separate project. | Experimental |
+| [iOS app and pairing](/hauser/docs/integrations/companion-app/) | A native app for iPhone and iPad, with Apple Home or Home Assistant. Pair a phone with a QR code. | Built, in TestFlight |
 | [Remote access](/hauser/docs/integrations/remote-access/) | Reach Hauser from outside through Tailscale, only for paired devices. | Experimental |
 
 ## Not planned
