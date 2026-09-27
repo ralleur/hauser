@@ -912,82 +912,11 @@
 }
 /* Der Lesbarkeits-Schleier des Raumblatts gehört zum Raumbild; die Blaupause bringt ihren eigenen mit. */
 .room-edit.is-phone .room-sheet.re-mirror::before { content: none; }
-.re-mirror-scene { gap: var(--space-1); }
-.re-mirror-scene .icon { opacity: 0.7; }
-/* Der Platz trägt Griff, Versatz und das Minus; die Kachel darin schneidet ihre Ecken ab. */
-.re-mirror-slot {
-  position: relative;
-  min-width: 0;
-  cursor: grab;
-  touch-action: pan-y pinch-zoom;
-  -webkit-touch-callout: none;
-  user-select: none;
-  outline: none;
-}
-.re-mirror-slot:focus-visible .re-mirror-tile { outline: 2px solid var(--color-accent-warm); outline-offset: 2px; }
-.re-mirror-slot.is-held { z-index: 2; cursor: grabbing; }
-.re-mirror-tile { width: 100%; transition: box-shadow var(--duration-normal) var(--ease-out); }
-.re-mirror-slot.is-held .re-mirror-tile {
-  border-color: var(--accent-light-on-border);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
-}
-.re-mirror-card { position: relative; }
-.re-mirror-card[inert], .re-mirror-card > [inert] { opacity: 0.62; }
-/* Das Minus an der Ecke wie auf dem Home-Bildschirm: klein im Bild, groß genug für den Finger. */
-.re-mirror-remove {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  z-index: 1;
-  width: var(--touch-min, 44px);
-  height: var(--touch-min, 44px);
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #fff;
-  cursor: pointer;
-}
-/* Die Marke ist eine eigene Fläche: das Symbol selbst ist eine Maske und kann keinen Grund tragen. */
-.re-mirror-badge {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-full);
-  background: var(--color-error);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
-  transform: translate(-6px, -6px);
-}
-.re-mirror-badge .icon { width: 14px; height: 14px; }
-/* Im Platz streckt sich die Kachel auf die Zeilenhöhe — wie die Tasten der Steuerung. */
-.re-mirror-slot { display: grid; }
-.re-mirror-slot.is-held .re-mirror-remove { visibility: hidden; }
-/* Kamerakarte vor oder hinter die Kacheln legen (wie die iOS-App): der Pfeil
-   sitzt gegenüber dem Minus. */
-.re-mirror-move {
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  z-index: 1;
-  width: var(--touch-min, 44px);
-  height: var(--touch-min, 44px);
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #fff;
-}
-.re-mirror-move .re-mirror-badge { background: var(--color-accent-warm); }
 .room-edit.is-phone .light-tile.re-mirror-add {
   border-style: dashed;
   border-color: rgba(255, 255, 255, 0.45);
   background: transparent;
 }
-.re-mirror-add .light-tile-icon { color: var(--color-accent-warm); }
 
 .room-edit.is-phone .re-room {
   transition: transform var(--duration-normal) var(--ease-out);

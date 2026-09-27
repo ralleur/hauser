@@ -1,0 +1,196 @@
+/* ── Raum-Konfiguration als Spiegel der Steuerung ──
+   Telefon und Wandpanel zeigen die Geräte-Ansicht der Raum-Konfiguration im
+   Maß der Steuerung (wie die iOS-App): jede Kachel steht dort, wo man sie
+   bedient. Die Regeln für Platz, Minus und Plus gelten in beiden Shells und
+   laden deshalb mit dem Overlay, nicht mit einer Shell. */
+.re-mirror-scene { gap: var(--space-1); }
+.re-mirror-scene .icon { opacity: 0.7; }
+/* Der Platz trägt Griff, Versatz und das Minus; die Kachel darin schneidet ihre Ecken ab. */
+.re-mirror-slot {
+  position: relative;
+  min-width: 0;
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+  -webkit-touch-callout: none;
+  user-select: none;
+  outline: none;
+}
+.re-mirror-slot:focus-visible .re-mirror-tile { outline: 2px solid var(--color-accent-warm); outline-offset: 2px; }
+.re-mirror-slot.is-held { z-index: 2; cursor: grabbing; }
+.re-mirror-tile { width: 100%; transition: box-shadow var(--duration-normal) var(--ease-out); }
+.re-mirror-slot.is-held .re-mirror-tile {
+  border-color: var(--accent-light-on-border);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.re-mirror-card { position: relative; }
+.re-mirror-card[inert], .re-mirror-card > [inert] { opacity: 0.62; }
+/* Das Minus an der Ecke wie auf dem Home-Bildschirm: klein im Bild, groß genug für den Finger. */
+.re-mirror-remove {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 1;
+  width: var(--touch-min, 44px);
+  height: var(--touch-min, 44px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+}
+/* Die Marke ist eine eigene Fläche: das Symbol selbst ist eine Maske und kann keinen Grund tragen. */
+.re-mirror-badge {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-error);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-6px, -6px);
+}
+.re-mirror-badge .icon { width: 14px; height: 14px; }
+/* Im Platz streckt sich die Kachel auf die Zeilenhöhe — wie die Tasten der Steuerung. */
+.re-mirror-slot { display: grid; }
+.re-mirror-slot.is-held .re-mirror-remove { visibility: hidden; }
+/* Kamerakarte vor oder hinter die Kacheln legen (wie die iOS-App): der Pfeil
+   sitzt gegenüber dem Minus. */
+.re-mirror-move {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 1;
+  width: var(--touch-min, 44px);
+  height: var(--touch-min, 44px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+}
+.re-mirror-move .re-mirror-badge { background: var(--color-accent-warm); }
+.re-mirror-add .light-tile-icon { color: var(--color-accent-warm); }
+
+/* ── Wandpanel: die Spalte der Kontrollfläche ──
+   Das Fenster wird zur Bühne ohne eigene Fläche: links die Spalte in Lage
+   und Breite der Kontrollfläche (`--re-column` aus dem Layout-Menü,
+   RoomEdit.svelte), die ihre Klassen trägt (`.home-panel.on-image`,
+   `.panel-controls`) und deshalb aussieht wie sie; rechts daneben
+   Raumbild, Lampen und Einstellungen. Die Blaupause liegt als Grund
+   darunter, ein Tipp daneben schließt. Die Selektoren sind bewusst
+   schwer: die Glas-Regeln der Overlays (on-image.css) sind spezifisch. */
+.room-edit.room-edit.is-panel-mirror {
+  display: block;
+  padding: 0;
+}
+:root .room-edit.room-edit.is-panel-mirror .room-edit-panel.room-edit-panel.on-image {
+  position: absolute;
+  inset: calc(var(--bar-top) + var(--space-3)) var(--space-4) calc(var(--bar-bottom) + var(--space-3)) var(--space-4);
+  width: auto;
+  max-height: none;
+  display: flex;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+/* Überblenden an Ort und Stelle statt Heranzoomen: die Spalte steht schon da, wo die Steuerung stand. */
+.room-edit.is-panel-mirror.is-open .room-edit-panel {
+  animation: re-mirror-in var(--duration-enter) var(--ease-out) both;
+}
+.room-edit.is-panel-mirror.is-closing .room-edit-panel {
+  animation: re-mirror-out var(--duration-fast) var(--ease-in) both;
+}
+@keyframes re-mirror-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes re-mirror-out { from { opacity: 1; } to { opacity: 0; } }
+
+.room-edit.is-panel-mirror .re-room {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: var(--space-4);
+}
+.room-edit.is-panel-mirror .re-room > * { pointer-events: auto; }
+.room-edit.is-panel-mirror .re-panel-column {
+  flex: none;
+  width: var(--re-column);
+  max-width: 100%;
+}
+.room-edit.is-panel-mirror .re-panel-side {
+  flex: 0 1 560px;
+  min-width: 0;
+  max-height: 100%;
+  align-self: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5) var(--space-2);
+}
+
+/* Kopf der Seitenspalte: der Raumname zum Umbenennen, daneben das Kreuz. */
+.room-edit.is-panel-mirror .re-mirror-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.room-edit.is-panel-mirror .re-mirror-head .room-sheet-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: #fff;
+}
+.room-edit.is-panel-mirror .room-sheet-more {
+  flex: none;
+  width: var(--touch-min, 44px);
+  height: var(--touch-min, 44px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+.room-edit.is-panel-mirror .re-panel-column .ld-header {
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  margin: 0;
+}
+:root .room-edit.is-panel-mirror .home-panel.on-image .light-tile.re-mirror-add {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: transparent;
+}
+
+/* Hochkant liegt die Kontrollfläche unter dem Bildband über die volle
+   Breite, die Raumauswahl schwebt über dem Bild — die Spalte hält es
+   ebenso und zeigt nur die Steuerfläche. Kopf und Schnelleinstieg nehmen
+   das Bildband darüber. */
+@media (orientation: portrait) {
+  :root .room-edit.room-edit.is-panel-mirror .room-edit-panel.room-edit-panel.on-image {
+    inset: calc(var(--panel-hero-band) + var(--space-3)) var(--space-4) var(--space-4) var(--space-4);
+  }
+  .room-edit.is-panel-mirror .re-panel-column { flex: 1 1 auto; width: auto; }
+  .room-edit.is-panel-mirror .re-panel-column .room-selector { display: none; }
+  .room-edit.is-panel-mirror .re-panel-column .panel-controls { border-top: 0; }
+  .room-edit.is-panel-mirror .re-panel-side {
+    position: fixed;
+    top: calc(var(--bar-top) + var(--space-3));
+    left: var(--space-4);
+    right: var(--space-4);
+    max-height: calc(var(--panel-hero-band) - var(--bar-top) - var(--space-3) * 2);
+    padding: 0 var(--space-2);
+  }
+}

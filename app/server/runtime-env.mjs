@@ -47,6 +47,7 @@ export const {
   sourceCropToProviderJpeg,
   sourceFullToProviderJpeg,
   uploadedPhotoToRoomImageVariants,
+  ROOM_IMAGE_MANUAL_UPLOAD_POLICY_V1,
 } = await import(`${roomImageContractBase}/room-image-transform-policy-v1.${roomImageContractExtension}`);
 export const {
   ROOM_IMAGE_PROMPT_POLICY_V1,

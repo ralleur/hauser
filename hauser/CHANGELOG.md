@@ -4,6 +4,10 @@
 
 - Hauser speaks Dutch: Nederlands under Settings → Appearance → Interface
   language, contributed by @pservais (#26).
+- The control surface can hide itself after a set time without touch, and
+  "All rooms" shows a chosen number of rows and scrolls the rest (layout menu).
+- Room setup on the panel stands exactly where the room is controlled: same
+  selection, scenes and tiles, with image, lamps and settings beside them.
 - A thermostat added to a room without climate becomes the room's climate
   (heat pumps stay devices); an unreadable calendar entry no longer breaks the
   standby week.

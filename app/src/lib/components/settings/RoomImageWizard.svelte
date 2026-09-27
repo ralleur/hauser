@@ -4,6 +4,7 @@
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
   import RoomImageAccess from './RoomImageAccess.svelte';
+  import RoomImageManual from './RoomImageManual.svelte';
   import Icon from '../Icon.svelte';
   import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
@@ -106,6 +107,22 @@
      bleibt im Kopf nur ein Chip, ueber den man ihn wieder aufklappen kann. */
   let accessStatus = $state<RoomImageAccessStatus | null>(null);
   let accessOpen = $state(false);
+  /* Der Weg (R55): Wer selbst zeichnet, braucht keinen Zugang — die Wahl
+     überlebt das Schließen, bis sie im Kopf über „Weg ändern" fällt. */
+  const WAY_KEY = 'hmi:room-image-way';
+  function restoreWay(): 'auto' | 'manual' {
+    try { return localStorage.getItem(WAY_KEY) === 'manual' ? 'manual' : 'auto'; } catch { return 'auto'; }
+  }
+  let way = $state<'auto' | 'manual'>(restoreWay());
+  function chooseWay(next: 'auto' | 'manual') {
+    way = next;
+    accessOpen = false;
+    try {
+      if (next === 'manual') localStorage.setItem(WAY_KEY, 'manual');
+      else localStorage.removeItem(WAY_KEY);
+    } catch { /* best-effort */ }
+  }
+  const manualWay = $derived(!IS_DEMO && way === 'manual');
   /* „Konfiguriert" heißt nicht „gültig" (R15, docs/23): Eine abgelaufene
      Anmeldung liegt als Datei vor wie eine frische. Zählte sie hier weiter,
      verschwände der Zugang hinter dem Chip und der nächste Lauf liefe in
@@ -390,10 +407,15 @@
           <p>{m.rimg_subtitle()}</p>
         </div>
         <div class="room-image-head-actions">
-          {#if !IS_DEMO && accessConfigured}
+          {#if manualWay}
+            <button class="room-image-access-chip pressable" type="button" onclick={() => chooseWay('auto')}>
+              <span aria-hidden="true"></span>
+              {m.rimg_way_chip_manual()} · {m.rimg_way_change()}
+            </button>
+          {:else if !IS_DEMO && accessConfigured}
             <button class="room-image-access-chip pressable" type="button" aria-expanded={accessOpen} onclick={() => accessOpen = !accessOpen}>
               <span aria-hidden="true"></span>
-              {accessStatus?.mode === 'api_key' ? m.rimg_access_api_key() : m.rimg_access_chatgpt_plan()}
+              {accessStatus?.mode === 'api_key' ? m.rimg_access_api_key() : accessStatus?.mode === 'cloudflare' ? m.rimg_access_cloudflare() : m.rimg_access_chatgpt_plan()}
             </button>
           {/if}
           <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
@@ -402,8 +424,8 @@
 
       {#if IS_DEMO}
         <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
-      {:else if showAccess}
-        <RoomImageAccess onchange={(status) => {
+      {:else if !manualWay && showAccess}
+        <RoomImageAccess onmanual={() => chooseWay('manual')} onchange={(status) => {
           accessStatus = status;
           if (status.configured && status.valid !== false) accessOpen = false;
           void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
@@ -420,7 +442,22 @@
         <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
       {/if}
 
-      {#if !accessConfigured}
+      {#if manualWay}
+        {#if assignRoomId}
+          <RoomImageManual roomId={assignRoomId} />
+        {:else}
+          <div class="room-image-final-confirm">
+            <label>{m.rimg_room()}
+              <select bind:value={assignRoomId}>
+                <option value="">{m.rimg_assign_none()}</option>
+                {#each roomOptions as room (room.id)}
+                  <option value={room.id}>{room.name}</option>
+                {/each}
+              </select>
+            </label>
+          </div>
+        {/if}
+      {:else if !accessConfigured}
         <p class="room-image-alert" role="status">{m.rimg_need_access()}</p>
       {:else if accessOpen}
         <footer class="room-image-wizard-actions">

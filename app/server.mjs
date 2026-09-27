@@ -612,6 +612,9 @@ export function createHmiServer(
   const detectRegionsForRoomImage = async (assetId) => {
     const credential = resolvedRoomImageCredentialStore?.current?.();
     if (!credential) return { ok: false, code: 'PROVIDER_CREDENTIAL_MISSING' };
+    /* Cloudflare zeichnet, sieht aber nicht (R55): kein Sehmodell, und das
+       Foto darf nicht nebenbei zu OpenAI. Die Fenster markiert der Nutzer. */
+    if (credential.mode === 'cloudflare') return { ok: false, code: 'WINDOW_DETECTION_NEEDS_API_KEY' };
     if (credential.mode === 'chatgpt') {
       const token = await resolvedRoomImageCredentialStore.chatGptAccessToken().catch(() => null);
       if (!token) return { ok: false, code: 'PROVIDER_CREDENTIAL_INVALID' };
@@ -716,7 +719,9 @@ export function createHmiServer(
          also bewusst noch sparsamer als die Fenstererkennung. */
       name: 'room-image-overcast',
       run: async () => {
-        const [assetId] = assetsWithoutOvercast(roomImageAssets);
+        /* Selbst gezeichnete und eigene Bilder (R55) gehen nachts nicht zum
+           Anbieter — der Nutzer entscheidet dort selbst, was er hochlädt. */
+        const [assetId] = assetsWithoutOvercast(roomImageAssets).filter((candidate) => !candidate.startsWith('manual_'));
         if (!assetId) return { status: 'skipped', reason: 'nothing-pending' };
         const result = await deriveOvercastForRoomImage(assetId);
         return result.ok ? { status: result.status, assetId } : { status: 'failed', reason: result.code };
@@ -727,13 +732,13 @@ export function createHmiServer(
          Nacht, damit ein großer Bestand nicht in einem Rutsch Geld kostet. */
       name: 'room-image-regions',
       run: async () => {
-        const pending = assetsWithoutRegions(roomImageAssets).slice(0, 3);
+        const pending = assetsWithoutRegions(roomImageAssets).filter((candidate) => !candidate.startsWith('manual_')).slice(0, 3);
         if (pending.length === 0) return { status: 'skipped', reason: 'nothing-pending' };
         let detected = 0;
         for (const assetId of pending) {
           const result = await detectRegionsForRoomImage(assetId);
           if (result.ok) detected += 1;
-          else if (result.code === 'PROVIDER_CREDENTIAL_MISSING') {
+          else if (result.code === 'PROVIDER_CREDENTIAL_MISSING' || result.code === 'WINDOW_DETECTION_NEEDS_API_KEY') {
             return { status: 'skipped', reason: 'no-credential' };
           }
         }

@@ -48,6 +48,9 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      roomsRows: 3,
+      panelAutoHide: false,
+      panelAutoHideSeconds: 30,
       homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };
@@ -56,6 +59,9 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'compact',
       panelSize: 15,
       roomsPerRow: 2,
+      roomsRows: 3,
+      panelAutoHide: false,
+      panelAutoHideSeconds: 30,
       homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'kueche' }],
     };
@@ -443,6 +449,9 @@ describe('zentrale HMI-Konfiguration', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      roomsRows: 3,
+      panelAutoHide: false,
+      panelAutoHideSeconds: 30,
       homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
     };

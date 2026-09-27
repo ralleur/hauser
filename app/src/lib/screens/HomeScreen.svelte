@@ -37,6 +37,7 @@
     rooms: typeof appState.rooms;
     activeIds: readonly string[];
     roomsPerRow: number;
+    rows: number;
     onselect: (roomId: string) => void;
   }> | null>(null);
   $effect(() => {
@@ -60,6 +61,24 @@
     const show = () => { panelsHidden = false; };
     window.addEventListener('pointerdown', show, { capture: true });
     return () => window.removeEventListener('pointerdown', show, { capture: true });
+  });
+  /* Automatisch ausblenden (Layout-Menü, Owner-Wunsch 2026-09-27): nach der
+     eingestellten Zeit ohne Berührung, Maus oder Taste fliegt die Fläche
+     hinaus wie beim Wisch. Solange das Layout-Menü offen ist, bleibt sie —
+     dort wird gerade an ihr gedreht. */
+  $effect(() => {
+    const { panelAutoHide, panelAutoHideSeconds } = layoutManager.applied;
+    if (!panelAutoHide || layoutManager.open) return;
+    const delay = panelAutoHideSeconds * 1000;
+    const hide = () => { panelsHidden = true; };
+    let timer = setTimeout(hide, delay);
+    const restart = () => { clearTimeout(timer); timer = setTimeout(hide, delay); };
+    const events = ['pointerdown', 'pointermove', 'wheel', 'keydown'] as const;
+    for (const type of events) window.addEventListener(type, restart, { capture: true, passive: true });
+    return () => {
+      clearTimeout(timer);
+      for (const type of events) window.removeEventListener(type, restart, { capture: true });
+    };
   });
 
   const layoutStyle = $derived(
@@ -187,7 +206,8 @@
   </div>
 
   {#if roomsView && HomeRoomGrid}
-    <HomeRoomGrid rooms={appState.rooms} activeIds={activeRoomIds} {roomsPerRow} onselect={selectRoomFromTile} />
+    <HomeRoomGrid rooms={appState.rooms} activeIds={activeRoomIds} {roomsPerRow}
+                  rows={layoutManager.preview.roomsRows} onselect={selectRoomFromTile} />
   {/if}
 
   {#if MomentCelebration && momentVisible}

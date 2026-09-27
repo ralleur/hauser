@@ -6,8 +6,10 @@ import {
   resetLayoutConfig,
   saveLayoutConfig,
   setHomeView,
+  setPanelAutoHide,
   setPanelSize,
   setRoomsPerRow,
+  setRoomsRows,
   setSlotRoom,
   setWidthPreset,
   type HomeViewId,
@@ -66,6 +68,8 @@ export const layoutManager = {
   setWidth(preset: WidthPresetId) { commit(setWidthPreset(applied, preset)); },
   setPanelSize(value: number) { commit(setPanelSize(applied, value)); },
   setRoomsPerRow(value: number) { commit(setRoomsPerRow(applied, value)); },
+  setRoomsRows(value: number) { commit(setRoomsRows(applied, value)); },
+  setPanelAutoHide(enabled: boolean, seconds?: number) { commit(setPanelAutoHide(applied, enabled, seconds)); },
   setHomeView(value: HomeViewId) { commit(setHomeView(applied, value)); },
   reconcileRooms(validRoomIds: readonly string[]) {
     const next = reconcileLayoutRooms(applied, validRoomIds);

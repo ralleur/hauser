@@ -1,5 +1,5 @@
 import { m } from '../../paraglide/messages.js';
-export type RoomImageAccessMode = 'api_key' | 'chatgpt';
+export type RoomImageAccessMode = 'api_key' | 'chatgpt' | 'cloudflare';
 
 export interface RoomImageAccessStatus {
   configured: boolean;
@@ -41,7 +41,7 @@ async function json(input: string, init: RequestInit): Promise<unknown> {
 
 function status(value: any): RoomImageAccessStatus {
   if (!value || typeof value !== 'object' || typeof value.configured !== 'boolean'
-      || ![null, 'api_key', 'chatgpt'].includes(value.mode)
+      || ![null, 'api_key', 'chatgpt', 'cloudflare'].includes(value.mode)
       || ![null, 'environment', 'stored'].includes(value.source)) {
     throw new RoomImageAccessError(m.rimg_err_access_status());
   }
@@ -59,6 +59,17 @@ export async function saveRoomImageApiKey(apiKey: string): Promise<RoomImageAcce
   return status(await json('/api/room-images/access/api-key', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey }),
   }));
+}
+
+/* Cloudflare Workers AI (R55): Konto-ID und Token bleiben auf dem Server. */
+export async function saveRoomImageCloudflare(accountId: string, apiToken: string): Promise<RoomImageAccessStatus> {
+  return status(await json('/api/room-images/access/cloudflare', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId, apiToken }),
+  }));
+}
+
+export function validCloudflareAccountId(value: string): boolean {
+  return /^[0-9a-f]{32}$/i.test(value.trim());
 }
 
 export async function clearRoomImageAccess(): Promise<RoomImageAccessStatus> {

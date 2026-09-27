@@ -10,6 +10,8 @@ import {
   reconcileLayoutRooms,
   removeSecondLayoutSlot,
   saveLayoutConfig,
+  setPanelAutoHide,
+  setRoomsRows,
   setSlotRoom,
   setWidthPreset,
   type LayoutStorage,
@@ -54,9 +56,29 @@ describe('layout config persistence', () => {
       widthPreset: 'wide',
       panelSize: 70,
       roomsPerRow: 2,
+      roomsRows: 3,
+      panelAutoHide: false,
+      panelAutoHideSeconds: 30,
       homeView: 'fullscreen',
       slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }, { id: 'slot-2', roomId: 'buero' }],
     });
+  });
+
+  it('Zeilen auf einmal und Ausblenden: alter Stand, Unsinn und Grenzen', () => {
+    const base = { version: 1, widthPreset: 'compact', slots: [{ id: 'slot-1', roomId: null }] };
+    // Gespeicherter Stand von vor dem Feld: Standard, kein Ausblenden.
+    const legacy = parseLayoutConfig(JSON.stringify(base));
+    expect([legacy.roomsRows, legacy.panelAutoHide, legacy.panelAutoHideSeconds]).toEqual([3, false, 30]);
+    // Hand-Edits und Fremdtypen: nie null Zeilen, nie ein Ausblenden nach 0 s oder nach Stunden.
+    const hostile = parseLayoutConfig(JSON.stringify({ ...base, roomsRows: 0, panelAutoHide: 'ja', panelAutoHideSeconds: 1e9 }));
+    expect([hostile.roomsRows, hostile.panelAutoHide, hostile.panelAutoHideSeconds]).toEqual([1, false, 120]);
+    const text = parseLayoutConfig(JSON.stringify({ ...base, roomsRows: '4', panelAutoHideSeconds: null }));
+    expect([text.roomsRows, text.panelAutoHideSeconds]).toEqual([3, 30]);
+    expect(setRoomsRows(DEFAULT_LAYOUT_CONFIG, 9).roomsRows).toBe(5);
+    const hidden = setPanelAutoHide(DEFAULT_LAYOUT_CONFIG, true, 2);
+    expect([hidden.panelAutoHide, hidden.panelAutoHideSeconds]).toEqual([true, 5]);
+    // Aus und wieder an behält die gewählte Zeit.
+    expect(setPanelAutoHide(setPanelAutoHide(setPanelAutoHide(DEFAULT_LAYOUT_CONFIG, true, 60), false), true).panelAutoHideSeconds).toBe(60);
   });
 
   it('fängt blockiertes Lesen und Schreiben ab und persistiert nur auf explizites Speichern', () => {
@@ -110,6 +132,9 @@ describe('layout config updates', () => {
       widthPreset: 'balanced' as const,
       panelSize: 40,
       roomsPerRow: 2,
+      roomsRows: 3,
+      panelAutoHide: false,
+      panelAutoHideSeconds: 30,
       homeView: 'fullscreen' as const,
       slots: [
         { id: 'slot-1' as const, roomId: 'geloescht' },

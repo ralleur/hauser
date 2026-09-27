@@ -100,8 +100,8 @@ this package uses. All Hauser state is mapped below it, among others:
 - `/data/config.json` — shared Hauser settings; in App mode it holds no Home
   Assistant URL and no Home Assistant token;
 - `/data/family-data.json` — reminder and shopping data held by the server;
-- `/data/room-image-auth.json` — your own ChatGPT or OpenAI authorization for
-  the optional room-image assistant;
+- `/data/room-image-auth.json` — your own ChatGPT, OpenAI or Cloudflare
+  authorization for the optional room-image assistant;
 - `/data/assets/` — room-image sets published by the assistant;
 - `/data/assets/ambient-maps/` and `/data/ambient-map.json` — the standby city
   map and its location metadata;
@@ -156,7 +156,7 @@ runtime user and only then serves.
 ## Versions and updates
 
 The App carries the same version as the Hauser release it packages — this
-documentation describes `0.32.0`. The Supervisor resolves the image as
+documentation describes `0.33.0`. The Supervisor resolves the image as
 `ghcr.io/ralleur/hauser:<version>` from the manifest, and the release gate
 refuses a manifest version without a matching published image. Updates arrive
 through Home Assistant's normal App update flow; the changelog shipped with the

@@ -1,20 +1,11 @@
 ---
 title: OpenAI (room pictures)
-description: Optional and the only paid third party. Used by the room-image wizard only.
+description: Optional and the only paid third party. One of the ways the room-image wizard draws.
 sidebar:
   order: 3
 ---
 
-OpenAI is inert until you supply your own access. Only the [room-image wizard](/hauser/docs/using/room-images/) uses it.
-
-## An interim solution
-
-OpenAI is the only way to draw room pictures today. It is a bridge, not the plan:
-
-- **iOS app:** a completely free way through Apple Intelligence is in development. No plan, no key, nothing to pay, on iPhones and iPads that support Apple Intelligence.
-- **Web app and Home Assistant app:** support for local models and your own API keys for other providers is planned.
-
-Neither is available yet. Until then, the wizard needs one of the two kinds of OpenAI access below.
+OpenAI is inert until you supply your own access. Only the [room-image wizard](/hauser/docs/using/room-images/) uses it, and only if you choose it: the wizard also draws with a free Cloudflare account, or you draw the pictures yourself with any image service and bring them back. OpenAI remains the most convenient way — it draws all three lighting states and finds the windows by itself — and the only paid one.
 
 ## Access
 
@@ -23,7 +14,7 @@ Neither is available yet. Until then, the wizard needs one of the two kinds of O
 - an **API key** (`YOUR_API_KEY`), or
 - a **ChatGPT sign-in** through the device flow.
 
-Both stay on the server in `room-image-auth.json` inside the data volume. The browser never sees them. The status dot asks whether the sign-in still carries and says so if it does not.
+Both stay on the server in `room-image-auth.json` inside the data volume, the same file that holds a Cloudflare account ID and token if you chose that way instead. The browser never sees them. The status dot asks whether the sign-in still carries and says so if it does not.
 
 ## What is sent
 

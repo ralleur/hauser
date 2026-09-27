@@ -53,6 +53,12 @@ export function roomHasOvercast(roomId: string | null | undefined): boolean {
   return PROJECT_OVERCAST_ROOMS.has(normalizeHeroRoom(roomId));
 }
 
+/** Nach dem Markieren von Hand oder einem neuen Set (R55): die Bibliothek erneut lesen. */
+export async function reloadRoomRegions(): Promise<void> {
+  loaded = false;
+  await loadRoomRegionsOnce();
+}
+
 /** Einmal pro Sitzung: Flächen und Varianten aus der Bildbibliothek nachziehen. */
 export async function loadRoomRegionsOnce(): Promise<void> {
   void loadProjectRegionsOnce();

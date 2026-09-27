@@ -23,6 +23,13 @@ export interface LayoutConfig {
   widthPreset: WidthPresetId;
   panelSize: number;
   roomsPerRow: number;
+  /* „Alle Räume“: so viele Kachelzeilen stehen auf einmal im Bild, der Rest
+     scrollt — wie am Telefon (Owner-Wunsch 2026-09-27). */
+  roomsRows: number;
+  /* Die Kontrollfläche blendet sich nach so vielen Sekunden ohne Berührung
+     aus; die nächste Berührung holt sie zurück. */
+  panelAutoHide: boolean;
+  panelAutoHideSeconds: number;
   homeView: HomeViewId;
   slots: LayoutSlot[];
 }
@@ -54,9 +61,16 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   widthPreset: 'compact',
   panelSize: 15,
   roomsPerRow: 2,
+  roomsRows: 3,
+  panelAutoHide: false,
+  panelAutoHideSeconds: 30,
   homeView: 'fullscreen',
   slots: [{ id: 'slot-1', roomId: null }],
 };
+
+export const ROOMS_ROWS_MAX = 5;
+export const AUTO_HIDE_SECONDS_MIN = 5;
+export const AUTO_HIDE_SECONDS_MAX = 120;
 
 export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
   return {
@@ -64,6 +78,9 @@ export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
     widthPreset: config.widthPreset,
     panelSize: normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset)),
     roomsPerRow: normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+    roomsRows: normalizeRoomsRows(config.roomsRows),
+    panelAutoHide: config.panelAutoHide === true,
+    panelAutoHideSeconds: normalizeAutoHideSeconds(config.panelAutoHideSeconds),
     homeView: normalizeHomeView(config.homeView),
     slots: config.slots.map((slot) => ({ ...slot })),
   };
@@ -99,6 +116,9 @@ export function parseLayoutConfig(raw: string | null): LayoutConfig {
       roomsPerRow: normalizeRoomsPerRow(typeof candidate.roomsPerRow === 'number'
         ? candidate.roomsPerRow
         : DEFAULT_LAYOUT_CONFIG.roomsPerRow),
+      roomsRows: normalizeRoomsRows(candidate.roomsRows),
+      panelAutoHide: candidate.panelAutoHide === true,
+      panelAutoHideSeconds: normalizeAutoHideSeconds(candidate.panelAutoHideSeconds),
       homeView: normalizeHomeView(candidate.homeView),
       slots,
     };
@@ -187,6 +207,19 @@ export function setRoomsPerRow(config: LayoutConfig, roomsPerRow: number): Layou
   return next;
 }
 
+export function setRoomsRows(config: LayoutConfig, roomsRows: number): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.roomsRows = normalizeRoomsRows(roomsRows);
+  return next;
+}
+
+export function setPanelAutoHide(config: LayoutConfig, enabled: boolean, seconds = config.panelAutoHideSeconds): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.panelAutoHide = enabled === true;
+  next.panelAutoHideSeconds = normalizeAutoHideSeconds(seconds);
+  return next;
+}
+
 export function setHomeView(config: LayoutConfig, homeView: HomeViewId): LayoutConfig {
   const next = cloneLayoutConfig(config);
   next.homeView = normalizeHomeView(homeView);
@@ -227,6 +260,18 @@ function normalizePanelSize(value: number): number {
 
 function normalizeRoomsPerRow(value: number): number {
   return Math.min(4, Math.max(1, Math.round(value)));
+}
+
+/* Alte Stände ohne Feld, Unsinn aus Hand-Edits (Text, NaN, 1e9): der Standard
+   bzw. die nächste Grenze — nie eine Zeilenzahl, bei der keine Kachel passt. */
+function normalizeRoomsRows(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_LAYOUT_CONFIG.roomsRows;
+  return Math.min(ROOMS_ROWS_MAX, Math.max(1, Math.round(value)));
+}
+
+function normalizeAutoHideSeconds(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_LAYOUT_CONFIG.panelAutoHideSeconds;
+  return Math.min(AUTO_HIDE_SECONDS_MAX, Math.max(AUTO_HIDE_SECONDS_MIN, Math.round(value)));
 }
 
 function normalizeHomeView(value: unknown): HomeViewId {

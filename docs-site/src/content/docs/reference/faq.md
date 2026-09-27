@@ -31,15 +31,15 @@ In the volumes, as JSON. See [Configuration reference](/hauser/docs/reference/co
 
 ### Does Hauser need cloud services?
 
-No. Home Assistant, Jellyfin, Paperless and Notion are your own services. Weather and the street map use free public data. The room-image wizard is the only paid, cloud-based step and it is optional.
+No. Home Assistant, Jellyfin, Paperless and Notion are your own services. Weather and the street map use free public data. The room-image wizard is optional, and only its ChatGPT way is paid; it also draws with a free Cloudflare account, or you draw the pictures yourself.
 
 ### How are room pictures made?
 
-Three ways: keep the defaults, upload your own, or let the wizard draw one from a photo with your own OpenAI access. See [Room pictures](/hauser/docs/using/room-images/).
+Four ways: keep the defaults, upload your own, let the wizard draw one from a photo (with your ChatGPT plan or a free Cloudflare account), or draw it yourself with the wizard's wording in any image service and mark the windows by hand. See [Room pictures](/hauser/docs/using/room-images/).
 
 ### Will the room-image wizard become free?
 
-That is the goal. OpenAI is an interim solution. For the iOS app, a completely free way through Apple Intelligence is in development. For the web app and the Home Assistant app, local models and your own API keys for other providers are planned. Neither is available yet. See [OpenAI](/hauser/docs/integrations/openai/).
+It already is, in two ways: with a free Cloudflare account the wizard draws within Cloudflare's daily allowance, and without any account you copy the wizard's wording into Gemini, ChatGPT, Bing or any other service, bring the picture back and mark the windows yourself. The iOS app adds an experimental way through Apple Intelligence on iOS 27. Local models are still planned. See [Room pictures](/hauser/docs/using/room-images/).
 
 ### What happens when Home Assistant is unreachable?
 

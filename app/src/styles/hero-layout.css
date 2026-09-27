@@ -369,9 +369,14 @@
    gleicher Spezifität gewann in der Produktion die Drei-Zeilen-Fassung, die
    Bühne schrumpfte auf die Kopfzeile und jede Seite blieb leer (v0.15.0,
    Owner-Befund 2026-09-12 am Panel). */
-[data-shell="panel"].app {
+/* Die Raum-Konfiguration liegt als Overlay außerhalb von .app und legt ihre
+   Spalte auf dieselben Maße wie die Kontrollfläche (room-edit-mirror.css). */
+[data-shell="panel"].app,
+.room-edit.is-panel-mirror {
   --bar-top: calc(48px + env(safe-area-inset-top, 0px));
   --bar-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+[data-shell="panel"].app {
   position: relative;
   grid-template-rows: minmax(0, 1fr);
 }
@@ -728,12 +733,28 @@
   /* Der Regler „Räume pro Zeile" aus dem Layout-Menü gilt hier für die Kacheln. */
   grid-template-columns: repeat(var(--rooms-per-row, 2), minmax(0, 1fr));
   grid-auto-rows: minmax(calc(var(--touch-preferred) * 2), 1fr);
+  align-content: start;
   gap: var(--space-3);
+  /* „Zeilen auf einmal": passen nicht alle Räume, scrollt das Raster wie am
+     Telefon, statt jede Kachel zum Streifen zu drücken. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   pointer-events: none;
 }
+.home-room-grid::-webkit-scrollbar { display: none; }
 
 .home-room-grid > * {
   pointer-events: auto;
+}
+
+/* Gemessen (HomeRoomGrid): jede Zeile ist ein Teil der Höhe. Spezifisch
+   genug für das Hochformat unten, das sonst seine eigene Zeilenhöhe setzt. */
+[data-shell="panel"] .home-stage.is-rooms-view .home-room-grid.is-fitted {
+  grid-auto-rows: var(--room-tile-height);
+}
+.home-room-grid.is-fitted > * {
+  min-height: 0;
 }
 
 /* Raumwechsel in der Kontrollfläche (Owner-Wunsch 2026-09-12): HomeScreen
@@ -763,8 +784,11 @@
    Die Abfrage gilt der Form, nicht dem Gerät: ein hochkant montiertes
    Wandpanel bekommt dasselbe Layout wie ein iPad in der Hand. */
 @media (orientation: portrait) {
-  [data-shell="panel"] .home-stage {
+  [data-shell="panel"] .home-stage,
+  .room-edit.is-panel-mirror {
     --panel-hero-band: 54%;
+  }
+  [data-shell="panel"] .home-stage {
     /* Bezugsgröße für die Höhe der schwebenden Raumspalte (cqh). */
     container-type: size;
   }

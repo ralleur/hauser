@@ -2,7 +2,9 @@
   import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { DEFAULT_LAYOUT_CONFIG, panelSizeOf, widthPreset } from '../state/layout-config.ts';
+  import {
+    AUTO_HIDE_SECONDS_MAX, AUTO_HIDE_SECONDS_MIN, DEFAULT_LAYOUT_CONFIG, ROOMS_ROWS_MAX, panelSizeOf, widthPreset,
+  } from '../state/layout-config.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
   import { prefersReducedMotion } from '../motion/index.ts';
   import TickScale from './TickScale.svelte';
@@ -138,6 +140,53 @@
                        min={1} max={4} step={1} keyStep={1} tickCount={4}
                        onInput={(value) => layoutManager.setRoomsPerRow(Math.round(value))}
                        format={(value) => String(Math.round(value))} />
+          </div>
+
+          <!-- Alle Räume: so viele Zeilen stehen auf einmal im Bild, der Rest
+               scrollt wie am Telefon. Im Vollbild gibt es kein Raster, dort
+               bliebe der Regler ohne Wirkung. -->
+          {#if config.homeView === 'rooms'}
+            <div class="layout-slider-setting">
+              <div class="layout-slider-head">
+                <span>{m.layout_rooms_rows()}</span>
+                <button class="text-btn pressable" type="button"
+                        onclick={() => layoutManager.setRoomsRows(DEFAULT_LAYOUT_CONFIG.roomsRows)}>{m.layout_default()}</button>
+              </div>
+              <TickScale ariaLabel={m.layout_rooms_rows()} orientation="horizontal" mode="fill"
+                         value={config.roomsRows}
+                         min={1} max={ROOMS_ROWS_MAX} step={1} keyStep={1} tickCount={ROOMS_ROWS_MAX}
+                         onInput={(value) => layoutManager.setRoomsRows(Math.round(value))}
+                         format={(value) => String(Math.round(value))} />
+            </div>
+          {/if}
+
+          <!-- Die Kontrollfläche geht nach einer Weile ohne Berührung aus dem
+               Bild, damit das Raumbild wirkt (simon42-Forum 2026-09-26); die
+               nächste Berührung holt sie zurück. -->
+          <div class="layout-slider-setting">
+            <div class="layout-slider-head">
+              <span>{m.layout_auto_hide()}</span>
+            </div>
+            <div class="choice-pill" role="radiogroup" aria-label={m.layout_auto_hide()}>
+              <button class="choice-seg pressable" type="button" role="radio"
+                      aria-checked={!config.panelAutoHide}
+                      onclick={() => layoutManager.setPanelAutoHide(false)}>{m.layout_auto_hide_never()}</button>
+              <button class="choice-seg pressable" type="button" role="radio"
+                      aria-checked={config.panelAutoHide}
+                      onclick={() => layoutManager.setPanelAutoHide(true)}>{m.layout_auto_hide_auto()}</button>
+            </div>
+            {#if config.panelAutoHide}
+              <div class="layout-slider-head">
+                <span>{m.layout_auto_hide_after()}</span>
+                <button class="text-btn pressable" type="button"
+                        onclick={() => layoutManager.setPanelAutoHide(true, DEFAULT_LAYOUT_CONFIG.panelAutoHideSeconds)}>{m.layout_default()}</button>
+              </div>
+              <TickScale ariaLabel={m.layout_auto_hide_after()} orientation="horizontal" mode="fill"
+                         value={config.panelAutoHideSeconds}
+                         min={AUTO_HIDE_SECONDS_MIN} max={AUTO_HIDE_SECONDS_MAX} step={5} keyStep={5}
+                         onInput={(value) => layoutManager.setPanelAutoHide(true, value)}
+                         format={(value) => `${Math.round(value)} s`} />
+            {/if}
           </div>
 
           <!-- Zweite Kontrollfläche: unten, und mit festem Raum — sie zeigt

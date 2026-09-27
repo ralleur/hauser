@@ -54,7 +54,7 @@ documented rollback path. The isolated clean-room pilot has completed setup,
 control/state echo, reconnect and persistence without source changes.
 
 `v0.4.0-beta.1` was the first public release. Its versioned GHCR image is the
-normal installation path; `v0.32.0` is current. The first installation by
+normal installation path; `v0.33.0` is current. The first installation by
 an external person in a second household is confirmed: Docker Compose on an
 Asustor NAS (Linux, x86_64) against Home Assistant Container, with automatic
 area discovery and the first light under control ten minutes in — see
@@ -102,7 +102,7 @@ deliberately omits superseded plans and rejected alternatives.
 | Area | |
 |---|---|
 | **Rooms** | Climate, lights, scenes, presence and window state; each room illustrated in three lighting states that follow the actual lights |
-| **Room images** | The bundled illustrations are of the author's home, so the built-in wizard makes yours from a phone photograph: day, evening and lights-off as one reviewed set. Needs your own OpenAI access, and it is the only paid third party in the product |
+| **Room images** | The bundled illustrations are of the author's home, so the built-in wizard makes yours from a phone photograph: day, evening and lights-off as one reviewed set — with your ChatGPT plan, with a free Cloudflare account, or drawn by yourself with the wizard's wording in any image service and the windows marked by hand. OpenAI is the only paid third party in the product, and only one of the ways |
 | **Home Assistant** | WebSocket via the official client, optimistic commands with reconciliation, reconnect handling, day/night theming from `sun.sun` |
 | **Media** | Jellyfin library, shelves, detail view, HLS playback with resume; room audio through HA media players |
 | **Energy** | Live load and daily consumption from real power sensors, with honest empty states for figures the house cannot measure |
@@ -128,7 +128,8 @@ configured live service are not the same thing:
 | **Shopping** | Every shop is a Home Assistant `todo.*` list, read with `todo/item/list` and written with the `todo.*` services; the settings screen can create one. A shared Notion page is the optional alternative, handled server-side. | Curated simulated data; no live connection. |
 | **Paperless-ngx** | Implemented by the optional companion server. It keeps the Paperless token and PIN server-side and exposes only gated search, processing status, preview/download and import operations. | Deliberately omitted; private documents do not belong in a public static demo. |
 | **OpenStreetMap / Overpass** | Optional and off by default. When a location is configured, the server queries a public Overpass endpoint once and renders a monochrome road SVG for the standby background. Map data © OpenStreetMap contributors, ODbL. | Not connected; the demo ships no generated map. |
-| **OpenAI** | Optional and inert until you supply your own access, either an API key or a signed-in ChatGPT account. Used by the room-image wizard only: the photo you pick is sent to the images endpoint to be redrawn. No other feature calls it, and the key stays server-side. | Deliberately omitted; the demo ships the bundled illustrations and never calls a paid provider. |
+| **OpenAI** | Optional and inert until you supply your own access, either an API key or a signed-in ChatGPT account. Used by the room-image wizard only, and only if you choose it: the photo you pick is sent to the images endpoint to be redrawn. No other feature calls it, and the key stays server-side. | Deliberately omitted; the demo ships the bundled illustrations and never calls a paid provider. |
+| **Cloudflare Workers AI** | Optional alternative for the room-image wizard, within the free daily allowance of your own Cloudflare account: account ID and API token stay server-side, the photo goes to Cloudflare to be redrawn, evening and night are derived locally. | Not connected. |
 | **Notion** | Optional alternative source for the shopping list. Needs an integration token and the page address; both stay server-side. Reminders never depend on Notion. | Not connected; shopping uses fixtures. |
 
 ## Screenshots
@@ -161,11 +162,14 @@ frozen so that what comes back is still your room rather than a stock living
 room that resembles it. Day, evening and lights-off are generated as one set,
 reviewed together and published atomically.
 
-This is the one place where Hauser talks to a paid third party. It needs your
-own OpenAI access, your photograph is sent there to be redrawn, that trade is
-stated before anything is uploaded, every paid step is confirmed by hand, and a
-running count of provider calls stays on screen. The wizard is not part of the
-hosted demo.
+This is the one place where Hauser can talk to a paid third party, and only if
+you choose that way: with your own OpenAI access your photograph is sent there
+to be redrawn, that trade is stated before anything is uploaded, every paid step
+is confirmed by hand, and a running count of provider calls stays on screen. A
+free Cloudflare account draws within its daily allowance instead, and without
+any account you copy the wizard's wording into the image service you already
+use, bring each version back and mark the windows by hand. The wizard is not
+part of the hosted demo.
 
 ### The screens a household opens most
 
@@ -300,9 +304,9 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-The image `ghcr.io/ralleur/hauser:v0.32.0` is published only after the
+The image `ghcr.io/ralleur/hauser:v0.33.0` is published only after the
 matching public beta tag passes the release workflow. Tagged releases also
-publish the plain `0.32.0` tag, which the Home Assistant Supervisor
+publish the plain `0.33.0` tag, which the Home Assistant Supervisor
 resolves from the App manifest. When deliberately building
 from a checkout instead, use the explicit source-build overlay:
 

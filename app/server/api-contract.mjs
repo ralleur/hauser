@@ -82,6 +82,7 @@ export const API_ROUTES = [
   { id: 'roomImageProbe', methods: ['POST'], path: '/api/room-images/probe', area: 'room-images', access: 'admin', purpose: 'Provider-Zugang prüfen.' },
   { id: 'roomImageAccess', methods: ['GET', 'DELETE'], path: '/api/room-images/access', area: 'room-images', access: 'admin', purpose: 'Provider-Zugang lesen oder entfernen.' },
   { id: 'roomImageAccessApiKey', methods: ['POST'], path: '/api/room-images/access/api-key', area: 'room-images', access: 'admin', purpose: 'OpenAI-Schlüssel hinterlegen.' },
+  { id: 'roomImageAccessCloudflare', methods: ['POST'], path: '/api/room-images/access/cloudflare', area: 'room-images', access: 'admin', purpose: 'Cloudflare-Konto-ID und -Token hinterlegen (Workers AI, freies Tageskontingent).' },
   { id: 'roomImageAccessChatGptStart', methods: ['POST'], path: '/api/room-images/access/chatgpt/start', area: 'room-images', access: 'admin', purpose: 'ChatGPT-Anmeldung starten.' },
   { id: 'roomImageAccessChatGptPoll', methods: ['POST'], path: '/api/room-images/access/chatgpt/poll', area: 'room-images', access: 'admin', purpose: 'ChatGPT-Anmeldung abfragen.' },
   { id: 'roomImageUploads', methods: ['POST'], path: '/api/room-image-uploads', area: 'room-images', access: 'admin', purpose: 'Quellfoto hochladen.' },
@@ -97,10 +98,10 @@ export const API_ROUTES = [
   { id: 'roomImageJobFinalPreview', methods: ['GET', 'HEAD'], path: '/api/room-image-jobs/:jobId/final-previews/:variant', area: 'room-images', access: 'admin', purpose: 'Vorschau des finalen Satzes (light, dark, dark-off).' },
   { id: 'roomImageAssets', methods: ['GET'], path: '/api/room-image-assets', area: 'room-images', access: 'origin', purpose: 'Bibliothek der Bildsets.', cacheable: true },
   { id: 'roomImageOvercast', methods: ['POST'], path: '/api/room-image-assets/:assetId/overcast', area: 'room-images', access: 'admin', purpose: 'Trübe Bildvariante eines Bildsets erzeugen und dazulegen.' },
-  { id: 'roomImageRegions', methods: ['POST'], path: '/api/room-image-assets/:assetId/regions', area: 'room-images', access: 'admin', purpose: 'Flächen eines Bildsets erkennen (Fenster, Sitzflächen, Tische …) und im Katalog festhalten.' },
+  { id: 'roomImageRegions', methods: ['POST', 'PUT'], path: '/api/room-image-assets/:assetId/regions', area: 'room-images', access: 'admin', purpose: 'Flächen eines Bildsets erkennen (POST; Fenster, Sitzflächen, Tische …) oder von Hand setzen (PUT) und im Katalog festhalten.' },
   { id: 'roomImageAssetDelete', methods: ['DELETE'], path: '/api/room-image-assets/:assetId', area: 'room-images', access: 'admin', purpose: 'Bildset löschen.' },
   { id: 'roomImageAssignment', methods: ['PUT'], path: '/api/room-image-assignments/:roomId', area: 'room-images', access: 'admin', purpose: 'Bildset einem Raum zuweisen.' },
-  { id: 'roomBackground', methods: ['POST', 'DELETE'], path: '/api/room-backgrounds/:roomId', area: 'room-images', access: 'admin', purpose: 'Manuelles Raumbild setzen oder auf den Projekt-Fallback zurückgehen.' },
+  { id: 'roomBackground', methods: ['POST', 'DELETE'], path: '/api/room-backgrounds/:roomId', area: 'room-images', access: 'admin', purpose: 'Eigenes Raumbild setzen oder auf den Projekt-Fallback zurückgehen; mit `?variant=dark|dark-off|overcast` eine einzelne Fassung des selbst gezeichneten Sets ersetzen oder wieder ablegen.' },
   { id: 'roomImageAssignmentLegacy', methods: ['PUT'], path: '/api/rooms/:roomId/room-image-assignment', area: 'room-images', access: 'admin', purpose: 'Ältere Zuweisungsroute; bleibt für bestehende Clients beantwortet.' },
 
   /* ── Ambient ── */

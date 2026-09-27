@@ -3,6 +3,29 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.33.0] - 2026-09-27
+
+### Added
+
+- **The room-image wizard asks one question at a time and draws for free.**
+  Do you have a ChatGPT plan? Sign in and everything is drawn for you. Do you
+  have a Cloudflare account? Enter its ID and a Workers AI token, and the
+  wizard draws within Cloudflare's free daily allowance; evening and night are
+  derived from the day picture. Otherwise you draw it yourself: a workbench
+  per room shows for day, evening with lights, night without lights and
+  overcast whether a picture is there, only derived or missing, hands you the
+  wizard's wording for each version to paste into Gemini, ChatGPT or Bing
+  together with the input picture, and takes the finished picture back.
+  Below it, mark the windows by dragging rectangles — rain and snow are drawn
+  only there. The same four ways as in the iOS app.
+
+### Changed
+
+- **Your own photo has a night now.** An uploaded photo gets evening and
+  lights-off derived from it, darkened, instead of staying bright at night.
+- Pictures you drew or uploaded yourself are no longer sent to the image
+  provider during the night runs for the overcast variant or the surfaces.
+
 ## [0.32.0] - 2026-09-27
 
 ### Added
@@ -14,6 +37,18 @@ Semantic Versioning for its public release line.
   ([#26](https://github.com/ralleur/hauser/issues/26)); the texts for today's
   energy balance, the Apple TV remote and the quick-action bar were added
   since and still wait for a native review. The iOS app follows.
+
+- **The room image gets the panel to itself.** In the layout menu (long press
+  on the free stage) the control surface can hide itself after a time without
+  touch, from 5 seconds to 2 minutes; the next touch brings it back. "All
+  rooms" shows as many rows at once as you set and scrolls the rest, like the
+  phone, instead of squeezing many rooms into thin strips. Both also in the
+  iOS app.
+- **Room setup on the panel stands where you control the room.** The room
+  selection, scenes and tiles sit exactly where they are in the control
+  surface, with the minus at the corner, holding to reorder and the plus tile
+  to add; room image, lamps and settings stand beside them. Tapping another
+  room in the selection sets up that room.
 
 ### Fixed
 

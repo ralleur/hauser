@@ -33,6 +33,8 @@ export interface RoomImageLibraryAsset {
   byteLength: number;
   assignedRoomIds: string[];
   regions?: RoomImageRegions;
+  /** Selbst gezeichnet (R55): welche Fassungen eigen sind; fehlt bei Sets des Assistenten. */
+  manual?: { own: string[] };
 }
 
 export interface RoomImageLibrary {
@@ -158,6 +160,23 @@ export function formatRoomImageBytes(bytes: number): string {
    Kostet einen Modellaufruf und schreibt den Katalog; deshalb nur von Hand aus
    der Diagnose oder nachts vom Server. Die Antwort trägt den neuen Stand
    zurück, damit die Ansicht sofort zeichnen kann. */
+/* Fenster von Hand (R55): Rechtecke als Vierecke, der Server prüft den Vertrag. */
+export async function setRoomImageRegions(assetId: string, regions: RoomImageRegion[]): Promise<RoomImageRegions> {
+  const response = await fetch(`/api/room-image-assets/${encodeURIComponent(assetId)}/regions`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ regions }),
+  });
+  if (!response.ok) throw await readError(response, m.rimg_regions_failed());
+  const payload: unknown = await response.json();
+  const stored = (payload as { regions?: unknown } | null)?.regions;
+  if (!stored || typeof stored !== 'object' || !Array.isArray((stored as RoomImageRegions).regions)) {
+    throw libraryError('INVALID_RESPONSE', m.rimg_regions_failed());
+  }
+  return stored as RoomImageRegions;
+}
+
 export async function detectRoomImageRegions(assetId: string): Promise<RoomImageRegions> {
   const response = await fetch(`/api/room-image-assets/${encodeURIComponent(assetId)}/regions`, {
     method: 'POST',

@@ -92,10 +92,10 @@ export interface RoomImageCapability {
 
 export interface RoomImageCapabilityDetails {
   enabled: boolean;
-  provider: 'openai';
+  provider: 'openai' | 'cloudflare';
   credentialConfigured: boolean;
   credentialSource: 'environment' | 'stored' | null;
-  credentialMode: 'api_key' | 'chatgpt' | null;
+  credentialMode: 'api_key' | 'chatgpt' | 'cloudflare' | null;
   imageCapability:
     | 'disabled'
     | 'credential_missing'
@@ -105,7 +105,7 @@ export interface RoomImageCapabilityDetails {
     | 'unverified'
     | 'ready';
   reasonCode: 'CREDENTIAL_MISSING' | null;
-  model: 'gpt-image-2-2026-04-21' | 'gpt-image-2';
+  model: 'gpt-image-2-2026-04-21' | 'gpt-image-2' | '@cf/black-forest-labs/flux-2-klein-4b';
   probe: { modelVisible: boolean; checkedAt: string | null };
   limits: {
     maxUploadBytes: number;
@@ -385,13 +385,13 @@ function parseDetails(value: unknown): RoomImageCapabilityDetails | null {
     'enabled', 'provider', 'credentialConfigured', 'credentialSource', 'imageCapability',
     'credentialMode', 'reasonCode', 'model', 'probe', 'limits',
   ])
-      || typeof value.enabled !== 'boolean' || value.provider !== 'openai'
+      || typeof value.enabled !== 'boolean' || !oneOf(value.provider, ['openai', 'cloudflare'] as const)
       || typeof value.credentialConfigured !== 'boolean'
       || !oneOf(value.credentialSource, ['environment', 'stored', null] as const)
-      || !oneOf(value.credentialMode, ['api_key', 'chatgpt', null] as const)
+      || !oneOf(value.credentialMode, ['api_key', 'chatgpt', 'cloudflare', null] as const)
       || !oneOf(value.imageCapability, PRIVATE_CAPABILITIES)
       || !oneOf(value.reasonCode, ['CREDENTIAL_MISSING', null] as const)
-      || !oneOf(value.model, ['gpt-image-2-2026-04-21', 'gpt-image-2'] as const)
+      || !oneOf(value.model, ['gpt-image-2-2026-04-21', 'gpt-image-2', '@cf/black-forest-labs/flux-2-klein-4b'] as const)
       || !exact(value.probe, ['modelVisible', 'checkedAt'])
       || typeof value.probe.modelVisible !== 'boolean'
       || !(value.probe.checkedAt === null || timestamp(value.probe.checkedAt))
@@ -406,7 +406,7 @@ function parseDetails(value: unknown): RoomImageCapabilityDetails | null {
       || value.limits.maxQueuedJobs !== 3) return null;
   return {
     enabled: value.enabled,
-    provider: 'openai',
+    provider: value.provider,
     credentialConfigured: value.credentialConfigured,
     credentialSource: value.credentialSource,
     credentialMode: value.credentialMode,

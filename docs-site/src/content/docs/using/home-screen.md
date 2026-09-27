@@ -19,17 +19,20 @@ Long-press a free area of the stage to open the layout menu. The **View** pill s
 - **Full screen.** One room picture, the room picker at the top of the control surface.
 - **All rooms.** Every room as a tile with picture, name and light status. The control surface belongs to the selected room and carries its name.
 
-**Rooms per row** sets the tile columns.
+**Rooms per row** sets the tile columns. In All rooms, **Rows at once** sets how many rows share the height; more rooms scroll, as on the phone.
 
 ## Swipe the controls away
 
 Swipe left on the control surface and it flies out of the picture. The stage takes the full width. The next touch brings it back. A tap on a tile also selects that room.
 
+To let it go by itself, set **Hide control surface** to **Automatic** in the layout menu and choose the time without touch, from 5 seconds to 2 minutes. It stays while the layout menu is open.
+
 ## Layout menu
 
 The layout menu has no Apply button. Every setting takes effect at once:
 
-- view and rooms per row
+- view, rooms per row and, in All rooms, rows at once
+- hiding the control surface automatically, and after how long
 - the width of the control area, separately for Home and Energy
 - a second control surface at the bottom with a fixed room of its own
 - **Reset to default**

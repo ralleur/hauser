@@ -5,8 +5,6 @@
      die komplette Entity-Liste. Reuse des overlay-scrim/modal-Musters. */
   import Icon from './Icon.svelte';
   import '../../styles/room-images.css';
-  import { longpress } from '../actions/longpress.ts';
-  import { dragreorder } from '../actions/dragreorder.ts';
   import { tilereorder } from '../actions/tilereorder.ts';
   import ClimateCard from './ClimateCard.svelte';
   import { mergedClimate } from '../state/commands.ts';
@@ -50,6 +48,7 @@
     sensorIdFor,
     sensorIsAutomatic,
     climateHidden,
+    climateInline,
     setCameraSplit,
     setClimateHidden,
     setContactIds,
@@ -61,6 +60,10 @@
   import type { RoomContactKind } from '../state/commands.ts';
   import { ROOM_NAME_MAX, cleanRoomName, renameRoom } from '../state/room-rename.ts';
   import { cardsAroundTiles } from '../state/room-cards.ts';
+  import { layoutManager } from '../state/layout-manager.svelte.ts';
+  import { layoutHomeView, layoutRoomsPerRow, widthPreset } from '../state/layout-config.ts';
+  import PanelRoomSelector from './PanelRoomSelector.svelte';
+  import '../../styles/room-edit-mirror.css';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
 
@@ -79,7 +82,6 @@
   let backgroundMessage = $state<string | null>(null);
   let backgroundError = $state(false);
   let libraryOpen = $state(false);
-  let moveDeviceId = $state<string | null>(null);
   const roomLights = $derived((room?.lights ?? []).filter((device) => (device.category ?? 'light') === 'light'));
   const placements = $derived(roomLightPlacements(room?.id));
   const selectedPlacement = $derived(placements[selectedLightId]);
@@ -183,24 +185,15 @@
     searchEl?.focus();
   }
 
-  /* Reihenfolge der Raumgeräte: Konfig-Overlay-Standard (actions/dragreorder) —
-     derselbe Neun-Punkte-Griff wie in der Raumliste und im Szenen-Editor. */
-  let dragEntityId = $state<string | null>(null);
-  let dragOffset = $state(0);
-  let orderListEl = $state<HTMLElement>();
-
-  /* Die gezogene Zeile hängt am Finger (Versatz aus der Action), die anderen
+  /* Die gezogene Kachel hängt am Finger (Versatz aus der Action), die anderen
      gleiten per FLIP auf ihren neuen Platz. Die gezogene selbst bekommt keine
      FLIP-Dauer — sonst zöge die Animation gegen den Finger. */
-  const flipMs = $derived(prefersReducedMotion() ? 0 : tokenDuration(orderListEl ?? null, 'normal'));
+  const flipMs = $derived(prefersReducedMotion() ? 0 : tokenDuration(null, 'normal'));
   /* Beim Entfernen rücken die Nachbarn erst nach, wenn die Zeile sichtbar
      weggeflogen ist — sonst gleiten sie durch sie hindurch. Beim Ziehen
      darf nichts nachhängen, dort bleibt die Verzögerung null. */
   const REMOVE_LEAD_MS = 90;
   let removing = $state(false);
-  function rowFlip(id: string) {
-    return { duration: id === dragEntityId ? 0 : flipMs, delay: removing ? REMOVE_LEAD_MS : 0 };
-  }
   /* Die abgehende Zeile verlässt den Fluss (siehe popAway) und weiß dann
      nicht mehr, wo sie stand — die Stelle wird beim Klick gemessen. */
   let removedFrom = $state<{ top: number; left: number } | null>(null);
@@ -296,16 +289,6 @@
     }
   }
 
-  /* Longpress auf eine Geraetezeile verschiebt das Geraet in einen anderen Raum.
-     addDeviceToRoom haengt es ans Ende der Zielraum-Reihenfolge. */
-  function moveDeviceToRoom(targetRoomId: string) {
-    const entityId = moveDeviceId;
-    moveDeviceId = null;
-    if (!entityId) return;
-    const targetOrder = appState.rooms.find((entry) => entry.id === targetRoomId)?.lights.map((light) => light.entityId) ?? [];
-    addDeviceToRoom(entityId, targetRoomId, targetOrder);
-  }
-
   function placeSelected(event: MouseEvent) {
     if (!room || !selectedLightId) return;
     const rect = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
@@ -340,13 +323,12 @@
     if (e.key === 'Escape' && roomEdit.mode === 'open') closeRoomEdit();
   }
 
-  /* Die Wischgeste gehört dem Telefon: am Wandpanel steht dasselbe Overlay
-     mittig im Bild, dort wäre ein Zug nach unten sinnlos. */
-  let onPhone = $state(false);
-  $effect(() => {
-    onPhone = typeof document !== 'undefined'
-      && document.querySelector('[data-shell="phone"]') !== null;
-  });
+  /* Die Wischgeste gehört dem Telefon: am Wandpanel steht die Konfiguration
+     in der Spalte der Kontrollfläche, dort wäre ein Zug nach unten sinnlos.
+     Die Shell steht fest, bevor das Overlay lädt — gleich beim ersten Bild
+     lesen, sonst zeigte es einen Takt lang die Fassung der anderen Shell. */
+  let onPhone = $state(typeof document !== 'undefined'
+    && document.querySelector('[data-shell="phone"]') !== null);
 
   /* ── Gespiegelte Ansicht (Telefon) ──
      Die Geräte-Ansicht steht am Telefon wie das Raumblatt: derselbe Kopf,
@@ -355,7 +337,18 @@
      ordnet die Kacheln, das Minus an der Ecke nimmt heraus, die Plus-Kachel
      hinter dem letzten Gerät öffnet die Suche; der Schnelleinstieg folgt
      darunter. Dieselben Klassen wie im Raumblatt tragen das Aussehen. */
-  const mirrored = $derived(onPhone && view === 'devices');
+  const mirrored = $derived(view === 'devices');
+  /* ── Gespiegelte Ansicht am Wandpanel (wie die iOS-App) ──
+     Die Geräte-Ansicht liegt als Kontrollfläche genau dort, wo die Steuerung
+     stand: dieselbe Spalte, dieselbe Breite aus dem Layout-Menü, dieselben
+     Klassen (`.home-panel`, `.panel-controls`). Raumbild, Lampen und
+     Einstellungen stehen daneben statt darunter. Immersionslicht, Raumbild
+     und Erweitert bleiben das Fenster in der Mitte. */
+  const panelMirror = $derived(!onPhone && mirrored);
+  const panelColumn = $derived.by(() => {
+    const preset = widthPreset(layoutManager.applied);
+    return `max(${preset.slotMinPx}px, min(${preset.totalPercent}vw, calc(100vw - ${preset.heroMinPx}px - var(--space-8))))`;
+  });
   /* Eine Kachel in der Hand gehört dem Ordnen — dort greifen weder Raumwechsel noch Schließen. */
   const MIRROR_SWIPE_IGNORE = `${SHEET_SWIPE_IGNORE}, [data-reorder-tile]`;
   /* Wie das Raumblatt: die Demo hat Kameras ohne Bild und zeigt sie deshalb nicht. */
@@ -415,6 +408,15 @@
     const target = tileDevices[targetTileIndex];
     if (!room || !target) return;
     moveDevice(entityId, room.lights.findIndex((device) => device.entityId === target.entityId));
+  }
+  /* Raumauswahl in der Spalte am Panel: dieselbe Wahl wie in der Steuerung,
+     hier stellt sie die Konfiguration des gewählten Raums ein. */
+  function showRoom(roomId: string): void {
+    if (roomId === roomEdit.roomId) return;
+    view = 'devices';
+    selectedLightId = '';
+    releaseSearchLift();
+    roomEdit.roomId = roomId;
   }
   function openSceneFromRow(sceneId: string) {
     if (!room) return;
@@ -588,6 +590,7 @@
 <svelte:window onkeydown={onKeydown} onresize={onViewportResize} />
 
 <div class="room-edit" class:is-open={roomEdit.mode === 'open'} class:is-phone={onPhone}
+     class:is-panel-mirror={panelMirror} style:--re-column={panelMirror ? panelColumn : undefined}
      class:is-from-sheet={roomEdit.origin === 'sheet'} class:has-blueprint={blueprint !== null}
      style:--re-blueprint={blueprint ? `url("${blueprint.url}")` : undefined}
      style:--re-blueprint-focus={blueprint?.position}
@@ -616,310 +619,314 @@
       {#key room.id}
         <div class="re-room" class:is-following={dragging} in:roomEnter
              style:transform={dragX === 0 ? undefined : `translateX(${dragX * 0.5}px)`}>
-        {#if mirrored && !adding}
-        <!-- Derselbe Kopf wie im Raumblatt: der Name bleibt stehen, aus den drei Punkten wird das Kreuz. -->
-        <div class="room-sheet-head re-mirror-head">
-          {#if renaming}
-            <input class="room-sheet-title re-rename-input" type="text" maxlength={ROOM_NAME_MAX} aria-label={m.room_rename()}
-                   bind:value={renameDraft} use:focusSelect onkeydown={renameKeydown} onblur={() => void finishRename(true)} />
-          {:else}
-            <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>
-              <h2 class="room-sheet-title">{room.name}</h2>
-              <Icon name="i-pencil" cls="icon icon-sm" />
-            </button>
-          {/if}
-          <button class="room-sheet-more pressable" type="button" aria-label={m.common_close()} onclick={() => closeRoomEdit()}>
-            <Icon name="i-close" cls="icon icon-md" />
-          </button>
-        </div>
-        {:else}
-        <header class="ld-header">
-          {#if view !== 'devices'}
-            <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
-                    onclick={() => { view = 'devices'; selectedLightId = ''; }}>
-              <Icon name="i-chevron-left" cls="icon icon-md" />
-            </button>
-          {:else if adding}
-            <!-- Aus „Gerät hinzufügen" führt der Pfeil zurück in die Konfiguration; das Kreuz schließt sie ganz. -->
-            <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()} onclick={stopAdding}>
-              <Icon name="i-chevron-left" cls="icon icon-md" />
-            </button>
-          {/if}
-          <h2 class="ld-title">
+        {#snippet mirrorHead()}
+          <!-- Derselbe Kopf wie im Raumblatt: der Name bleibt stehen, aus den drei Punkten wird das Kreuz. -->
+          <div class="room-sheet-head re-mirror-head">
             {#if renaming}
-              <input class="re-rename-input" type="text" maxlength={ROOM_NAME_MAX} aria-label={m.room_rename()}
+              <input class="room-sheet-title re-rename-input" type="text" maxlength={ROOM_NAME_MAX} aria-label={m.room_rename()}
                      bind:value={renameDraft} use:focusSelect onkeydown={renameKeydown} onblur={() => void finishRename(true)} />
             {:else}
-              <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>{room.name}<Icon name="i-pencil" cls="icon icon-sm" /></button>
+              <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>
+                <h2 class="room-sheet-title">{room.name}</h2>
+                <Icon name="i-pencil" cls="icon icon-sm" />
+              </button>
             {/if}
-            <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : view === 'advanced' ? m.room_advanced() : m.room_devices()}</span></h2>
-          <button class="ld-close pressable" type="button" aria-label={m.common_close()}
-                  onclick={() => closeRoomEdit()}>×</button>
-        </header>
+            <button class="room-sheet-more pressable" type="button" aria-label={m.common_close()} onclick={() => closeRoomEdit()}>
+              <Icon name="i-close" cls="icon icon-md" />
+            </button>
+          </div>
+        {/snippet}
+        {#snippet editHeader()}
+          <header class="ld-header">
+            {#if view !== 'devices'}
+              <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
+                      onclick={() => { view = 'devices'; selectedLightId = ''; }}>
+                <Icon name="i-chevron-left" cls="icon icon-md" />
+              </button>
+            {:else if adding}
+              <!-- Aus „Gerät hinzufügen" führt der Pfeil zurück in die Konfiguration; das Kreuz schließt sie ganz. -->
+              <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()} onclick={stopAdding}>
+                <Icon name="i-chevron-left" cls="icon icon-md" />
+              </button>
+            {/if}
+            <h2 class="ld-title">
+              {#if renaming}
+                <input class="re-rename-input" type="text" maxlength={ROOM_NAME_MAX} aria-label={m.room_rename()}
+                       bind:value={renameDraft} use:focusSelect onkeydown={renameKeydown} onblur={() => void finishRename(true)} />
+              {:else}
+                <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>{room.name}<Icon name="i-pencil" cls="icon icon-sm" /></button>
+              {/if}
+              <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : view === 'advanced' ? m.room_advanced() : m.room_devices()}</span></h2>
+            <button class="ld-close pressable" type="button" aria-label={m.common_close()}
+                    onclick={() => closeRoomEdit()}>×</button>
+          </header>
+        {/snippet}
+        {#snippet mirrorControls(panel: boolean)}
+          <div class="room-controls">
+            {#if roomScenes.length > 0}
+              <section class="detail-section">
+                <div class="scene-row">
+                  {#each roomScenes as s (s.id)}
+                    <!-- Die Leiste bleibt an ihrem Platz, schaltet hier aber nichts: ein Tipp öffnet die Szene. -->
+                    <button class="scene-btn re-mirror-scene pressable" type="button" onclick={() => openSceneFromRow(s.id)}>
+                      <Icon name="i-pencil" cls="icon icon-sm" />{s.label}
+                    </button>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+
+            {#snippet mirrorCameras(list: typeof cameraDevices, before: boolean)}
+              {#each list as camera (camera.entityId)}
+                <!-- Die Kamera hält ihren Platz als ruhende Karte im Maß der Steuerung;
+                     der Pfeil legt sie vor oder hinter die Kacheln (wie die iOS-App). -->
+                <section class="detail-section re-mirror-card" out:popAway={{ from: removedFrom }} data-reorder-row={camera.entityId}>
+                  <figure class="camera-feed" inert>
+                    <figcaption class="camera-feed-caption"><span>{camera.name}</span></figcaption>
+                    <div class="camera-feed-frame"><Icon name={camera.icon ?? 'i-camera'} cls="icon icon-lg" /></div>
+                  </figure>
+                  <button class="re-mirror-remove pressable" type="button"
+                          aria-label="{camera.name} aus {room.name} entfernen"
+                          onclick={(event) => removeDevice(camera.entityId, event.currentTarget)}>
+                    <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
+                  </button>
+                  {#if tileDevices.length > 0}
+                    <button class="re-mirror-move pressable" type="button"
+                            aria-label={before ? m.room_card_after() : m.room_card_before()}
+                            onclick={() => placeCard(camera.entityId, !before)}>
+                      <span class="re-mirror-badge"><Icon name={before ? 'i-arrow-down' : 'i-arrow-up'} cls="icon icon-sm" /></span>
+                    </button>
+                  {/if}
+                </section>
+              {/each}
+            {/snippet}
+
+            {@render mirrorCameras(cameraPlaces.before, true)}
+
+            <section class="detail-section">
+              <div class="light-list" bind:this={tileGridEl}>
+                {#each tileDevices as device (device.entityId)}
+                  <!-- svelte-ignore a11y_no_noninteractive_tabindex
+                       — der Platz ist selbst der Griff und nimmt Pfeiltasten zum Ordnen an (actions/tilereorder) -->
+                  <div class="re-mirror-slot" class:is-held={tileDragId === device.entityId}
+                       data-reorder-tile={device.entityId} role="group" tabindex="0"
+                       aria-label={m.scene_reorder({ name: device.name })}
+                       style:transform={tileDragId === device.entityId
+                         ? `translate3d(${tileOffset.x}px, ${tileOffset.y}px, 0) scale(1.04)` : undefined}
+                       animate:flip={tileFlip(device.entityId)}
+                       out:popAway={{ from: removedFrom }}
+                       use:tilereorder={{
+                         id: device.entityId,
+                         grid: () => tileGridEl,
+                         enabled: tileDevices.length > 1,
+                         onReorder: moveTile,
+                         onDragChange: (dragging) => { tileDragId = dragging ? device.entityId : null; },
+                         onDragOffset: (offset) => { tileOffset = offset; },
+                       }}>
+                    <div class="light-tile re-mirror-tile">
+                      <span class="light-tile-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
+                      <span class="light-tile-label">
+                        <span class="light-tile-name">{device.name}</span>
+                      </span>
+                    </div>
+                    <button class="re-mirror-remove pressable" type="button"
+                            aria-label="{device.name} aus {room.name} entfernen"
+                            onclick={(event) => removeDevice(device.entityId, event.currentTarget)}>
+                      <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
+                    </button>
+                  </div>
+                {/each}
+                {#if panel && roomClimate && !climateInline(room.id)}
+                  <div class="light-tile climate-tile re-mirror-card" inert>
+                    <span class="light-tile-icon" aria-hidden="true"><Icon name="i-thermometer" /></span>
+                    <span class="light-tile-label">
+                      <span class="light-tile-name">{m.cat_temp()}</span>
+                    </span>
+                  </div>
+                {/if}
+                <!-- Hinter dem letzten Gerät: die Plus-Kachel öffnet die Suche mit ihren Filtern. -->
+                <button class="light-tile is-placeholder re-mirror-add pressable" type="button" onclick={startAdding}>
+                  <span class="light-tile-icon" aria-hidden="true"><Icon name="i-plus" /></span>
+                  <span class="light-tile-label">
+                    <span class="light-tile-name">{m.room_add_device()}</span>
+                  </span>
+                </button>
+              </div>
+            </section>
+
+            {@render mirrorCameras(cameraPlaces.after, false)}
+
+            <!-- Am Panel steht das Klima wie in der Steuerung als Kachel im Raster,
+                 außer der Raum will die Karte in der Leiste. -->
+            {#if roomClimate && (!panel || climateInline(room.id))}
+              <section class="detail-section climate-section re-mirror-card" inert>
+                <ClimateCard {room} stacked />
+              </section>
+            {/if}
+          </div>
+        {/snippet}
+        {#snippet quickSection()}
+        <!-- Schnelleinstieg: die vier Einstiege als 2×2-Raster, damit die
+             Geräteliste darunter ohne Scrollen sichtbar bleibt. -->
+        <section class="ld-section">
+          <span class="caps-label">{m.room_quick_setup()}</span>
+          {#if cameraDevices.length > 1}
+            {@const together = cameraSplit(room.id)}
+            <!-- Mehrere Kameras: zusammen im geteilten Bild oder jede einzeln
+                 (wie die iOS-App, derselbe Schalter). -->
+            <div class="re-row re-metric-head">
+              <span class="re-icon" aria-hidden="true"><Icon name="i-view-grid" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_camera_split()}</span>
+                <small class="re-meta">{together ? m.room_camera_split_on({ count: String(cameraDevices.length) }) : m.room_camera_split_off()}</small>
+              </span>
+              <button class="re-toggle pressable" type="button" role="switch" aria-checked={together}
+                      class:is-on={together} aria-label={m.room_camera_split()}
+                      onclick={() => setCameraSplit(room.id, !together)}>
+                <span class="re-toggle-knob"></span>
+              </button>
+            </div>
+          {/if}
+          <div class="re-quick-grid">
+            <button class="re-quick-entry pressable" type="button" onclick={openBackgroundEditor}>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-image" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_background()}</span>
+                <small class="re-meta">{background ? m.room_background_custom() : m.room_background_default()}</small>
+              </span>
+              <Icon name="i-chevron-right" cls="icon icon-md" />
+            </button>
+            <button class="re-quick-entry pressable" type="button" onclick={openScenes}>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-palette" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_edit_scenes()}</span>
+                <small class="re-meta">{m.room_edit_scenes_hint()}</small>
+              </span>
+              <Icon name="i-chevron-right" cls="icon icon-md" />
+            </button>
+            <button class="re-quick-entry pressable" type="button" onclick={openImmersionEditor}>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_assign_lamps()}</span>
+                <small class="re-meta">{m.room_set_light_positions()}</small>
+              </span>
+              <Icon name="i-chevron-right" cls="icon icon-md" />
+            </button>
+            <button class="re-quick-entry pressable" type="button" onclick={() => view = 'advanced'}>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-tune" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_advanced()}</span>
+                <small class="re-meta">{m.room_advanced_hint()}</small>
+              </span>
+              <Icon name="i-chevron-right" cls="icon icon-md" />
+            </button>
+          </div>
+        </section>
+        {/snippet}
+        {#snippet addSection()}
+        <section class="ld-section re-add-section">
+          <span class="caps-label">{m.room_add_device()}</span>
+          <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
+                 placeholder={m.room_search_placeholder()}
+                 onfocus={onSearchFocus} onblur={onSearchBlur} oninput={onSearchInput}
+                 aria-label={m.room_search_device()} autocomplete="off" spellcheck="false" />
+          {#if searchOpen && !query.trim() && categoryPills.length > 0}
+            <div class="re-filters" role="group" aria-label={m.room_add_device()} onpointerdown={keepSearchFocus}>
+              {#each categoryPills as pill (pill.category)}
+                <button class="re-filter pressable" type="button"
+                        class:is-active={categoryFilter === pill.category}
+                        aria-pressed={categoryFilter === pill.category}
+                        onclick={() => toggleCategory(pill.category)}>
+                  {CATEGORY_LABELS[pill.category]}
+                  <span class="re-filter-count">{pill.count}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+          {#if query.trim() || categoryFilter}
+            {#if suggestions.length === 0}
+              <p class="re-empty">{m.room_no_matches()}</p>
+            {:else}
+              <ul class="re-list re-suggest" onpointerdown={keepSearchFocus}>
+                {#each suggestions as item (item.entityId)}
+                  {@const origin = locatedIn(item.entityId)}
+                  <li>
+                    <button class="re-row re-suggest-btn pressable" type="button" onclick={() => add(item)}
+                            class:is-celebrating={celebrating === item.entityId}>
+                      <span class="re-icon re-icon-add" aria-hidden="true">
+                        {#if celebrating === item.entityId}
+                          <Icon name="i-check" cls="icon icon-md" />
+                          {#each [0, 1, 2, 3, 4, 5] as spark (spark)}<span class="re-spark" style={`--spark:${spark}`}></span>{/each}
+                        {:else}
+                          <Icon name="i-plus" cls="icon icon-md" />
+                        {/if}
+                      </span>
+                      <span class="re-label">
+                        <span class="re-name">{item.name}</span>
+                        <small class="re-meta">{item.entityId}</small>
+                      </span>
+                      <!-- Kategorie-Chip: bei 9 Domänen sieht man, WAS man hinzufügt -->
+                      <span class="re-tag">{CATEGORY_LABELS[categoryOf(item.domain)]}</span>
+                      {#if origin}<span class="re-tag">in {origin}</span>{/if}
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+              {#if hiddenByLimit > 0}
+                <p class="re-empty">{m.ambient_more_count({ count: hiddenByLimit })}</p>
+              {/if}
+            {/if}
+          {/if}
+        </section>
+        {/snippet}
+
+        {#if panelMirror}
+        <!-- Am Wandpanel (wie die iOS-App): die Konfiguration steht in der
+             Spalte der Kontrollfläche, in ihrem Maß und mit ihren Klassen —
+             jede Kachel bleibt beim Überblenden an ihrem Platz. Raumbild,
+             Lampen und Einstellungen stehen rechts daneben. -->
+        <div class="home-panel on-image re-panel-column">
+          <!-- Oben dieselbe Raumauswahl bzw. derselbe Kopf wie in der Steuerung,
+               damit die Kacheln darunter auf derselben Höhe beginnen; ein Tipp
+               auf einen anderen Raum stellt dessen Konfiguration ein. -->
+          {#if adding}
+            {@render editHeader()}
+          {:else if layoutHomeView(layoutManager.applied) === 'rooms'}
+            <header class="panel-head"><h2 class="panel-title">{room.name}</h2></header>
+          {:else}
+            <PanelRoomSelector rooms={appState.rooms} selectedId={room.id}
+                               roomsPerRow={layoutRoomsPerRow(layoutManager.applied)} onselect={showRoom} />
+          {/if}
+          <div class="panel-controls">
+            {#if adding}
+              {@render addSection()}
+            {:else}
+              {@render mirrorControls(true)}
+            {/if}
+          </div>
+        </div>
+        {#if !adding}
+          <div class="re-panel-side">
+            {@render mirrorHead()}
+            {#if renameFailed}<p class="re-empty re-rename-failed" role="alert">{m.room_rename_failed()}</p>{/if}
+            {@render quickSection()}
+          </div>
         {/if}
+        {:else}
+        {#if mirrored && !adding}{@render mirrorHead()}{:else}{@render editHeader()}{/if}
         {#if renameFailed}<p class="re-empty re-rename-failed" role="alert">{m.room_rename_failed()}</p>{/if}
 
         <div class="ld-body">
-          {#snippet quickSection()}
-          <!-- Schnelleinstieg: die vier Einstiege als 2×2-Raster, damit die
-               Geräteliste darunter ohne Scrollen sichtbar bleibt. -->
-          <section class="ld-section">
-            <span class="caps-label">{m.room_quick_setup()}</span>
-            {#if cameraDevices.length > 1}
-              {@const together = cameraSplit(room.id)}
-              <!-- Mehrere Kameras: zusammen im geteilten Bild oder jede einzeln
-                   (wie die iOS-App, derselbe Schalter). -->
-              <div class="re-row re-metric-head">
-                <span class="re-icon" aria-hidden="true"><Icon name="i-view-grid" /></span>
-                <span class="re-label">
-                  <span class="re-name">{m.room_camera_split()}</span>
-                  <small class="re-meta">{together ? m.room_camera_split_on({ count: String(cameraDevices.length) }) : m.room_camera_split_off()}</small>
-                </span>
-                <button class="re-toggle pressable" type="button" role="switch" aria-checked={together}
-                        class:is-on={together} aria-label={m.room_camera_split()}
-                        onclick={() => setCameraSplit(room.id, !together)}>
-                  <span class="re-toggle-knob"></span>
-                </button>
-              </div>
-            {/if}
-            <div class="re-quick-grid">
-              <button class="re-quick-entry pressable" type="button" onclick={openBackgroundEditor}>
-                <span class="re-icon" aria-hidden="true"><Icon name="i-image" /></span>
-                <span class="re-label">
-                  <span class="re-name">{m.room_background()}</span>
-                  <small class="re-meta">{background ? m.room_background_custom() : m.room_background_default()}</small>
-                </span>
-                <Icon name="i-chevron-right" cls="icon icon-md" />
-              </button>
-              <button class="re-quick-entry pressable" type="button" onclick={openScenes}>
-                <span class="re-icon" aria-hidden="true"><Icon name="i-palette" /></span>
-                <span class="re-label">
-                  <span class="re-name">{m.room_edit_scenes()}</span>
-                  <small class="re-meta">{m.room_edit_scenes_hint()}</small>
-                </span>
-                <Icon name="i-chevron-right" cls="icon icon-md" />
-              </button>
-              <button class="re-quick-entry pressable" type="button" onclick={openImmersionEditor}>
-                <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
-                <span class="re-label">
-                  <span class="re-name">{m.room_assign_lamps()}</span>
-                  <small class="re-meta">{m.room_set_light_positions()}</small>
-                </span>
-                <Icon name="i-chevron-right" cls="icon icon-md" />
-              </button>
-              <button class="re-quick-entry pressable" type="button" onclick={() => view = 'advanced'}>
-                <span class="re-icon" aria-hidden="true"><Icon name="i-tune" /></span>
-                <span class="re-label">
-                  <span class="re-name">{m.room_advanced()}</span>
-                  <small class="re-meta">{m.room_advanced_hint()}</small>
-                </span>
-                <Icon name="i-chevron-right" cls="icon icon-md" />
-              </button>
-            </div>
-          </section>
-          {/snippet}
           {#if view === 'devices'}
           {#if mirrored && !adding}
           <!-- Gespiegelte Ansicht: Aufbau und Klassen des Raumblatts, damit jede
                Kachel genau dort steht, wo man sie bedient. -->
-          <div class="room-sheet on-image re-mirror">
-            <div class="room-controls">
-              {#if roomScenes.length > 0}
-                <section class="detail-section">
-                  <div class="scene-row">
-                    {#each roomScenes as s (s.id)}
-                      <!-- Die Leiste bleibt an ihrem Platz, schaltet hier aber nichts: ein Tipp öffnet die Szene. -->
-                      <button class="scene-btn re-mirror-scene pressable" type="button" onclick={() => openSceneFromRow(s.id)}>
-                        <Icon name="i-pencil" cls="icon icon-sm" />{s.label}
-                      </button>
-                    {/each}
-                  </div>
-                </section>
-              {/if}
-
-              {#snippet mirrorCameras(list: typeof cameraDevices, before: boolean)}
-                {#each list as camera (camera.entityId)}
-                  <!-- Die Kamera hält ihren Platz als ruhende Karte im Maß der Steuerung;
-                       der Pfeil legt sie vor oder hinter die Kacheln (wie die iOS-App). -->
-                  <section class="detail-section re-mirror-card" out:popAway={{ from: removedFrom }} data-reorder-row={camera.entityId}>
-                    <figure class="camera-feed" inert>
-                      <figcaption class="camera-feed-caption"><span>{camera.name}</span></figcaption>
-                      <div class="camera-feed-frame"><Icon name={camera.icon ?? 'i-camera'} cls="icon icon-lg" /></div>
-                    </figure>
-                    <button class="re-mirror-remove pressable" type="button"
-                            aria-label="{camera.name} aus {room.name} entfernen"
-                            onclick={(event) => removeDevice(camera.entityId, event.currentTarget)}>
-                      <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
-                    </button>
-                    {#if tileDevices.length > 0}
-                      <button class="re-mirror-move pressable" type="button"
-                              aria-label={before ? m.room_card_after() : m.room_card_before()}
-                              onclick={() => placeCard(camera.entityId, !before)}>
-                        <span class="re-mirror-badge"><Icon name={before ? 'i-arrow-down' : 'i-arrow-up'} cls="icon icon-sm" /></span>
-                      </button>
-                    {/if}
-                  </section>
-                {/each}
-              {/snippet}
-
-              {@render mirrorCameras(cameraPlaces.before, true)}
-
-              <section class="detail-section">
-                <div class="light-list" bind:this={tileGridEl}>
-                  {#each tileDevices as device (device.entityId)}
-                    <!-- svelte-ignore a11y_no_noninteractive_tabindex
-                         — der Platz ist selbst der Griff und nimmt Pfeiltasten zum Ordnen an (actions/tilereorder) -->
-                    <div class="re-mirror-slot" class:is-held={tileDragId === device.entityId}
-                         data-reorder-tile={device.entityId} role="group" tabindex="0"
-                         aria-label={m.scene_reorder({ name: device.name })}
-                         style:transform={tileDragId === device.entityId
-                           ? `translate3d(${tileOffset.x}px, ${tileOffset.y}px, 0) scale(1.04)` : undefined}
-                         animate:flip={tileFlip(device.entityId)}
-                         out:popAway={{ from: removedFrom }}
-                         use:tilereorder={{
-                           id: device.entityId,
-                           grid: () => tileGridEl,
-                           enabled: tileDevices.length > 1,
-                           onReorder: moveTile,
-                           onDragChange: (dragging) => { tileDragId = dragging ? device.entityId : null; },
-                           onDragOffset: (offset) => { tileOffset = offset; },
-                         }}>
-                      <div class="light-tile re-mirror-tile">
-                        <span class="light-tile-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
-                        <span class="light-tile-label">
-                          <span class="light-tile-name">{device.name}</span>
-                        </span>
-                      </div>
-                      <button class="re-mirror-remove pressable" type="button"
-                              aria-label="{device.name} aus {room.name} entfernen"
-                              onclick={(event) => removeDevice(device.entityId, event.currentTarget)}>
-                        <span class="re-mirror-badge"><Icon name="i-minus" cls="icon icon-sm" /></span>
-                      </button>
-                    </div>
-                  {/each}
-                  <!-- Hinter dem letzten Gerät: die Plus-Kachel öffnet die Suche mit ihren Filtern. -->
-                  <button class="light-tile is-placeholder re-mirror-add pressable" type="button" onclick={startAdding}>
-                    <span class="light-tile-icon" aria-hidden="true"><Icon name="i-plus" /></span>
-                    <span class="light-tile-label">
-                      <span class="light-tile-name">{m.room_add_device()}</span>
-                    </span>
-                  </button>
-                </div>
-              </section>
-
-              {@render mirrorCameras(cameraPlaces.after, false)}
-
-              {#if roomClimate}
-                <section class="detail-section climate-section re-mirror-card" inert>
-                  <ClimateCard {room} stacked />
-                </section>
-              {/if}
-            </div>
-          </div>
+          <div class="room-sheet on-image re-mirror">{@render mirrorControls(false)}</div>
           {@render quickSection()}
           {:else}
-          {#if !mirrored}
-          {@render quickSection()}
-          <section class="ld-section">
-            <span class="caps-label">{m.room_order_label()} · {room.lights.length}</span>
-            {#if room.lights.length === 0}
-              <p class="re-empty">{m.room_no_devices()}</p>
-            {:else}
-              <ul class="re-list" bind:this={orderListEl}>
-                {#each room.lights as device (device.entityId)}
-                  <li class="re-row" class:is-dragging={dragEntityId === device.entityId}
-                      data-reorder-row={device.entityId}
-                      style:transform={dragEntityId === device.entityId && dragOffset !== 0
-                        ? `translate3d(0, ${dragOffset}px, 0)` : undefined}
-                      animate:flip={rowFlip(device.entityId)}
-                      out:popAway={{ from: removedFrom }}
-                      use:longpress={{ onLongPress: () => moveDeviceId = device.entityId }}>
-                    <span class="re-icon" aria-hidden="true"><Icon name={device.icon ?? 'i-bulb'} /></span>
-                    <span class="re-label">
-                      <span class="re-name">{device.name}</span>
-                      <small class="re-meta">{device.entityId}</small>
-                    </span>
-                    <span class="re-actions">
-                      <button class="cfg-handle" type="button"
-                              aria-label={m.scene_reorder({ name: device.name })}
-                              disabled={room.lights.length < 2}
-                              use:dragreorder={{
-                                id: device.entityId,
-                                list: () => orderListEl,
-                                enabled: room.lights.length > 1,
-                                onReorder: moveDevice,
-                                onDragChange: (dragging) => { dragEntityId = dragging ? device.entityId : null; },
-                                onDragOffset: (offset) => { dragOffset = offset; },
-                              }}>
-                        <Icon name="i-dots-grid" cls="icon icon-md" />
-                      </button>
-                      <button class="re-btn re-remove pressable" type="button"
-                              aria-label="{device.name} aus {room.name} entfernen"
-                              onclick={(event) => removeDevice(device.entityId, event.currentTarget)}>
-                        <Icon name="i-minus" cls="icon icon-md" />
-                      </button>
-                    </span>
-                  </li>
-                {/each}
-              </ul>
-            {/if}
-          </section>
-
-          {/if}
-          <section class="ld-section re-add-section">
-            <span class="caps-label">{m.room_add_device()}</span>
-            <input class="re-search" type="search" bind:value={query} bind:this={searchEl}
-                   placeholder={m.room_search_placeholder()}
-                   onfocus={onSearchFocus} onblur={onSearchBlur} oninput={onSearchInput}
-                   aria-label={m.room_search_device()} autocomplete="off" spellcheck="false" />
-            {#if searchOpen && !query.trim() && categoryPills.length > 0}
-              <div class="re-filters" role="group" aria-label={m.room_add_device()} onpointerdown={keepSearchFocus}>
-                {#each categoryPills as pill (pill.category)}
-                  <button class="re-filter pressable" type="button"
-                          class:is-active={categoryFilter === pill.category}
-                          aria-pressed={categoryFilter === pill.category}
-                          onclick={() => toggleCategory(pill.category)}>
-                    {CATEGORY_LABELS[pill.category]}
-                    <span class="re-filter-count">{pill.count}</span>
-                  </button>
-                {/each}
-              </div>
-            {/if}
-            {#if query.trim() || categoryFilter}
-              {#if suggestions.length === 0}
-                <p class="re-empty">{m.room_no_matches()}</p>
-              {:else}
-                <ul class="re-list re-suggest" onpointerdown={keepSearchFocus}>
-                  {#each suggestions as item (item.entityId)}
-                    {@const origin = locatedIn(item.entityId)}
-                    <li>
-                      <button class="re-row re-suggest-btn pressable" type="button" onclick={() => add(item)}
-                              class:is-celebrating={celebrating === item.entityId}>
-                        <span class="re-icon re-icon-add" aria-hidden="true">
-                          {#if celebrating === item.entityId}
-                            <Icon name="i-check" cls="icon icon-md" />
-                            {#each [0, 1, 2, 3, 4, 5] as spark (spark)}<span class="re-spark" style={`--spark:${spark}`}></span>{/each}
-                          {:else}
-                            <Icon name="i-plus" cls="icon icon-md" />
-                          {/if}
-                        </span>
-                        <span class="re-label">
-                          <span class="re-name">{item.name}</span>
-                          <small class="re-meta">{item.entityId}</small>
-                        </span>
-                        <!-- Kategorie-Chip: bei 9 Domänen sieht man, WAS man hinzufügt -->
-                        <span class="re-tag">{CATEGORY_LABELS[categoryOf(item.domain)]}</span>
-                        {#if origin}<span class="re-tag">in {origin}</span>{/if}
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-                {#if hiddenByLimit > 0}
-                  <p class="re-empty">{m.ambient_more_count({ count: hiddenByLimit })}</p>
-                {/if}
-              {/if}
-            {/if}
-          </section>
+          <!-- Aus der Plus-Kachel: die Suche mit ihren Filtern. Ein Gerät, das
+               schon in einem anderen Raum liegt, zieht dabei hierher um. -->
+          {@render addSection()}
           {/if}
           {:else if view === 'immersion'}
             <div class="re-immersion-editor">
@@ -1125,28 +1132,12 @@
             </section>
           {/if}
         </div>
+        {/if}
         </div>
       {/key}
     {/if}
   </div>
 </div>
-
-{#if room && moveDeviceId}
-  {@const moving = room.lights.find((entry) => entry.entityId === moveDeviceId)}
-  <div class="re-move-layer" role="presentation" onclick={(event) => { if (event.target === event.currentTarget) moveDeviceId = null; }}>
-    <div class="re-move-sheet" role="dialog" aria-modal="true" aria-label={m.rimg_move_label()}>
-      <h3>{m.rimg_move_title({ device: moving?.name ?? '' })}</h3>
-      <p>{m.rimg_move_question()}</p>
-      <div class="re-move-rooms">
-        {#each appState.rooms.filter((entry) => entry.id !== room.id) as target (target.id)}
-          <button class="secondary-btn pressable" type="button"
-                  onclick={() => moveDeviceToRoom(target.id)}>{target.name}</button>
-        {/each}
-      </div>
-      <button class="secondary-btn pressable" type="button" onclick={() => moveDeviceId = null}>{m.rimg_cancel()}</button>
-    </div>
-  </div>
-{/if}
 
 {#if room}
   <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}

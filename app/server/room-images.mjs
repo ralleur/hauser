@@ -15,7 +15,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
-import { validRegionsRecord } from './room-image-regions.mjs';
+import { regionsRecord, validRegionsRecord } from './room-image-regions.mjs';
+import { CLOUDFLARE_ROOM_IMAGE_MODEL, createCloudflareRoomImageProvider, validCloudflareAccountId } from './room-image-cloudflare-provider.mjs';
+import { darkenRoomImage } from './room-image-darken.mjs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import {
@@ -66,6 +68,7 @@ import {
   snapRoomImageCrop,
   sourceFullToProviderJpeg,
   uploadedPhotoToRoomImageVariants,
+  ROOM_IMAGE_MANUAL_UPLOAD_POLICY_V1,
   validateRoomImagePromptSpec,
 } from './runtime-env.mjs';
 import {
@@ -2417,7 +2420,16 @@ function roomImageAssetPublic(assetId, focus, entry = null) {
     variants,
     focus: structuredClone(focus),
     ...(entry?.regions ? { regions: structuredClone(entry.regions) } : {}),
+    /* Selbst gezeichnet (R55): welche Fassungen der Nutzer wirklich mitgebracht
+       hat — die übrigen sind aus dem Tagbild abgedunkelt. */
+    ...(entry?.manual ? { manual: structuredClone(entry.manual) } : {}),
   };
+}
+
+const ROOM_IMAGE_MANUAL_OWN_KEYS = Object.freeze(['light', 'dark', 'darkOff', 'overcast']);
+function validRoomImageManualRecord(value) {
+  return roomImageExactObject(value, ['own']) && Array.isArray(value.own) && value.own.length <= ROOM_IMAGE_MANUAL_OWN_KEYS.length
+    && value.own.every((key, index) => ROOM_IMAGE_MANUAL_OWN_KEYS.includes(key) && value.own.indexOf(key) === index);
 }
 
 function ensureRoomImageAssetDirectory(path) {
@@ -2464,7 +2476,9 @@ function validRoomImageCatalogEntry(entry) {
   const optional = [];
   if (Object.hasOwn(entry ?? {}, 'regions')) optional.push('regions');
   if (Object.hasOwn(entry ?? {}, 'windows')) optional.push('windows');
+  if (Object.hasOwn(entry ?? {}, 'manual')) optional.push('manual');
   if (optional.includes('regions') && !validRegionsRecord(entry.regions)) return false;
+  if (optional.includes('manual') && !validRoomImageManualRecord(entry.manual)) return false;
   if (!roomImageExactObject(entry, [
     'assetId', 'variants', 'focus', 'createdAt', 'status', 'files', 'manifestSha256',
     ...optional,
@@ -2857,6 +2871,21 @@ export function createRoomImageAssetStore({
     return true;
   }
 
+  /* Selbst gezeichnete Sets (R55): festhalten, welche Fassungen eigen sind. */
+  function setManual(assetId, manual) {
+    assertMutable();
+    if (manual !== null && !validRoomImageManualRecord(manual)) {
+      throw roomImageAssetStoreError('Die Angaben zu eigenen Fassungen sind ungültig.');
+    }
+    const document = readCatalog();
+    const entry = document.assets.find((candidate) => candidate.assetId === assetId);
+    if (!entry || entry.status !== 'active') return false;
+    if (manual === null) delete entry.manual;
+    else entry.manual = manual;
+    atomicCatalogWrite(document);
+    return true;
+  }
+
   function deleteTombstonedFiles(assetId) {
     assertMutable();
     const entry = readCatalog().assets.find((candidate) => candidate.assetId === assetId);
@@ -2939,7 +2968,7 @@ export function createRoomImageAssetStore({
   }
   return {
     activeEntry, addOptionalVariant, catalogPath: catalog, cleanupOrphans, deleteTombstonedFiles,
-    list, publish, recoveryState, root, setRegions, status, tombstone, variantBytes,
+    list, publish, recoveryState, root, setManual, setRegions, status, tombstone, variantBytes,
   };
 }
 
@@ -3119,8 +3148,10 @@ export function createRoomImageCredentialStore({
   function stored() {
     try {
       const value = JSON.parse(readFileSync(path, 'utf8'));
-      if (value?.version !== 1 || !['api_key', 'chatgpt'].includes(value.mode)) return null;
+      if (value?.version !== 1 || !['api_key', 'chatgpt', 'cloudflare'].includes(value.mode)) return null;
       if (value.mode === 'api_key' && typeof value.apiKey === 'string' && value.apiKey.trim()) return value;
+      if (value.mode === 'cloudflare' && validCloudflareAccountId(value.accountId)
+          && typeof value.apiToken === 'string' && value.apiToken.trim()) return value;
       if (value.mode === 'chatgpt' && typeof value.accessToken === 'string' && value.accessToken.trim()
           && typeof value.refreshToken === 'string' && value.refreshToken.trim()) return value;
     } catch { /* missing or invalid store means no persisted credential */ }
@@ -3149,6 +3180,22 @@ export function createRoomImageCredentialStore({
       throw new RoomImageRequestError(422, 'OPENAI_API_KEY_INVALID', 'Der OpenAI-API-Key ist ungültig.');
     }
     atomicWriteRoomImageCredential(path, { version: 1, mode: 'api_key', apiKey: normalized, source: 'stored' });
+    return status();
+  }
+
+  /* Cloudflare Workers AI (R55): Konto-ID und Token des Nutzers — das freie
+     Tageskontingent zeichnet mit FLUX.2 klein. Eine Konto-ID ist 32-mal hex;
+     alles andere ist ein Tippfehler, nicht erst ein 400 vom Dienst. */
+  function setCloudflare({ accountId, apiToken } = {}) {
+    const normalizedAccount = typeof accountId === 'string' ? accountId.trim().toLowerCase() : '';
+    const normalizedToken = typeof apiToken === 'string' ? apiToken.trim() : '';
+    if (!validCloudflareAccountId(normalizedAccount)) {
+      throw new RoomImageRequestError(422, 'CLOUDFLARE_ACCOUNT_INVALID', 'Die Cloudflare-Konto-ID ist ungültig (32 Zeichen aus Ziffern und a–f).');
+    }
+    if (normalizedToken.length < 20 || normalizedToken.length > 512 || /[\u0000-\u001f\u007f]/.test(normalizedToken)) {
+      throw new RoomImageRequestError(422, 'CLOUDFLARE_TOKEN_INVALID', 'Der Cloudflare-API-Token ist ungültig.');
+    }
+    atomicWriteRoomImageCredential(path, { version: 1, mode: 'cloudflare', accountId: normalizedAccount, apiToken: normalizedToken, source: 'stored' });
     return status();
   }
 
@@ -3280,7 +3327,7 @@ export function createRoomImageCredentialStore({
     }
   }
 
-  return { beginChatGptLogin, chatGptAccessToken, check, clear, current, pollChatGptLogin, setApiKey, status };
+  return { beginChatGptLogin, chatGptAccessToken, check, clear, current, pollChatGptLogin, setApiKey, setCloudflare, status };
 }
 
 /* Ein Satz je Grund (R16, docs/23): Bisher las jeder Anbieterfehler gleich —
@@ -3524,6 +3571,7 @@ export function createRoomImageProviderRouter({ credentialStore, fetchImpl = glo
     const credential = credentialStore?.current?.();
     if (credential?.mode === 'api_key') return createOpenAiRoomImageProvider({ credential: credential.apiKey, fetchImpl });
     if (credential?.mode === 'chatgpt') return createChatGptRoomImageProvider({ credentialStore, fetchImpl });
+    if (credential?.mode === 'cloudflare') return createCloudflareRoomImageProvider({ credential, fetchImpl });
     return createRoomImageProviderBoundary();
   };
   return Object.freeze({
@@ -4220,13 +4268,13 @@ function roomImagePrivateDetails(testCapability, probeState = null, credentialSt
   const checked = typeof probeState?.probe?.checkedAt === 'string';
   return {
     enabled: ROOM_IMAGE_WIZARD_ENABLED && Boolean(credentialConfigured),
-    provider: 'openai',
+    provider: credentialStatus?.mode === 'cloudflare' ? 'cloudflare' : 'openai',
     credentialConfigured,
     credentialSource: credentialStatus?.source ?? (credentialConfigured ? 'environment' : null),
     credentialMode: credentialStatus?.mode ?? (credentialConfigured ? 'api_key' : null),
     imageCapability: checked ? probeState.imageCapability : credentialConfigured ? 'unverified' : 'credential_missing',
     reasonCode: credentialConfigured ? null : 'CREDENTIAL_MISSING',
-    model: credentialStatus?.mode === 'chatgpt' ? 'gpt-image-2' : ROOM_IMAGE_PROVIDER_MODEL,
+    model: credentialStatus?.mode === 'chatgpt' ? 'gpt-image-2' : credentialStatus?.mode === 'cloudflare' ? CLOUDFLARE_ROOM_IMAGE_MODEL : ROOM_IMAGE_PROVIDER_MODEL,
     probe: checked ? { ...probeState.probe } : { modelVisible: false, checkedAt: null },
     limits: {
       maxUploadBytes: ROOM_IMAGE_UPLOAD_MAX_BYTES,
@@ -4282,6 +4330,8 @@ async function serveRoomImageAccess(req, res, pathname, credentialStore) {
     const payload = await readRoomImageJsonBody(req);
     if (pathname === '/api/room-images/access/api-key') {
       roomImageJsonResponse(req, res, 200, credentialStore.setApiKey(payload.apiKey));
+    } else if (pathname === '/api/room-images/access/cloudflare') {
+      roomImageJsonResponse(req, res, 200, credentialStore.setCloudflare(payload ?? {}));
     } else if (pathname === '/api/room-images/access/chatgpt/start') {
       roomImageJsonResponse(req, res, 200, await credentialStore.beginChatGptLogin());
     } else if (pathname === '/api/room-images/access/chatgpt/poll') {
@@ -4920,6 +4970,29 @@ async function serveRoomImageRegionDetection(req, res, assetId, context) {
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }
 
+/* Fenster von Hand (R55): Rechtecke als Vierecke, `source: 'manual'`. Der
+   Vertrag ist derselbe wie beim Sehmodell; was daneben liegt, fällt still weg. */
+async function serveRoomImageRegionsSet(req, res, assetId, context) {
+  try {
+    const payload = await readRoomImageJsonBody(req);
+    const raw = Array.isArray(payload?.regions) ? payload.regions : null;
+    if (!raw || raw.length > 24) throw new RoomImageRequestError(400, 'REGIONS_INVALID', 'Die Flächenangaben sind ungültig.');
+    const record = regionsRecord(raw.map((region) => ({
+      kind: region?.kind,
+      points: Array.isArray(region?.points)
+        ? region.points.map((point) => ({ x: Math.round(Number(point?.x) * 1000) / 1000, y: Math.round(Number(point?.y) * 1000) / 1000 }))
+        : [],
+    })), { source: 'manual', now: context.now });
+    if (!validRegionsRecord(record)) throw new RoomImageRequestError(400, 'REGIONS_INVALID', 'Die Flächenangaben sind ungültig.');
+    const stored = await context.configMutations.run(() => context.assetStore.setRegions(assetId, record));
+    if (!stored) { roomImageError(req, res, 404, 'ASSET_NOT_FOUND', 'Das Asset wurde nicht gefunden.'); return; }
+    roomImageJsonResponse(req, res, 200, { assetId, regions: record });
+  } catch (error) {
+    if (error instanceof RoomImageRequestError) roomImageError(req, res, error.status, error.code, error.message);
+    else roomImageHandleAsyncError(req, res, error);
+  }
+}
+
 function regionDetectionMessage(result) {
   if (result.code === 'ASSET_NOT_FOUND') return 'Das Asset wurde nicht gefunden.';
   if (result.code === 'ASSET_UNREADABLE') return 'Das Bildset ließ sich nicht lesen.';
@@ -5002,7 +5075,33 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }
 
-async function serveManualRoomBackground(req, res, roomId, context) {
+const MANUAL_VARIANT_KEYS = Object.freeze({ light: 'light', dark: 'dark', 'dark-off': 'darkOff', overcast: 'overcast' });
+const MANUAL_PHONE_KEYS = Object.freeze({ light: 'phoneLight', dark: 'phoneDark', darkOff: 'phoneDarkOff' });
+
+/* Abend, Nacht und trüb aus einer Panelfassung rechnen — Panel und Telefon
+   (R55). Dasselbe Rezept wie der Cloudflare-Weg und die iOS-App. */
+async function derivedManualVariant(panelAvif, phase) {
+  const { phone, panelAvif: panelOptions, phoneAvif } = ROOM_IMAGE_MANUAL_UPLOAD_POLICY_V1;
+  const panel = new Uint8Array(await darkenRoomImage(panelAvif, phase).avif({ ...panelOptions }).toBuffer());
+  const phoneBytes = new Uint8Array(await sharp(Buffer.from(panel))
+    .resize(phone.width, phone.height, { fit: 'fill', kernel: sharp.kernel.lanczos3 })
+    .avif({ ...phoneAvif })
+    .toBuffer());
+  return { panel, phone: phoneBytes };
+}
+
+function manualOwnList(entry) {
+  return new Set(Array.isArray(entry?.manual?.own) ? entry.manual.own : ['light']);
+}
+
+/* Ein eigenes Bild (R55, vorher „Raumbild setzen"): ohne `variant` oder mit
+   `variant=light` entsteht ein neues Set — Tag vom Nutzer, Abend und Nacht
+   daraus abgedunkelt. `variant=dark|dark-off|overcast` ersetzt genau diese
+   Fassung im laufenden selbst gezeichneten Set; DELETE mit `variant` legt
+   sie wieder ab (Abend und Nacht: neu abgeleitet, trüb: fort). Bildsets
+   sind unveränderlich, also entsteht dabei ein neues Set mit derselben
+   Zuweisung, das alte wird zum Tombstone. */
+async function serveManualRoomBackground(req, res, roomId, context, variant = null) {
   let uploaded = null;
   try {
     context.assertSetupRecoveryHealthy();
@@ -5012,18 +5111,21 @@ async function serveManualRoomBackground(req, res, roomId, context) {
     }
     /* B-27 D2: wie im Finaljob — rechnen, bevor der Mutations-Lock greift. */
     if (req.method === 'POST') uploaded = await decodeManualRoomBackground(req);
+    const wholeSet = req.method === 'POST' && (variant === null || variant === 'light');
 
-    /* Ein eigenes Foto kennt keinen Tag-Nacht-Unterschied: alle Fassungen des
-       Bildsets sind dasselbe Bild. Es wird deshalb genau zweimal gerechnet —
-       einmal fürs Panel, einmal fürs Telefon — und nicht sechsmal. */
-    const manualVariants = uploaded
-      ? {
-        light: uploaded.panel, dark: uploaded.panel, darkOff: uploaded.panel,
-        phoneLight: uploaded.phone, phoneDark: uploaded.phone, phoneDarkOff: uploaded.phone,
-      }
-      : null;
+    /* Ein eigenes Foto hat keine Nacht: abgedunkelt folgt es dem Tagesverlauf,
+       statt abends hell zu bleiben. Gerechnet wird vor dem Lock. */
+    let manualVariants = null;
+    if (wholeSet) {
+      const dark = await derivedManualVariant(uploaded.panel, 'dark');
+      const darkOff = await derivedManualVariant(uploaded.panel, 'dark-off');
+      manualVariants = {
+        light: uploaded.panel, dark: dark.panel, darkOff: darkOff.panel,
+        phoneLight: uploaded.phone, phoneDark: dark.phone, phoneDarkOff: darkOff.phone,
+      };
+    }
 
-    const result = await context.configMutations.run(() => {
+    const result = await context.configMutations.run(async () => {
       context.assertSetupRecoveryHealthy();
       const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
       if (matches[0] !== snapshot.etag) return { type: 'stale' };
@@ -5032,12 +5134,52 @@ async function serveManualRoomBackground(req, res, roomId, context) {
 
       const previousAssetId = room.hero?.assetId ?? null;
       let createdAsset = null;
-      if (manualVariants) {
+      let manual = null;
+
+      if (req.method === 'DELETE' && variant === null) {
+        room.hero = null;
+      } else if (wholeSet) {
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
         const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
         createdAsset = context.assetStore.publish(assetId, focus, manualVariants);
+        manual = { own: ['light'] };
+        context.assetStore.setManual(assetId, manual);
+        room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
+      } else {
+        /* Eine einzelne Fassung: nur in einem selbst gezeichneten Set. */
+        if (!previousAssetId?.startsWith('manual_')) return { type: 'needs_light' };
+        const entry = context.assetStore.activeEntry(previousAssetId);
+        if (!entry) return { type: 'needs_light' };
+        const own = manualOwnList(entry);
+        if (variant === 'overcast' && req.method === 'POST') {
+          context.assetStore.addOptionalVariant(previousAssetId, 'overcast', uploaded.panel);
+          own.add('overcast');
+          manual = { own: [...own] };
+          context.assetStore.setManual(previousAssetId, manual);
+          return { type: 'written', roomId, hero: structuredClone(room.hero), etag: snapshot.etag, manual };
+        }
+        const key = MANUAL_VARIANT_KEYS[variant];
+        const variants = {};
+        for (const variantKey of ROOM_IMAGE_VARIANT_KEYS) variants[variantKey] = context.assetStore.variantBytes(previousAssetId, variantKey);
+        if (key !== 'overcast') {
+          const replacement = req.method === 'POST'
+            ? uploaded
+            : await derivedManualVariant(variants.light, variant);
+          variants[key] = replacement.panel;
+          variants[MANUAL_PHONE_KEYS[key]] = replacement.phone;
+        }
+        if (req.method === 'POST') own.add(key); else own.delete(key);
+        manual = { own: [...own] };
+        const assetId = `manual_${randomBytes(16).toString('hex')}`;
+        createdAsset = context.assetStore.publish(assetId, structuredClone(entry.focus), variants);
+        context.assetStore.setManual(assetId, manual);
+        /* Was das alte Set sonst noch wusste, zieht mit: Flächen und, sofern nicht gerade entfernt, die trübe Fassung. */
+        if (entry.regions) context.assetStore.setRegions(assetId, structuredClone(entry.regions));
+        if (entry.files?.overcast && !(key === 'overcast' && req.method === 'DELETE')) {
+          context.assetStore.addOptionalVariant(assetId, 'overcast', context.assetStore.variantBytes(previousAssetId, 'overcast'));
+        }
+        room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
       }
-      room.hero = createdAsset ? { assetId: createdAsset.assetId, focus: createdAsset.focus } : null;
 
       let written;
       try {
@@ -5065,13 +5207,20 @@ async function serveManualRoomBackground(req, res, roomId, context) {
           context.assetStore.deleteTombstonedFiles(previousAssetId);
         } catch { /* assignment is already durable; cleanup can be retried later */ }
       }
-      return { type: 'written', roomId, hero: structuredClone(room.hero), etag: written.etag };
+      return { type: 'written', roomId, hero: structuredClone(room.hero), etag: written.etag, manual };
     });
 
     if (result.type === 'stale') throw new RoomImageRequestError(412, 'CONFIG_PRECONDITION_FAILED', 'Die Household Config wurde zwischenzeitlich geändert.');
     if (result.type === 'room_absent') throw new RoomImageRequestError(404, 'ROOM_NOT_FOUND', 'Der Raum wurde nicht gefunden.');
-    roomImageJsonResponse(req, res, 200, { roomId: result.roomId, hero: result.hero, etag: result.etag });
+    if (result.type === 'needs_light') throw new RoomImageRequestError(409, 'MANUAL_LIGHT_REQUIRED', 'Erst das Tagbild — die anderen Fassungen gehören zu einem selbst gezeichneten Set.');
+    roomImageJsonResponse(req, res, 200, {
+      roomId: result.roomId, hero: result.hero, etag: result.etag, ...(result.manual ? { manual: result.manual } : {}),
+    });
   } catch (error) {
+    if (error instanceof RoomImageRequestError) {
+      roomImageError(req, res, error.status, error.code, error.message);
+      return;
+    }
     if (error instanceof RoomImageTransformError) {
       roomImageError(req, res, 422, error.code, 'Das Bild konnte nicht verarbeitet werden.');
       return;
@@ -5169,6 +5318,7 @@ export function serveRoomImages(req, res, {
   };
   if (pathname === '/api/room-images/access'
       || pathname === '/api/room-images/access/api-key'
+      || pathname === '/api/room-images/access/cloudflare'
       || pathname === '/api/room-images/access/chatgpt/start'
       || pathname === '/api/room-images/access/chatgpt/poll') {
     const expectedMethods = pathname === '/api/room-images/access' ? ['GET', 'DELETE'] : ['POST'];
@@ -5218,8 +5368,12 @@ export function serveRoomImages(req, res, {
         'Die Bildbibliothek läuft auf diesem Gerät nicht — eigene Raumbilder sind deshalb nicht möglich.');
       return true;
     }
+    const manualVariant = parsed.searchParams.get('variant');
+    if (manualVariant !== null && !Object.hasOwn(MANUAL_VARIANT_KEYS, manualVariant)) {
+      roomImageError(req, res, 400, 'VARIANT_INVALID', 'Unbekannte Fassung — erlaubt sind light, dark, dark-off und overcast.'); return true;
+    }
     if (!assetStore) roomImageError(req, res, 503, 'ROOM_IMAGE_STORE_INVALID', 'Der Assetstore fehlt.');
-    else void serveManualRoomBackground(req, res, manualBackgroundMatch[1], context);
+    else void serveManualRoomBackground(req, res, manualBackgroundMatch[1], context, manualVariant);
     return true;
   }
   const assignmentMatch = pathname.match(/^\/api\/room-image-assignments\/([^/]+)$/);
@@ -5254,14 +5408,16 @@ export function serveRoomImages(req, res, {
      Modellaufruf und ändert den Katalog. */
   const assetRegionsMatch = pathname.match(/^\/api\/room-image-assets\/([^/]+)\/regions$/);
   if (assetRegionsMatch) {
-    if (req.method !== 'POST') {
-      roomImageError(req, res, 405, 'METHOD_NOT_ALLOWED', 'Die Flächenerkennung erlaubt ausschließlich POST.', { allow: 'POST' }); return true;
+    /* PUT (R55): Flächen von Hand — für Bilder, die kein Sehmodell gesehen hat. */
+    if (!['POST', 'PUT'].includes(req.method || '')) {
+      roomImageError(req, res, 405, 'METHOD_NOT_ALLOWED', 'Die Flächen erlauben ausschließlich POST und PUT.', { allow: 'POST, PUT' }); return true;
     }
     const identity = authorizeRoomImage(req, res, authConfig, allowedOrigins, true);
     if (!identity) return true;
     if (!assetStore || !ROOM_IMAGE_ASSET_ID_PATTERN.test(assetRegionsMatch[1] || '')) {
       roomImageError(req, res, 404, 'ASSET_NOT_FOUND', 'Das Asset wurde nicht gefunden.');
-    } else void serveRoomImageRegionDetection(req, res, assetRegionsMatch[1], context);
+    } else if (req.method === 'PUT') void serveRoomImageRegionsSet(req, res, assetRegionsMatch[1], context);
+    else void serveRoomImageRegionDetection(req, res, assetRegionsMatch[1], context);
     return true;
   }
   const assetDeleteMatch = pathname.match(/^\/api\/room-image-assets\/([^/]+)$/);

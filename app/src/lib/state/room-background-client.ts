@@ -4,10 +4,14 @@ import { setRoomHeroConfig } from './room-hero-config.svelte.ts';
 
 const MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 
+export type RoomBackgroundVariant = 'light' | 'dark' | 'dark-off' | 'overcast';
+
 interface AssignmentResponse {
   roomId: string;
   hero: RoomHeroConfig | null;
   etag: string;
+  /** Selbst gezeichnet (R55): welche Fassungen der Nutzer selbst mitgebracht hat. */
+  manual?: { own: string[] };
 }
 
 async function householdEtag(): Promise<string> {
@@ -34,7 +38,7 @@ async function errorMessage(response: Response): Promise<string> {
   return m.room_background_failed();
 }
 
-async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): Promise<RoomHeroConfig | null> {
+async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, variant?: RoomBackgroundVariant): Promise<AssignmentResponse> {
   if (!/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/.test(roomId)) throw new Error(m.rimg_err_invalid_room());
   if (file && (!MIME_TYPES.has(file.type) || file.size === 0 || file.size > 12_582_912)) {
     throw new Error(m.rimg_err_file_type());
@@ -42,7 +46,8 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): P
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const etag = await householdEtag();
-    const response = await fetch(`/api/room-backgrounds/${encodeURIComponent(roomId)}`, {
+    const query = variant ? `?variant=${variant}` : '';
+    const response = await fetch(`/api/room-backgrounds/${encodeURIComponent(roomId)}${query}`, {
       method,
       headers: {
         'If-Match': etag,
@@ -58,15 +63,26 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File): P
       throw new Error(m.rimg_err_room_response());
     }
     setRoomHeroConfig(roomId, payload.hero);
-    return payload.hero;
+    return payload;
   }
   throw new Error(m.rimg_err_conflict());
 }
 
-export function uploadRoomBackground(roomId: string, file: File): Promise<RoomHeroConfig | null> {
-  return mutate(roomId, 'POST', file);
+export async function uploadRoomBackground(roomId: string, file: File): Promise<RoomHeroConfig | null> {
+  return (await mutate(roomId, 'POST', file)).hero;
 }
 
-export function removeRoomBackground(roomId: string): Promise<RoomHeroConfig | null> {
-  return mutate(roomId, 'DELETE');
+export async function removeRoomBackground(roomId: string): Promise<RoomHeroConfig | null> {
+  return (await mutate(roomId, 'DELETE')).hero;
+}
+
+/* Selbst zeichnen (R55): eine einzelne Fassung hochladen — das Tagbild beginnt
+   ein neues Set, Abend, Nacht und trüb ersetzen ihre abgeleitete Fassung. */
+export function uploadRoomBackgroundVariant(roomId: string, variant: RoomBackgroundVariant, file: File): Promise<AssignmentResponse> {
+  return mutate(roomId, 'POST', file, variant);
+}
+
+/** Abend und Nacht wieder aus dem Tagbild ableiten, trüb entfernen. */
+export function resetRoomBackgroundVariant(roomId: string, variant: Exclude<RoomBackgroundVariant, 'light'>): Promise<AssignmentResponse> {
+  return mutate(roomId, 'DELETE', undefined, variant);
 }

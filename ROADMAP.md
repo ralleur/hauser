@@ -98,8 +98,9 @@ PNG, WebP or AVIF, or let a wizard turn a photo of your room into an
 illustration in the interface's style. The bundled illustrations are licensed
 under the repository's CC BY 4.0 asset boundary.
 
-The wizard currently needs an OpenAI account. That is meant as an interim
-solution: the goal is a picture of your own room without paying anyone.
+The wizard draws with a ChatGPT plan, with a free Cloudflare account, or you
+draw the picture yourself with its wording in any image service — the goal is a
+picture of your own room without paying anyone, and two of the ways get there.
 
 | Item | Status |
 |---|---|
@@ -108,8 +109,10 @@ solution: the goal is a picture of your own room without paying anyone.
 | iOS app: free drawing through Apple Intelligence on iOS 27 | **Experimental** |
 | iOS app: drawing with a free Cloudflare account | **Experimental** |
 | iOS app: copy the prompt into any image service, bring the picture back, mark the windows with a finger | **Built** |
-| Panel: the same copy-the-prompt path and marking windows by hand | **Planned** |
-| Panel: local models and your own API keys for other providers | **Planned** |
+| Panel: one question at a time — ChatGPT plan? Cloudflare account? Otherwise draw it yourself | **Built** |
+| Panel: drawing with a free Cloudflare account | **Built** |
+| Panel: copy the prompt into any image service, bring each version back, mark the windows by hand | **Built** |
+| Panel: local models | **Planned** |
 
 ## Everyday screens
 
@@ -197,7 +200,7 @@ fault found in the web app is checked in the iOS app and the other way round.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
-| Beta stabilisation | `v0.32.0` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
+| Beta stabilisation | `v0.33.0` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
 | Release candidate | `v0.x.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 
