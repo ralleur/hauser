@@ -17,7 +17,7 @@
   /* Eine Frage nach der anderen (R55), damit niemand vor vier Optionen steht:
      ChatGPT-Abo? Cloudflare-Konto? Sonst selbst zeichnen lassen. `onmanual`
      meldet dem Assistenten den letzten Weg — der braucht keinen Zugang. */
-  let { onchange, onmanual }: { onchange?: (status: RoomImageAccessStatus) => void; onmanual?: () => void } = $props();
+  let { onchange, onmanual, onclose }: { onchange?: (status: RoomImageAccessStatus) => void; onmanual?: () => void; onclose?: () => void } = $props();
   let access = $state<RoomImageAccessStatus>({ configured: false, mode: null, source: null, valid: null });
   /* Ein grüner Punkt, der stimmt (R15, docs/23): Eine abgelaufene Anmeldung
      sieht in der Datei aus wie eine gültige. Sagt der Server, dass sie nicht
@@ -27,6 +27,12 @@
   type Question = 'chatgpt' | 'cloudflare' | 'manual';
   let question = $state<Question>('chatgpt');
   let connecting = $state<Question | null>(null);
+  /* Mit stehendem Zugang bleiben die Fragen hinter „Weg ändern" — wer ChatGPT
+     hat, sieht sonst nie, dass es Cloudflare und Selbstzeichnen gibt. Die
+     Fragen laufen dann ohne Trennen: ChatGPT behalten, wechseln oder selbst
+     zeichnen. */
+  let choosing = $state(false);
+  const connected = $derived(access.configured && !expired);
   let apiKey = $state('');
   let cloudflareAccount = $state('');
   let cloudflareToken = $state('');
@@ -71,7 +77,15 @@
 
   function update(next: RoomImageAccessStatus) {
     access = next;
+    if (next.configured && next.valid !== false) choosing = false;
     onchange?.(next);
+  }
+
+  function keep() {
+    choosing = false;
+    connecting = null;
+    question = 'chatgpt';
+    onclose?.();
   }
 
   async function load() {
@@ -145,7 +159,7 @@
 
   async function disconnect() {
     busy = true; error = null;
-    try { update(await clearRoomImageAccess()); login = null; question = 'chatgpt'; connecting = null; }
+    try { update(await clearRoomImageAccess()); login = null; question = 'chatgpt'; connecting = null; choosing = false; }
     catch { error = m.rimg_access_err_clear(); }
     finally { busy = false; }
   }
@@ -158,23 +172,31 @@
   }
 </script>
 
-<section class="room-image-access" aria-labelledby="room-image-access-title">
+<section class="room-image-access" class:is-choosing={!connected || choosing} aria-labelledby="room-image-access-title">
   <div>
-    <span class="caps-label">{m.rimg_access_label()}</span>
+    <span class="caps-label">{m.rimg_way_label()}</span>
     <h3 id="room-image-access-title">
       {expired ? m.rimg_access_expired() : access.configured ? m.rimg_access_connected() : m.rimg_way_title()}
     </h3>
     <p>{expired ? m.rimg_access_expired_hint() : modeLabel(access.mode)}</p>
   </div>
 
-  {#if access.configured && !expired}
-    <button class="secondary-btn pressable" type="button" disabled={busy} onclick={disconnect}>{m.rimg_access_change()}</button>
+  {#if connected && !choosing}
+    <div class="room-image-way-actions">
+      <button class="primary-btn pressable" type="button" disabled={busy} onclick={() => { choosing = true; question = 'chatgpt'; connecting = null; }}>{m.rimg_way_change()}</button>
+      <button class="secondary-btn pressable" type="button" disabled={busy} onclick={disconnect}>{m.rimg_way_disconnect()}</button>
+    </div>
   {:else}
     <div class="room-image-way" role="group" aria-label={m.rimg_way_title()}>
       {#if question === 'chatgpt'}
         <h4>{m.rimg_way_q_chatgpt()}</h4>
         <p>{m.rimg_way_q_chatgpt_hint()}</p>
-        {#if connecting === 'chatgpt'}
+        {#if connected && connecting !== 'chatgpt'}
+          <div class="room-image-way-actions">
+            <button class="primary-btn pressable" type="button" onclick={keep}>{m.rimg_way_keep()}</button>
+            <button class="secondary-btn pressable" type="button" onclick={() => next('chatgpt')}>{m.rimg_way_no()}</button>
+          </div>
+        {:else if connecting === 'chatgpt'}
           <div class="room-image-access-options">
             <article>
               <h4>{m.rimg_access_signin()}</h4>
@@ -248,6 +270,8 @@
       {/if}
       {#if question !== 'chatgpt' || connecting}
         <button class="room-image-way-back pressable" type="button" onclick={back}>{m.rimg_way_back()}</button>
+      {:else if connected}
+        <button class="room-image-way-back pressable" type="button" onclick={keep}>{m.rimg_way_back()}</button>
       {/if}
     </div>
   {/if}

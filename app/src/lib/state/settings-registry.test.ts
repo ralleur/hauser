@@ -100,7 +100,7 @@ describe('fachliche Gliederung', () => {
   });
 
   it('hält alle Standby-Einstellungen zusammen unter Ambient & Standby', () => {
-    for (const id of ['standby-now', 'ambient-deep-night', 'ambient-hero-text', 'ambient-city-map']) {
+    for (const id of ['standby-now', 'standby-layout', 'ambient-deep-night', 'ambient-hero-text', 'ambient-city-map']) {
       expect(settingsEntry(id)?.section).toBe('ambient');
     }
     expect(settingsSection('ambient').group).toBe('appearance');

@@ -38,7 +38,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startFakeHa } from './fake-ha.mjs';
 import { crawlIos } from './ios.mjs';
-import { hostileHomeWith, seededRandom } from '../../src/lib/stresshaus/hostile-home.ts';
+import { HOSTILE_STANDBY_LAYOUTS, hostileHomeWith, seededRandom } from '../../src/lib/stresshaus/hostile-home.ts';
 import { applyVariant, grossrundeScenarios } from '../../src/lib/stresshaus/grossrunde.ts';
 import { readdirSync, readFileSync } from 'node:fs';
 
@@ -616,6 +616,38 @@ async function main() {
       if (await waitFor(() => count('.ambient.is-on'), { what: label, timeout: 30_000 }).catch(() => 0)) coverage.Ruhebilder++;
       await sleep(4000);
       await boundaries();
+    }
+    /* ── Ruhebild anpassen (R63): ein gespeicherter Stand von fremder Hand, dann der lange Druck ins
+       Anordnen, ein Element über den Rand ziehen, größer, Fertig — nichts davon darf kippen. ── */
+    {
+      const hostileLayout = pickOne(HOSTILE_STANDBY_LAYOUTS);
+      step = `Panel: Ruhebild mit fremdem Stand „${hostileLayout.name}“`;
+      await evaluate(`localStorage.setItem('hmi:standby-layout:v1', ${JSON.stringify(hostileLayout.raw)}); localStorage.setItem('hmi:ambient-deep-night', 'off')`);
+      await send('Page.navigate', { url: `${hauser.origin}/?idle=2` });
+      if (await waitFor(() => count('.ambient.is-on'), { what: 'Ruhebild mit fremdem Stand', timeout: 30_000 }).catch(() => 0)) {
+        coverage.Ruhebilder++;
+        await sleep(2500);
+        await boundaries();
+        step = 'Panel: Ruhebild anpassen';
+        if (await longPress('.ambient', 0) && await waitFor(() => count('.ambient.is-editing'), { what: 'Anordnen', timeout: 5000 }).catch(() => 0)) {
+          coverage.Ruhebilder++;
+          const clock = await center('[data-standby-el="clock"] .ambient-clock', 0);
+          if (clock) {
+            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: clock.x, y: clock.y, button: 'left', clickCount: 1 });
+            for (let i = 1; i <= 8; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: clock.x + (panelSize.width - clock.x + 200) * i / 8, y: clock.y, button: 'left', buttons: 1 }); await sleep(30); }
+            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: panelSize.width + 200, y: clock.y, button: 'left', clickCount: 1 });
+            await sleep(300);
+            for (let i = 0; i < 2; i++) if (await click('.ambient-edit-size', 0)) await sleep(200);
+            const edge = await evaluate(`(() => { const r = document.querySelector('[data-standby-el="clock"] .ambient-content')?.getBoundingClientRect(); return r ? Math.round(r.right - innerWidth) : 0; })()`);
+            if (edge > 1) record(step, `Die Uhr ragt ${edge} px über den rechten Rand hinaus`);
+          }
+          await boundaries();
+          await click('.ambient-edit-bar .primary-btn', 0);
+          await sleep(500);
+          if (await count('.ambient.is-editing')) record(step, 'Fertig schließt das Anordnen nicht');
+        }
+        await evaluate(`localStorage.removeItem('hmi:standby-layout:v1'); localStorage.removeItem('hmi:ambient-deep-night')`);
+      }
     }
     await send('Page.navigate', { url: hauser.origin });
     await waitFor(() => count('[data-nav]'), { what: 'Startseite nach dem Ruhebild', timeout: 30_000 });

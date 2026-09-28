@@ -425,9 +425,15 @@
       {#if IS_DEMO}
         <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
       {:else if !manualWay && showAccess}
-        <RoomImageAccess onmanual={() => chooseWay('manual')} onchange={(status) => {
+        <RoomImageAccess onmanual={() => chooseWay('manual')} onclose={() => accessOpen = false} onchange={(status) => {
+          /* Schließen nur, wenn sich etwas getan hat: neu verbunden oder der
+             Weg gewechselt. Beim bloßen Aufklappen lädt die Karte den Stand
+             nach — der ist dann schon „verbunden" und darf sie nicht gleich
+             wieder zuklappen. */
+          const wasReady = accessStatus?.configured === true && accessStatus.valid !== false;
+          const wasMode = accessStatus?.mode ?? null;
           accessStatus = status;
-          if (status.configured && status.valid !== false) accessOpen = false;
+          if (status.configured && status.valid !== false && (!wasReady || wasMode !== status.mode)) accessOpen = false;
           void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
         }} />
       {/if}

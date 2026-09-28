@@ -136,6 +136,23 @@
   padding: var(--space-5) var(--space-2);
 }
 
+/* Auf der Blaupause stehen Spalte und Seitenspalte deckend (hauser#27): die
+   Linien des Motivs laufen sonst durch jede Glaskarte und machen Namen und
+   Werte schwer lesbar. Die Karten darauf behalten ihr helles Glas. */
+.room-edit.is-panel-mirror { --re-mirror-face: var(--color-surface-1); }
+:root:not([data-card-style="standard"]) .room-edit.is-panel-mirror { --re-mirror-face: rgb(26, 28, 34); }
+:root .room-edit.room-edit.is-panel-mirror .re-panel-column .home-panel.on-image,
+:root .room-edit.room-edit.is-panel-mirror .re-panel-side {
+  background: var(--re-mirror-face);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.room-edit.is-panel-mirror .re-panel-side {
+  padding: var(--space-5);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-2xl);
+}
+
 /* Kopf der Seitenspalte: der Raumname zum Umbenennen, daneben das Kreuz. */
 .room-edit.is-panel-mirror .re-mirror-head {
   display: flex;
@@ -191,6 +208,6 @@
     left: var(--space-4);
     right: var(--space-4);
     max-height: calc(var(--panel-hero-band) - var(--bar-top) - var(--space-3) * 2);
-    padding: 0 var(--space-2);
+    padding: var(--space-4);
   }
 }

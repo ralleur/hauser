@@ -18,6 +18,8 @@
 .room-image-access h3,
 .room-image-access h4,
 .room-image-access p { margin: 0; }
+/* Mit offenen Fragen (R55) stehen Stand und Frage untereinander, sonst quetscht die Frage den Stand in eine schmale Spalte. */
+.room-image-access.is-choosing { flex-direction: column; align-items: stretch; }
 .room-image-access-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

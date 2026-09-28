@@ -15,6 +15,7 @@ import { createServer, request as httpRequest } from 'node:http';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { HOSTILE_STANDBY_LAYOUTS } from '../../src/lib/stresshaus/hostile-home.ts';
 
 const SWIFT_REPO = process.env.HAUSER_SWIFT_REPO ?? join(homedir(), 'workspace/hauser-app-swift');
 const DERIVED = process.env.STRESSHAUS_IOS_DERIVED ?? join(homedir(), 'Library/Caches/hauser-stresshaus/ios-dd');
@@ -185,6 +186,9 @@ export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit
     ...(Number.isFinite(tileLimit) ? { STRESSHAUS_TILE_LIMIT: String(tileLimit) } : {}),
     ...(seed === null ? {} : { STRESSHAUS_SEED: String(seed) }),
     ...(operate ? { STRESSHAUS_BEDIENEN: '1' } : {}),
+    /* Ruhebild anpassen (R63): derselbe fremde Stand wie im Web, per Startargument in die App (Base64, damit
+       Anführungszeichen den Argumentweg überstehen); die Startzahl wählt den Fall. */
+    STRESSHAUS_STANDBY_LAYOUT: Buffer.from(HOSTILE_STANDBY_LAYOUTS[Math.abs(seed ?? 1) % HOSTILE_STANDBY_LAYOUTS.length].raw).toString('base64'),
   };
   const devices = [
     { label: 'iPhone', udid: ensureSimulator('Stresshaus iPhone', /^iPhone \d+$/) },

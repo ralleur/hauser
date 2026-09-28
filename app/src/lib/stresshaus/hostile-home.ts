@@ -717,3 +717,22 @@ export const HOSTILE_ERRORS: HostileError[] = [
     detail: 'x'.repeat(10) + ' ' + 'Lang '.repeat(400),
     keep: [], drop: [] },
 ];
+
+/* Gespeicherte Ruhebild-Anordnungen (R63), wie sie ein alter Stand, ein
+   Tippfehler in den Entwicklerwerkzeugen oder ein anderes Gerät hinterlassen
+   könnte. Der Parser muss jede davon zu einem Layout im Bild oder zu `null`
+   machen; die Oberfläche darf mit keiner davon kippen. Dieselben Stände
+   bekommt die iOS-App über `--standby-layout=` (StresshausUITests). */
+export interface HostileStandbyLayout { name: string; raw: string }
+
+export const HOSTILE_STANDBY_LAYOUTS: HostileStandbyLayout[] = [
+  { name: 'Kein JSON', raw: '{kaputt' },
+  { name: 'Falsche Version', raw: '{"version":2,"elements":{"clock":{"x":50,"y":50,"size":3}}}' },
+  { name: 'Liste statt Objekt', raw: '[{"x":1,"y":1}]' },
+  { name: 'Unendlich und negativ', raw: '{"version":1,"elements":{"clock":{"x":1e999,"y":-40,"size":-7},"week":{"x":50,"y":"unten","size":3}}}' },
+  { name: 'Texte statt Zahlen', raw: '{"version":1,"elements":{"shopping":{"x":"12","y":"88","size":"groß"},"postits":{"x":null,"y":true}}}' },
+  { name: 'Alles am Rand, alles riesig', raw: '{"version":1,"elements":{"clock":{"x":0,"y":0,"size":5},"weather":{"x":100,"y":100,"size":5},"week":{"x":100,"y":0,"size":5},"shopping":{"x":0,"y":100,"size":5},"postits":{"x":50,"y":50,"size":99}}}' },
+  { name: 'Alles winzig auf einem Punkt', raw: '{"version":1,"elements":{"clock":{"x":50,"y":50,"size":1},"weather":{"x":50,"y":50,"size":1},"week":{"x":50,"y":50,"size":1},"shopping":{"x":50,"y":50,"size":1},"postits":{"x":50,"y":50,"size":1}}}' },
+  { name: 'Fremde Elemente und Bruchteile', raw: '{"version":1,"elements":{"uhr":{"x":50,"y":50},"clock":{"x":33.333333,"y":66.666666,"size":2.5,"rotation":45},"__proto__":{"x":1,"y":1}}}' },
+  { name: 'Tausend Elemente', raw: JSON.stringify({ version: 1, elements: Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`el${i}`, { x: i, y: i, size: 3 }])) }) },
+];

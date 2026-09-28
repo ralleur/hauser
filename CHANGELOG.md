@@ -3,6 +3,36 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.34.1] - 2026-09-28
+
+### Fixed
+
+- **Room settings stay readable on the blueprint.** When you configure a room
+  on the wall panel, the control column and the settings next to it now sit on
+  solid surfaces, so the blueprint lines no longer run through names and values.
+- **Two texts follow the interface language.** The width under Settings →
+  Control surfaces and the open-window note on the lock screen were still in
+  German in every language.
+- **The lock-screen editor's bar is readable in the light theme.** The bar
+  with Reset and Done and the size menu now sit on paper with black ink in
+  every theme; before, the light theme drew them light with white text.
+
+## [0.34.0] - 2026-09-28
+
+### Added
+
+- **Arrange the lock screen.** A long press on the lock screen (in edit mode)
+  or "Customize the lock screen" under Settings → Ambient & Standby dips the
+  screen into blueprint blue. Drag the clock, the weather, the week band, the
+  shopping list and the notes wherever you like; tap one and a small menu next
+  to it makes it larger or smaller in five steps — the menu jumps to the other
+  side when it would run out of the picture, and back when there is room again.
+  Every element keeps its natural anchor (the week band hangs from the bottom,
+  notes hang from the top), so it grows the way it always did when events or
+  items are added. Done keeps it, Reset brings the familiar layout back; deep
+  night still shows only the dimmed clock in the middle. Stored on the device,
+  like the other standby switches. The iOS app does the same on the iPad.
+
 ## [0.33.0] - 2026-09-27
 
 ### Added

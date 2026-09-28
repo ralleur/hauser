@@ -6,7 +6,7 @@
      die ihn erzeugt. */
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
-  import { originOf, requestAmbient, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
+  import { originOf, requestAmbient, requestAmbientEdit, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
   import { parseAmbientMapCoordinate, type AmbientMapPlace } from '../../state/ambient-map-client.ts';
   import {
     settingsValues,
@@ -162,6 +162,17 @@
       <span class="settings-row-sub">{m.sys_standby_hint()}</span>
     </div>
     <button class="secondary-btn pressable" type="button" onclick={(e) => requestAmbient(originOf(e.currentTarget))}>{m.sys_start_now()}</button>
+  </div>
+
+  <!-- Ruhebild anpassen (R63): derselbe Editor wie der lange Druck auf den
+       Sperrbildschirm — von hier aus auch im Bedienen-Modus erreichbar. -->
+  <div class="settings-row" data-setting-id="standby-layout">
+    <span class="settings-row-icon"><Icon name="i-tune" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_standby_layout()}</span>
+      <span class="settings-row-sub">{m.sys_standby_layout_hint()}</span>
+    </div>
+    <button class="secondary-btn pressable" type="button" onclick={() => requestAmbientEdit()}>{m.sys_configure()}</button>
   </div>
 
   <!-- Wer den Lockscreen nicht will, schaltet ihn hier ganz ab; wer ihn will,

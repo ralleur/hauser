@@ -3763,6 +3763,151 @@ button.security-bar {
    Papierfarbe ab, ohne sie durchsichtig zu machen. */
 :root[data-theme='dark'] .ambient-shopping { filter: brightness(0.6); }
 
+/* ── Ruhebild anpassen (R63): jedes Element steckt in einer Hülle, die ohne
+   eigenen Platz keinen Kasten bildet (display: contents) — das Raster und die
+   Ecken des CSS gelten dann unverändert. Mit Platz wird die Hülle absolut,
+   Mittelpunkt in Prozent, Größe als Transform; die Bewegungen des Weckens
+   bleiben am inneren Element und stören sich nicht daran. ── */
+.ambient-el { display: contents; }
+.ambient-el.is-placed {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  width: max-content;
+  max-width: 100%;
+  transform: translate(-50%, -50%) scale(var(--el-scale, 1));
+  transform-origin: center;
+}
+/* Anker je Element (STANDBY_ANCHORS): das Band hängt unten und wächst nach
+   oben, Zettel hängen oben und wachsen nach unten — auch beim Vergrößern. */
+.ambient-el.is-placed[data-anchor="top"] { transform: translate(-50%, 0) scale(var(--el-scale, 1)); transform-origin: 50% 0; }
+.ambient-el.is-placed[data-anchor="bottom"] { transform: translate(-50%, -100%) scale(var(--el-scale, 1)); transform-origin: 50% 100%; }
+.ambient-el.is-placed > .ambient-shopping,
+.ambient-el.is-placed > .ambient-postits { position: relative; inset: auto; }
+.ambient-el.is-placed > .ambient-week { margin-bottom: 0; }
+.ambient-el.is-placed > .ambient-status { margin-top: 0; }
+/* Ohne Uhrblock verliert die eigene Wetterzeile ihre Textmitte nicht. */
+.ambient-el.is-placed > .ambient-status { text-align: center; }
+
+/* Der Glasstil (on-image.css) setzt Grund und Tinte des Ruhebilds mit hoher
+   Spezifität; das Blau der Blaupause muss darüber gewinnen — in jeder
+   Bundle-Reihenfolge, deshalb !important auf genau diesen Werten. */
+.ambient.is-editing {
+  --ambient-glass-ground: #0a1a36 !important;
+  --ambient-glass-ink: #dee8f8 !important;
+  --ambient-glass-soft: 0.3 !important;
+  --ambient-glass-sharp: 0.22 !important;
+  --ambient-glass-vignette: transparent !important;
+  --color-text-primary: #dee8f8;
+  --color-text-secondary: rgba(222, 235, 248, 0.8);
+  background: #0a1a36 !important;
+  color: #dee8f8;
+}
+.ambient.is-editing .ambient-content {
+  --color-text-primary: #dee8f8 !important;
+  --color-text-secondary: rgba(222, 235, 248, 0.8) !important;
+  color: #dee8f8 !important;
+  filter: none !important;
+}
+.ambient.is-editing .ambient-greeting,
+.ambient.is-editing .ambient-date,
+.ambient.is-editing .ambient-status { color: #dee8f8; }
+.ambient.is-editing .ambient-week {
+  --week-ink: #dee8f8 !important;
+  --week-ink-soft: rgba(222, 235, 248, 0.75) !important;
+  --week-hairline: rgba(222, 235, 248, 0.35) !important;
+  --week-accent: #f5b03c !important;
+}
+.ambient.is-editing .ambient-week-name,
+.ambient.is-editing .ambient-week-num,
+.ambient.is-editing .ambient-week-title { color: #dee8f8; }
+.ambient.is-editing .ambient-week-day { border-top-color: rgba(222, 235, 248, 0.35); }
+/* Standardstil: der Stadtplan wird zur hellen Zeichnung auf dem Blau. Nur
+   dort — im Glasstil trägt der Knoten keine Maske, eine Farbe darauf wäre ein
+   Schleier über allem; dort färben die Variablen oben seine beiden Kopien. */
+:root[data-card-style="standard"] .ambient.is-editing .ambient-map { background: #dee8f8; opacity: 0.16; }
+.ambient-blueprint {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 0.5px, transparent 0.5px),
+    linear-gradient(rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 0.5px, transparent 0.5px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+}
+.ambient.is-editing .ambient-el.is-placed {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ambient.is-editing.is-dragging .ambient-el.is-placed { cursor: grabbing; }
+.ambient.is-editing .ambient-el.is-placed::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-2));
+  border: 1px dashed rgba(222, 235, 248, 0.6);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+.ambient.is-editing .ambient-el.is-selected::after {
+  border-style: solid;
+  border-color: #f5b03c;
+}
+.ambient.is-editing .ambient-postit,
+.ambient.is-editing .ambient-shopping-paper { pointer-events: none; }
+/* Leiste und Menü mit festen Farben statt Thema-Variablen: im hellen Thema
+   wurde die Leiste hell, die Schrift blieb weiß (Sam, 2026-09-28). Papier
+   mit schwarzer Schrift liest sich auf dem Blau der Blaupause in jedem Thema. */
+.ambient-edit-menu {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid rgba(10, 26, 54, 0.25);
+  border-radius: var(--radius-xl);
+  background: #f5f2ea;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: #1c1a17;
+}
+.ambient-edit-size {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(10, 26, 54, 0.3);
+  background: rgba(10, 26, 54, 0.06);
+  color: #1c1a17;
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+.ambient-edit-size:disabled { opacity: 0.35; }
+.ambient-edit-bar {
+  /* Oben, nicht unten: unten liegt das Wochenband, das sich sonst nicht
+     greifen ließe. */
+  position: absolute;
+  left: 50%;
+  top: var(--space-6);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid rgba(10, 26, 54, 0.25);
+  border-radius: var(--radius-xl);
+  background: #f5f2ea;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: #1c1a17;
+  transform: translateX(-50%);
+}
+.ambient-edit-bar .primary-btn { background: #0a1a36; color: #fff; }
+.ambient-edit-bar .secondary-btn { color: #1c1a17; background: rgba(10, 26, 54, 0.06); border-color: rgba(10, 26, 54, 0.3); }
+.ambient-edit-hint { font-size: var(--text-sm); color: #1c1a17; }
+
 /* ── B-10 Kalender (R5, docs/23): durchscrollbares Monatsraster als dieselbe
    Papierseite wie das Ambient-Wochenband — Haarlinien, Kapitälchen für die
    Wochentage, Serif für Monat und Tageszahl, Zettelfarben statt hellblauer

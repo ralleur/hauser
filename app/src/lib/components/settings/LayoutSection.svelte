@@ -8,7 +8,7 @@
   import { m } from '../../../paraglide/messages.js';
 
   const layoutSummary = $derived(
-    `${layoutManager.applied.slots.length === 1 ? m.sys_one_surface() : m.sys_two_surfaces()} · Breite: ${widthPreset(layoutManager.applied).label}`,
+    `${layoutManager.applied.slots.length === 1 ? m.sys_one_surface() : m.sys_two_surfaces()} · ${m.sys_width_summary({ width: widthPreset(layoutManager.applied).label })}`,
   );
 </script>
 

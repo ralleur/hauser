@@ -7,7 +7,7 @@
 
 export const ambientRequest = $state({
   seq: 0,
-  mode: 'normal' as 'normal' | 'preview' | 'deep-night-preview',
+  mode: 'normal' as 'normal' | 'preview' | 'deep-night-preview' | 'edit',
   /* Bildschirmpunkt des auslösenden Knopfs: von dort zieht sich beim
      manuellen Sperren der Ring zusammen. Der Timer hat keinen Punkt. */
   origin: null as { x: number; y: number } | null,
@@ -48,6 +48,15 @@ export function requestAmbientPreview(): void {
  * Uhrzeit und Schalter. Der nächste Tap beendet die Vorschau wie jeden Standby. */
 export function requestDeepNightPreview(): void {
   ambientRequest.mode = 'deep-night-preview';
+  ambientRequest.origin = null;
+  ambientRequest.seq++;
+}
+
+/** „Sperrbildschirm anpassen" aus den Einstellungen (R63): zeigt den Standby
+ * wie die Vorschau und öffnet darin sofort das Anordnen. Der Tap nach
+ * „Fertig" kehrt zu den Einstellungen zurück. */
+export function requestAmbientEdit(): void {
+  ambientRequest.mode = 'edit';
   ambientRequest.origin = null;
   ambientRequest.seq++;
 }
