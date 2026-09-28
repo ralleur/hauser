@@ -1146,12 +1146,12 @@ export async function serveHouseholdModuleToggle(req, res, moduleId, context) {
         else modules.delete(id);
       }
       document.enabledModules = [...modules];
-      /* Die Energie-Sektion haengt am Modul: ohne Modul muss sie fehlen, mit
-         Modul muss sie da sein (INCONSISTENT_MODULE). Beim Anschalten entsteht
-         eine leere Sektion, die die Dienste-Seite dann fuellt. */
+      /* Mit Modul muss die Energie-Sektion da sein (INCONSISTENT_MODULE); beim
+         Anschalten entsteht eine leere, die die Dienste-Seite dann fuellt.
+         Beim Ausschalten bleibt die Auswahl stehen und kommt mit dem naechsten
+         Einschalten zurueck. */
       if (moduleId === 'energy') {
-        if (!payload.enabled) document.energy = null;
-        else if (!document.energy) {
+        if (payload.enabled && !document.energy) {
           document.energy = {
             sensors: { productionPower: null, consumptionPower: [] },
             kpis: { producedToday: null, consumedToday: null, fedInToday: null, drawnToday: null },

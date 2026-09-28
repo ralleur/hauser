@@ -42,12 +42,20 @@ describe('Nächtlicher Lauf', () => {
 describe('Energiestatistik der Vorwoche', () => {
   it('sammelt die Sensor-Ids aus der Haushaltskonfiguration', () => {
     const ids = energySensorIds({
+      enabledModules: ['home', 'energy', 'system'],
       energy: {
         sensors: { productionPower: ['sensor.pv'], consumptionPower: ['sensor.haus'] },
         kpis: { producedToday: 'sensor.pv_heute', consumedToday: null },
       },
     });
     expect(ids).toEqual(['sensor.pv', 'sensor.haus', 'sensor.pv_heute']);
+  });
+
+  it('liest bei ausgeschaltetem Modul nichts mit', () => {
+    expect(energySensorIds({
+      enabledModules: ['home', 'system'],
+      energy: { sensors: { productionPower: 'sensor.pv', consumptionPower: [] }, kpis: {} },
+    })).toEqual([]);
   });
 
   it('behält je Tag und Sensor den letzten Wert', () => {

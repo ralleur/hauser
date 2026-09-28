@@ -36,6 +36,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:notion-page',
   'hmi:phone-action:v1',
   'hmi:central-climate:v1',
+  'hmi:edit-auto-lock',
 ] as const;
 
 type FetchLike = typeof fetch;

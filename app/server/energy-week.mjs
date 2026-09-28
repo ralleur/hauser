@@ -18,7 +18,7 @@ import { previousWeekRange } from './precompute.mjs';
 /** Sensor-Ids aus der Energie-Sektion der Haushaltskonfiguration. */
 export function energySensorIds(document) {
   const energy = document?.energy;
-  if (!energy) return [];
+  if (!energy || !document.enabledModules?.includes('energy')) return [];
   const ids = [
     ...(Array.isArray(energy.sensors?.productionPower) ? energy.sensors.productionPower : [energy.sensors?.productionPower]),
     ...(Array.isArray(energy.sensors?.consumptionPower) ? energy.sensors.consumptionPower : []),

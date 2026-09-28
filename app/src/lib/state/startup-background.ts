@@ -8,6 +8,7 @@ import { initFamilyCalendar } from './calendar.svelte.ts';
 import { buildRuntimeRooms, loadDeviceConfig } from './device-config.ts';
 import { deviceManager } from './device-manager.svelte.ts';
 import { rehydrateLayoutManager } from './layout-manager.svelte.ts';
+import { editMode, initialMinutes } from './edit-mode.svelte.ts';
 import { rehydrateImmersionLight } from './immersion-light.svelte.ts';
 import { notifications } from './notifications.svelte.ts';
 import { adoptHaPersonsOnce, rehydrateReminderPersons } from './reminder-persons.svelte.ts';
@@ -49,6 +50,7 @@ export function rehydrateSharedConfigConsumers(): void {
   appState.rooms = buildRuntimeRooms(ROOM_SEED, deviceManager.catalog, deviceManager.config);
   reapplyDemoNames(appState.rooms);
   rehydrateLayoutManager();
+  editMode.autoLockMinutes = initialMinutes();
   rehydrateImmersionLight();
   sceneManager.config = loadSceneConfig();
   rehydrateRoomDisplay();

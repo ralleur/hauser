@@ -141,7 +141,8 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
     }
   }
   if (globalEntities.homeOffScript) addCommand(globalEntities.homeOffScript, 'script', ['turn_on']);
-  if (energy) {
+  // Eine Auswahl bei ausgeschaltetem Modul liest niemand mit.
+  if (energy && enabledModules.includes('energy')) {
     const producers = energy.sensors.productionPower;
     for (const entityId of !producers ? [] : typeof producers === 'string' ? [producers] : producers) subscriptionEntityIds.add(entityId);
     for (const source of energy.sensors.consumptionPower) subscriptionEntityIds.add(source.entityId);

@@ -24,7 +24,7 @@ afterEach(async () => {
 
 const ORIGIN = 'http://client.fixture';
 
-async function start() {
+async function start(household: unknown = neutralSmall) {
   const root = mkdtempSync(join(tmpdir(), 'hauser-energy-'));
   roots.push(root);
   const staticRoot = join(root, 'dist');
@@ -33,7 +33,7 @@ async function start() {
   const configPath = join(root, 'config.json');
   const householdConfigPath = join(root, 'household.json');
   writeFileSync(configPath, JSON.stringify({}));
-  writeFileSync(householdConfigPath, JSON.stringify(neutralSmall));
+  writeFileSync(householdConfigPath, JSON.stringify(household));
 
   const server = createHmiServer('', {
     staticRoot,
@@ -107,5 +107,24 @@ describe('Energie-Auswahl', () => {
     });
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: 'ENERGY_TOO_MANY_LOADS', max: 256 });
+  });
+
+  /* simon42-Forum, 2026-09-28: Bei ausgeschaltetem Energie-Modul verwarf die
+     Haushaltsprüfung jede Auswahl, und die Dienste-Seite meldete nur
+     „Konnte nicht gespeichert werden". */
+  it('speichert die Auswahl auch bei ausgeschaltetem Modul', async () => {
+    const household = structuredClone(neutralSmall) as Record<string, any>;
+    household.enabledModules = household.enabledModules.filter((id: string) => id !== 'energy');
+    household.navigation = household.navigation.filter((item: any) => item.target.id !== 'energy');
+    household.energy = null;
+    const { base, householdConfigPath } = await start(household);
+    const response = await putEnergy(base, await etagOf(base), {
+      production: 'sensor.solarbank_e1600_solarleistung',
+      consumption: [{ entityId: 'sensor.turmventilator_leistung', name: 'Turmventilator Leistung' }],
+    });
+    expect(response.status).toBe(200);
+    const stored = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(stored.enabledModules).not.toContain('energy');
+    expect(stored.energy.sensors.consumptionPower[0].entityId).toBe('sensor.turmventilator_leistung');
   });
 });

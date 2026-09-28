@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.34.3 - 2026-09-28
+
+- Energy sensors can be chosen and saved while the Energy page is still
+  switched off; the selection stays when Energy is switched off and on.
+
+## 0.34.2 - 2026-09-28
+
+- Panel width, rooms per row and "return to use mode automatically" survive a
+  browser restart: they come back from the server instead of resetting to the
+  defaults (#28).
+
 ## 0.32.0 - 2026-09-27
 
 - Hauser speaks Dutch: Nederlands under Settings → Appearance → Interface

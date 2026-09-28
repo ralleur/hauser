@@ -7,6 +7,7 @@ import {
   AUTO_LOCK_KEY, MODE_KEY, PIN_KEY,
   editMode, editModeStorage, resetBlockedConfigAttempts, showNotice,
 } from './edit-mode.svelte.ts';
+import { sharedStorage } from './shared-config.ts';
 
 function write(key: string, value: string | null): void {
   try {
@@ -47,7 +48,12 @@ export function setEditPin(pin: string): void {
 
 export function setAutoLockMinutes(minutes: number | null): void {
   editMode.autoLockMinutes = minutes;
-  write(AUTO_LOCK_KEY, minutes === null ? null : String(minutes));
+  try {
+    if (minutes === null) sharedStorage.removeItem(AUTO_LOCK_KEY);
+    else sharedStorage.setItem(AUTO_LOCK_KEY, String(minutes));
+  } catch {
+    // Privatmodus o. ä.: die Wahl gilt dann nur für diese Sitzung.
+  }
 }
 
 /* ── Automatisches Sperren ──

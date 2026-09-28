@@ -71,8 +71,12 @@ export const layoutManager = {
   setRoomsRows(value: number) { commit(setRoomsRows(applied, value)); },
   setPanelAutoHide(enabled: boolean, seconds?: number) { commit(setPanelAutoHide(applied, enabled, seconds)); },
   setHomeView(value: HomeViewId) { commit(setHomeView(applied, value)); },
+  /* Nur im Speicher, nie gespeichert: Die Startseite ruft das vor dem Abgleich
+     mit dem Server auf. Mit leerem Browser-Speicher hätte der aufgefüllte
+     Standard als eigene Änderung gegolten und die gespeicherte Breite und
+     Spaltenzahl auf dem Server überschrieben (ralleur/hauser#28). */
   reconcileRooms(validRoomIds: readonly string[]) {
     const next = reconcileLayoutRooms(applied, validRoomIds);
-    if (JSON.stringify(next) !== JSON.stringify(applied)) commit(next);
+    if (JSON.stringify(next) !== JSON.stringify(applied)) applied = next;
   },
 };

@@ -649,3 +649,29 @@ describe('Schlüsselliste Client und Server', () => {
     }
   });
 });
+
+describe('Browser mit leerem Speicher (ralleur/hauser#28)', () => {
+  it('der Raumabgleich der Startseite überschreibt die gespeicherte Anordnung nicht', async () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    vi.resetModules();
+    const { layoutManager } = await import('./layout-manager.svelte.ts');
+    const { bootstrapSharedConfig: bootstrap } = await import('./shared-config-bootstrap.ts');
+    const saved = JSON.stringify({ version: 1, widthPreset: 'wide', panelSize: 70, roomsPerRow: 3,
+      homeView: 'fullscreen', slots: [{ id: 'slot-1', roomId: 'kueche' }] });
+
+    // Die Startseite ergänzt den Raum, bevor der Server geantwortet hat.
+    layoutManager.reconcileRooms(['wohnzimmer', 'kueche']);
+    expect(storage.getItem(SHARED_CONFIG_OUTBOX_KEY)).toBeNull();
+
+    const puts: string[] = [];
+    await bootstrap(async (_url, init) => {
+      if (init?.method === 'PUT') { puts.push(String(init.body)); return jsonResponse({}); }
+      return jsonResponse({ 'hmi:home-layout:v1': saved, 'hmi:edit-auto-lock': '15' });
+    }, storage);
+
+    expect(puts).toEqual([]);
+    expect(storage.getItem('hmi:home-layout:v1')).toBe(saved);
+    expect(storage.getItem('hmi:edit-auto-lock')).toBe('15');
+  });
+});

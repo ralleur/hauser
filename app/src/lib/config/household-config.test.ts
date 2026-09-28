@@ -173,9 +173,10 @@ describe('household config v4', () => {
     missingEnergy.energy = null;
     expectIssue(missingEnergy, 'INCONSISTENT_MODULE', '$.energy');
 
+    // Eine Auswahl bei ausgeschaltetem Modul bleibt gültig (simon42-Forum, 2026-09-28).
     const disabledEnergy: Record<string, unknown> = structuredClone(neutralStudio);
     disabledEnergy.energy = structuredClone(neutralSmall.energy);
-    expectIssue(disabledEnergy, 'INCONSISTENT_MODULE', '$.energy');
+    expect(parseHouseholdConfig(disabledEnergy).ok).toBe(true);
   });
 
   it('does not mutate its unknown input', () => {

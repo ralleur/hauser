@@ -3,6 +3,26 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.34.3] - 2026-09-28
+
+### Fixed
+
+- **Energy sensors save while the Energy page is switched off.** Choosing
+  producers and consumers under Settings → Services → Energy failed with
+  "Could not be saved" as long as the Energy module was off — which it is on a
+  new installation. The selection now saves, stays when you switch Energy off
+  and comes back when you switch it on.
+
+## [0.34.2] - 2026-09-28
+
+### Fixed
+
+- **Panel settings survive a browser restart.** Panel width, rooms per row and
+  "return to use mode automatically" now come back from the server when a
+  browser starts with empty storage; before, the first start wrote the
+  defaults over the saved layout, and the return-to-use timer lived only in
+  the browser ([#28](https://github.com/ralleur/hauser/issues/28)).
+
 ## [0.34.1] - 2026-09-28
 
 ### Fixed

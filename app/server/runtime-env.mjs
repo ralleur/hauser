@@ -293,6 +293,8 @@ export const SHARED_CONFIG_KEYS = new Set([
      jetzt deckungsgleich. */
   'hmi:room-display:v1', 'hmi:immersion-light:v1', 'hmi:ha-follow:v1',
   'hmi:phone-action:v1', 'hmi:central-climate:v1',
+  // Frist bis „zurück in die Bedienung“ am Panel (ralleur/hauser#28).
+  'hmi:edit-auto-lock',
   // Nur die iOS-App (HouseholdStore.sharedKeys):
   'hmi:security-sensors:v1', 'hmi:media-presets:v1', 'hmi:room-list:v1', 'hmi:home-off:v1',
 ]);

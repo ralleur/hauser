@@ -1461,10 +1461,13 @@ export function parseHouseholdConfig(input: unknown): HouseholdConfigParseResult
   }
 
   const energyEnabled = moduleIds.has('energy');
+  /* Die Sensorauswahl darf bei ausgeschaltetem Modul stehen bleiben, wie die
+     Media-Ziele unten: Wer Energie aus- und wieder einschaltet, findet seine
+     Auswahl vor, und wer sie vor dem Einschalten trifft, kann sie speichern —
+     bis 0.34.2 scheiterte genau das mit „Konnte nicht gespeichert werden"
+     (simon42-Forum, 2026-09-28). */
   if (energyEnabled && energy === null) {
     validator.issue('INCONSISTENT_MODULE', '$.energy', 'The energy module is enabled but energy configuration is null.');
-  } else if (!energyEnabled && energy !== null) {
-    validator.issue('INCONSISTENT_MODULE', '$.energy', 'Energy configuration is present but the energy module is disabled.');
   }
   /* Gefundene Media-Ziele duerfen bestehen bleiben, wenn das Modul aus ist:
      sie sind reine Erkennungsdaten. Wer Media in den Diensten dazuschaltet,

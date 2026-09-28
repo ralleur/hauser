@@ -1,3 +1,5 @@
+import { sharedStorage } from './shared-config.ts';
+
 /* ── Bearbeiten vs. Bedienen ──
    Zwei Betriebsarten der Oberfläche, umgeschaltet über den Knopf in der Mitte
    der Kopfzeile:
@@ -50,8 +52,13 @@ function read(key: string): string | null {
   }
 }
 
-function initialMinutes(): number | null {
-  const raw = read(AUTO_LOCK_KEY);
+/* Die Frist bis zum automatischen Sperren gehört zum Haushalt und liegt
+   deshalb in der geteilten Konfiguration auf dem Server — sie übersteht
+   einen Browser, der beim Neustart seinen Speicher leert (ralleur/hauser#28).
+   Modus und PIN bleiben am Gerät. */
+export function initialMinutes(): number | null {
+  let raw: string | null;
+  try { raw = sharedStorage.getItem(AUTO_LOCK_KEY); } catch { raw = null; }
   if (raw === null) return null;
   const value = Number.parseInt(raw, 10);
   return Number.isFinite(value) && value > 0 ? Math.min(value, 240) : null;
