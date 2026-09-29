@@ -126,6 +126,14 @@ describe('deterministic setup household suggestion', () => {
       .some(({ entityId }) => entityId.startsWith('scene.'))).toBe(false);
   });
 
+  it('names a room after its area id when Home Assistant gives the area no name', () => {
+    const nameless = snapshot();
+    nameless.areas.push({ area_id: 'store_room', name: '' }, { area_id: 'pantry', name: '   ' });
+    const suggestion = buildSetupHouseholdSuggestion(nameless);
+    expect(suggestion.config.rooms.map(({ name }) => name)).toEqual(['Hall', 'Living Room', 'Pantry', 'Store room']);
+    expect(parseHouseholdConfig(suggestion.config).ok).toBe(true);
+  });
+
   it('exposes switches (plural per room), a vacuum and media players discovered alongside areas', () => {
     const withDevices = snapshot();
     withDevices.entities.push(

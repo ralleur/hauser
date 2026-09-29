@@ -175,6 +175,9 @@ export function hostileHome(now: Date = new Date()): HostileHome {
     ['chambre', 'Chambre d’enfant'],
     ['soggiorno', 'Soggiorno però'],
     ['strasse', 'Straßenseite'],
+    // Bereiche ohne Namen (Stresshaus #16–#19): sie hielten die Einrichtung an.
+    ['abstellraum', ''],
+    ['vorrat', '   '],
   ].map(([area_id, name]) => ({ area_id, name, aliases: [], floor_id: null, icon: null, picture: null }));
 
   const devices = [

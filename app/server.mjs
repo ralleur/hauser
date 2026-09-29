@@ -96,6 +96,7 @@ import {
   createRoomImageProviderBoundary,
   createRoomImageProviderRouter,
   createRoomImageUploadStore,
+  refreshBrightManualRoomImages,
   serveRoomImages,
   validateRoomImagePreviewBytes,
 } from './server/room-images.mjs';
@@ -213,6 +214,7 @@ export {
 } from './server/room-images.mjs';
 export {
   backfillRoomImagePhoneVariants,
+  refreshBrightManualRoomImages,
   createOpenAiRoomImageProvider,
   createRoomImageAssetStore,
   createRoomImageAuthConfig,
@@ -757,6 +759,20 @@ export function createHmiServer(
       }),
     },
   ];
+  /* Eigene Fotos von vor 0.33 bekommen ihre dunklen Fassungen nachgerechnet —
+     beim Start und, falls da etwas dazwischenkam, jede Nacht erneut. */
+  const manualDarkenContext = {
+    assetStore: roomImageAssets, householdConfigPath, configMutations,
+    publishStep: roomImagePublishStep, latchSetupRecoveryFailure, assertSetupRecoveryHealthy,
+  };
+  const refreshManualDarken = async () => {
+    if (!setupRecoveryResult.ok || !roomImageAssets) return { status: 'skipped', reason: 'no-assets' };
+    const result = await refreshBrightManualRoomImages(manualDarkenContext);
+    if (result.refreshed?.length) console.log(`[hauser] Abend und Nacht nachgerechnet fuer ${result.refreshed.length} eigene(s) Raumbild(er).`);
+    return { status: result.status, refreshed: result.refreshed?.length ?? 0, failed: result.failed?.length ?? 0 };
+  };
+  precomputeTasks.push({ name: 'manual-darken', run: refreshManualDarken });
+  void refreshManualDarken().catch(() => undefined);
   const stopNightly = scheduleNightly(precomputeTasks, {
     onResult: (result) => { lastPrecompute = result; },
   });

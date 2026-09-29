@@ -653,6 +653,38 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect((await fetch(`${app.base}/assets/room-images/${uploaded.hero.assetId}/light.avif`)).status).toBe(404);
   });
 
+  it('recomputes evening and night for an own photo from before 0.33 and repoints the room', async () => {
+    const sandbox = root();
+    const householdConfigPath = join(sandbox, 'config', 'household.json');
+    installHousehold(householdConfigPath);
+    const avif = await providerPngToFinalAvif(readFileSync(new URL('./fixtures/neutral-alpha.png', import.meta.url)));
+    const store = createRoomImageAssetStore({
+      catalogPath: join(sandbox, 'config', 'room-images', 'assets.json'), assetRoot: join(sandbox, 'assets'),
+    });
+    const oldId = `manual_${'a'.repeat(32)}`;
+    const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
+    store.publish(oldId, focus, {
+      light: avif, dark: avif, darkOff: avif, phoneLight: avif, phoneDark: avif, phoneDarkOff: avif,
+    });
+    const household = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    household.rooms[0].hero = { assetId: oldId, focus };
+    writeFileSync(householdConfigPath, `${JSON.stringify(household)}\n`);
+
+    const app = await startB4({ sandbox, installHousehold: false });
+    let heroId = oldId;
+    for (let attempt = 0; attempt < 100 && heroId === oldId; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      heroId = JSON.parse(readFileSync(householdConfigPath, 'utf8')).rooms[0].hero.assetId;
+    }
+    expect(heroId).toMatch(/^manual_[0-9a-f]{32}$/);
+    expect(heroId).not.toBe(oldId);
+    const light = new Uint8Array(await (await fetch(`${app.base}/assets/room-images/${heroId}/light.avif`)).arrayBuffer());
+    const dark = new Uint8Array(await (await fetch(`${app.base}/assets/room-images/${heroId}/dark.avif`)).arrayBuffer());
+    expect(Buffer.from(light).equals(Buffer.from(avif))).toBe(true);
+    expect(Buffer.from(dark).equals(Buffer.from(avif))).toBe(false);
+    expect((await fetch(`${app.base}/assets/room-images/${oldId}/light.avif`)).status).toBe(404);
+  });
+
   it('accepts a manual room background from the exact direct-LAN request origin', async () => {
     const app = await startB4();
     const household = await fetch(`${app.base}/api/household-config`);

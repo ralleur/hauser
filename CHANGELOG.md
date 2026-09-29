@@ -3,6 +3,23 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.35.0] - 2026-09-29
+
+### Changed
+
+- **Room settings sit right under "Assign lamps".** On the wall panel and the
+  phone, heating, temperature, humidity, windows and motion are shown directly
+  below the room image, scenes and lamps entries instead of behind a separate
+  "Advanced" page — the same layout as the iOS app.
+
+### Fixed
+
+- **Own room photos from older versions darken in the evening.** Photos
+  uploaded before 0.33 kept their bright daylight look at night, because the
+  evening and night versions were copies of the day picture. Hauser now
+  recalculates them once on start, so old and new photos follow the time of
+  day alike.
+
 ## [0.34.3] - 2026-09-28
 
 ### Fixed

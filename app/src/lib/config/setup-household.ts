@@ -429,7 +429,12 @@ export function buildSetupHouseholdSuggestion(
   const rooms: RoomConfig[] = [...grouped.entries()]
     .map(([areaKey, items]) => {
       const configuredArea = areaById.get(areaKey);
-      const roomName = configuredArea?.name ?? areaKey.slice('inferred:'.length);
+      /* Ein Bereich ohne Namen (oder nur mit Leerzeichen) darf die Einrichtung
+         nicht blockieren: ein leerer Raumname fällt in der Haushaltsprüfung
+         durch. Dann trägt der Raum die Bereichskennung als Namen. */
+      const areaName = typeof configuredArea?.name === 'string' ? configuredArea.name.trim() : '';
+      const fallbackName = areaKey.replace(/^inferred:/, '').replace(/_/g, ' ').trim();
+      const roomName = areaName || (fallbackName ? fallbackName.charAt(0).toUpperCase() + fallbackName.slice(1) : 'Room');
       const usedEntityIds = new Set<string>();
       const singletonRoles = new Set<EntityRole>();
       const visibleEntities: VisibleEntityConfig[] = [];

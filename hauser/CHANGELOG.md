@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.35.0 - 2026-09-29
+
+- Room settings (heating, temperature, humidity, windows, motion) sit directly
+  under "Assign lamps" instead of on a separate "Advanced" page, as in the iOS
+  app.
+- Own room photos uploaded before 0.33 now darken in the evening and at night
+  like newer ones.
+
 ## 0.34.3 - 2026-09-28
 
 - Energy sensors can be chosen and saved while the Energy page is still

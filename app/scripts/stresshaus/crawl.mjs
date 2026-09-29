@@ -392,7 +392,8 @@ async function main() {
     step = 'Einrichtung: Aktivieren';
     await click('button.primary[type=button]');
     await waitFor(() => count('.done button.primary'), { what: 'Einrichtung abgeschlossen', timeout: 30_000 })
-      .catch(async (err) => { record('Einrichtung', `${err.message}: ${await evaluate('document.body.innerText.slice(0, 400)')}`); throw err; });
+      /* Die Meldung der Einrichtung sagt, warum; der Seitenanfang zeigt nur die Sprachwahl. */
+      .catch(async (err) => { record('Einrichtung', `${err.message}: ${await evaluate(`(document.querySelector('.setup-card .message')?.innerText || document.body.innerText).slice(0, 400)`)}`); throw err; });
     await click('.done button.primary');
 
     /* ── Ausstatten: alle Module an, Energie und Kalender belegt — auch mit

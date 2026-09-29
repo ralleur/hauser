@@ -4631,7 +4631,7 @@ button.security-bar {
   .re-quick-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Erweitert: je Messgröße eine Box mit Schalter und Sensorwahl. */
+/* Unter den Einstiegen: je Messgröße eine Box mit Schalter und Sensorwahl. */
 .re-metric-box {
   padding: var(--space-3);
   border: 1px solid var(--color-border);

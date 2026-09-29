@@ -5233,6 +5233,78 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
   }
 }
 
+/* Eigene Fotos von vor 0.33 (R54) trugen abends und nachts dreimal das helle
+   Tagbild: die Abendschaltung wechselte zwischen gleich hellen Bildern
+   (simon42, Cpt.Hardy). Solche Sets rechnet der Server einmal nach — dasselbe
+   Rezept wie beim Hochladen. Bildsets sind unveränderlich und werden
+   `immutable` ausgeliefert, also entsteht ein neues Set, die Räume zeigen
+   darauf, das alte wird Tombstone. Was der Nutzer selbst gezeichnet hat,
+   bleibt unberührt. */
+export async function refreshBrightManualRoomImages(context) {
+  const { assetStore, householdConfigPath } = context;
+  if (!assetStore || !householdConfigPath) return { status: 'skipped', refreshed: [], failed: [] };
+  const refreshed = [];
+  const failed = [];
+  const pending = assetStore.list()
+    .map((asset) => asset.assetId)
+    .filter((assetId) => assetId.startsWith('manual_'))
+    .map((assetId) => assetStore.activeEntry(assetId))
+    .filter((entry) => entry && entry.files.dark.sha256 === entry.files.light.sha256
+      && entry.files.darkOff.sha256 === entry.files.light.sha256
+      && !manualOwnList(entry).has('dark') && !manualOwnList(entry).has('darkOff'));
+  for (const entry of pending) {
+    const previousAssetId = entry.assetId;
+    try {
+      const variants = {};
+      for (const key of ROOM_IMAGE_VARIANT_KEYS) variants[key] = assetStore.variantBytes(previousAssetId, key);
+      const dark = await derivedManualVariant(variants.light, 'dark');
+      const darkOff = await derivedManualVariant(variants.light, 'dark-off');
+      Object.assign(variants, { dark: dark.panel, phoneDark: dark.phone, darkOff: darkOff.panel, phoneDarkOff: darkOff.phone });
+      const done = await context.configMutations.run(async () => {
+        context.assertSetupRecoveryHealthy();
+        const snapshot = readRoomImageHouseholdSnapshot(householdConfigPath);
+        const roomIds = assignedRoomIds(snapshot.document, previousAssetId);
+        if (roomIds.length === 0 || !assetStore.activeEntry(previousAssetId)) return false;
+        const assetId = `manual_${randomBytes(16).toString('hex')}`;
+        const created = assetStore.publish(assetId, structuredClone(entry.focus), variants);
+        assetStore.setManual(assetId, entry.manual ? structuredClone(entry.manual) : { own: ['light'] });
+        if (entry.regions) assetStore.setRegions(assetId, structuredClone(entry.regions));
+        if (entry.files?.overcast) {
+          assetStore.addOptionalVariant(assetId, 'overcast', assetStore.variantBytes(previousAssetId, 'overcast'));
+        }
+        for (const roomId of roomIds) {
+          const room = heroTarget(snapshot.document, roomId);
+          room.hero = { ...room.hero, assetId: created.assetId };
+        }
+        try {
+          writeRoomImageHousehold(
+            householdConfigPath,
+            snapshot.document,
+            context.publishStep,
+            context.latchSetupRecoveryFailure,
+            context.assertSetupRecoveryHealthy,
+          );
+        } catch (error) {
+          try {
+            assetStore.tombstone(created.assetId);
+            assetStore.deleteTombstonedFiles(created.assetId);
+          } catch { /* original config failure remains authoritative */ }
+          throw error;
+        }
+        try {
+          assetStore.tombstone(previousAssetId);
+          assetStore.deleteTombstonedFiles(previousAssetId);
+        } catch { /* assignment is already durable; cleanup can be retried later */ }
+        return true;
+      });
+      if (done) refreshed.push(previousAssetId);
+    } catch {
+      failed.push(previousAssetId);
+    }
+  }
+  return { status: failed.length ? 'partial' : 'ok', refreshed, failed };
+}
+
 async function serveRoomImageAssetDelete(req, res, assetId, context) {
   try {
     context.assertSetupRecoveryHealthy();

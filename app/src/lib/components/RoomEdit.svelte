@@ -74,7 +74,7 @@
      ins Feld und verschwinden, sobald ein Buchstabe fällt. */
   let searchOpen = $state(false);
   let categoryFilter = $state<DeviceCategory | null>(null);
-  let view = $state<'devices' | 'immersion' | 'background' | 'advanced'>('devices');
+  let view = $state<'devices' | 'immersion' | 'background'>('devices');
   let wizardOpen = $state(false);
   let selectedLightId = $state('');
   let backgroundInput = $state<HTMLInputElement>();
@@ -342,8 +342,8 @@
      Die Geräte-Ansicht liegt als Kontrollfläche genau dort, wo die Steuerung
      stand: dieselbe Spalte, dieselbe Breite aus dem Layout-Menü, dieselben
      Klassen (`.home-panel`, `.panel-controls`). Raumbild, Lampen und
-     Einstellungen stehen daneben statt darunter. Immersionslicht, Raumbild
-     und Erweitert bleiben das Fenster in der Mitte. */
+     Einstellungen stehen daneben statt darunter. Immersionslicht und
+     Raumbild bleiben das Fenster in der Mitte. */
   const panelMirror = $derived(!onPhone && mirrored);
   const panelColumn = $derived.by(() => {
     const preset = widthPreset(layoutManager.applied);
@@ -656,7 +656,7 @@
               {:else}
                 <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>{room.name}<Icon name="i-pencil" cls="icon icon-sm" /></button>
               {/if}
-              <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : view === 'advanced' ? m.room_advanced() : m.room_devices()}</span></h2>
+              <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : m.room_devices()}</span></h2>
             <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                     onclick={() => closeRoomEdit()}>×</button>
           </header>
@@ -812,15 +812,139 @@
               </span>
               <Icon name="i-chevron-right" cls="icon icon-md" />
             </button>
-            <button class="re-quick-entry pressable" type="button" onclick={() => view = 'advanced'}>
-              <span class="re-icon" aria-hidden="true"><Icon name="i-tune" /></span>
-              <span class="re-label">
-                <span class="re-name">{m.room_advanced()}</span>
-                <small class="re-meta">{m.room_advanced_hint()}</small>
-              </span>
-              <Icon name="i-chevron-right" cls="icon icon-md" />
-            </button>
           </div>
+        </section>
+        {@render advancedSection()}
+        {/snippet}
+        {#snippet advancedSection()}
+        <!-- Wie in der iOS-App direkt unter den Einstiegen, ohne eigene Seite:
+             was die Raum-Kachel auf dem Home-Screen zeigt. Der Sensor kommt
+             automatisch aus der HA-Bereichszuordnung; die Auswahl ist nur
+             nötig, wenn mehrere infrage kommen oder HA nichts weiß. -->
+        <section class="ld-section re-advanced-section">
+          <!-- Ein Klimagerät, das HA dem Raum zugeordnet hat, ist nicht
+               immer seine Heizung — eine Wärmepumpe etwa. -->
+          {#if configuredClimateEntityId(room.id)}
+            {@const climateShown = !climateHidden(room.id)}
+            <div class="re-metric-box">
+              <div class="re-row re-metric-head">
+                <span class="re-icon" aria-hidden="true"><Icon name="i-thermostat" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_display_climate()}</span>
+                  <small class="re-meta">{sensorName(configuredClimateEntityId(room.id))}</small>
+                </span>
+                <button class="re-toggle pressable" type="button" role="switch" aria-checked={climateShown}
+                        class:is-on={climateShown}
+                        aria-label={m.room_display_climate()}
+                        onclick={() => setClimateHidden(room.id, climateShown)}>
+                  <span class="re-toggle-knob"></span>
+                </button>
+              </div>
+            </div>
+          {/if}
+          {#each ['temperature', 'humidity'] as const as metric (metric)}
+            {@const candidates = roomSensorCandidates(room.id, metric)}
+            {@const others = otherSensorCandidates(room.id, metric)}
+            {@const auto = autoSensorId(room.id, metric)}
+            {@const chosen = sensorIdFor(room.id, metric)}
+            {@const shown = showsMetric(room.id, metric)}
+            <div class="re-metric-box">
+              <div class="re-row re-metric-head">
+                <span class="re-icon" aria-hidden="true">
+                  <Icon name={metric === 'temperature' ? 'i-thermometer' : 'i-water-percent'} />
+                </span>
+                <span class="re-label">
+                  <span class="re-name">{metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}</span>
+                  <small class="re-meta">
+                    {metric === 'temperature' ? m.room_display_temp_hint() : m.room_display_humidity_hint()}
+                  </small>
+                </span>
+                <button class="re-toggle pressable" type="button" role="switch" aria-checked={shown}
+                        class:is-on={shown}
+                        aria-label={metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}
+                        onclick={() => setShowsMetric(room.id, metric, !shown)}>
+                  <span class="re-toggle-knob"></span>
+                </button>
+              </div>
+
+              {#if shown}
+                <label class="re-metric-sensor">
+                  <span class="caps-label">{m.room_display_sensor()}</span>
+                  {#if candidates.length === 0 && others.length === 0 && !chosen}
+                    <p class="re-empty">{m.room_display_sensor_none()}</p>
+                  {:else}
+                    <select class="re-search" value={sensorIsAutomatic(room.id, metric) ? '' : chosen}
+                            onchange={(e) => setSensorId(room.id, metric, e.currentTarget.value || undefined)}>
+                      <option value="">
+                        {m.room_display_sensor_auto()}{auto ? ` · ${sensorName(auto)}` : ''}
+                      </option>
+                      {#each candidates as item (item.entityId)}
+                        <option value={item.entityId}>{item.name}</option>
+                      {/each}
+                      <!-- Der Rest des Hauses: ein selbst angelegter Raum hat
+                           keinen HA-Bereich, sein Fühler hängt woanders. -->
+                      {#if others.length > 0}
+                        <optgroup label={m.room_display_sensor_others()}>
+                          {#each others as item (item.entityId)}
+                            <option value={item.entityId}>{item.name}{item.area ? ` · ${item.area}` : ''}</option>
+                          {/each}
+                        </optgroup>
+                      {/if}
+                    </select>
+                  {/if}
+                </label>
+              {/if}
+            </div>
+          {/each}
+
+          <!-- Kontakte und Melder (docs/06 §5): sie speisen die
+               Sicherheitsleiste der Tab-Bar. Auch hier kommt die Zuordnung
+               automatisch aus dem HA-Bereich; angehakt wird nur, wenn sie
+               abweichen soll. -->
+          {#each ['window', 'presence'] as const as kind (kind)}
+            {@const candidates = roomContactOptions(room.id, kind)}
+            {@const chosen = contactIdsFor(room.id, kind)}
+            <div class="re-metric-box">
+              <div class="re-row re-metric-head">
+                <span class="re-icon" aria-hidden="true">
+                  <Icon name={kind === 'window' ? 'i-window' : 'i-motion-sensor'} />
+                </span>
+                <span class="re-label">
+                  <span class="re-name">
+                    {kind === 'window' ? m.room_contacts_window() : m.room_contacts_presence()}
+                  </span>
+                  <small class="re-meta">
+                    {contactsAreAutomatic(room.id, kind)
+                      ? m.room_contacts_auto()
+                      : m.room_contacts_manual()}
+                  </small>
+                </span>
+                {#if !contactsAreAutomatic(room.id, kind)}
+                  <button class="secondary-btn pressable" type="button"
+                          onclick={() => setContactIds(room.id, kind, undefined)}>
+                    {m.room_contacts_reset()}
+                  </button>
+                {/if}
+              </div>
+
+              {#if candidates.length === 0}
+                <p class="re-empty">{m.room_contacts_none()}</p>
+              {:else}
+                <ul class="re-contact-list">
+                  {#each candidates as item (item.entityId)}
+                    <li>
+                      <label class="re-contact">
+                        <input type="checkbox" checked={chosen.includes(item.entityId)}
+                               onchange={() => toggleContact(room.id, kind, item.entityId)} />
+                        <span class="re-name">{item.name}</span>
+                        <small class="re-meta">{item.entityId}</small>
+                      </label>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/each}
         </section>
         {/snippet}
         {#snippet addSection()}
@@ -974,135 +1098,6 @@
                 {/each}
               </button>
             </div>
-          {:else if view === 'advanced'}
-            <!-- Was die Raum-Kachel auf dem Home-Screen zeigt. Der Sensor kommt
-                 automatisch aus der HA-Bereichszuordnung; die Auswahl ist nur
-                 nötig, wenn mehrere infrage kommen oder HA nichts weiß. -->
-            <section class="ld-section">
-              <!-- Ein Klimagerät, das HA dem Raum zugeordnet hat, ist nicht
-                   immer seine Heizung — eine Wärmepumpe etwa. -->
-              {#if configuredClimateEntityId(room.id)}
-                {@const climateShown = !climateHidden(room.id)}
-                <div class="re-metric-box">
-                  <div class="re-row re-metric-head">
-                    <span class="re-icon" aria-hidden="true"><Icon name="i-thermostat" /></span>
-                    <span class="re-label">
-                      <span class="re-name">{m.room_display_climate()}</span>
-                      <small class="re-meta">{sensorName(configuredClimateEntityId(room.id))}</small>
-                    </span>
-                    <button class="re-toggle pressable" type="button" role="switch" aria-checked={climateShown}
-                            class:is-on={climateShown}
-                            aria-label={m.room_display_climate()}
-                            onclick={() => setClimateHidden(room.id, climateShown)}>
-                      <span class="re-toggle-knob"></span>
-                    </button>
-                  </div>
-                </div>
-              {/if}
-              {#each ['temperature', 'humidity'] as const as metric (metric)}
-                {@const candidates = roomSensorCandidates(room.id, metric)}
-                {@const others = otherSensorCandidates(room.id, metric)}
-                {@const auto = autoSensorId(room.id, metric)}
-                {@const chosen = sensorIdFor(room.id, metric)}
-                {@const shown = showsMetric(room.id, metric)}
-                <div class="re-metric-box">
-                  <div class="re-row re-metric-head">
-                    <span class="re-icon" aria-hidden="true">
-                      <Icon name={metric === 'temperature' ? 'i-thermometer' : 'i-water-percent'} />
-                    </span>
-                    <span class="re-label">
-                      <span class="re-name">{metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}</span>
-                      <small class="re-meta">
-                        {metric === 'temperature' ? m.room_display_temp_hint() : m.room_display_humidity_hint()}
-                      </small>
-                    </span>
-                    <button class="re-toggle pressable" type="button" role="switch" aria-checked={shown}
-                            class:is-on={shown}
-                            aria-label={metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}
-                            onclick={() => setShowsMetric(room.id, metric, !shown)}>
-                      <span class="re-toggle-knob"></span>
-                    </button>
-                  </div>
-
-                  {#if shown}
-                    <label class="re-metric-sensor">
-                      <span class="caps-label">{m.room_display_sensor()}</span>
-                      {#if candidates.length === 0 && others.length === 0 && !chosen}
-                        <p class="re-empty">{m.room_display_sensor_none()}</p>
-                      {:else}
-                        <select class="re-search" value={sensorIsAutomatic(room.id, metric) ? '' : chosen}
-                                onchange={(e) => setSensorId(room.id, metric, e.currentTarget.value || undefined)}>
-                          <option value="">
-                            {m.room_display_sensor_auto()}{auto ? ` · ${sensorName(auto)}` : ''}
-                          </option>
-                          {#each candidates as item (item.entityId)}
-                            <option value={item.entityId}>{item.name}</option>
-                          {/each}
-                          <!-- Der Rest des Hauses: ein selbst angelegter Raum hat
-                               keinen HA-Bereich, sein Fühler hängt woanders. -->
-                          {#if others.length > 0}
-                            <optgroup label={m.room_display_sensor_others()}>
-                              {#each others as item (item.entityId)}
-                                <option value={item.entityId}>{item.name}{item.area ? ` · ${item.area}` : ''}</option>
-                              {/each}
-                            </optgroup>
-                          {/if}
-                        </select>
-                      {/if}
-                    </label>
-                  {/if}
-                </div>
-              {/each}
-
-              <!-- Kontakte und Melder (docs/06 §5): sie speisen die
-                   Sicherheitsleiste der Tab-Bar. Auch hier kommt die Zuordnung
-                   automatisch aus dem HA-Bereich; angehakt wird nur, wenn sie
-                   abweichen soll. -->
-              {#each ['window', 'presence'] as const as kind (kind)}
-                {@const candidates = roomContactOptions(room.id, kind)}
-                {@const chosen = contactIdsFor(room.id, kind)}
-                <div class="re-metric-box">
-                  <div class="re-row re-metric-head">
-                    <span class="re-icon" aria-hidden="true">
-                      <Icon name={kind === 'window' ? 'i-window' : 'i-motion-sensor'} />
-                    </span>
-                    <span class="re-label">
-                      <span class="re-name">
-                        {kind === 'window' ? m.room_contacts_window() : m.room_contacts_presence()}
-                      </span>
-                      <small class="re-meta">
-                        {contactsAreAutomatic(room.id, kind)
-                          ? m.room_contacts_auto()
-                          : m.room_contacts_manual()}
-                      </small>
-                    </span>
-                    {#if !contactsAreAutomatic(room.id, kind)}
-                      <button class="secondary-btn pressable" type="button"
-                              onclick={() => setContactIds(room.id, kind, undefined)}>
-                        {m.room_contacts_reset()}
-                      </button>
-                    {/if}
-                  </div>
-
-                  {#if candidates.length === 0}
-                    <p class="re-empty">{m.room_contacts_none()}</p>
-                  {:else}
-                    <ul class="re-contact-list">
-                      {#each candidates as item (item.entityId)}
-                        <li>
-                          <label class="re-contact">
-                            <input type="checkbox" checked={chosen.includes(item.entityId)}
-                                   onchange={() => toggleContact(room.id, kind, item.entityId)} />
-                            <span class="re-name">{item.name}</span>
-                            <small class="re-meta">{item.entityId}</small>
-                          </label>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </div>
-              {/each}
-            </section>
           {:else}
             <section class="re-background-editor">
               <div class="re-background-preview" style:background-image={`url("${backgroundUrl}")`}
