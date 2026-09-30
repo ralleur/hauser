@@ -4424,8 +4424,9 @@ button.security-bar {
   white-space: nowrap;
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
 }
+/* Nur Kennungen aus HA stehen in Festbreite, Hinweise in der Hausschrift. */
+.re-meta.is-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .re-actions {
   flex: none;
   display: flex;

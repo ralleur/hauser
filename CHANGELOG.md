@@ -3,6 +3,17 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.35.1] - 2026-09-30
+
+### Fixed
+
+- **Room settings on the wall panel read calmly.** The column with the room's
+  devices now stands on the same solid surface as the settings next to it, so
+  the blueprint lines no longer run through names and values. Room image,
+  scenes and lamps stay at the top while only the settings below them scroll,
+  with room to breathe in between. Hints under these entries use Hauser's own
+  typeface instead of a typewriter font.
+
 ## [0.35.0] - 2026-09-29
 
 ### Changed

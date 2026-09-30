@@ -495,7 +495,7 @@
                         <span class="re-icon re-icon-add" aria-hidden="true"><Icon name="i-plus" cls="icon icon-md" /></span>
                         <span class="re-label">
                           <span class="re-name">{item.name}</span>
-                          <small class="re-meta">{item.entityId}</small>
+                          <small class="re-meta is-id">{item.entityId}</small>
                         </span>
                         {#if origin}<span class="re-tag">in {origin}</span>{/if}
                       </button>

@@ -814,7 +814,6 @@
             </button>
           </div>
         </section>
-        {@render advancedSection()}
         {/snippet}
         {#snippet advancedSection()}
         <!-- Wie in der iOS-App direkt unter den Einstiegen, ohne eigene Seite:
@@ -937,7 +936,7 @@
                         <input type="checkbox" checked={chosen.includes(item.entityId)}
                                onchange={() => toggleContact(room.id, kind, item.entityId)} />
                         <span class="re-name">{item.name}</span>
-                        <small class="re-meta">{item.entityId}</small>
+                        <small class="re-meta is-id">{item.entityId}</small>
                       </label>
                     </li>
                   {/each}
@@ -987,7 +986,7 @@
                       </span>
                       <span class="re-label">
                         <span class="re-name">{item.name}</span>
-                        <small class="re-meta">{item.entityId}</small>
+                        <small class="re-meta is-id">{item.entityId}</small>
                       </span>
                       <!-- Kategorie-Chip: bei 9 Domänen sieht man, WAS man hinzufügt -->
                       <span class="re-tag">{CATEGORY_LABELS[categoryOf(item.domain)]}</span>
@@ -1034,6 +1033,9 @@
             {@render mirrorHead()}
             {#if renameFailed}<p class="re-empty re-rename-failed" role="alert">{m.room_rename_failed()}</p>{/if}
             {@render quickSection()}
+            <!-- Kopf und Einstiege bleiben oben stehen, nur die Einstellungen
+                 darunter scrollen (hauser#27). -->
+            <div class="re-panel-side-scroll">{@render advancedSection()}</div>
           </div>
         {/if}
         {:else}
@@ -1047,6 +1049,7 @@
                Kachel genau dort steht, wo man sie bedient. -->
           <div class="room-sheet on-image re-mirror">{@render mirrorControls(false)}</div>
           {@render quickSection()}
+          {@render advancedSection()}
           {:else}
           <!-- Aus der Plus-Kachel: die Suche mit ihren Filtern. Ein Gerät, das
                schon in einem anderen Raum liegt, zieht dabei hierher um. -->

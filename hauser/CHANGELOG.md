@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.35.1 - 2026-09-30
+
+- Room settings on the wall panel: the device column stands on a solid surface
+  like the settings, room image, scenes and lamps stay at the top while the
+  settings below scroll, and hints use Hauser's own typeface.
+
 ## 0.35.0 - 2026-09-29
 
 - Room settings (heating, temperature, humidity, windows, motion) sit directly

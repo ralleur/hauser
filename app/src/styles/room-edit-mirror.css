@@ -126,14 +126,27 @@
   width: var(--re-column);
   max-width: 100%;
 }
+/* Seitenspalte: Kopf und Einstiege stehen fest, nur die Einstellungen
+   darunter scrollen, mit Luft und einer Linie dazwischen (hauser#27). */
 .room-edit.is-panel-mirror .re-panel-side {
   flex: 0 1 560px;
   min-width: 0;
   max-height: 100%;
   align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-5) var(--space-2);
+}
+.room-edit.is-panel-mirror .re-panel-side > * { flex: none; }
+.room-edit.is-panel-mirror .re-panel-side > .re-panel-side-scroll {
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--space-5) var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--overlay-border);
 }
 
 /* Auf der Blaupause stehen Spalte und Seitenspalte deckend (hauser#27): die
@@ -141,7 +154,7 @@
    Werte schwer lesbar. Die Karten darauf behalten ihr helles Glas. */
 .room-edit.is-panel-mirror { --re-mirror-face: var(--color-surface-1); }
 :root:not([data-card-style="standard"]) .room-edit.is-panel-mirror { --re-mirror-face: rgb(26, 28, 34); }
-:root .room-edit.room-edit.is-panel-mirror .re-panel-column .home-panel.on-image,
+:root .room-edit.room-edit.is-panel-mirror .home-panel.on-image.re-panel-column,
 :root .room-edit.room-edit.is-panel-mirror .re-panel-side {
   background: var(--re-mirror-face);
   -webkit-backdrop-filter: none;
