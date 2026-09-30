@@ -5236,13 +5236,15 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
 /* Eigene Fotos von vor 0.33 (R54) trugen abends und nachts dreimal das helle
    Tagbild: die Abendschaltung wechselte zwischen gleich hellen Bildern
    (simon42, Cpt.Hardy). Solche Sets rechnet der Server einmal nach — dasselbe
-   Rezept wie beim Hochladen. Bildsets sind unveränderlich und werden
-   `immutable` ausgeliefert, also entsteht ein neues Set, die Räume zeigen
-   darauf, das alte wird Tombstone. Was der Nutzer selbst gezeichnet hat,
-   bleibt unberührt. */
-export async function refreshBrightManualRoomImages(context) {
+   Rezept wie beim Hochladen, auch für Bilder, die nur in der Bibliothek
+   liegen. Bildsets sind unveränderlich und werden `immutable` ausgeliefert,
+   also entsteht ein neues Set, die Räume zeigen darauf, das alte wird
+   Tombstone. Was der Nutzer selbst gezeichnet hat, bleibt unberührt.
+   `onStart` erfährt vorab, welche Bilder es sind und an welchen Räumen sie
+   hängen — daraus wird die Meldung im Benachrichtigungsstreifen (0.36.0). */
+export async function refreshBrightManualRoomImages(context, { onStart = () => undefined } = {}) {
   const { assetStore, householdConfigPath } = context;
-  if (!assetStore || !householdConfigPath) return { status: 'skipped', refreshed: [], failed: [] };
+  if (!assetStore || !householdConfigPath) return { status: 'skipped', refreshed: [], failed: [], rooms: [] };
   const refreshed = [];
   const failed = [];
   const pending = assetStore.list()
@@ -5252,6 +5254,11 @@ export async function refreshBrightManualRoomImages(context) {
     .filter((entry) => entry && entry.files.dark.sha256 === entry.files.light.sha256
       && entry.files.darkOff.sha256 === entry.files.light.sha256
       && !manualOwnList(entry).has('dark') && !manualOwnList(entry).has('darkOff'));
+  if (pending.length === 0) return { status: 'ok', refreshed, failed, rooms: [] };
+  const household = readRoomImageHouseholdSnapshot(householdConfigPath).document;
+  const rooms = pending.flatMap((entry) => assignedRoomIds(household, entry.assetId))
+    .map((roomId) => (roomId === EXTERIOR_HERO_ID ? EXTERIOR_HERO_ID : household.rooms.find((room) => room.id === roomId)?.name ?? roomId));
+  onStart({ count: pending.length, rooms });
   for (const entry of pending) {
     const previousAssetId = entry.assetId;
     try {
@@ -5262,9 +5269,9 @@ export async function refreshBrightManualRoomImages(context) {
       Object.assign(variants, { dark: dark.panel, phoneDark: dark.phone, darkOff: darkOff.panel, phoneDarkOff: darkOff.phone });
       const done = await context.configMutations.run(async () => {
         context.assertSetupRecoveryHealthy();
+        if (!assetStore.activeEntry(previousAssetId)) return false;
         const snapshot = readRoomImageHouseholdSnapshot(householdConfigPath);
         const roomIds = assignedRoomIds(snapshot.document, previousAssetId);
-        if (roomIds.length === 0 || !assetStore.activeEntry(previousAssetId)) return false;
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
         const created = assetStore.publish(assetId, structuredClone(entry.focus), variants);
         assetStore.setManual(assetId, entry.manual ? structuredClone(entry.manual) : { own: ['light'] });
@@ -5272,24 +5279,27 @@ export async function refreshBrightManualRoomImages(context) {
         if (entry.files?.overcast) {
           assetStore.addOptionalVariant(assetId, 'overcast', assetStore.variantBytes(previousAssetId, 'overcast'));
         }
-        for (const roomId of roomIds) {
-          const room = heroTarget(snapshot.document, roomId);
-          room.hero = { ...room.hero, assetId: created.assetId };
-        }
-        try {
-          writeRoomImageHousehold(
-            householdConfigPath,
-            snapshot.document,
-            context.publishStep,
-            context.latchSetupRecoveryFailure,
-            context.assertSetupRecoveryHealthy,
-          );
-        } catch (error) {
+        /* Nur in der Bibliothek: kein Raum zeigt darauf, die Haushaltsdatei bleibt, wie sie ist. */
+        if (roomIds.length > 0) {
+          for (const roomId of roomIds) {
+            const room = heroTarget(snapshot.document, roomId);
+            room.hero = { ...room.hero, assetId: created.assetId };
+          }
           try {
-            assetStore.tombstone(created.assetId);
-            assetStore.deleteTombstonedFiles(created.assetId);
-          } catch { /* original config failure remains authoritative */ }
-          throw error;
+            writeRoomImageHousehold(
+              householdConfigPath,
+              snapshot.document,
+              context.publishStep,
+              context.latchSetupRecoveryFailure,
+              context.assertSetupRecoveryHealthy,
+            );
+          } catch (error) {
+            try {
+              assetStore.tombstone(created.assetId);
+              assetStore.deleteTombstonedFiles(created.assetId);
+            } catch { /* original config failure remains authoritative */ }
+            throw error;
+          }
         }
         try {
           assetStore.tombstone(previousAssetId);
@@ -5302,7 +5312,7 @@ export async function refreshBrightManualRoomImages(context) {
       failed.push(previousAssetId);
     }
   }
-  return { status: failed.length ? 'partial' : 'ok', refreshed, failed };
+  return { status: failed.length ? 'partial' : 'ok', refreshed, failed, rooms };
 }
 
 async function serveRoomImageAssetDelete(req, res, assetId, context) {

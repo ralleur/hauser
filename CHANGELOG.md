@@ -3,6 +3,32 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.37.2] - 2026-10-01
+
+### Added
+
+- **Hauser tells you when it updates older room images.** After an update,
+  Hauser recalculates the evening and night versions of room photos uploaded
+  before 0.33. While it works, the room-image sign turns in the header and a
+  notification says so; when it is done, a notification names the rooms that
+  now darken in the evening. The same message appears in the iOS app, and the
+  App log records how long it took.
+
+### Fixed
+
+- **Older photos in the image library darken too.** Photos that sat only in
+  the library, not assigned to a room, kept their bright evening versions and
+  stayed bright when picked again later.
+
+## [0.36.1] - 2026-09-30
+
+### Fixed
+
+- **The demo always shows the latest release.** Anyone who had opened the demo
+  before could keep seeing an older version, because the new one waited for a
+  confirmation the wall panel layout never offers. The demo now switches to the
+  new version right away.
+
 ## [0.36.0] - 2026-09-30
 
 ### Added

@@ -13,8 +13,12 @@ export function startPwaLifecycle(): void {
      Aktivierung für unbedenklich und lud die Seite deshalb mitten in der
      sichtbaren Nutzung neu — genau der Reload, den der Plan beseitigt. Es
      bleibt allein das Ambient-/Hidden-Gate: der Kiosk aktualisiert unverändert
-     von selbst, die sichtbare App fragt. */
-  const safeToActivate = () => ambientActive || document.visibilityState === 'hidden';
+     von selbst, die sichtbare App fragt. Die Demo hat keinen Zustand zu
+     schützen und fragt am Panel nirgends: wer sie wieder öffnet, bekäme sonst
+     den zwischengespeicherten alten Stand gezeigt. Dort übernimmt die neue
+     Fassung sofort. */
+  const alwaysSafe = import.meta.env.VITE_DEMO === '1';
+  const safeToActivate = () => alwaysSafe || ambientActive || document.visibilityState === 'hidden';
   let updateServiceWorker: (reloadPage?: boolean) => Promise<void> = async () => undefined;
   const coordinator = createPwaUpdateCoordinator(
     () => updateServiceWorker(true),

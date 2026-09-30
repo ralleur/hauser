@@ -15,6 +15,7 @@
    einem Neuladen nicht, deshalb der kleine Merkzettel im Gerätespeicher. */
 
 import { m } from '../../paraglide/messages.js';
+import type { NotificationAction } from './notifications.ts';
 import { notifications } from './notifications.svelte.ts';
 import { setRoomImageStage } from './room-image-activity.svelte.ts';
 import { ROOM_IMAGE_RESUME_KEY } from './room-image-wizard-state.ts';
@@ -22,6 +23,7 @@ import { ROOM_IMAGE_RESUME_KEY } from './room-image-wizard-state.ts';
 const SEEN_KEY = 'hmi:room-image-announced:v1';
 const JOB_INTERVAL_MS = 15_000;
 const FINISH_INTERVAL_MS = 20_000;
+const MAINTENANCE_INTERVAL_MS = 5_000;
 /* Der Feinschliff braucht ein bis zwei Minuten; nach einer Viertelstunde ist
    etwas anderes schiefgegangen, und der nächtliche Lauf übernimmt. */
 const FINISH_TRIES = 45;
@@ -53,7 +55,7 @@ function activeJobId(): string | null {
   } catch { return null; }
 }
 
-function announce(key: string, title: string, message: string, icon: string): void {
+function announce(key: string, title: string, message: string, icon: string, action: NotificationAction | undefined = 'room-image-wizard'): void {
   if (!remember(key)) return;
   notifications.pushLocal({
     id: key,
@@ -66,7 +68,7 @@ function announce(key: string, title: string, message: string, icon: string): vo
     priority: 60,
     createdAt: Date.now(),
     dedupeKey: key,
-    action: 'room-image-wizard',
+    ...(action ? { action } : {}),
   });
 }
 
@@ -109,7 +111,48 @@ export function watchRoomImageJobs(): () => void {
      hat deshalb Vorrang vor dem Jobzustand. Ohne diese eine Stelle löschte der
      nächste Durchgang die Anzeige, während noch gearbeitet wird. */
   function refreshStage(jobRunning: boolean): void {
-    setRoomImageStage(finishing.size > 0 ? 'regions' : jobRunning ? 'set' : null);
+    lastJobRunning = jobRunning;
+    setRoomImageStage(finishing.size > 0 ? 'regions' : jobRunning ? 'set' : darkening ? 'darken' : null);
+  }
+  let lastJobRunning = false;
+
+  /* Der Server rechnet nach einem Update Abend und Nacht alter eigener Fotos
+     nach (0.36.0). Er sagt unter /api/room-images/maintenance, ob das gerade
+     läuft oder in den letzten 24 Stunden fertig wurde; daraus wird dieselbe
+     Meldung wie beim Assistenten. Gefragt wird beim Start und, solange es
+     läuft, alle paar Sekunden — danach nicht mehr. */
+  let darkening = false;
+  let maintenanceTimer: ReturnType<typeof setTimeout> | undefined;
+  async function checkMaintenance(): Promise<void> {
+    if (stopped) return;
+    try {
+      const response = await fetch('/api/room-images/maintenance');
+      if (!response.ok) return;
+      const body = await response.json() as { id?: unknown; kind?: unknown; status?: unknown; rooms?: unknown };
+      if (body.kind !== 'darken' || typeof body.id !== 'string') return;
+      const rooms = (Array.isArray(body.rooms) ? body.rooms : [])
+        .filter((room): room is string => typeof room === 'string' && room.trim() !== '')
+        .map((room) => (room === 'exterior' ? m.notif_rimg_darken_exterior() : room));
+      const message = rooms.length > 0
+        ? m.notif_rimg_darken_msg({ rooms: [...new Set(rooms)].join(', ') })
+        : m.notif_rimg_darken_msg_library();
+      const runningKey = `room-image:darken:${body.id}:running`;
+      darkening = body.status === 'running';
+      refreshStage(lastJobRunning);
+      if (body.status === 'running') {
+        notifications.pushLocal({
+          id: runningKey, source: 'room-image', sourceLabel: m.notif_rimg_source(), type: 'info',
+          title: m.notif_rimg_darken_running_title(), message, icon: 'i-image', priority: 55,
+          createdAt: Date.now(), dedupeKey: runningKey, state: 'running',
+        });
+        maintenanceTimer = setTimeout(() => void checkMaintenance(), MAINTENANCE_INTERVAL_MS);
+        return;
+      }
+      if (body.status === 'done') {
+        if (notifications.items.some((item) => item.dedupeKey === runningKey)) notifications.dismiss(runningKey);
+        announce(`room-image:darken:${body.id}:done`, m.notif_rimg_darken_done_title(), message, 'i-image', undefined);
+      }
+    } catch { /* Netz weg: beim nächsten Start wieder. */ }
   }
 
   async function watchFinishing(assetId: string): Promise<void> {
@@ -143,9 +186,11 @@ export function watchRoomImageJobs(): () => void {
   }
 
   void tick();
+  void checkMaintenance();
   return () => {
     stopped = true;
     setRoomImageStage(null);
     if (timer !== undefined) clearTimeout(timer);
+    if (maintenanceTimer !== undefined) clearTimeout(maintenanceTimer);
   };
 }
