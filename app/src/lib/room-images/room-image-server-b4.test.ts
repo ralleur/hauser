@@ -663,9 +663,11 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     });
     const oldId = `manual_${'a'.repeat(32)}`;
     const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
-    store.publish(oldId, focus, {
-      light: avif, dark: avif, darkOff: avif, phoneLight: avif, phoneDark: avif, phoneDarkOff: avif,
-    });
+    const bright = { light: avif, dark: avif, darkOff: avif, phoneLight: avif, phoneDark: avif, phoneDarkOff: avif };
+    store.publish(oldId, focus, bright);
+    // Nur in der Bibliothek, keinem Raum zugewiesen — wird trotzdem nachgerechnet.
+    const libraryId = `manual_${'b'.repeat(32)}`;
+    store.publish(libraryId, focus, bright);
     const household = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
     household.rooms[0].hero = { assetId: oldId, focus };
     writeFileSync(householdConfigPath, `${JSON.stringify(household)}\n`);
@@ -683,6 +685,19 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect(Buffer.from(light).equals(Buffer.from(avif))).toBe(true);
     expect(Buffer.from(dark).equals(Buffer.from(avif))).toBe(false);
     expect((await fetch(`${app.base}/assets/room-images/${oldId}/light.avif`)).status).toBe(404);
+
+    let maintenance: any = null;
+    for (let attempt = 0; attempt < 100 && maintenance?.status !== 'done'; attempt += 1) {
+      maintenance = await (await fetch(`${app.base}/api/room-images/maintenance`)).json();
+      if (maintenance.status !== 'done') await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    expect(maintenance).toMatchObject({ kind: 'darken', status: 'done', count: 2, rooms: [household.rooms[0].name] });
+    expect((await fetch(`${app.base}/assets/room-images/${libraryId}/light.avif`)).status).toBe(404);
+    const library = JSON.parse(readFileSync(join(sandbox, 'config', 'room-images', 'assets.json'), 'utf8')).assets
+      .filter((entry: any) => entry.status === 'active' && entry.assetId.startsWith('manual_'));
+    expect(library).toHaveLength(2);
+    expect(library.every((entry: any) => entry.files.dark.sha256 !== entry.files.light.sha256)).toBe(true);
+    expect(JSON.parse(readFileSync(join(sandbox, 'config', 'room-image-maintenance.json'), 'utf8')).status).toBe('done');
   });
 
   it('accepts a manual room background from the exact direct-LAN request origin', async () => {

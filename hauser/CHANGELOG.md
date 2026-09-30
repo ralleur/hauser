@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.37.0 - 2026-09-30
+
+- When Hauser recalculates the evening and night versions of older room
+  photos after an update, a notification on the panel (and in the iOS app)
+  says so and names the rooms; the App log records the duration.
+- Older photos that sit only in the image library now darken in the evening
+  as well.
+
+## 0.36.1 - 2026-09-30
+
+- The demo always shows the latest release instead of an older copy kept by the
+  browser.
+
+## 0.36.0 - 2026-09-30
+
+- A new area in Home Assistant becomes a room: a new device there, or one that
+  moves there, appears in that room without running the setup again.
+
 ## 0.35.1 - 2026-09-30
 
 - Room settings on the wall panel: the device column stands on a solid surface

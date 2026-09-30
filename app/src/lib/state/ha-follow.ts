@@ -11,7 +11,14 @@
    das Gerät zurück. Gezogen wird deshalb nur bei einer Änderung in HA.
 
    Warum ein Stichtag: Was vor ihm schon in HA stand, hat die Einrichtung
-   gesehen und bewusst nicht gezeigt. Es darf nicht von selbst auftauchen. */
+   gesehen und bewusst nicht gezeigt. Es darf nicht von selbst auftauchen.
+
+   R56: Landet ein neues oder umgezogenes Gerät in einem Bereich, den Hauser
+   noch nie gesehen hat und für den es keinen Raum gibt, meldet der Abgleich
+   den Bereich als neu, statt ihn zu merken. Ist der Raum angelegt, läuft der
+   Abgleich noch einmal und das Gerät zieht ein. Ein Bereich, den Hauser schon
+   kannte, wird nie von selbst ein Raum — sonst käme ein gelöschter Raum
+   zurück. */
 
 import { assignDeviceRoom, roomIdForArea, type DeviceConfig, type EntityCatalogItem } from './device-config.ts';
 
@@ -51,6 +58,8 @@ export interface HaFollowResult {
   configChanged: boolean;
   /** Gemerkte Bereiche geändert? */
   stateChanged: boolean;
+  /** Bereiche, die ein Raum werden sollen, bevor ihre Geräte einziehen (R56). */
+  newAreas: string[];
 }
 
 /**
@@ -72,21 +81,34 @@ export function followHomeAssistant(
   let next = config;
   let configChanged = false;
   let stateChanged = previous === null;
+  const knownAreas = new Set(Object.values(previous?.areas ?? {}));
+  const newAreas = new Set<string>();
 
   for (const item of catalog) {
     const tracked = FOLLOW_DOMAINS.has(item.domain) || shown.has(item.entityId);
     if (!tracked || !item.area) continue;
     const area = item.area.trim();
+    if (!area) continue;
     const before = state.areas[item.entityId];
+    const target = roomIdForArea(area, rooms);
+    const override = next.devices[item.entityId];
+    const moved = before !== undefined && before !== area && shown.has(item.entityId);
+    const fresh = before === undefined
+      && FOLLOW_DOMAINS.has(item.domain)
+      && typeof item.createdAt === 'number' && item.createdAt > state.since
+      && !shown.has(item.entityId) && !override;
+
+    if (!target && (moved || fresh) && !knownAreas.has(area)) {
+      newAreas.add(area);
+      continue;
+    }
     if (before !== area) {
       state.areas[item.entityId] = area;
       stateChanged = true;
     }
-    const target = roomIdForArea(area, rooms);
     if (!target) continue;
-    const override = next.devices[item.entityId];
 
-    if (before !== undefined && before !== area && shown.has(item.entityId)) {
+    if (moved) {
       // Umgezogen: nur wenn Hauser das Gerät nicht schon dort zeigt.
       if (override?.roomId !== target) {
         next = assignDeviceRoom(next, item.entityId, target);
@@ -95,15 +117,11 @@ export function followHomeAssistant(
       continue;
     }
 
-    const fresh = before === undefined
-      && FOLLOW_DOMAINS.has(item.domain)
-      && typeof item.createdAt === 'number' && item.createdAt > state.since
-      && !shown.has(item.entityId) && !override;
     if (fresh) {
       next = assignDeviceRoom(next, item.entityId, target);
       configChanged = true;
     }
   }
 
-  return { config: next, state, configChanged, stateChanged };
+  return { config: next, state, configChanged, stateChanged, newAreas: [...newAreas] };
 }

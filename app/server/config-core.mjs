@@ -1367,6 +1367,67 @@ export async function serveHouseholdRoomName(req, res, context) {
   }
 }
 
+/* R56: Ein neuer Bereich in Home Assistant wird ein Raum. Der Name folgt der
+   Regel des Umbenennens; die Kennung entsteht wie in der Einrichtung aus dem
+   Namen. Gibt es den Raum schon (gleicher Name, Groß-/Kleinschreibung egal),
+   bleibt der Haushalt unverändert — zwei Panels, die denselben Bereich
+   gleichzeitig sehen, legen ihn so nur einmal an. */
+const ROOM_ID_RESERVED = new Set(Object.getOwnPropertyNames(Object.prototype).map((key) => key.toLowerCase()));
+
+export function roomIdFromName(name, used) {
+  const base = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'room';
+  const safe = ROOM_ID_RESERVED.has(base) ? `${base}_1` : base;
+  let candidate = safe;
+  let suffix = 2;
+  while (used.has(candidate)) candidate = `${safe}_${suffix++}`;
+  return candidate;
+}
+
+export async function serveHouseholdRoomCreate(req, res, context) {
+  try {
+    context.assertSetupRecoveryHealthy();
+    const payload = await readRoomImageJsonBody(req);
+    const request = normalizeRoomRename({ roomId: 'new', name: payload?.name });
+    if (!request) {
+      return jsonResponse(res, 400, { ok: false, code: 'INVALID_REQUEST', message: 'Der Raumname ist ungültig.' });
+    }
+    const matches = rawHeaderValues(req, 'if-match');
+    if (matches.length !== 1) {
+      return jsonResponse(res, 428, { ok: false, code: 'CONFIG_PRECONDITION_REQUIRED', message: 'Der Household-ETag fehlt.' });
+    }
+    const result = await context.configMutations.run(() => {
+      context.assertSetupRecoveryHealthy();
+      const snapshot = readRoomImageHouseholdSnapshot(context.householdConfigPath);
+      const document = snapshot.document;
+      const rooms = Array.isArray(document.rooms) ? document.rooms : [];
+      const wanted = request.name.toLowerCase();
+      const existing = rooms.find((room) => typeof room?.name === 'string' && room.name.trim().toLowerCase() === wanted);
+      if (existing) return { type: 'existing', roomId: existing.id, name: existing.name, etag: snapshot.etag };
+      if (matches[0] !== snapshot.etag) return { type: 'stale' };
+      const roomId = roomIdFromName(request.name, new Set(rooms.map((room) => room?.id)));
+      document.rooms = [...rooms, { id: roomId, name: request.name, visibleEntities: [], hero: null }];
+      const written = writeRoomImageHousehold(
+        context.householdConfigPath,
+        document,
+        context.publishStep,
+        context.latchSetupRecoveryFailure,
+        context.assertSetupRecoveryHealthy,
+      );
+      return { type: 'written', roomId, name: request.name, etag: written.etag };
+    });
+    if (result.type === 'stale') {
+      return jsonResponse(res, 412, { ok: false, code: 'CONFIG_PRECONDITION_FAILED', message: 'Die Household Config wurde zwischenzeitlich geändert.' });
+    }
+    jsonResponse(res, result.type === 'written' ? 201 : 200, {
+      ok: true, created: result.type === 'written', roomId: result.roomId, name: result.name, etag: result.etag,
+    });
+  } catch (error) {
+    console.warn('[hauser] Raum anlegen fehlgeschlagen:', error?.code ?? error);
+    jsonResponse(res, 500, { ok: false, code: 'ROOM_CREATE_FAILED', message: 'Der Raum konnte nicht angelegt werden.' });
+  }
+}
+
 export async function serveHouseholdEnergy(req, res, context) {
   try {
     context.assertSetupRecoveryHealthy();
