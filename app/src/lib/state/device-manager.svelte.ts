@@ -124,6 +124,24 @@ function followHa(items: readonly EntityCatalogItem[]): void {
     deviceManager.config = result.config;
     saveDeviceConfig(result.config);
   }
+  const areas = result.newAreas.filter((area) => !roomsAsked.has(area));
+  if (areas.length) void addRoomsForAreas(areas, items);
+}
+
+/* R56: Jeder neue Bereich wird je Sitzung einmal angefragt — scheitert es,
+   bleibt das Gerät wie bisher im Katalog, bis die Seite neu lädt. */
+const roomsAsked = new Set<string>();
+
+async function addRoomsForAreas(areas: readonly string[], items: readonly EntityCatalogItem[]): Promise<void> {
+  for (const area of areas) roomsAsked.add(area);
+  const { createRoomForArea } = await import('./room-create.ts');
+  // Nacheinander: jeder Raum ändert den ETag, den der nächste braucht.
+  let created = false;
+  for (const area of areas) created = (await createRoomForArea(area)) || created;
+  if (!created) return;
+  applyProjection();
+  followHa(items);
+  applyProjection();
 }
 
 function applyProjection(): void {

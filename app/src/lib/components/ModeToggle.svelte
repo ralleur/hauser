@@ -32,7 +32,8 @@
      sagt daneben knapp, woran gerade gearbeitet wird (Paket 13). */
   const busyText = $derived(roomImageActivity.stage === 'set'
     ? m.mode_busy_set()
-    : roomImageActivity.stage === 'regions' ? m.mode_busy_regions() : null);
+    : roomImageActivity.stage === 'regions' ? m.mode_busy_regions()
+      : roomImageActivity.stage === 'darken' ? m.mode_busy_darken() : null);
   const action = $derived(editMode.active ? m.mode_switch_to_user() : m.mode_switch_to_edit());
   const lockedHint = $derived(m.mode_hint_locked({ mark: MARK }).split(MARK));
   const switched = $derived(modeNotice.kind === 'edit' || modeNotice.kind === 'user');

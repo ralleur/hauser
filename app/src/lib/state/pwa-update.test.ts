@@ -10,8 +10,10 @@ describe('PWA update activation', () => {
   it('never activates a waiting worker while the app is visible', () => {
     const lifecycle = readFileSync(new URL('./pwa-lifecycle.ts', import.meta.url), 'utf8');
     expect(lifecycle).toMatch(
-      /const safeToActivate = \(\) => ambientActive \|\| document\.visibilityState === 'hidden'/,
+      /const safeToActivate = \(\) => alwaysSafe \|\| ambientActive \|\| document\.visibilityState === 'hidden'/,
     );
+    // Nur die Demo übernimmt sofort; im Produktionsbundle ist das konstant false.
+    expect(lifecycle).toMatch(/const alwaysSafe = import\.meta\.env\.VITE_DEMO === '1'/);
     // Auf Code gepruefte Abwesenheit — der erklaerende Kommentar darf den
     // Namen weiterhin nennen.
     expect(lifecycle).not.toMatch(/let startupSafe/);

@@ -87,3 +87,38 @@ describe('Raum umbenennen', () => {
     expect((await putName(base, etag, { roomId: 'den', name: 'Flur' }, 'http://fremd.example')).status).toBe(403);
   });
 });
+
+function postRoom(base: string, etag: string, body: unknown, origin = ORIGIN) {
+  return fetch(`${base}/api/household-room`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'if-match': etag, origin },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('R56: Raum für einen neuen HA-Bereich anlegen', () => {
+  it('legt den Raum einmal an, auch wenn zwei Panels ihn gleichzeitig melden', async () => {
+    const { base, householdConfigPath } = await start();
+    const etag = await etagOf(base);
+    const [first, second] = await Promise.all([postRoom(base, etag, { name: ' Küche  Süd ' }), postRoom(base, etag, { name: 'küche süd' })]);
+    const bodies = [await first.json(), await second.json()];
+    expect([first.status, second.status].sort()).toEqual([200, 201]);
+    expect(bodies.map((body) => body.roomId)).toEqual(['kuche_sud', 'kuche_sud']);
+    const household = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(household.rooms.filter((room: { name: string }) => room.name.toLowerCase() === 'küche süd')).toHaveLength(1);
+    expect(household.rooms.at(-1)).toEqual({ id: 'kuche_sud', name: 'Küche Süd', visibleEntities: [], hero: null });
+  });
+
+  it('vergibt eine freie Kennung und weist leere, zu lange und fremde Eingaben ab', async () => {
+    const { base } = await start();
+    const created = await postRoom(base, await etagOf(base), { name: 'den!' });
+    expect(created.status).toBe(201);
+    expect((await created.json()).roomId).toBe('den_2');
+    const etag = await etagOf(base);
+    for (const body of [{ name: '   ' }, { name: 'x'.repeat(61) }, {}, ['Flur']]) {
+      expect((await postRoom(base, etag, body)).status).toBe(400);
+    }
+    expect((await postRoom(base, '"veraltet"', { name: 'Flur' })).status).toBe(412);
+    expect((await postRoom(base, etag, { name: 'Flur' }, 'http://fremd.example')).status).toBe(403);
+  });
+});

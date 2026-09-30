@@ -1,4 +1,4 @@
-import { existsSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -117,6 +117,7 @@ import {
   serveHouseholdEnergy,
   serveHouseholdEnergyMarks,
   serveHouseholdRoomName,
+  serveHouseholdRoomCreate,
   serveHouseholdModuleToggle,
   setupRecoveryFailure,
   setupRecoveryRequiredError,
@@ -760,15 +761,44 @@ export function createHmiServer(
     },
   ];
   /* Eigene Fotos von vor 0.33 bekommen ihre dunklen Fassungen nachgerechnet —
-     beim Start und, falls da etwas dazwischenkam, jede Nacht erneut. */
+     beim Start und, falls da etwas dazwischenkam, jede Nacht erneut. Was
+     gerade läuft oder in den letzten 24 Stunden fertig wurde, steht unter
+     /api/room-images/maintenance: Panel, Telefon und iOS-App machen daraus
+     dieselbe Meldung im Benachrichtigungsstreifen. Die fertige Meldung liegt
+     neben der Haushaltsdatei, damit ein Panel, das erst nach dem Update
+     aufwacht, sie noch sieht. */
+  const MAINTENANCE_KEEP_MS = 24 * 60 * 60 * 1000;
+  const maintenancePath = householdConfigPath ? join(dirname(householdConfigPath), 'room-image-maintenance.json') : null;
+  let roomImageMaintenance = null;
+  try {
+    const stored = maintenancePath && existsSync(maintenancePath) ? JSON.parse(readFileSync(maintenancePath, 'utf8')) : null;
+    if (stored?.status === 'done' && Number.isFinite(stored.finishedAt)) roomImageMaintenance = stored;
+  } catch { roomImageMaintenance = null; }
+  const currentRoomImageMaintenance = () => {
+    if (roomImageMaintenance?.status === 'done' && Date.now() - roomImageMaintenance.finishedAt > MAINTENANCE_KEEP_MS) return null;
+    return roomImageMaintenance;
+  };
   const manualDarkenContext = {
     assetStore: roomImageAssets, householdConfigPath, configMutations,
     publishStep: roomImagePublishStep, latchSetupRecoveryFailure, assertSetupRecoveryHealthy,
   };
   const refreshManualDarken = async () => {
     if (!setupRecoveryResult.ok || !roomImageAssets) return { status: 'skipped', reason: 'no-assets' };
-    const result = await refreshBrightManualRoomImages(manualDarkenContext);
-    if (result.refreshed?.length) console.log(`[hauser] Abend und Nacht nachgerechnet fuer ${result.refreshed.length} eigene(s) Raumbild(er).`);
+    const startedAt = Date.now();
+    const result = await refreshBrightManualRoomImages(manualDarkenContext, {
+      onStart: ({ count, rooms }) => {
+        roomImageMaintenance = { id: `darken-${startedAt}`, kind: 'darken', status: 'running', count, rooms, startedAt };
+        console.log(`[hauser] Rechne Abend und Nacht fuer ${count} alte(s) eigene(s) Raumbild(er) nach${rooms.length ? ` (${rooms.join(', ')})` : ''} ...`);
+      },
+    });
+    if (result.refreshed?.length) {
+      const finishedAt = Date.now();
+      roomImageMaintenance = { ...roomImageMaintenance, status: 'done', count: result.refreshed.length, finishedAt };
+      try { if (maintenancePath) writeFileSync(maintenancePath, `${JSON.stringify(roomImageMaintenance)}\n`, { mode: 0o600 }); } catch { /* Die Meldung lebt dann bis zum nächsten Neustart. */ }
+      console.log(`[hauser] Abend und Nacht nachgerechnet fuer ${result.refreshed.length} eigene(s) Raumbild(er) in ${Math.max(1, Math.round((finishedAt - startedAt) / 1000))} s.`);
+    } else if (roomImageMaintenance?.status === 'running') {
+      roomImageMaintenance = null;
+    }
     return { status: result.status, refreshed: result.refreshed?.length ?? 0, failed: result.failed?.length ?? 0 };
   };
   precomputeTasks.push({ name: 'manual-darken', run: refreshManualDarken });
@@ -947,6 +977,8 @@ export function createHmiServer(
       serveHmiHealth(req, res, readinessOptions);
     } else if ((req.url || '') === '/api/build-info') {
       serveBuildInfo(req, res, buildInfo);
+    } else if ((req.url || '') === '/api/room-images/maintenance' && req.method === 'GET') {
+      jsonResponse(res, 200, currentRoomImageMaintenance() ?? { status: 'idle' });
     } else if ((req.url || '') === '/api/ha/connection'
         && setupReadRequestAllowed(req, allowedOrigins)) {
       /* Sanitisierte Laufzeitauskunft: sagt Oberfläche und Runtime, ob dieser
@@ -1024,6 +1056,18 @@ export function createHmiServer(
       });
     } else if ((req.url || '').split('?')[0] === '/api/household-room-name') {
       jsonResponse(res, 403, { ok: false, code: 'ROOM_RENAME_FORBIDDEN', message: 'Raum umbenennen nicht freigegeben.' });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room' && req.method === 'POST'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdRoomCreate(req, res, {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room') {
+      jsonResponse(res, 403, { ok: false, code: 'ROOM_CREATE_FORBIDDEN', message: 'Raum anlegen nicht freigegeben.' });
     } else if ((req.url || '').split('?')[0] === '/api/household-energy-marks' && req.method === 'PUT'
         && requestOriginAllowed(req, allowedOrigins)
         && normalizedHouseholdConfigMode === 'active') {

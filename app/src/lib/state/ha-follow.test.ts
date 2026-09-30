@@ -77,6 +77,37 @@ describe('R43: Hauser folgt Home Assistant', () => {
     expect(result.configChanged).toBe(false);
   });
 
+  it('R56: ein neues Licht in einem neuen Bereich meldet den Bereich, statt ihn zu merken', () => {
+    const catalog = [item('light.keller', ' Keller ', since + DAY), item('light.keller_2', 'Keller', since + DAY)];
+    const first = followHomeAssistant(empty, catalog, rooms, new Set(), state({}), since + 2 * DAY);
+    expect(first.newAreas).toEqual(['Keller']);
+    expect(first.state.areas).toEqual({});
+    // Steht der Raum, zieht das Licht im zweiten Lauf ein.
+    const second = followHomeAssistant(empty, catalog, [...rooms, { id: 'keller', name: 'Keller' }], new Set(), first.state, since + 2 * DAY);
+    expect(second.newAreas).toEqual([]);
+    expect(second.config.devices['light.keller']).toEqual({ visible: true, roomId: 'keller' });
+    expect(second.config.devices['light.keller_2']).toEqual({ visible: true, roomId: 'keller' });
+  });
+
+  it('R56: ein gezeigtes Gerät, das in einen neuen Bereich umzieht, meldet ihn ebenfalls', () => {
+    const result = followHomeAssistant(empty, [item('light.a', 'Garten')], rooms, new Set(['light.a']), state({ 'light.a': 'Flur' }), since + DAY);
+    expect(result.newAreas).toEqual(['Garten']);
+    expect(result.state.areas['light.a']).toBe('Flur');
+  });
+
+  it('R56: ein bekannter Bereich ohne Raum wird nicht von selbst wieder ein Raum', () => {
+    // „Garage" war schon bekannt; ihr Raum wurde in Hauser gelöscht.
+    const result = followHomeAssistant(empty, [item('light.neu', 'Garage', since + DAY)], rooms, new Set(), state({ 'switch.tor': 'Garage' }), since + 2 * DAY);
+    expect(result.newAreas).toEqual([]);
+    expect(result.configChanged).toBe(false);
+  });
+
+  it('R56: Altbestand, Sensoren und Bereiche aus Leerzeichen melden keinen Raum', () => {
+    const catalog = [item('light.alt', 'Keller', since - DAY), item('sensor.neu', 'Keller', since + DAY), item('light.leer', '   ', since + DAY)];
+    const result = followHomeAssistant(empty, catalog, rooms, new Set(), state({}), since + 2 * DAY);
+    expect(result.newAreas).toEqual([]);
+  });
+
   it('verwirft kaputte gespeicherte Stände', () => {
     expect(parseHaFollowState(null)).toBeNull();
     expect(parseHaFollowState('{')).toBeNull();

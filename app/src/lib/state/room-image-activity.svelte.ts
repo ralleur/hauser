@@ -9,7 +9,8 @@
    Seiten — vom Assistenten, der den Auftrag startet und es sofort weiß, und
    vom Wächter, der es nach einem Neuladen wiederfindet. */
 
-export type RoomImageStage = 'set' | 'regions';
+/* `darken`: der Server rechnet Abend und Nacht alter eigener Fotos nach (0.36.0). */
+export type RoomImageStage = 'set' | 'regions' | 'darken';
 
 export const roomImageActivity = $state({
   /** `null` heißt: gerade entsteht nichts. */
