@@ -3,6 +3,16 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.36.0] - 2026-09-30
+
+### Added
+
+- **A new area in Home Assistant becomes a room.** When a new light, switch,
+  cover or vacuum shows up in an area Hauser has never seen, or a device on
+  the panel moves there, Hauser adds the room on its own and puts the device
+  in it, without running the setup again. The room starts without an image.
+  An area whose room you removed in Hauser does not come back by itself.
+
 ## [0.35.1] - 2026-09-30
 
 ### Fixed

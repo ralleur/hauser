@@ -117,6 +117,7 @@ import {
   serveHouseholdEnergy,
   serveHouseholdEnergyMarks,
   serveHouseholdRoomName,
+  serveHouseholdRoomCreate,
   serveHouseholdModuleToggle,
   setupRecoveryFailure,
   setupRecoveryRequiredError,
@@ -1024,6 +1025,18 @@ export function createHmiServer(
       });
     } else if ((req.url || '').split('?')[0] === '/api/household-room-name') {
       jsonResponse(res, 403, { ok: false, code: 'ROOM_RENAME_FORBIDDEN', message: 'Raum umbenennen nicht freigegeben.' });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room' && req.method === 'POST'
+        && requestOriginAllowed(req, allowedOrigins)
+        && normalizedHouseholdConfigMode === 'active') {
+      void serveHouseholdRoomCreate(req, res, {
+        householdConfigPath,
+        configMutations,
+        publishStep: roomImagePublishStep,
+        latchSetupRecoveryFailure,
+        assertSetupRecoveryHealthy,
+      });
+    } else if ((req.url || '').split('?')[0] === '/api/household-room') {
+      jsonResponse(res, 403, { ok: false, code: 'ROOM_CREATE_FORBIDDEN', message: 'Raum anlegen nicht freigegeben.' });
     } else if ((req.url || '').split('?')[0] === '/api/household-energy-marks' && req.method === 'PUT'
         && requestOriginAllowed(req, allowedOrigins)
         && normalizedHouseholdConfigMode === 'active') {

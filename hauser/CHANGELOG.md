@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.36.0 - 2026-09-30
+
+- A new area in Home Assistant becomes a room: a new device there, or one that
+  moves there, appears in that room without running the setup again.
+
 ## 0.35.1 - 2026-09-30
 
 - Room settings on the wall panel: the device column stands on a solid surface

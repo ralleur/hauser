@@ -14,11 +14,12 @@ import { ImportType, init, parse } from 'es-module-lexer';
    reichlich Luft, und ein Gate, das großzügiger ist als sein Dokument, ist kein
    Gate. ADR-034 hebt den kombinierten Startpfad auf 115 KiB, mit Startmessung
    als Beleg; ADR-035 auf 118 KiB, ADR-036 auf 119 KiB (Niederländisch,
-   Thermostat als Raumklima). */
+   Thermostat als Raumklima), ADR-037 auf 120 KiB (neuer HA-Bereich wird ein
+   Raum). */
 export const DEFAULT_BUDGETS = Object.freeze({
   initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
-  combinedPhoneStartupJsGzipBytes: 119 * 1024,
+  combinedPhoneStartupJsGzipBytes: 120 * 1024,
 });
 
 function emptyReport(budgets) {
