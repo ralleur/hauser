@@ -3,6 +3,33 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.38.0] - 2026-10-02
+
+### Added
+
+- **Rain shows on the lock screen icon, and outside pictures get the
+  weather too.** The weather line on the lock screen shows sun, clouds, rain
+  or snow as it is outside instead of a fixed sun. A new room setting,
+  “Weather across the whole image”, lets rain and snow fall over a garden or
+  terrace picture instead of only inside drawn windows — on the panel and in
+  the iOS app.
+- **CO₂ next to temperature and humidity.** Room settings have a CO₂ switch;
+  the room tile on the panel, the value strip on the phone and the iOS app
+  then show the room's CO₂ sensor in ppm.
+- **Glass light.** Under Appearance → Card style a third option keeps the
+  glass look with fewer effects, for tablets where the full glass stutters.
+
+### Fixed
+
+- Fuel stations from the Tankerkönig integration no longer appear under
+  “Windows and doors” — their “open” sensor describes opening hours, not a
+  door. A station that was already listed disappears on its own.
+- When a stored lock screen layout made the clock or week wider than the
+  screen, arranging it left the element hanging over both edges. Elements now
+  shrink a step until they fit, on the panel and in the iOS app.
+- The central temperature control explains how to get the room list back
+  when a single climate entity is selected.
+
 ## [0.37.2] - 2026-10-01
 
 ### Added

@@ -34,7 +34,7 @@
   import { heroWeatherLayer, resolvedWeatherCondition } from '../state/hero-weather.ts';
   import { simulation } from '../state/simulation.svelte.ts';
   import { prefersReducedMotion } from '../motion/index.ts';
-  import type { TempTrend } from '../state/weather.ts';
+  import { weatherConditionIcon, type TempTrend } from '../state/weather.ts';
   import Icon from './Icon.svelte';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
   import {
@@ -363,9 +363,9 @@
      Deep Night zeigt weiter ausschließlich die gedämpfte Uhr. */
   const weatherLayer = $derived.by(() => {
     if (!settingsValues.ambientWeather || deepNight) return null;
-    const condition = resolvedWeatherCondition(simulation.weather, location.search, outdoor.condition);
-    return heroWeatherLayer(condition, outdoor.windSpeed, prefersReducedMotion());
+    return heroWeatherLayer(currentCondition, outdoor.windSpeed, prefersReducedMotion());
   });
+  const currentCondition = $derived(resolvedWeatherCondition(simulation.weather, location.search, outdoor.condition));
 
   /* ── Stadtplan-Hintergrund (docs/18 §8): rein dekorativ, gerätelokal
      eingeschaltet und nur mit fertigem Serverasset. Deep Night zeigt weiter
@@ -561,10 +561,7 @@
     /* Ein gespeicherter Stand von fremder Hand kann Elemente aus dem Bild
        schieben; beim Anordnen kommen sie zurück, damit sie greifbar sind. */
     await tick();
-    for (const el of STANDBY_ELEMENTS) {
-      const entry = draft?.[el];
-      if (entry) draft[el] = { ...entry, ...clamped(el, entry.x, entry.y) };
-    }
+    for (const el of STANDBY_ELEMENTS) if (draft?.[el]) await fit(el);
   }
   function finishEdit(): void {
     layout = draft && Object.keys(draft).length ? structuredClone($state.snapshot(draft)) : null;
@@ -640,7 +637,20 @@
     if (size === draft[el].size) return;
     draft[el] = { ...draft[el], size };
     await tick();
-    draft[el] = { ...draft[el], ...clamped(el, draft[el].x, draft[el].y) };
+    await fit(el);
+  }
+  /* Größer als die Fläche darf nichts werden (Stresshaus #20: eine Uhr in
+     Stufe 5 mit französischem Datum war breiter als 1280 px und stand dann
+     mittig über beiden Rändern). Passt es nicht, eine Stufe kleiner, dann
+     an den Rand holen. */
+  async function fit(el: StandbyElement): Promise<void> {
+    let e = extents(el);
+    while (draft?.[el] && draft[el].size > STANDBY_SIZE_MIN && (e.left + e.right > 100 || e.top + e.bottom > 100)) {
+      draft[el] = { ...draft[el], size: draft[el].size - 1 };
+      await tick();
+      e = extents(el);
+    }
+    if (draft?.[el]) draft[el] = { ...draft[el], ...clamped(el, draft[el].x, draft[el].y, e) };
   }
 
   /* Das Menü folgt dem gewählten Element und wechselt die Seite, sobald es
@@ -670,7 +680,7 @@
       {#if outdoor.temp !== null}
         {@const arrow = trendIcon(outdoor.trend)}
         <span class="ambient-temp" aria-label={m.ambient_temp_aria({ temp: fmtTemp(outdoor.temp), trend: trendLabel(outdoor.trend) })}>
-          <Icon name="i-sun-thermometer-outline" cls="ambient-temp-icon" />
+          <Icon name={weatherConditionIcon(currentCondition)} cls="ambient-temp-icon" />
           <span class="num">{fmtTemp(outdoor.temp)}°</span>
           {#if arrow}<Icon name={arrow} cls="ambient-temp-trend" />{/if}
         </span>

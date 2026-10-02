@@ -51,10 +51,14 @@
     climateInline,
     setCameraSplit,
     setClimateHidden,
+    setWeatherWholeImage,
+    weatherWholeImage,
     setContactIds,
     setSensorId,
     setShowsMetric,
     showsMetric,
+    ROOM_METRICS,
+    type RoomMetric,
   } from '../state/room-display-config.svelte.ts';
   import { configuredClimateEntityId } from '../state/entities.ts';
   import type { RoomContactKind } from '../state/commands.ts';
@@ -142,6 +146,11 @@
   });
 
   // Anzeigename eines Sensors aus dem Katalog; unbekannt → die entity_id.
+  const METRIC_ICON: Record<RoomMetric, string> = { temperature: 'i-thermometer', humidity: 'i-water-percent', co2: 'i-molecule-co2' };
+  function metricLabel(metric: RoomMetric): string {
+    return metric === 'temperature' ? m.room_display_temp() : metric === 'humidity' ? m.room_display_humidity() : m.room_display_co2();
+  }
+
   function sensorName(entityId: string): string {
     return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
   }
@@ -841,7 +850,22 @@
               </div>
             </div>
           {/if}
-          {#each ['temperature', 'humidity'] as const as metric (metric)}
+          <div class="re-metric-box">
+            <div class="re-row re-metric-head">
+              <span class="re-icon" aria-hidden="true"><Icon name="i-weather-rainy" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_display_weather_whole()}</span>
+                <small class="re-meta">{m.room_display_weather_whole_hint()}</small>
+              </span>
+              <button class="re-toggle pressable" type="button" role="switch" aria-checked={weatherWholeImage(room.id)}
+                      class:is-on={weatherWholeImage(room.id)}
+                      aria-label={m.room_display_weather_whole()}
+                      onclick={() => setWeatherWholeImage(room.id, !weatherWholeImage(room.id))}>
+                <span class="re-toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+          {#each ROOM_METRICS as metric (metric)}
             {@const candidates = roomSensorCandidates(room.id, metric)}
             {@const others = otherSensorCandidates(room.id, metric)}
             {@const auto = autoSensorId(room.id, metric)}
@@ -850,17 +874,17 @@
             <div class="re-metric-box">
               <div class="re-row re-metric-head">
                 <span class="re-icon" aria-hidden="true">
-                  <Icon name={metric === 'temperature' ? 'i-thermometer' : 'i-water-percent'} />
+                  <Icon name={METRIC_ICON[metric]} />
                 </span>
                 <span class="re-label">
-                  <span class="re-name">{metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}</span>
+                  <span class="re-name">{metricLabel(metric)}</span>
                   <small class="re-meta">
                     {metric === 'temperature' ? m.room_display_temp_hint() : m.room_display_humidity_hint()}
                   </small>
                 </span>
                 <button class="re-toggle pressable" type="button" role="switch" aria-checked={shown}
                         class:is-on={shown}
-                        aria-label={metric === 'temperature' ? m.room_display_temp() : m.room_display_humidity()}
+                        aria-label={metricLabel(metric)}
                         onclick={() => setShowsMetric(room.id, metric, !shown)}>
                   <span class="re-toggle-knob"></span>
                 </button>

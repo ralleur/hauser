@@ -9,6 +9,21 @@
 export type TempTrend = 'rising' | 'steady' | 'falling';
 export type WeatherCondition = 'sunny' | 'rainy' | 'snowy' | 'cloudy';
 
+/* Symbol der Wetterzeile im Ruhebild: dieselbe Lage, die auch Regen und
+   Schnee über die Tafel zieht — vorher stand dort immer die Sonne, auch wenn
+   es regnete (simon42-Forum, Cpt.Hardy 2026-10-01). Ohne Lage bleibt das
+   neutrale Thermometer. */
+const CONDITION_ICONS: Record<WeatherCondition, string> = {
+  sunny: 'i-weather-sunny',
+  cloudy: 'i-weather-cloudy',
+  rainy: 'i-weather-rainy',
+  snowy: 'i-weather-snowy',
+};
+
+export function weatherConditionIcon(condition: WeatherCondition | null | undefined): string {
+  return condition ? CONDITION_ICONS[condition] : 'i-sun-thermometer-outline';
+}
+
 /* Beispielort der Demo (Köln, grob gerundet) — im Betrieb kommt der Ort aus
    Home Assistant, siehe server/weather.mjs. */
 export const DEMO_COORDS = { latitude: 50.94, longitude: 6.96 } as const;

@@ -21,6 +21,19 @@ describe('REST-Zugang für Widgets', () => {
     await expect(service.command({ domain: 'light', service: 'turn_on', entityId: 'light.flur', data: {} })).rejects.toMatchObject({ code: 'HA_UNAVAILABLE' });
   });
 
+  it('ordnet HAs Antwort ein: überlastet ist ein Zustand, abgelehnt trägt den Grund (Stresshaus #23)', async () => {
+    const answer = (status: number, message = '') => createAppCommandService({
+      resolveAccess: () => ({ baseUrl: 'http://ha.local:8123', token: 'T' }),
+      fetchImpl: async () => ({ ok: false, status, json: async () => ({ message }) }),
+    });
+    const cmd = { domain: 'climate', service: 'set_temperature', entityId: 'climate.bad', data: { temperature: 99 } };
+    await expect(answer(503, 'Unruhe').command(cmd)).rejects.toMatchObject({ code: 'HA_UNAVAILABLE', status: 503 });
+    await expect(answer(400, 'Temperatur außerhalb des Bereichs').command(cmd)).rejects.toMatchObject({ code: 'HA_REJECTED', status: 422, message: 'Temperatur außerhalb des Bereichs' });
+    await expect(answer(500, 'kaputt').command(cmd)).rejects.toMatchObject({ code: 'HA_ERROR', status: 502 });
+    const offline = createAppCommandService({ resolveAccess: () => ({ baseUrl: 'http://ha.local', token: 'T' }), fetchImpl: async () => { throw new Error('timeout'); } });
+    await expect(offline.command(cmd)).rejects.toMatchObject({ code: 'HA_UNAVAILABLE' });
+  });
+
   it('listet Bewohner aus person.*', async () => {
     const service = createAppCommandService({
       resolveAccess: () => ({ baseUrl: 'http://ha.local:8123', token: 'T' }),

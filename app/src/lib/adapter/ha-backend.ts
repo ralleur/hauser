@@ -43,7 +43,7 @@ import {
   type RawEntity,
   type EntitiesDiff,
 } from './ha-entities.ts';
-import { catalogItemFromHaState } from './capabilities.ts';
+import { catalogItemFromHaState, isForeignContact } from './capabilities.ts';
 import type { EntityCatalogItem } from '../state/device-config.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import { calendarEventsMessage } from '../state/calendar.ts';
@@ -883,6 +883,7 @@ export class HaBackend implements Backend {
             ...item,
             ...(entry.area ? { area: entry.area } : {}),
             ...(entry.createdAt !== null ? { createdAt: entry.createdAt } : {}),
+            ...(item.domain === 'binary_sensor' && isForeignContact(entry.platform) ? { deviceClass: null } : {}),
           };
         });
       this.#catalogCb(items);
@@ -897,14 +898,14 @@ export class HaBackend implements Backend {
      ist stabiler als die area_id, deshalb wird er zurückgegeben.
      Scheitert der Abruf (fehlende Rechte, alte HA-Version), bleibt der Katalog
      ohne Bereiche — die Automatik greift dann eben nicht. */
-  async #entityAreas(): Promise<Map<string, { area: string | null; createdAt: number | null }>> {
-    const map = new Map<string, { area: string | null; createdAt: number | null }>();
+  async #entityAreas(): Promise<Map<string, { area: string | null; createdAt: number | null; platform: string | null }>> {
+    const map = new Map<string, { area: string | null; createdAt: number | null; platform: string | null }>();
     if (!this.#conn) return map;
     try {
       const [areas, devices, entities] = await Promise.all([
         this.#conn.sendMessagePromise<{ area_id: string; name: string }[]>({ type: 'config/area_registry/list' }),
         this.#conn.sendMessagePromise<{ id: string; area_id: string | null }[]>({ type: 'config/device_registry/list' }),
-        this.#conn.sendMessagePromise<{ entity_id: string; area_id: string | null; device_id: string | null; created_at?: unknown }[]>(
+        this.#conn.sendMessagePromise<{ entity_id: string; area_id: string | null; device_id: string | null; created_at?: unknown; platform?: unknown }[]>(
           { type: 'config/entity_registry/list' },
         ),
       ]);
@@ -915,7 +916,8 @@ export class HaBackend implements Backend {
         const name = areaId ? areaName.get(areaId) ?? null : null;
         // HA führt `created_at` (Sekunden) seit 2024.x; ältere Stände kennen es nicht.
         const createdAt = typeof entry.created_at === 'number' && Number.isFinite(entry.created_at) ? entry.created_at * 1000 : null;
-        if (name || createdAt !== null) map.set(entry.entity_id, { area: name, createdAt });
+        const platform = typeof entry.platform === 'string' ? entry.platform : null;
+        if (name || createdAt !== null || platform) map.set(entry.entity_id, { area: name, createdAt, platform });
       }
     } catch (err) {
       console.warn('[HaBackend] area mapping unavailable:', err);

@@ -4,6 +4,7 @@
   import ReminderPersonDialog from '../components/ReminderPersonDialog.svelte';
   import ReminderTableDialog from '../components/ReminderTableDialog.svelte';
   import { doubletap } from '../actions/doubletap.ts';
+  import { liteBackdrop } from '../actions/lite-backdrop.ts';
   import { longpress } from '../actions/longpress.ts';
   import { shopping, addShoppingItem, toggleShoppingItem } from '../state/shopping.svelte.ts';
   import { refreshShopping } from '../state/shopping.svelte.ts';
@@ -173,7 +174,7 @@
   {#if addError}<p class="notes-add-error" role="alert">{addError}</p>{/if}
   {#if shoppingSort.error}<p class="notes-add-error" role="alert">{shoppingSort.error}</p>{/if}
   <div class="notes-panels">
-    <aside class="notes-panel" aria-label={m.notes_shopping()}>
+    <aside class="notes-panel" use:liteBackdrop aria-label={m.notes_shopping()}>
       <header class="panel-head">
         <h2 class="panel-title">{m.notes_shopping()}</h2>
         <div class="notes-head-meta">
@@ -219,7 +220,7 @@
       </div>
     </aside>
 
-    <aside class="notes-panel" aria-label={m.notes_reminders()}>
+    <aside class="notes-panel" use:liteBackdrop aria-label={m.notes_reminders()}>
       <header class="panel-head">
         <h2 class="panel-title">{m.notes_reminders()}</h2>
         <div class="notes-head-meta">

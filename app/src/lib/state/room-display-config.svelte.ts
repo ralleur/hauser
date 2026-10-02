@@ -16,7 +16,14 @@ import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './
 import { sharedStorage } from './shared-config.ts';
 import type { EntityCatalogItem } from './fake-discovery-catalog.ts';
 
-export type RoomMetric = 'temperature' | 'humidity';
+export type RoomMetric = 'temperature' | 'humidity' | 'co2';
+export const ROOM_METRICS: readonly RoomMetric[] = ['temperature', 'humidity', 'co2'];
+
+/* Geräteklasse in HA je Messgröße. CO₂ kam auf Wunsch aus dem simon42-Forum
+   (Cpt.Hardy, 2026-10-01) dazu; die iOS-App liest dieselben Schlüssel. */
+const METRIC_DEVICE_CLASS: Record<RoomMetric, string> = { temperature: 'temperature', humidity: 'humidity', co2: 'carbon_dioxide' };
+const SHOW_KEY = { temperature: 'showTemperature', humidity: 'showHumidity', co2: 'showCo2' } as const satisfies Record<RoomMetric, keyof RoomDisplayEntry>;
+const SENSOR_KEY = { temperature: 'temperatureSensorId', humidity: 'humiditySensorId', co2: 'co2SensorId' } as const satisfies Record<RoomMetric, keyof RoomDisplayEntry>;
 
 export interface RoomDisplayEntry {
   /** Temperatur auf der Kachel zeigen (Default: ja) */
@@ -26,6 +33,9 @@ export interface RoomDisplayEntry {
   /** abweichend gewählter Sensor; ohne Eintrag greift die HA-Zuordnung */
   temperatureSensorId?: string;
   humiditySensorId?: string;
+  /** CO₂ auf der Kachel zeigen (Default: nein) und abweichend gewählter Sensor */
+  showCo2?: boolean;
+  co2SensorId?: string;
   /** abweichend gewählte Kontakte/Melder; ohne Eintrag greift die HA-Zuordnung.
       Mehrzahl, weil ein Raum mehrere Fenster hat. Leeres Array heißt bewusst
       „keine" — das ist etwas anderes als „nicht konfiguriert". */
@@ -44,6 +54,10 @@ export interface RoomDisplayEntry {
   /** Klimagerät des Raums ausblenden (etwa eine Wärmepumpe, die HA dem Raum
       zugeordnet hat) — die iOS-App liest denselben Schalter. */
   hideClimate?: boolean;
+  /** Regen und Schnee über das ganze Raumbild statt nur in die Fenster — für
+      Garten, Terrasse und andere Bilder von draußen (simon42, Cpt.Hardy
+      2026-10-01). Die iOS-App liest denselben Schalter. */
+  weatherWholeImage?: boolean;
 }
 
 export type ClimateTileShows = 'target' | 'current' | 'both';
@@ -57,7 +71,7 @@ export interface RoomDisplayConfig {
 export const EMPTY_ROOM_DISPLAY_CONFIG: RoomDisplayConfig = { version: 1, rooms: {} };
 export const ROOM_DISPLAY_CONFIG_KEY = 'hmi:room-display:v1';
 
-const DEFAULTS: Record<RoomMetric, boolean> = { temperature: true, humidity: false };
+const DEFAULTS: Record<RoomMetric, boolean> = { temperature: true, humidity: false, co2: false };
 
 /* ── Automatik: Sensoren aus der HA-Bereichszuordnung ──
    Der Katalog trägt den HA-Bereichsnamen („Wohnzimmer"), die Raum-Id ist ein
@@ -91,7 +105,7 @@ function placedInRoom(roomId: string): Set<string> {
 export function roomSensorCandidates(roomId: string, metric: RoomMetric): EntityCatalogItem[] {
   const placed = placedInRoom(roomId);
   return deviceManager.catalog.filter(
-    (item) => item.domain === 'sensor' && item.deviceClass === metric
+    (item) => item.domain === 'sensor' && item.deviceClass === METRIC_DEVICE_CLASS[metric]
       && (areaMatchesRoom(item.area, roomId) || placed.has(item.entityId)),
   );
 }
@@ -101,7 +115,7 @@ export function roomSensorCandidates(roomId: string, metric: RoomMetric): Entity
 export function otherSensorCandidates(roomId: string, metric: RoomMetric): EntityCatalogItem[] {
   const own = new Set(roomSensorCandidates(roomId, metric).map((item) => item.entityId));
   return deviceManager.catalog
-    .filter((item) => item.domain === 'sensor' && item.deviceClass === metric && !own.has(item.entityId))
+    .filter((item) => item.domain === 'sensor' && item.deviceClass === METRIC_DEVICE_CLASS[metric] && !own.has(item.entityId))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -144,7 +158,7 @@ export function roomContactOptions(roomId: string, kind: RoomContactKind): RoomC
   const seen = new Set<string>();
   const options: RoomContactOption[] = [];
   for (const entityId of configured) {
-    if (seen.has(entityId)) continue;
+    if (seen.has(entityId) || lostContact(entityId, kind)) continue;
     seen.add(entityId);
     options.push({ entityId, name: catalogName(entityId), fromConfig: true });
   }
@@ -154,6 +168,16 @@ export function roomContactOptions(roomId: string, kind: RoomContactKind): RoomC
     options.push({ entityId: item.entityId, name: item.name, fromConfig: false });
   }
   return options;
+}
+
+/* Die Rolle aus der Einrichtung bleibt, auch wenn HA den Sensor inzwischen
+   nicht mehr als Kontakt führt (Tankstelle aus Tankerkönig, Geräteklasse
+   geändert) — ohne diese Prüfung stünde er für immer unter „Fenster und
+   Türen“ und ließe sich nur abwählen, nie loswerden. Fehlt er im Katalog
+   (HA noch nicht geladen), bleibt er. */
+function lostContact(entityId: string, kind: RoomContactKind): boolean {
+  const item = deviceManager.catalog.find((entry) => entry.entityId === entityId);
+  return !!item && !(item.domain === 'binary_sensor' && !!item.deviceClass && CONTACT_DEVICE_CLASSES[kind].includes(item.deviceClass));
 }
 
 function catalogName(entityId: string): string {
@@ -189,7 +213,7 @@ export function setContactEnabled(
 export function contactIdsFor(roomId: string, kind: RoomContactKind): readonly string[] {
   const e = entry(roomId);
   const chosen = kind === 'window' ? e.windowSensorIds : e.presenceSensorIds;
-  return chosen ?? autoContactIds(roomId, kind);
+  return chosen ? chosen.filter((entityId) => !lostContact(entityId, kind)) : autoContactIds(roomId, kind);
 }
 
 /** Sind die Kontakte automatisch zugeordnet (also nicht überschrieben)? */
@@ -233,15 +257,13 @@ function entry(roomId: string): RoomDisplayEntry {
 /** Zeigt die Kachel diese Messgröße? */
 export function showsMetric(roomId: string, metric: RoomMetric): boolean {
   const e = entry(roomId);
-  const value = metric === 'temperature' ? e.showTemperature : e.showHumidity;
-  return value ?? DEFAULTS[metric];
+  return e[SHOW_KEY[metric]] ?? DEFAULTS[metric];
 }
 
 /** Der tatsächlich verwendete Sensor: eigene Wahl, sonst die HA-Zuordnung. */
 export function sensorIdFor(roomId: string, metric: RoomMetric): string {
   const e = entry(roomId);
-  const chosen = metric === 'temperature' ? e.temperatureSensorId : e.humiditySensorId;
-  return chosen ?? autoSensorId(roomId, metric);
+  return e[SENSOR_KEY[metric]] ?? autoSensorId(roomId, metric);
 }
 
 setRoomSensorResolver(sensorIdFor);
@@ -249,20 +271,20 @@ setRoomSensorResolver(sensorIdFor);
 /** Ist der Sensor automatisch gewählt (also nicht überschrieben)? */
 export function sensorIsAutomatic(roomId: string, metric: RoomMetric): boolean {
   const e = entry(roomId);
-  return (metric === 'temperature' ? e.temperatureSensorId : e.humiditySensorId) === undefined;
+  return e[SENSOR_KEY[metric]] === undefined;
 }
 
 export function setShowsMetric(roomId: string, metric: RoomMetric, value: boolean): void {
   const next = { ...entry(roomId) };
-  if (value === DEFAULTS[metric]) delete next[metric === 'temperature' ? 'showTemperature' : 'showHumidity'];
-  else next[metric === 'temperature' ? 'showTemperature' : 'showHumidity'] = value;
+  if (value === DEFAULTS[metric]) delete next[SHOW_KEY[metric]];
+  else next[SHOW_KEY[metric]] = value;
   writeEntry(roomId, next);
 }
 
 /** Sensor setzen; `undefined` gibt die Wahl an die HA-Zuordnung zurück. */
 export function setSensorId(roomId: string, metric: RoomMetric, entityId: string | undefined): void {
   const next = { ...entry(roomId) };
-  const key = metric === 'temperature' ? 'temperatureSensorId' : 'humiditySensorId';
+  const key = SENSOR_KEY[metric];
   if (entityId === undefined) delete next[key];
   else next[key] = entityId;
   writeEntry(roomId, next);
@@ -293,6 +315,17 @@ export function setClimateHidden(roomId: string, value: boolean): void {
 }
 
 setClimateHiddenResolver(climateHidden);
+
+export function weatherWholeImage(roomId: string): boolean {
+  return entry(roomId).weatherWholeImage === true;
+}
+
+export function setWeatherWholeImage(roomId: string, value: boolean): void {
+  const next = { ...entry(roomId) };
+  if (value) next.weatherWholeImage = true;
+  else delete next.weatherWholeImage;
+  writeEntry(roomId, next);
+}
 
 /* ── Klima in der Kontrollfläche (Owner-Entscheidung 2026-09-11) ── */
 export function climateInline(roomId: string): boolean {
@@ -345,7 +378,7 @@ function writeEntry(roomId: string, next: RoomDisplayEntry): void {
 export function configuredRoomSensorIds(): string[] {
   const ids = new Set<string>();
   for (const room of appState.rooms) {
-    for (const metric of ['temperature', 'humidity'] as const) {
+    for (const metric of ROOM_METRICS) {
       if (!showsMetric(room.id, metric)) continue;
       const id = sensorIdFor(room.id, metric);
       if (id) ids.add(id);
@@ -377,6 +410,8 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (typeof cand.showHumidity === 'boolean') next.showHumidity = cand.showHumidity;
       if (typeof cand.temperatureSensorId === 'string') next.temperatureSensorId = cand.temperatureSensorId;
       if (typeof cand.humiditySensorId === 'string') next.humiditySensorId = cand.humiditySensorId;
+      if (typeof cand.showCo2 === 'boolean') next.showCo2 = cand.showCo2;
+      if (typeof cand.co2SensorId === 'string') next.co2SensorId = cand.co2SensorId;
       if (Array.isArray(cand.windowSensorIds)) {
         next.windowSensorIds = cand.windowSensorIds.filter((id): id is string => typeof id === 'string');
       }
@@ -388,6 +423,7 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
       if (typeof cand.cameraSplit === 'boolean') next.cameraSplit = cand.cameraSplit;
       if (cand.hideClimate === true) next.hideClimate = true;
+      if (cand.weatherWholeImage === true) next.weatherWholeImage = true;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };

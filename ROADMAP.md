@@ -200,7 +200,7 @@ fault found in the web app is checked in the iOS app and the other way round.
 |---|---|---|
 | Private public-ready development | `v0.3.x` internal | Anonymised repository, publication-facing documentation, test suite and static demo build stay green; no alpha is published |
 | Installable public beta | `v0.4.0-beta.1` | First public release: the final package passes isolated clean-room setup, control, reconnect and persistence without source edits |
-| Beta stabilisation | `v0.37.2` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
+| Beta stabilisation | `v0.38.0` and later `v0.x` | External households install and update on their own ([#7](https://github.com/ralleur/hauser/issues/7) and later reports); a documented backup, restore and rollback on an installation the author does not operate is still outstanding |
 | Release candidate | `v0.x.0-rc.1` | Configuration contract frozen; clean install, upgrade and rollback green; only release blockers remain |
 | Stable | `v1.0.0` | The unchanged final RC is published and its actual release artifacts pass a fresh smoke test |
 

@@ -20,6 +20,7 @@
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
+  import { weatherWholeImage } from '../state/room-display-config.svelte.ts';
   import { inDuskBand } from '../state/dusk.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { simulation } from '../state/simulation.svelte.ts';
@@ -225,7 +226,11 @@
      kennt — sonst gar nicht. Der Schleier bleibt dem Standby vorbehalten:
      hier geht es um den Blick nach draußen, nicht um die Stimmung im Raum.
      Die Polygone kommen aus dem Katalog, die Schicht selbst erst bei Bedarf. */
-  const windowClips = $derived(regionClipPaths(roomRegions(appState.currentRoom, 'window')));
+  /* Ein Bild von draußen (Garten, Terrasse) bekommt das Wetter übers ganze
+     Bild — ein Ausschnitt ohne Rand statt der Fenster. */
+  const windowClips = $derived(appState.currentRoom && weatherWholeImage(appState.currentRoom)
+    ? ['polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)']
+    : regionClipPaths(roomRegions(appState.currentRoom, 'window')));
   const weatherLayer = $derived.by(() => {
     if (!settingsValues.ambientWeather || windowClips.length === 0) return null;
     const condition = resolvedWeatherCondition(
@@ -298,26 +303,30 @@
       {/if}
     </div>
   {/if}
-  <svg class="immersion-light-layer" class:is-visible={showImmersion}
-       viewBox="0 0 3392 2400" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      {#each renderedLights as light, index (light.device.entityId)}
-        <radialGradient id={`immersion-light-${index}`}>
-          <stop offset="0" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.7" />
-          <stop offset="0.35" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.28" />
-          <stop offset="1" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0" />
-        </radialGradient>
-      {/each}
-    </defs>
+  <!-- Je Licht eine eigene SVG-Ebene (Owner-Paket Glass Lite, 2026-09-13):
+       die Deckkraft eines <circle> in einem gemeinsamen SVG kann der Browser
+       nicht im Compositor blenden, er rastert beim Nachdimmen das ganze
+       Vollbild mit allen Verläufen in jedem Frame neu. Ein SVG-Wurzelelement
+       je Licht blendet dagegen als Ebene. Geometrie und Verläufe sind dieselben. -->
+  <div class="immersion-light-layer" class:is-visible={showImmersion}>
     {#each renderedLights as light, index (light.device.entityId)}
-      <circle
-        class:is-on={light.value?.on === true}
-        cx={light.placement.x * 3392}
-        cy={light.placement.y * 2400}
-        r={light.placement.radius * 3392}
-        fill={`url(#immersion-light-${index})`}
-        style:--light-opacity={(light.value?.brightness ?? 100) / 100}
-      />
+      <svg class="immersion-light" class:is-on={light.value?.on === true}
+           viewBox="0 0 3392 2400" preserveAspectRatio="xMidYMid slice"
+           style:--light-opacity={(light.value?.brightness ?? 100) / 100}>
+        <defs>
+          <radialGradient id={`immersion-light-${index}`}>
+            <stop offset="0" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.7" />
+            <stop offset="0.35" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.28" />
+            <stop offset="1" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <circle
+          cx={light.placement.x * 3392}
+          cy={light.placement.y * 2400}
+          r={light.placement.radius * 3392}
+          fill={`url(#immersion-light-${index})`}
+        />
+      </svg>
     {/each}
-  </svg>
+  </div>
 </div>

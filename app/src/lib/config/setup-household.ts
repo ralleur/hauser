@@ -1,5 +1,6 @@
 import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import { HEATING_PLANT_NAME } from './heating-plant.ts';
+import { isForeignContact } from '../adapter/capabilities.ts';
 import type {
   EntityRole,
   HouseholdConfigV4,
@@ -28,6 +29,7 @@ export interface SetupEntityRegistryEntry {
   original_name?: string | null;
   disabled_by?: string | null;
   hidden_by?: string | null;
+  platform?: string | null;
 }
 
 export interface SetupState {
@@ -385,6 +387,7 @@ export function buildSetupHouseholdSuggestion(
     }
     const role = entityRole(state);
     if (!role) continue;
+    if (role === 'window' && isForeignContact(entry.platform)) continue;
     if ((role === 'climate' || role === 'temperature') && isHeatingPlant(entry, state)) continue;
     const areaKey = resolveAreaKey(entry.entity_id, entry.area_id, entry.device_id);
     if (!areaKey) {

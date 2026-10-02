@@ -5,7 +5,7 @@
   import { longpress } from '../actions/longpress.ts';
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomCo2, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
   import { showsMetric } from '../state/room-display-config.svelte.ts';
   import {
     clampPanelRoomPage,
@@ -77,6 +77,7 @@
           {@const climate = mergedClimate(room.id)}
           {@const temp = showsMetric(room.id, 'temperature') ? roomTemperature(room.id) : null}
           {@const humidity = showsMetric(room.id, 'humidity') ? roomHumidity(room.id) : null}
+          {@const co2 = showsMetric(room.id, 'co2') ? roomCo2(room.id) : null}
           {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
           {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
           <button
@@ -99,6 +100,9 @@
               {/if}
               {#if humidity !== null}
                 <span class="rb-humidity"><Icon name="i-water-percent" cls="icon icon-sm" />{Math.round(humidity)}%</span>
+              {/if}
+              {#if co2 !== null}
+                <span class="rb-humidity"><Icon name="i-molecule-co2" cls="icon icon-sm" />{Math.round(co2)}</span>
               {/if}
               <span class="rb-light" class:is-on={lightsOn > 0}><Icon name="i-bulb" cls="icon icon-sm" /></span>
               {#if roomWindowOpen(room.id, room.windowOpen)}<Icon name="i-window" cls="icon icon-sm rb-window" />{/if}

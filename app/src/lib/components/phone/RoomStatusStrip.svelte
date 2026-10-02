@@ -6,7 +6,8 @@
      keine Geräte: die Klimasteuerung wohnt hinter der Temperatur. */
   import Icon from '../Icon.svelte';
   import { type Room } from '../../state/app.svelte.ts';
-  import { mergedClimate, roomContacts, roomHumidity, roomPresence, roomTemperature } from '../../state/commands.ts';
+  import { CO2_STALE_PPM, mergedClimate, roomCo2, roomContacts, roomHumidity, roomPresence, roomTemperature } from '../../state/commands.ts';
+  import { showsMetric } from '../../state/room-display-config.svelte.ts';
   import { openRoomClimate } from '../../state/overlay.svelte.ts';
   import { fmtTemp } from '../../format.ts';
   import { m } from '../../../paraglide/messages.js';
@@ -16,6 +17,8 @@
   const climate = $derived(mergedClimate(room.id));
   const temperature = $derived(roomTemperature(room.id) ?? climate?.target ?? null);
   const humidity = $derived(roomHumidity(room.id));
+  /* CO₂ nur, wenn der Raum es zeigen soll (Raumeinstellungen) — sonst stünde es in jedem Raum mit Fühler. */
+  const co2 = $derived(showsMetric(room.id, 'co2') ? roomCo2(room.id) : null);
   const hasPresence = $derived(roomContacts(room.id, 'presence').length > 0);
   const present = $derived(roomPresence(room.id));
 </script>
@@ -25,7 +28,7 @@
   <span class="room-status-value num">{fmtTemp(temperature!)}°</span>
 {/snippet}
 
-{#if temperature !== null || humidity !== null || hasPresence}
+{#if temperature !== null || humidity !== null || co2 !== null || hasPresence}
   <div class="room-status">
     {#if temperature !== null}
       {#if climate}
@@ -44,6 +47,12 @@
       <span class="room-status-field" role="img" aria-label={`${m.room_display_humidity()} ${Math.round(humidity)} %`}>
         <span class="room-status-icon is-cool" aria-hidden="true"><Icon name="i-water-outline" /></span>
         <span class="room-status-value num">{Math.round(humidity)}%</span>
+      </span>
+    {/if}
+    {#if co2 !== null}
+      <span class="room-status-field" role="img" aria-label={`${m.room_display_co2()} ${Math.round(co2)} ppm`}>
+        <span class="room-status-icon" class:is-warm={co2 >= CO2_STALE_PPM} aria-hidden="true"><Icon name="i-molecule-co2" /></span>
+        <span class="room-status-value num">{Math.round(co2)}</span>
       </span>
     {/if}
     {#if hasPresence}

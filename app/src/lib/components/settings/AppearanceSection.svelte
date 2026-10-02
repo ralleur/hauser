@@ -49,6 +49,7 @@
   const style = $derived(cardStyle());
   const CARD_STYLES: readonly { id: CardStyle; icon: string; label: () => string; desc: () => string }[] = [
     { id: 'glass', icon: 'i-blur', label: () => m.card_style_glass(), desc: () => m.card_style_glass_desc() },
+    { id: 'glass-lite', icon: 'i-blur-linear', label: () => m.card_style_glass_lite(), desc: () => m.card_style_glass_lite_desc() },
     { id: 'standard', icon: 'i-card-outline', label: () => m.card_style_standard(), desc: () => m.card_style_standard_desc() },
   ];
 </script>

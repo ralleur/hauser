@@ -50,6 +50,16 @@ describe('Stresshaus', () => {
     expect(parsed.ok ? [] : parsed.issues.slice(0, 3)).toEqual([]);
   });
 
+  it('Tankstellen aus Tankerkönig werden keine Fenster oder Türen des Hauses', () => {
+    const suggestion = buildSetupHouseholdSuggestion(snapshotOf(hostileHomeWith({ seed: 1 }, NOW)));
+    const parsed = parseHouseholdConfig(suggestion.config);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const visible = parsed.value.rooms.flatMap((room) => room.visibleEntities.map((entity) => entity.entityId));
+    expect(visible.filter((id) => id.startsWith('binary_sensor.tankstelle_'))).toEqual([]);
+    expect(visible).toContain('binary_sensor.wintergarten_tur');
+  });
+
   it.each(SEEDS)('Startzahl %i: Optionslisten der Geräte haben keine Dubletten', (seed) => {
     const home = hostileHomeWith({ seed }, NOW);
     const duplicates: string[] = [];

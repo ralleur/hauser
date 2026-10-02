@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.38.0 - 2026-10-02
+
+- The lock screen weather icon follows the weather outside (sun, clouds, rain,
+  snow) instead of always showing the sun.
+- New room setting “Weather across the whole image” for garden and terrace
+  pictures, and a CO₂ value next to temperature and humidity.
+- Appearance → Card style offers “Glass light” for tablets where full glass
+  stutters.
+- Tankerkönig fuel stations no longer count as windows or doors.
+- Lock screen elements no longer hang over the screen edges when arranged.
+
 ## 0.37.2 - 2026-10-01
 
 - When Hauser recalculates the evening and night versions of older room

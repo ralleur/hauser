@@ -104,17 +104,23 @@
   opacity: 1;
   transition: opacity var(--duration-enter) var(--ease-out);
 }
-.immersion-light-layer circle {
+/* Je Licht eine Ebene (RoomHero.svelte): Deckkraft auf dem SVG-Wurzelelement,
+   damit das Nachdimmen im Compositor läuft statt als Vollbild-Rasterung. */
+.immersion-light {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
   transition: opacity var(--duration-dusk) var(--ease-in-out);
 }
-.immersion-light-layer circle.is-on {
+.immersion-light.is-on {
   opacity: var(--light-opacity);
   transition: opacity var(--duration-enter) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-layer, .immersion-light-layer, .immersion-light-layer circle { transition: none; }
+  .hero-layer, .immersion-light-layer, .immersion-light { transition: none; }
   /* Hartschnitt statt Bewegung: kein Nachdimmen, kein Parallax. Die
      Dämmerungsebene bleibt, sie ist ein Zustand und keine Animation. */
   .room-hero.is-soft-swap .hero-layer { transition: none; }

@@ -16,12 +16,29 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
     const access = resolveAccess();
     if (!access) throw Object.assign(new Error('Home Assistant ist nicht verbunden.'), { code: 'HA_UNAVAILABLE', status: 503 });
     const base = access.baseUrl.replace(/\/+$/, '');
-    const response = await fetchImpl(`${base}/api/${path}`, {
-      ...init,
-      headers: { authorization: `Bearer ${access.token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!response.ok) throw Object.assign(new Error(`Home Assistant antwortet mit ${response.status}.`), { code: 'HA_ERROR', status: 502 });
+    let response;
+    try {
+      response = await fetchImpl(`${base}/api/${path}`, {
+        ...init,
+        headers: { authorization: `Bearer ${access.token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch {
+      throw Object.assign(new Error('Home Assistant antwortet nicht.'), { code: 'HA_UNAVAILABLE', status: 503 });
+    }
+    if (!response.ok) {
+      /* HAs Antwort einordnen statt alles zu 502 zu machen (Stresshaus #23): überlastet oder im
+         Neustart ist ein Zustand (503), eine abgelehnte Eingabe (Temperatur außerhalb des Bereichs,
+         Dienst unbekannt) sagt HA mit 4xx samt Grund — nur der Rest ist ein Fehler in HA. */
+      const reason = await response.json().then((body) => typeof body?.message === 'string' ? body.message.slice(0, 200) : '', () => '');
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        throw Object.assign(new Error('Home Assistant ist gerade nicht erreichbar.'), { code: 'HA_UNAVAILABLE', status: 503 });
+      }
+      if (response.status >= 400 && response.status < 500) {
+        throw Object.assign(new Error(reason || `Home Assistant lehnt ab (${response.status}).`), { code: 'HA_REJECTED', status: 422 });
+      }
+      throw Object.assign(new Error(reason || `Home Assistant antwortet mit ${response.status}.`), { code: 'HA_ERROR', status: 502 });
+    }
     return response;
   }
 

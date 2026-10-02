@@ -82,6 +82,7 @@ const EXPECTED_REFUSALS = [
   [404, /^\/(assets|hero)\//],
   [503, /^\/api\/shopping\/notion/],      // Notion nicht eingerichtet
   [409, /^\/api\/household-modules\/media/], // Media ohne Mediaplayer
+  [404, /^\/hermes\//],                    // KI-Anpassung ist in der öffentlichen Fassung aus; die App zeigt „nicht verfügbar"
   [500, /^\/api\/camera_proxy/],           // Kamera in HA nicht erreichbar — das Stresshaus hat solche
   [502, /^\/api\/camera_proxy/],
 ];
@@ -96,7 +97,9 @@ function startProxy(apiOrigin, onRefusal) {
         answer.on('data', (c) => chunks.push(c));
         answer.on('end', () => {
           const body = Buffer.concat(chunks).toString('utf8').slice(0, 160).replace(/\s+/g, ' ');
-          onRefusal(`${answer.statusCode} ${req.method} ${path} — ${body}`);
+          /* Gerätekennungen zusammenfassen: dieselbe Ablehnung für zwanzig Kameras ist ein Befund. */
+          const shape = path.replace(/\/[a-z_]+\.[a-z0-9_]+/g, '/<entity>').replace(/\/[0-9a-f-]{16,}/g, '/<id>');
+          onRefusal(`${answer.statusCode} ${req.method} ${shape} — ${body}`);
         });
       }
       res.writeHead(answer.statusCode ?? 502, answer.headers);

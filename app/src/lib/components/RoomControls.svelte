@@ -10,7 +10,7 @@
   import RoomStatusStrip from './phone/RoomStatusStrip.svelte';
   import { type Room } from '../state/app.svelte.ts';
   import { mergedClimate, roomTemperature } from '../state/commands.ts';
-  import { cameraSplit, climateInline, climateTileShows } from '../state/room-display-config.svelte.ts';
+  import { cameraSplit, climateInline, climateTileShows, showsMetric } from '../state/room-display-config.svelte.ts';
   import { cardsAroundTiles } from '../state/room-cards.ts';
   import { type SceneId } from '../state/scene-config.ts';
   import { applySceneWithUndo, openSceneEdit, scenes, isSceneActive } from '../state/scene-manager.svelte.ts';
@@ -57,8 +57,10 @@
   const cameraDevices = $derived(IS_DEMO_BUILD ? [] : room.lights.filter((device) => device.category === 'camera' && !cameraPopouts.has(device.entityId)));
   /* Was die Werteleiste zeigt, braucht keine Kachel mehr. */
   const STRIP_CLASSES = new Set(['temperature', 'humidity', 'motion', 'occupancy', 'presence']);
+  /* CO₂ steht nur in der Leiste, wenn der Raum es zeigen soll — sonst bleibt seine Kachel. */
+  const stripHasCo2 = $derived(showsMetric(room.id, 'co2'));
   const tileDevices = $derived(room.lights.filter((device) => device.category !== 'camera'
-    && !(statusStrip && device.category === 'info' && STRIP_CLASSES.has(device.deviceClass ?? ''))));
+    && !(statusStrip && device.category === 'info' && (STRIP_CLASSES.has(device.deviceClass ?? '') || (stripHasCo2 && device.deviceClass === 'carbon_dioxide')))));
   /* Kameras stehen vor oder hinter dem Raster — je nachdem, wo sie in der
      Reihenfolge des Raums liegen (wie die iOS-App). Das geteilte Bild folgt
      seiner ersten Kamera. */

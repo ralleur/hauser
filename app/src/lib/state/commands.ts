@@ -23,7 +23,7 @@ import type {
 } from '../adapter/types.ts';
 import { appState, type Light } from './app.svelte.ts';
 
-type RoomMetric = 'temperature' | 'humidity';
+type RoomMetric = 'temperature' | 'humidity' | 'co2';
 let roomSensorResolver: ((roomId: string, metric: RoomMetric) => string) | null = null;
 
 export function setRoomSensorResolver(resolver: (roomId: string, metric: RoomMetric) => string): void {
@@ -89,6 +89,17 @@ export function roomHumidity(roomId: string): number | null {
   if (!sensorId) return null;
   const s = runtime.merged(sensorId) as SensorValue | undefined;
   return s && typeof s.value === 'number' ? s.value : null;
+}
+
+/* Ab hier ist die Luft verbraucht (Lüftungsempfehlung des Umweltbundesamts: über 1000 ppm auffällig). */
+export const CO2_STALE_PPM = 1000;
+
+/* CO₂ eines Raums in ppm: wie die Luftfeuchte nur aus einem Sensor. */
+export function roomCo2(roomId: string): number | null {
+  const sensorId = roomSensorResolver?.(roomId, 'co2') ?? '';
+  if (!sensorId) return null;
+  const s = runtime.merged(sensorId) as SensorValue | undefined;
+  return s && typeof s.value === 'number' && Number.isFinite(s.value) && s.value >= 0 ? s.value : null;
 }
 
 /* ── Fenster/Tür und Bewegung (docs/06 §5) ──

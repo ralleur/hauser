@@ -4,6 +4,18 @@ const COLOR_MODES = new Set(['hs', 'rgb', 'rgbw', 'rgbww', 'xy']);
 const TEMP_MODES = new Set(['color_temp']);
 const BRIGHTNESS_MODES = new Set(['brightness', 'color_temp', 'hs', 'rgb', 'rgbw', 'rgbww', 'xy', 'white']);
 
+/* Integrationen, deren Tür-/Öffnungs-Sensoren keinen Ort im Haus beschreiben:
+   Tankerkönig meldet „Tankstelle geöffnet“ als `door` — ohne diese Regel
+   landeten alle Tankstellen eines Bereichs unter „Fenster und Türen“
+   (simon42-Forum, Cpt.Hardy 2026-10-01). Die Geräteklasse fällt beim Eingang
+   weg, damit Einrichtung, Raumeinstellungen und Benachrichtigungen sie
+   gleichermaßen nicht als Kontakt sehen. */
+const NOT_A_HOUSE_CONTACT: ReadonlySet<string> = new Set(['tankerkoenig']);
+
+export function isForeignContact(platform: unknown): boolean {
+  return typeof platform === 'string' && NOT_A_HOUSE_CONTACT.has(platform);
+}
+
 export interface HassStateLike {
   entity_id: string;
   state: string;

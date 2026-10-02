@@ -81,6 +81,7 @@ interface RegistryOverrides {
   hidden_by?: string | null;
   disabled_by?: string | null;
   entity_category?: string | null;
+  platform?: string;
 }
 
 interface AddOptions {
@@ -133,7 +134,7 @@ export function hostileHome(now: Date = new Date()): HostileHome {
         entity_id: entityId,
         id: `reg-${entityId}`,
         unique_id: `uid-${entityId}`,
-        platform: 'stresshaus',
+        platform: registry.platform ?? 'stresshaus',
         area_id: registry.area_id ?? null,
         device_id: registry.device_id ?? null,
         name: registry.name ?? null,
@@ -364,6 +365,12 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   /* ── Technik: rechts nach links ── */
   add('sensor.technik_cpu', '37.5', { friendly_name: 'حرارة المعالج', unit_of_measurement: '°C', device_class: 'temperature' }, { area_id: 'technik', name: 'CPU' });
   add('binary_sensor.technik_tuer', 'on', { friendly_name: 'باب', device_class: 'door' }, { area_id: 'technik' });
+
+  /* ── Wintergarten: Tankstellen aus Tankerkönig (simon42, Cpt.Hardy 2026-10-01) ──
+     „geöffnet“ kommt als device_class door; das sind keine Türen des Hauses. */
+  for (const [i, name] of ['Aral Hauptstr.', 'Shell A3', 'JET Süd'].entries()) {
+    add(`binary_sensor.tankstelle_${i + 1}_status`, i === 1 ? 'off' : 'on', { friendly_name: `${name} Status`, device_class: 'door', latitude: 50.9, longitude: 6.9 }, { area_id: 'wintergarten', platform: 'tankerkoenig' });
+  }
 
   /* ── Ohne Bereich, verwaist, deaktiviert ── */
   add('light.ohne_bereich', 'on', { friendly_name: 'YAML-Licht', brightness: 10, supported_color_modes: ['brightness'], color_mode: 'brightness' }, {}, { noRegistry: true });
