@@ -3,6 +3,16 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.39.1] - 2026-10-03
+
+### Fixed
+
+- Room-photo uploads accept streamed requests without Content-Length, while
+  retaining the 12 MiB limit and rejecting incomplete transfers. The image
+  wizard now shows the specific upload error instead of a generic message.
+- The optional Tailscale sign-in reminder appears once per tunnel process
+  instead of repeating every few seconds, without exposing its login URL.
+
 ## [0.39.0] - 2026-10-03
 
 ### Added

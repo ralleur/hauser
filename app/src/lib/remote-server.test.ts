@@ -11,7 +11,8 @@ import { join } from 'node:path';
 function fakeChild() {
   const handlers: Record<string, (...args: unknown[]) => void> = {};
   return {
-    stderr: { on() { /* still */ } },
+    stderr: { on(event: string, handler: (...args: unknown[]) => void) { handlers[`stderr:${event}`] = handler; } },
+    writeStderr(text: string) { handlers['stderr:data']?.(text); },
     on(event: string, handler: (...args: unknown[]) => void) { handlers[event] = handler; },
     kill() { handlers.exit?.(0); },
     exit(code: number) { handlers.exit?.(code); },
@@ -19,6 +20,28 @@ function fakeChild() {
 }
 
 describe('Tunnel-Aufsicht', () => {
+  it('meldet die optionale Anmeldung einmal, auch bei geteilten oder gebündelten Logzeilen', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hauser-tunnel-'));
+    const binary = join(root, 'hauser-tunnel');
+    writeFileSync(binary, '#!/bin/sh\n');
+    const child = fakeChild();
+    const messages: string[] = [];
+    const tunnel = createTunnelSupervisor({
+      binary, stateDir: join(root, 'state'), target: 'http://127.0.0.1:4173',
+      spawnImpl: () => child,
+      log: { warn(message: string) { messages.push(message); } },
+    });
+    tunnel.start();
+    try {
+      const notice = 'To start this tsnet server, restart with TS_AUTHKEY set, or go to: https://login.example/secret\n';
+      child.writeStderr(notice.slice(0, 20));
+      child.writeStderr(notice.slice(20) + notice + 'network error\n');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toContain('Optionaler Fernzugriff');
+      expect(messages.join('\n')).not.toContain('secret');
+      expect(messages[1]).toBe('[hauser-tunnel] network error');
+    } finally { tunnel.close(); }
+  });
   it('bleibt ohne Binary schlicht nicht verfügbar', () => {
     const tunnel = createTunnelSupervisor({ binary: '/nirgends/hauser-tunnel', stateDir: '/tmp/x', target: 'http://127.0.0.1:4173' });
     expect(tunnel.available).toBe(false);

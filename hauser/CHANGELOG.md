@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.1 - 2026-10-03
+
+- Room-photo uploads also accept streamed requests without Content-Length.
+  Upload size limits remain enforced; failures show their specific cause.
+- The optional Tailscale sign-in reminder appears once instead of repeatedly.
+
 ## 0.39.0 - 2026-10-03
 
 - Camera popups: long-press a camera, enable automatic fullscreen, select

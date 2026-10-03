@@ -6,7 +6,7 @@
   import RoomImageAccess from './RoomImageAccess.svelte';
   import RoomImageManual from './RoomImageManual.svelte';
   import Icon from '../Icon.svelte';
-  import { createRoomImageClient, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
+  import { createRoomImageClient, RoomImageClientError, type RoomImageFocus, type RoomImageMimeType, type RoomImageUpload } from '../../state/room-image-client.ts';
   import { createRoomImageWizardController, type RoomImageWizardState } from '../../state/room-image-wizard-state.ts';
   import { getRoomImageAccess, type RoomImageAccessStatus } from '../../state/room-image-access.ts';
   import { appState } from '../../state/app.svelte.ts';
@@ -268,8 +268,8 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-    } catch {
-      localError = m.rimg_err_prepare();
+    } catch (error) {
+      localError = error instanceof RoomImageClientError ? error.message : m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }
@@ -293,8 +293,8 @@
       zoom = 1;
       centerX = 0.5;
       centerY = 0.5;
-    } catch {
-      localError = m.rimg_err_prepare();
+    } catch (error) {
+      localError = error instanceof RoomImageClientError ? error.message : m.rimg_err_prepare();
     } finally {
       uploadBusy = false;
     }

@@ -32,6 +32,14 @@ export function createTunnelSupervisor({
 
   function start() {
     if (!available || stopped) return;
+    let loginNoticeShown = false;
+    let stderrBuffer = '';
+    function logLine(line) {
+      if (line.includes('To start this tsnet server, restart with TS_AUTHKEY set, or go to:')) {
+        if (!loginNoticeShown) log.warn('[hauser-tunnel] Optionaler Fernzugriff wartet auf Anmeldung in den Einstellungen. Hauser ist im Heimnetz verfügbar.');
+        loginNoticeShown = true;
+      } else if (line.trim()) log.warn(`[hauser-tunnel] ${line.trim()}`);
+    }
     mkdirSync(stateDir, { recursive: true });
     child = spawnImpl(binary, [], {
       env: {
@@ -44,10 +52,13 @@ export function createTunnelSupervisor({
       stdio: ['ignore', 'ignore', 'pipe'],
     });
     child.stderr?.on('data', (chunk) => {
-      const line = String(chunk).trim();
-      if (line) log.warn(`[hauser-tunnel] ${line}`);
+      stderrBuffer += String(chunk);
+      const lines = stderrBuffer.split('\n');
+      stderrBuffer = lines.pop();
+      for (const line of lines) logLine(line);
     });
     child.on('exit', (code) => {
+      if (stderrBuffer) logLine(stderrBuffer);
       child = null;
       if (stopped) return;
       status = { enabled: true, state: 'stopped', error: `Sidecar beendet (Code ${code ?? '?'})` };

@@ -448,16 +448,20 @@ describe('B-08E10 B2 upload and temp lifecycle', () => {
     expect(readdirSync(app.uploadRoot)).toEqual([]);
   });
 
-  it('rejects missing and oversized Content-Length before body processing', async () => {
+  it('accepts streamed uploads without Content-Length', async () => {
     const app = await start();
     const missing = await nodeRequest(app.port, '/api/room-image-uploads', {
       method: 'POST',
       headers: { ...trustedHeaders(), 'content-type': 'image/png', 'transfer-encoding': 'chunked' },
       body: fixture('neutral-alpha.png'),
     });
-    expect(missing.status).toBe(411);
-    expect(JSON.parse(missing.body).code).toBe('CONTENT_LENGTH_REQUIRED');
+    expect(missing.status).toBe(201);
+    expect(JSON.parse(missing.body)).toMatchObject({ width: 640, height: 480, mimeType: 'image/png' });
+    expect(readdirSync(app.uploadRoot)).toHaveLength(2);
+  });
 
+  it('rejects oversized Content-Length before body processing', async () => {
+    const app = await start();
     const oversized = await nodeRequest(app.port, '/api/room-image-uploads', {
       method: 'POST',
       headers: { ...trustedHeaders(), 'content-type': 'image/png', 'content-length': '12582913' },
@@ -500,6 +504,17 @@ describe('B-08E10 B2 upload and temp lifecycle', () => {
       status: 413,
       code: 'UPLOAD_TOO_LARGE',
       message: 'Das Bild überschreitet die Uploadgrenze von 12 MiB.',
+    });
+
+    const streamedOversized = Readable.from([Buffer.alloc(maxBytes), Buffer.from([0])]) as any;
+    streamedOversized.complete = true;
+    await expect(readBoundedRoomImageBody(streamedOversized, null)).rejects.toMatchObject({
+      status: 413, code: 'UPLOAD_TOO_LARGE',
+    });
+    const incomplete = Readable.from([Buffer.from('partial')]) as any;
+    incomplete.complete = false;
+    await expect(readBoundedRoomImageBody(incomplete, null)).rejects.toMatchObject({
+      status: 400, code: 'CONTENT_LENGTH_MISMATCH',
     });
 
     const mismatched = Readable.from([Buffer.from('short')]) as any;

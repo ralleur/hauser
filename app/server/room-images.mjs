@@ -4357,11 +4357,9 @@ function roomImageLengthFailure(status, code, message) {
 export function parseRoomImageContentLength(rawHeaders, maxBytes = ROOM_IMAGE_UPLOAD_MAX_BYTES) {
   const values = rawHeaderValues({ rawHeaders }, 'content-length');
   if (values.length === 0) {
-    return roomImageLengthFailure(
-      411,
-      'CONTENT_LENGTH_REQUIRED',
-      'Content-Length ist für Bild-Uploads erforderlich.',
-    );
+    // Browser/Ingress dürfen gestreamt übertragen. Die tatsächliche Größe
+    // wird unabhängig vom Header in readBoundedRoomImageBody begrenzt.
+    return { ok: true, length: null };
   }
   if (values.length !== 1 || !/^(?:0|[1-9]\d*)$/.test(values[0])) {
     return roomImageLengthFailure(
@@ -4438,14 +4436,14 @@ export function readBoundedRoomImageBody(
         reject(new RoomImageRequestError(413, 'UPLOAD_TOO_LARGE', 'Das Bild überschreitet die Uploadgrenze von 12 MiB.'));
         return;
       }
-      if (received > declaredLength) {
+      if (declaredLength !== null && received > declaredLength) {
         reject(new RoomImageRequestError(400, 'CONTENT_LENGTH_MISMATCH', 'Die tatsächliche Uploadlänge stimmt nicht mit Content-Length überein.'));
         return;
       }
       chunks.push(bytes);
     };
     const onEnd = () => {
-      if (received !== declaredLength || req.complete === false) {
+      if ((declaredLength !== null && received !== declaredLength) || req.complete === false) {
         reject(new RoomImageRequestError(400, 'CONTENT_LENGTH_MISMATCH', 'Die tatsächliche Uploadlänge stimmt nicht mit Content-Length überein.'));
         return;
       }
