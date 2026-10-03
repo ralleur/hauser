@@ -3,6 +3,15 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.39.2] - 2026-10-03
+
+### Fixed
+
+- Light commands use a short 300 ms transition, including brightness changes
+  from sliders, scenes and undo. Controls respond immediately while supported
+  Home Assistant lights fade smoothly to the new setting. Also available in
+  the native iOS app with build 103.
+
 ## [0.39.1] - 2026-10-03
 
 ### Fixed

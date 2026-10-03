@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.2 - 2026-10-03
+
+- Light commands fade over 300 ms, including brightness changes from sliders,
+  scenes and undo. Controls remain immediate. Requires lights with transition
+  support; the native iOS app includes the same change in build 103.
+
 ## 0.39.1 - 2026-10-03
 
 - Room-photo uploads also accept streamed requests without Content-Length.

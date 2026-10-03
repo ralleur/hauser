@@ -366,6 +366,15 @@ describe('hotel mode guest allowlist', () => {
 });
 
 describe('resolveGuestServiceCall', () => {
+  it('allows the short light transition for dimming and turning off', () => {
+    const policy = enabledPolicy();
+    for (const action of ['turn_on', 'turn_off']) {
+      const data = action === 'turn_on' ? { brightness_pct: 60, transition: 0.3 } : { transition: 0.3 };
+      expect(resolveGuestServiceCall(policy, { entityId: 'light.living_ceiling', action, data }))
+        .toEqual({ allowed: true, call: { domain: 'light', service: action, entityId: 'light.living_ceiling', data } });
+    }
+  });
+
   it('builds the service call from the entity id and the released action', () => {
     const policy = enabledPolicy();
 

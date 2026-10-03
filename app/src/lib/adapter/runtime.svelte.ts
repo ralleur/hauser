@@ -16,6 +16,7 @@ import { demoEnergySeed, demoTodoSeed } from '../demo/demo-mode.ts';
 import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS, CONFIDENCE_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
+import { LIGHT_TRANSITION_SECONDS } from '../config/light-transition.ts';
 import type {
   Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate,
   HaScene, NotificationHistoryEntry, PersistentNotification, PersonSource,
@@ -404,7 +405,14 @@ export class AdapterRuntime {
       this.#flushScheduled = false;
       const batch = this.#queue;
       this.#queue = [];
-      for (const cmd of batch) this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, cmd.data, cmd.commandId);
+      for (const cmd of batch) {
+        // Derselbe weiche Übergang für Regler, Szenen, Vorschau und Undo.
+        // Der letzte Zielwert geht sofort raus; die Lampe übernimmt das Dimmen.
+        const data = cmd.domain === 'light' && (cmd.service === 'turn_on' || cmd.service === 'turn_off')
+          ? { transition: LIGHT_TRANSITION_SECONDS, ...cmd.data }
+          : cmd.data;
+        this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, data, cmd.commandId);
+      }
     });
   }
 

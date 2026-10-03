@@ -1,3 +1,4 @@
+import { LIGHT_TRANSITION_SECONDS } from './light-transition.ts';
 import {
   HOTEL_HVAC_MODES,
   type HotelCalendarConfig,
@@ -471,6 +472,7 @@ const isRgb: HotelPayloadCheck = (value) =>
   Array.isArray(value) && value.length === 3
   && value.every((part) => typeof part === 'number' && Number.isInteger(part) && part >= 0 && part <= 255);
 const isFiniteNumber: HotelPayloadCheck = (value) => typeof value === 'number' && Number.isFinite(value);
+const isLightTransition: HotelPayloadCheck = (value) => value === LIGHT_TRANSITION_SECONDS;
 const isHvacMode: HotelPayloadCheck = (value) =>
   typeof value === 'string' && (HOTEL_HVAC_MODES as readonly string[]).includes(value);
 
@@ -480,7 +482,8 @@ const isHvacMode: HotelPayloadCheck = (value) =>
  * Hausers vorhandene Controls senden, mehr braucht der Gastpfad nicht.
  */
 const HOTEL_GUEST_PAYLOADS: Readonly<Record<string, Readonly<Record<string, HotelPayloadCheck>>>> = {
-  'light:turn_on': { brightness_pct: isPercent, color_temp_kelvin: isKelvin, rgb_color: isRgb },
+  'light:turn_on': { brightness_pct: isPercent, color_temp_kelvin: isKelvin, rgb_color: isRgb, transition: isLightTransition },
+  'light:turn_off': { transition: isLightTransition },
   'climate:set_temperature': { temperature: isFiniteNumber },
   'climate:set_hvac_mode': { hvac_mode: isHvacMode },
 };

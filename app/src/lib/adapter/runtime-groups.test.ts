@@ -42,8 +42,36 @@ describe('Gerätegruppen in der Laufzeit', () => {
     expect(runtime.merged('group.hauser_1')).toEqual({ on: true, brightness: 60 });
     await Promise.resolve();
     expect(calls).toEqual([
-      ['light', 'turn_on', 'light.a', { brightness_pct: 60 }],
-      ['light', 'turn_on', 'light.b', { brightness_pct: 60 }],
+      ['light', 'turn_on', 'light.a', { brightness_pct: 60, transition: 0.3 }],
+      ['light', 'turn_on', 'light.b', { brightness_pct: 60, transition: 0.3 }],
+    ]);
+  });
+
+  it('zeigt den letzten Helligkeitswunsch sofort und sendet ihn ohne Verzögerung mit kurzem Übergang', async () => {
+    const { runtime, calls } = harness();
+    for (const brightness of [20, 80]) {
+      runtime.dispatch(
+        { entityId: 'light.a', domain: 'light', service: 'turn_on', data: { brightness_pct: brightness }, queuedAt: 0 },
+        { on: true, brightness },
+      );
+      expect(runtime.merged('light.a')).toEqual({ on: true, brightness });
+    }
+    await Promise.resolve();
+    expect(calls).toEqual([
+      ['light', 'turn_on', 'light.a', { brightness_pct: 80, transition: 0.3 }],
+    ]);
+  });
+
+  it('dimmt auch beim Ausschalten, erhält explizite Übergänge und verändert keine Schalter', async () => {
+    const { runtime, calls } = harness();
+    runtime.send({ entityId: 'light.a', domain: 'light', service: 'turn_off', data: {}, queuedAt: 0 });
+    runtime.send({ entityId: 'light.b', domain: 'light', service: 'turn_on', data: { transition: 1 }, queuedAt: 0 });
+    runtime.send({ entityId: 'switch.a', domain: 'switch', service: 'turn_on', data: {}, queuedAt: 0 });
+    await Promise.resolve();
+    expect(calls).toEqual([
+      ['light', 'turn_off', 'light.a', { transition: 0.3 }],
+      ['light', 'turn_on', 'light.b', { transition: 1 }],
+      ['switch', 'turn_on', 'switch.a', {}],
     ]);
   });
 });
