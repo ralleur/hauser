@@ -2107,5 +2107,14 @@
   "grp_create": "Gruppe anlegen",
   "grp_save": "Speichern",
   "grp_dissolve": "Gruppe auflösen",
-  "sys_width_summary": "Breite: {width}"
+  "sys_width_summary": "Breite: {width}",
+  "camera_popup_title": "Kamera-Pop-up",
+  "camera_popup_enable": "Kamera-Pop-up aktivieren",
+  "camera_popup_trigger": "Auslöser",
+  "camera_popup_choose": "Auslöser wählen",
+  "camera_popup_duration": "Vollbild für {seconds} Sekunden",
+  "camera_popup_required": "Wähle einen Auslöser, damit das Pop-up aktiv wird.",
+  "camera_popup_empty": "Keine Auslöser verfügbar. Prüfe die Verbindung und öffne diese Einstellung erneut.",
+  "camera_popup_hint": "Bewegung, Personenerkennung oder Klingel öffnen diese Kamera kurz im Vollbild. Gilt auf diesem Gerät, solange Hauser geöffnet ist.",
+  "camera_popup_done": "Fertig"
 }

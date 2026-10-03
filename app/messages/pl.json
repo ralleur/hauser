@@ -2108,5 +2108,14 @@
   "grp_create": "Utwórz grupę",
   "grp_save": "Zapisz",
   "grp_dissolve": "Rozwiąż grupę",
-  "sys_width_summary": "Szerokość: {width}"
+  "sys_width_summary": "Szerokość: {width}",
+  "camera_popup_title": "Wyskakujący obraz kamery",
+  "camera_popup_enable": "Włącz wyskakujący obraz kamery",
+  "camera_popup_trigger": "Wyzwalacz",
+  "camera_popup_choose": "Wybierz wyzwalacz",
+  "camera_popup_duration": "Pełny ekran przez {seconds} sekund",
+  "camera_popup_required": "Wybierz wyzwalacz, aby włączyć obraz.",
+  "camera_popup_empty": "Brak wyzwalaczy. Sprawdź połączenie i ponownie otwórz ustawienia.",
+  "camera_popup_hint": "Ruch, wykrycie osoby lub dzwonek na chwilę otwierają tę kamerę na pełnym ekranie. Na tym urządzeniu, gdy Hauser jest otwarty.",
+  "camera_popup_done": "Gotowe"
 }

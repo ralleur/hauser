@@ -1,3 +1,4 @@
+import { cameraPopupEvents } from '../state/camera-popup-events.ts';
 /* ============================================
    HaBackend (ADR-018) — Schicht-1-Implementierung des Backend-Interfaces über
    den offiziellen Client `home-assistant-js-websocket` (v9.6.0, Apache-2.0).
@@ -469,6 +470,10 @@ export class HaBackend implements Backend {
     await callService(this.#conn, 'scene', 'turn_on', {}, { entity_id: entityId });
   }
 
+  async listCameraPopupStates() {
+    return this.#conn && this.#status === 'connected' ? getStates(this.#conn) : [];
+  }
+
   async readStates(entityIds: readonly string[]): Promise<Record<string, unknown>> {
     if (!this.#conn || this.#status !== 'connected') return {};
     const wanted = new Set(entityIds);
@@ -929,6 +934,7 @@ export class HaBackend implements Backend {
     const changed = applyEntitiesDiff(this.#raw, diff);
     for (const id of changed) {
       const raw = this.#raw.get(id);
+      cameraPopupEvents.state?.(id, raw?.state);
       if (!raw) {
         this.#last.delete(id);
         this.#onUpdate?.(id, undefined);
@@ -979,6 +985,7 @@ export class HaBackend implements Backend {
 
   #setStatus(status: ConnectionStatus): void {
     if (status === this.#status) return;
+    if (status !== 'connected') cameraPopupEvents.reset?.();
     this.#status = status;
     this.#connCb?.(status);
     if (status === 'connected') markHaStartup('hmi:ha-connected', 'Home Assistant verbunden');

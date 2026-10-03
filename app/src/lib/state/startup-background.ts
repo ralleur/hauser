@@ -139,14 +139,15 @@ export async function startBackgroundRuntime(isCancelled: () => boolean) {
      sichtbar ist oder das Netz zurückkommt (verpasste Intervalle). */
   startQueryRevalidation();
 
-  const [notificationLayer, playerLayer] = await Promise.all([
+  const [notificationLayer, playerLayer, cameraPopupState] = await Promise.all([
     import('../components/NotificationLayer.svelte'),
     import('../components/PlayerLayer.svelte'),
+    import('./camera-popup.svelte.ts'),
   ]);
   if (isCancelled()) return null;
   return {
     notificationLayer: notificationLayer.default,
     playerLayer: playerLayer.default,
-    configuredRoomSensorIds,
+    configuredRoomSensorIds: () => configuredRoomSensorIds().concat(cameraPopupState.cameraPopupWatchIds()),
   };
 }

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import CameraPopupSettings from './CameraPopupSettings.svelte';
+  import { editMode } from '../state/edit-mode.svelte.ts';
   import { m } from '../../paraglide/messages.js';
   import { onMount } from 'svelte';
   import { backend, runtime, configuredHaUrl, configuredHaTransport } from '../adapter/runtime.svelte.ts';
@@ -46,9 +48,10 @@
   let frame = $state<HTMLDivElement>();
   let root = $state<HTMLElement>();
   let fullscreen = $state(false);
+  let popupSettingsOpen = $state(false);
   let menuOpen = $state(false);
   let resizeOpen = $state(false);
-  const menuAvailable = $derived(onpopout !== null && ontoggletitlebar !== null);
+  const menuAvailable = $derived(!disableFullscreen && (editMode.active || (onpopout !== null && ontoggletitlebar !== null)));
 
   /* Der Livestream ist der Normalfall — dieselbe HLS-Quelle, die auch die
      Home-Assistant-Oberfläche spielt. Bleibt er aus (Kamera ohne Stream, HA
@@ -301,6 +304,9 @@
 
   {#if menuOpen}
     <div class="camera-context-menu" role="menu" aria-label={m.camera_context_menu()}>
+      {#if editMode.active}
+        <button class="camera-context-option pressable" type="button" role="menuitem" onclick={() => { menuOpen = false; popupSettingsOpen = true; }}>{m.camera_popup_title()}</button>
+      {/if}
       <button class="camera-context-option pressable" type="button" role="menuitem"
               onclick={togglePopout}>
         {popoutMode ? m.camera_dock() : m.camera_popout()}
@@ -334,3 +340,5 @@
     </div>
   {/if}
 </figure>
+
+{#if popupSettingsOpen && editMode.active}<CameraPopupSettings {entityId} {label} onclose={() => { popupSettingsOpen = false; }} />{/if}

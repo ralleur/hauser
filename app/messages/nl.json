@@ -2107,5 +2107,14 @@
   "grp_create": "Groep aanmaken",
   "grp_save": "Opslaan",
   "grp_dissolve": "Groep opheffen",
-  "sys_width_summary": "Breedte: {width}"
+  "sys_width_summary": "Breedte: {width}",
+  "camera_popup_title": "Camerapop-up",
+  "camera_popup_enable": "Camerapop-up inschakelen",
+  "camera_popup_trigger": "Trigger",
+  "camera_popup_choose": "Kies een trigger",
+  "camera_popup_duration": "Volledig scherm gedurende {seconds} seconden",
+  "camera_popup_required": "Kies een trigger om de pop-up te activeren.",
+  "camera_popup_empty": "Geen triggers beschikbaar. Controleer de verbinding en open deze instellingen opnieuw.",
+  "camera_popup_hint": "Beweging, persoonsdetectie of de deurbel opent deze camera kort op volledig scherm. Geldt op dit apparaat terwijl Hauser geopend is.",
+  "camera_popup_done": "Gereed"
 }

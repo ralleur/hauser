@@ -2107,5 +2107,14 @@
   "grp_create": "Criar grupo",
   "grp_save": "Guardar",
   "grp_dissolve": "Desfazer grupo",
-  "sys_width_summary": "Largura: {width}"
+  "sys_width_summary": "Largura: {width}",
+  "camera_popup_title": "Janela da câmara",
+  "camera_popup_enable": "Ativar janela da câmara",
+  "camera_popup_trigger": "Acionador",
+  "camera_popup_choose": "Escolher acionador",
+  "camera_popup_duration": "Ecrã inteiro durante {seconds} segundos",
+  "camera_popup_required": "Escolha um acionador para ativar a janela.",
+  "camera_popup_empty": "Nenhum acionador disponível. Verifique a ligação e reabra as definições.",
+  "camera_popup_hint": "Movimento, deteção de pessoas ou campainha abrem brevemente esta câmara em ecrã inteiro. Neste dispositivo, enquanto o Hauser estiver aberto.",
+  "camera_popup_done": "Concluído"
 }

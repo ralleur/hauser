@@ -2108,5 +2108,14 @@
   "grp_create": "Crea gruppo",
   "grp_save": "Salva",
   "grp_dissolve": "Sciogli gruppo",
-  "sys_width_summary": "Larghezza: {width}"
+  "sys_width_summary": "Larghezza: {width}",
+  "camera_popup_title": "Popup della videocamera",
+  "camera_popup_enable": "Attiva popup della videocamera",
+  "camera_popup_trigger": "Attivatore",
+  "camera_popup_choose": "Scegli un attivatore",
+  "camera_popup_duration": "Schermo intero per {seconds} secondi",
+  "camera_popup_required": "Scegli un attivatore per attivare il popup.",
+  "camera_popup_empty": "Nessun attivatore disponibile. Controlla la connessione e riapri le impostazioni.",
+  "camera_popup_hint": "Movimento, rilevamento di persone o campanello aprono brevemente questa videocamera a schermo intero. Su questo dispositivo, mentre Hauser è aperto.",
+  "camera_popup_done": "Fine"
 }

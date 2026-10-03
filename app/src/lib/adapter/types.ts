@@ -168,6 +168,7 @@ export interface Backend {
   listScenes?(): Promise<HaScene[]>;
   activateScene?(entityId: string): Promise<void>;
   /** Einmaliger Zustandsabruf beliebiger Entitäten (nicht das laufende Abo). */
+  listCameraPopupStates?(): Promise<{ entity_id: string; attributes: { friendly_name?: string } }[]>;
   readStates?(entityIds: readonly string[]): Promise<Record<string, unknown>>;
 }
 

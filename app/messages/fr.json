@@ -2108,5 +2108,14 @@
   "grp_create": "Créer le groupe",
   "grp_save": "Enregistrer",
   "grp_dissolve": "Dissoudre le groupe",
-  "sys_width_summary": "Largeur : {width}"
+  "sys_width_summary": "Largeur : {width}",
+  "camera_popup_title": "Caméra en plein écran",
+  "camera_popup_enable": "Activer la caméra en plein écran",
+  "camera_popup_trigger": "Déclencheur",
+  "camera_popup_choose": "Choisir un déclencheur",
+  "camera_popup_duration": "Plein écran pendant {seconds} secondes",
+  "camera_popup_required": "Choisissez un déclencheur pour activer l’affichage.",
+  "camera_popup_empty": "Aucun déclencheur disponible. Vérifiez la connexion et rouvrez ces réglages.",
+  "camera_popup_hint": "Un mouvement, une personne détectée ou la sonnette affiche brièvement cette caméra en plein écran. Sur cet appareil, lorsque Hauser est ouvert.",
+  "camera_popup_done": "Terminé"
 }

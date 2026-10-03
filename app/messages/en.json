@@ -2107,5 +2107,14 @@
   "grp_create": "Create group",
   "grp_save": "Save",
   "grp_dissolve": "Dissolve group",
-  "sys_width_summary": "Width: {width}"
+  "sys_width_summary": "Width: {width}",
+  "camera_popup_title": "Camera popup",
+  "camera_popup_enable": "Enable camera popup",
+  "camera_popup_trigger": "Trigger",
+  "camera_popup_choose": "Choose a trigger",
+  "camera_popup_duration": "Fullscreen for {seconds} seconds",
+  "camera_popup_required": "Choose a trigger to activate the popup.",
+  "camera_popup_empty": "No triggers available. Check the connection and reopen these settings.",
+  "camera_popup_hint": "Motion, person detection or a doorbell briefly opens this camera fullscreen. Applies on this device while Hauser is open.",
+  "camera_popup_done": "Done"
 }

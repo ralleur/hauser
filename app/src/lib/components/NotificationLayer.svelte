@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CameraPopupHost from './CameraPopupHost.svelte';
   import '../../styles/notifications.css';
   import { untrack } from 'svelte';
   import NotificationTile from './NotificationTile.svelte';
@@ -124,3 +125,5 @@
     {/each}
   </aside>
 {/if}
+
+<CameraPopupHost />

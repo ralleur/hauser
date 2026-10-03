@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.0 - 2026-10-03
+
+- Camera popups: long-press a camera, enable automatic fullscreen, select
+  a motion/person/doorbell trigger and choose 5–120 seconds. Returns to the
+  previous screen automatically. Settings apply to this device.
+
 ## 0.38.1 - 2026-10-03
 
 - **Grace under failure:** room sensors keep their correct room after Home

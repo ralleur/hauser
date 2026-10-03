@@ -3,6 +3,15 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.39.0] - 2026-10-03
+
+### Added
+
+- Camera popups: long-press a camera to enable an automatic fullscreen view,
+  choose a motion, person-detection or doorbell trigger, and set a duration
+  from 5 to 120 seconds. The previous screen returns automatically; the
+  popup can also be closed manually. Settings apply to this device.
+
 ## [0.38.1] - 2026-10-03
 
 ### Fixed
