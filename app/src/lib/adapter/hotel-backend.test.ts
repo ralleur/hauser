@@ -68,12 +68,12 @@ describe('HotelBackend', () => {
   it('meldet einen abgelehnten Befehl als Fehler und sendet ihn nicht erneut', async () => {
     const { calls, impl } = commandFetch([{ ok: false, status: 403 }]);
     const refresh = vi.fn();
-    const failed: string[] = [];
+    const failed: Array<[string, number | undefined]> = [];
     const backend = new HotelBackend({ fetchImpl: impl, refresh });
-    backend.onCommandError((entityId) => failed.push(entityId));
+    backend.onCommandError((entityId, commandId) => failed.push([entityId, commandId]));
 
-    backend.callService('light', 'turn_on', 'light.living_ceiling', {});
-    await vi.waitFor(() => expect(failed).toEqual(['light.living_ceiling']));
+    backend.callService('light', 'turn_on', 'light.living_ceiling', {}, 42);
+    await vi.waitFor(() => expect(failed).toEqual([['light.living_ceiling', 42]]));
 
     expect(calls.length).toBe(1);
     expect(refresh).not.toHaveBeenCalled();

@@ -31,8 +31,8 @@ export class LazyPlatformBackend implements Backend {
     this.#run((b) => b.subscribe(onUpdate));
   }
 
-  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void {
-    this.#run((b) => b.callService(domain, service, entityId, data));
+  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>, commandId?: number): void {
+    this.#run((b) => b.callService(domain, service, entityId, data, commandId));
   }
 
   onConnectionChange(cb: (status: ConnectionStatus) => void): void {
@@ -44,7 +44,7 @@ export class LazyPlatformBackend implements Backend {
     this.#run((b) => b.retry?.());
   }
 
-  onCommandError(cb: (entityId: string) => void): void {
+  onCommandError(cb: (entityId: string, commandId?: number) => void): void {
     this.#run((b) => b.onCommandError?.(cb));
   }
 

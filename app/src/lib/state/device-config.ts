@@ -549,11 +549,15 @@ function stableDeviceId(entityId: string): string {
 export function roomIdForArea(area: string | null | undefined, rooms: readonly { id: string; name: string }[]): string | null {
   if (!area) return null;
   const wanted = area.trim().toLowerCase();
+  if (!wanted) return null;
   const byName = rooms.find((room) => room.name.trim().toLowerCase() === wanted);
   if (byName) return byName.id;
   const ids = new Set(rooms.map((room) => room.id));
   const nfkd = area.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  if (ids.has(nfkd)) return nfkd;
+  if (nfkd && ids.has(nfkd)) return nfkd;
+  const transliterated = wanted.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss') // i18n-ignore: Transliteration, keine Anzeige
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (transliterated && ids.has(transliterated)) return transliterated;
   return normalizeRoomId(area, ids);
 }
 

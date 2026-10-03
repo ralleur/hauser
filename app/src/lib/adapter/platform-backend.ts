@@ -14,7 +14,7 @@ export class PlatformBackend implements Backend {
   #push: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   #status: ConnectionStatus = 'connecting';
   #statusListeners = new Set<(status: ConnectionStatus) => void>();
-  #errorListeners = new Set<(entityId: string) => void>();
+  #errorListeners = new Set<(entityId: string, commandId?: number) => void>();
   #catalogListeners = new Set<(items: unknown[]) => void>();
   #unsubscribe: (() => void) | null = null;
 
@@ -60,7 +60,7 @@ export class PlatformBackend implements Backend {
     for (const entity of this.#entities.values()) onUpdate(entity.entityId, platformValue(entity));
   }
 
-  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void {
+  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>, commandId?: number): void {
     const entity = this.#entities.get(entityId);
     if (!entity) return;
     const writes = platformWrites(entity, domain, service, data);
@@ -73,7 +73,7 @@ export class PlatformBackend implements Backend {
         }
         this.#push?.(entityId, platformValue(entity));
       })
-      .catch(() => { for (const cb of this.#errorListeners) cb(entityId); });
+      .catch(() => { for (const cb of this.#errorListeners) cb(entityId, commandId); });
   }
 
   onConnectionChange(cb: (status: ConnectionStatus) => void): void {
@@ -85,7 +85,7 @@ export class PlatformBackend implements Backend {
     void this.#load();
   }
 
-  onCommandError(cb: (entityId: string) => void): void {
+  onCommandError(cb: (entityId: string, commandId?: number) => void): void {
     this.#errorListeners.add(cb);
   }
 

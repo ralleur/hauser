@@ -42,6 +42,18 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
     return response;
   }
 
+  async function haJson(path, init) {
+    const response = await haFetch(path, init);
+    try {
+      return await response.json();
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw Object.assign(new Error('Home Assistant liefert eine ungültige Antwort.'), { code: 'HA_ERROR', status: 502 });
+      }
+      throw Object.assign(new Error('Home Assistant antwortet nicht.'), { code: 'HA_UNAVAILABLE', status: 503 });
+    }
+  }
+
   return {
     async command({ domain, service, entityId, data }) {
       if (!ENTITY_ID.test(entityId) || !SERVICE_NAME.test(domain) || !SERVICE_NAME.test(service)) {
@@ -57,7 +69,7 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
         Die App hat keinen WebSocket; `todo.get_items` liefert die Einträge als Service-Antwort. */
     async todo(entityId) {
       if (!entityId) {
-        const all = await (await haFetch('states')).json();
+        const all = await haJson('states');
         return {
           lists: (Array.isArray(all) ? all : [])
             .filter((s) => typeof s?.entity_id === 'string' && s.entity_id.startsWith('todo.'))
@@ -67,8 +79,7 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
       if (!ENTITY_ID.test(entityId) || !entityId.startsWith('todo.')) {
         throw Object.assign(new Error('Ungültige Liste.'), { code: 'COMMAND_INVALID', status: 400 });
       }
-      const response = await haFetch('services/todo/get_items?return_response', { method: 'POST', body: JSON.stringify({ entity_id: entityId }) });
-      const payload = await response.json();
+      const payload = await haJson('services/todo/get_items?return_response', { method: 'POST', body: JSON.stringify({ entity_id: entityId }) });
       const items = payload?.service_response?.[entityId]?.items;
       /* Zwei Einträge mit derselben uid (CalDAV kann das) bekämen in der App
          dieselbe ID — SwiftUI verwirft dann Zeilen. Der zweite trägt einen
@@ -86,16 +97,14 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
     },
     /** Bewohner aus Home Assistant (`person.*`) für die Personen-Kopplung. */
     async persons() {
-      const response = await haFetch('states');
-      const all = await response.json();
+      const all = await haJson('states');
       return (Array.isArray(all) ? all : [])
         .filter((s) => typeof s?.entity_id === 'string' && s.entity_id.startsWith('person.'))
         .map((s) => ({ entityId: s.entity_id, name: s.attributes?.friendly_name ?? s.entity_id.slice(7), state: s.state ?? null }));
     },
     async states(ids) {
       const wanted = ids.filter((id) => ENTITY_ID.test(id)).slice(0, MAX_STATE_IDS);
-      const response = await haFetch('states');
-      const all = await response.json();
+      const all = await haJson('states');
       const byId = new Map(Array.isArray(all) ? all.map((s) => [s.entity_id, s]) : []);
       return wanted.map((id) => {
         const state = byId.get(id);
@@ -108,7 +117,7 @@ export function createAppCommandService({ resolveAccess, fetchImpl = fetch, time
 }
 
 function fail(res, error) {
-  jsonResponse(res, error?.status ?? 500, { ok: false, code: error?.code ?? 'APP_COMMAND_FAILED', message: error?.message ?? 'Fehler.' });
+  jsonResponse(res, error?.status ?? 500, { ok: false, code: typeof error?.code === 'string' ? error.code : 'APP_COMMAND_FAILED', message: error?.message ?? 'Fehler.' });
 }
 
 export async function serveAppCommands(req, res, { service, allowedOrigins }) {

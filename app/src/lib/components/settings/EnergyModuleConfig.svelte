@@ -48,6 +48,9 @@
   let busy = $state(false);
   let result = $state<'saved' | 'failed' | 'too-many' | null>(null);
   let maxLoads = $state(0);
+  let search = $state('');
+  const visibleEntities = $derived(powerEntities.filter((entity) =>
+    `${entity.name} ${entity.entityId}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
 
   /* Ohne gespeicherte Auswahl steht alles an, sobald der Katalog da ist. */
   $effect(() => {
@@ -122,13 +125,16 @@
   }
 </script>
 
+<input class="re-search" type="search" bind:value={search}
+       aria-label={m.room_search_device()} placeholder={m.room_search_placeholder()} />
+
 <div class="settings-row is-stacked" data-setting-id="energy-production">
   <div class="settings-row-text">
     <span class="settings-row-label">{m.sys_energy_production()}</span>
     <span class="settings-row-sub">{m.sys_energy_production_hint()}</span>
   </div>
   <div class="energy-entity-list" role="group" aria-label={m.sys_energy_production()}>
-    {#each powerEntities as entity (entity.entityId)}
+    {#each visibleEntities as entity (entity.entityId)}
       <label class="energy-entity">
         <input type="checkbox" checked={production.has(entity.entityId)}
                onchange={() => toggleProduction(entity.entityId)} />
@@ -151,7 +157,7 @@
     </span>
   </div>
   <div class="energy-entity-list">
-    {#each powerEntities as entity (entity.entityId)}
+    {#each visibleEntities as entity (entity.entityId)}
       <label class="energy-entity">
         <input type="checkbox" checked={consumption.has(entity.entityId)}
                disabled={production.has(entity.entityId)}

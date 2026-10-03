@@ -185,7 +185,7 @@ export class HaBackend implements Backend {
   #onUpdate: ((entityId: string, value: unknown, stale?: boolean) => void) | null = null;
   #connCb: ((status: ConnectionStatus) => void) | null = null;
   #onAuth: ((reason: AuthRequiredReason) => void) | null = null;
-  #onCmdErr: ((entityId: string) => void) | null = null;
+  #onCmdErr: ((entityId: string, commandId?: number) => void) | null = null;
   #catalogCb: ((items: EntityCatalogItem[]) => void) | null = null;
   #persistentCb: ((items: PersistentNotification[]) => void) | null = null;
   #persistent = new Map<string, PersistentNotification>();
@@ -247,18 +247,18 @@ export class HaBackend implements Backend {
     cb(this.#status);
   }
 
-  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void {
+  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>, commandId?: number): void {
     if (!this.#conn || this.#status !== 'connected') return; // offline (docs/02)
     // Optimistischer UI-Update ist längst passiert; hier nur der Service-Call.
     // Service-Fehler (docs/02, Funktionsumfang 6): loggen + der Runtime melden,
     // die den optimistischen Intent sofort verwirft (KEIN Retry, kein Spinner).
     void callService(this.#conn, domain, service, data, { entity_id: entityId }).catch((err) => {
       console.warn('[HaBackend] callService fehlgeschlagen:', domain, service, entityId, err);
-      this.#onCmdErr?.(entityId);
+      this.#onCmdErr?.(entityId, commandId);
     });
   }
 
-  onCommandError(cb: (entityId: string) => void): void {
+  onCommandError(cb: (entityId: string, commandId?: number) => void): void {
     this.#onCmdErr = cb;
   }
 

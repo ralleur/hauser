@@ -70,6 +70,11 @@
   import '../../styles/room-edit-mirror.css';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
+  let sensorSearch = $state<Partial<Record<RoomMetric, string>>>({});
+  function matchesSensor(item: EntityCatalogItem, metric: RoomMetric): boolean {
+    const query = (sensorSearch[metric] ?? '').trim().toLocaleLowerCase();
+    return `${item.name} ${item.entityId}`.toLocaleLowerCase().includes(query);
+  }
 
   let query = $state('');
   let searchEl = $state<HTMLInputElement>();
@@ -891,31 +896,39 @@
               </div>
 
               {#if shown}
-                <label class="re-metric-sensor">
+                <div class="re-metric-sensor">
                   <span class="caps-label">{m.room_display_sensor()}</span>
                   {#if candidates.length === 0 && others.length === 0 && !chosen}
                     <p class="re-empty">{m.room_display_sensor_none()}</p>
                   {:else}
+                    <input class="re-search" type="search" bind:value={sensorSearch[metric]}
+                           aria-label={`${metricLabel(metric)} · ${m.room_search_device()}`}
+                           placeholder={m.room_search_placeholder()} />
                     <select class="re-search" value={sensorIsAutomatic(room.id, metric) ? '' : chosen}
+                            aria-label={`${metricLabel(metric)} · ${m.room_display_sensor()}`}
                             onchange={(e) => setSensorId(room.id, metric, e.currentTarget.value || undefined)}>
                       <option value="">
                         {m.room_display_sensor_auto()}{auto ? ` · ${sensorName(auto)}` : ''}
                       </option>
                       {#each candidates as item (item.entityId)}
-                        <option value={item.entityId}>{item.name}</option>
+                        {#if item.entityId === chosen || matchesSensor(item, metric)}
+                          <option value={item.entityId}>{item.name} · {item.entityId}</option>
+                        {/if}
                       {/each}
                       <!-- Der Rest des Hauses: ein selbst angelegter Raum hat
                            keinen HA-Bereich, sein Fühler hängt woanders. -->
                       {#if others.length > 0}
                         <optgroup label={m.room_display_sensor_others()}>
                           {#each others as item (item.entityId)}
-                            <option value={item.entityId}>{item.name}{item.area ? ` · ${item.area}` : ''}</option>
+                            {#if item.entityId === chosen || matchesSensor(item, metric)}
+                              <option value={item.entityId}>{item.name}{item.area ? ` · ${item.area}` : ''} · {item.entityId}</option>
+                            {/if}
                           {/each}
                         </optgroup>
                       {/if}
                     </select>
                   {/if}
-                </label>
+                </div>
               {/if}
             </div>
           {/each}

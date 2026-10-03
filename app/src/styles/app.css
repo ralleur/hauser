@@ -4465,6 +4465,17 @@ button.security-bar {
   font: inherit;
 }
 .re-search::placeholder { color: var(--color-text-tertiary); }
+/* Native Menüs erben die helle Schrift der Glasfläche, aber auf Windows
+   nicht deren Hintergrund. Das aufgeklappte Menü braucht ein eigenes Paar. */
+:root {
+  --native-option-text: var(--color-text-primary);
+  --native-option-background: var(--color-surface-2);
+}
+select option,
+select optgroup {
+  color: var(--native-option-text);
+  background: var(--native-option-background);
+}
 .re-search:focus-visible {
   outline: none;
   border-color: var(--color-text-tertiary);

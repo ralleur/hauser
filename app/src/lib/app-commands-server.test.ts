@@ -1,8 +1,47 @@
 import { describe, expect, it } from 'vitest';
+// @ts-expect-error Native Node test without @types/node.
+import { createServer } from 'node:http';
 // @ts-expect-error Native Node ESM Servermodul.
-import { createAppCommandService } from '../../server/app-commands.mjs';
+import { createAppCommandService, serveAppCommands } from '../../server/app-commands.mjs';
 
 describe('REST-Zugang für Widgets', () => {
+  it.each(['/api/app/states?ids=light.review', '/api/app/persons', '/api/app/todo', '/api/app/todo?entity=todo.review'])(
+    'meldet einen Timeout im Antwortkörper als 503 HA_UNAVAILABLE: %s', async (url) => {
+      const upstream = createServer((_req: unknown, res: any) => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.write('['); // Header kommen an; der JSON-Rumpf bleibt unvollständig.
+      });
+      await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+      try {
+        const address = upstream.address();
+        if (!address || typeof address === 'string') throw new Error('Missing test port');
+        const service = createAppCommandService({
+          resolveAccess: () => ({ baseUrl: `http://127.0.0.1:${address.port}`, token: 'test-only' }), timeoutMs: 100,
+        });
+        let status = 0;
+        let body: unknown;
+        await serveAppCommands({ url, method: 'GET', hauserDevice: true }, {
+          writeHead(code: number) { status = code; },
+          end(value: string) { body = JSON.parse(value); },
+        }, { service, allowedOrigins: new Set() });
+        expect(status).toBe(503);
+        expect(body).toMatchObject({ ok: false, code: 'HA_UNAVAILABLE' });
+      } finally {
+        upstream.closeAllConnections();
+        await new Promise<void>((resolve, reject) => upstream.close((error?: Error) => error ? reject(error) : resolve()));
+      }
+    },
+  );
+
+  it('unterscheidet ungültiges JSON von einem Verbindungsabbruch beim Lesen', async () => {
+    const answer = (error: Error) => createAppCommandService({
+      resolveAccess: () => ({ baseUrl: 'http://ha.local', token: 'test-only' }),
+      fetchImpl: async () => ({ ok: true, json: async () => { throw error; } }),
+    });
+    await expect(answer(new SyntaxError('Invalid JSON')).persons()).rejects.toMatchObject({ code: 'HA_ERROR', status: 502 });
+    await expect(answer(new TypeError('terminated')).persons()).rejects.toMatchObject({ code: 'HA_UNAVAILABLE', status: 503 });
+  });
+
   it('ruft den HA-Service mit entity_id und Daten auf', async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const service = createAppCommandService({

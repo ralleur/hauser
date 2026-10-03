@@ -242,6 +242,10 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('light.kuche', 'unavailable', { friendly_name: 'Küche', restored: true, supported_features: 0 }, { area_id: 'kuche' });
   add('light.kueche', 'unknown', { friendly_name: 'Küche', supported_color_modes: ['brightness'] }, { area_id: 'kueche' });
   add('light.kueche_insel', 'on', { friendly_name: 'Insel', brightness: 300, color_mode: 'brightness', supported_color_modes: ['brightness'] }, { area_id: 'kueche' });
+  // Native Zahlen-Konvertierungen dürfen weder NaN noch übergroße Werte in Int umwandeln.
+  add('light.kueche_nan', 'on', { friendly_name: 'Ungültige Helligkeit', brightness: 'NaN', supported_color_modes: ['brightness'] }, { area_id: 'kueche' });
+  add('sensor.kueche_feuchte_nan', 'NaN', { friendly_name: 'Ungültige Feuchte', device_class: 'humidity', unit_of_measurement: '%' }, { area_id: 'kueche' });
+  add('sensor.kueche_co2_inf', 'inf', { friendly_name: 'Ungültiges CO₂', device_class: 'carbon_dioxide', unit_of_measurement: 'ppm' }, { area_id: 'kueche' });
   add('switch.kuche_kaffee', 'on', { friendly_name: 'Kaffeemaschine' }, { area_id: 'kuche' });
   // Melder weg: die Kachel zeigt keinen grünen Anwesenheitspunkt, statt „jemand da" zu raten.
   add('binary_sensor.kueche_bewegung', 'unavailable', { friendly_name: 'Bewegung', device_class: 'motion' }, { area_id: 'kueche' });

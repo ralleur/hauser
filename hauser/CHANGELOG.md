@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.38.1 - 2026-10-03
+
+- **Grace under failure:** room sensors keep their correct room after Home
+  Assistant areas are renamed, including humidity and CO₂.
+- A delayed failure from an earlier device command no longer rolls back a
+  newer setting. Home Assistant timeouts while reading a response are reported
+  as temporarily unavailable.
+- Sensor dropdowns remain readable on glass surfaces. Room and energy sensor
+  lists can be searched by name or entity ID.
+- Updated development dependencies to address the reported vulnerabilities.
+
 ## 0.38.0 - 2026-10-02
 
 - The lock screen weather icon follows the weather outside (sun, clouds, rain,

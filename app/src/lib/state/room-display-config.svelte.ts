@@ -12,6 +12,7 @@
 import { appState } from './app.svelte.ts';
 import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
+import { roomIdForArea } from './device-config.ts';
 import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './entities.ts';
 import { sharedStorage } from './shared-config.ts';
 import type { EntityCatalogItem } from './fake-discovery-catalog.ts';
@@ -75,22 +76,10 @@ const DEFAULTS: Record<RoomMetric, boolean> = { temperature: true, humidity: fal
 
 /* ── Automatik: Sensoren aus der HA-Bereichszuordnung ──
    Der Katalog trägt den HA-Bereichsnamen („Wohnzimmer"), die Raum-Id ist ein
-   Slug („wohnzimmer"). Beides wird auf dieselbe Normalform gebracht und dann
-   sowohl gegen die Id als auch gegen den Anzeigenamen des Raums geprüft. */
-function slug(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss') // i18n-ignore: Transliteration, keine Anzeige
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
+   Slug („wohnzimmer"). Dieselbe Auflösung wie beim Folgen der HA-Bereiche
+   erhält Setup-Ids nach dem Umbenennen und trennt nichtlateinische Namen. */
 function areaMatchesRoom(area: string | null | undefined, roomId: string): boolean {
-  if (!area) return false;
-  const normalized = slug(area);
-  if (normalized === slug(roomId)) return true;
-  const roomName = appState.rooms.find((r) => r.id === roomId)?.name;
-  return !!roomName && normalized === slug(roomName);
+  return roomIdForArea(area, appState.rooms) === roomId;
 }
 
 /* Was jemand von Hand in den Raum gelegt hat, gehört ihm auch. Ein selbst

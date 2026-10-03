@@ -98,8 +98,9 @@ export interface Backend {
   /** Push-Kanal: der EntityStore abonniert hier alle State-Updates
       (subscribe_entities bzw. Fake-Echo). Liefert initial den Seed-State. */
   subscribe(onUpdate: (entityId: string, value: unknown, stale?: boolean) => void): void;
-  /** call_service (docs/04): der optimistische UI-Update ist bereits passiert. */
-  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>): void;
+  /** call_service (docs/04): der optimistische UI-Update ist bereits passiert.
+      Die lokale commandId wird bei Fehlern zurückgegeben, nie an HA gesendet. */
+  callService(domain: string, service: string, entityId: string, data: Record<string, unknown>, commandId?: number): void;
   /** Verbindungszustand (ADR-017 Addendum, Schicht 1): FakeBackend treibt ihn
       über Dev-Hooks, HaBackend über den echten Reconnect. Emittiert initial den
       aktuellen Status. */
@@ -114,9 +115,10 @@ export interface Backend {
   setVisible?(entityIds: readonly string[]): void;
   /** Service-Call-Fehler (docs/02, Funktionsumfang 6): der Server hat den
       Command abgelehnt (Service-Error/Netzwerk). Die Runtime verwirft den
-      optimistischen Intent sofort, statt 5 s aufs Timeout zu warten. Optional —
-      das FakeBackend echot immer und meldet nie einen Fehler. */
-  onCommandError?(cb: (entityId: string) => void): void;
+      zugehörigen optimistischen Intent anhand der commandId sofort, statt 5 s
+      aufs Timeout zu warten. Optional — das FakeBackend echot immer und
+      meldet nie einen Fehler. */
+  onCommandError?(cb: (entityId: string, commandId?: number) => void): void;
   /** Geräteverwaltung: steuerbare HA-Entities für den Editor (light/switch). */
   subscribeCatalog?(cb: (items: unknown[]) => void): void;
   /** Gemeinsamer Anzeigename. Live schreibt das in die HA Entity Registry. */

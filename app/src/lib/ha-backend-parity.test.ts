@@ -150,11 +150,11 @@ describe('Backend-Parität über das Gateway', () => {
   it('meldet einen abgelehnten Befehl an die Reconciliation', async () => {
     const backend = await connectedBackend();
     FakeUpstream.rejectCommand = true;
-    const failed: string[] = [];
-    backend.onCommandError((entityId) => failed.push(entityId));
-    backend.callService('light', 'turn_on', 'light.living_ceiling', {});
+    const failed: Array<[string, number | undefined]> = [];
+    backend.onCommandError((entityId, commandId) => failed.push([entityId, commandId]));
+    backend.callService('light', 'turn_on', 'light.living_ceiling', {}, 42);
     await waitFor(() => failed.length > 0, 'command error');
-    expect(failed).toEqual(['light.living_ceiling']);
+    expect(failed).toEqual([['light.living_ceiling', 42]]);
   });
 
   it('liest Kalenderquellen und Kalenderereignisse', async () => {

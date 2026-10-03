@@ -25,6 +25,10 @@ describe('R43: Hauser folgt Home Assistant', () => {
     expect(roomIdForArea('Keller', rooms)).toBeNull();
     // Ältere Einrichtung schrieb `kueche`.
     expect(roomIdForArea('Küche', [{ id: 'kueche', name: 'Kochen' }])).toBe('kueche');
+    expect(roomIdForArea('Gäste Süd', [{ id: 'gaeste_sued', name: 'Gästezimmer' }])).toBe('gaeste_sued');
+    expect(roomIdForArea('Büro', [{ id: 'buro', name: 'Arbeiten' }])).toBe('buro');
+    expect(roomIdForArea('   ', [{ id: '', name: 'Leer' }])).toBeNull();
+    expect(roomIdForArea('厨房', [{ id: '', name: '卧室' }])).toBeNull();
   });
 
   it('merkt sich beim ersten Lauf nur den Stand und zieht nichts', () => {

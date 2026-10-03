@@ -10,10 +10,10 @@ import type { Command } from './types.ts';
    pro Entität — ein neuer Command derselben Entität überschreibt den
    pending Command, nur der letzte wird ausgeführt (kein Doppelklick-Bug).
    Die UI zeigt immer den Zustand des letzten Commands (Overlay-Intent). */
-export function enqueue(
-  queue: readonly Command[],
-  cmd: Command,
-): Command[] {
+export function enqueue<T extends Command>(
+  queue: readonly T[],
+  cmd: T,
+): T[] {
   return [...queue.filter((c) => c.entityId !== cmd.entityId), cmd];
 }
 

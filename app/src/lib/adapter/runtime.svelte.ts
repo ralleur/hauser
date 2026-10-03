@@ -50,12 +50,15 @@ export function mergeGroupValues(values: readonly unknown[]): unknown {
   return merged;
 }
 
+type QueuedCommand = Command & { commandId?: number };
+
 export class AdapterRuntime {
   readonly store = new EntityStore();
-  #intents = new SvelteMap<string, Intent>();
+  #intents = new SvelteMap<string, Intent & { commandId: number }>();
+  #commandSeq = 0;
   #reconciled = new SvelteMap<string, ReconcileEvent>();
   #reconcileSeq = 0;
-  #queue: Command[] = [];
+  #queue: QueuedCommand[] = [];
   #flushScheduled = false;
   #timers = new Map<string, ReturnType<typeof setTimeout>>();
   #confidenceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -67,7 +70,7 @@ export class AdapterRuntime {
   /* Befehle, die angenommen wurden, bevor der Kanal stand (B-27 E1). Sie
      warten hier und gehen beim `connected` in einem Rutsch raus. Dedup pro
      Entität wie in der normalen Queue — der letzte Griff gewinnt. */
-  #pending: Command[] = [];
+  #pending: QueuedCommand[] = [];
   /* Seit wann steht dieser Verbindungszustand? Die versteckte Diagnose
      (Paket 10) zeigt daraus das Verbindungsalter. */
   #connectionSince = $state(Date.now());
@@ -119,13 +122,13 @@ export class AdapterRuntime {
       if (status === 'disconnected' && this.#pending.length > 0) {
         const waiting = this.#pending;
         this.#pending = [];
-        for (const cmd of waiting) this.#onCommandFailed(cmd.entityId);
+        for (const cmd of waiting) this.#onCommandFailed(cmd.entityId, cmd.commandId);
       }
     });
     // Service-Error (docs/02, Funktionsumfang 6): der Command wurde abgelehnt —
     // Intent sofort verwerfen statt 5 s aufs Timeout zu warten.
-    backend.onCommandError?.((id) => {
-      if (backend === this.#backend) this.#onCommandFailed(id);
+    backend.onCommandError?.((id, commandId) => {
+      if (backend === this.#backend) this.#onCommandFailed(id, commandId);
     });
     if (this.#visible !== null) backend.setVisible?.(this.#visible);
     this.#bindCatalog(backend);
@@ -350,20 +353,22 @@ export class AdapterRuntime {
        Zustand direkt nach dem App-Start, und dort greift der Nutzer zuerst zu
        (B-27 E1). Der Befehl wartet, bis der Kanal steht. */
     if (this.#connection === 'disconnected') return;
+    const commandId = ++this.#commandSeq;
+    const queued: QueuedCommand = { ...cmd, commandId };
     this.#intents.set(cmd.entityId, {
-      entityId: cmd.entityId, value: optimistic, sentAt: Date.now(), status: 'inflight',
+      entityId: cmd.entityId, value: optimistic, sentAt: Date.now(), status: 'inflight', commandId,
     });
     // Dedup pro Entität (docs/02): der letzte Command überschreibt den pending
     nativeBridge().haptic('impact');
     if (this.#connection !== 'connected') {
-      this.#pending = enqueue(this.#pending, cmd);
+      this.#pending = enqueue(this.#pending, queued);
       /* Ohne Kanal keine Uhren: Konfidenz und Timeout messen die Antwort von
          Home Assistant, nicht die Wartezeit auf die Verbindung. Sie starten in
          #flushPending, wenn der Command wirklich rausgeht. */
       this.#clearTimers(cmd.entityId);
       return;
     }
-    this.#queue = enqueue(this.#queue, cmd);
+    this.#queue = enqueue(this.#queue, queued);
     this.#scheduleFlush();
     this.#startCommandTimers(cmd.entityId);
   }
@@ -399,7 +404,7 @@ export class AdapterRuntime {
       this.#flushScheduled = false;
       const batch = this.#queue;
       this.#queue = [];
-      for (const cmd of batch) this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, cmd.data);
+      for (const cmd of batch) this.#backend.callService(cmd.domain, cmd.service, cmd.entityId, cmd.data, cmd.commandId);
     });
   }
 
@@ -427,9 +432,9 @@ export class AdapterRuntime {
      Sicht springt auf den Server-Wert zurück) und das Control wackeln lassen.
      Anders als beim Widerspruch kommt kein Server-Echo; der bekannte Store-Wert
      ist die Wahrheit, auf die zurückgesprungen wird. */
-  #onCommandFailed(entityId: string): void {
+  #onCommandFailed(entityId: string, commandId?: number): void {
     const intent = this.#intents.get(entityId);
-    if (!intent) return; // kein offener Intent (schon bestätigt/verworfen)
+    if (!intent || intent.commandId !== commandId) return; // nur den abgelehnten, noch aktuellen Wunsch verwerfen
     const server = this.store.get(entityId)?.value;
     if (server !== undefined) this.#reconciled.set(entityId, { seq: ++this.#reconcileSeq, optimistic: intent.value, server });
     this.#intents.delete(entityId);

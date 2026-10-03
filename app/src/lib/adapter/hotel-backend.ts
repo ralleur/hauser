@@ -30,7 +30,7 @@ export interface HotelBackendOptions {
 }
 
 export class HotelBackend implements Backend {
-  #onCmdErr: ((entityId: string) => void) | null = null;
+  #onCmdErr: ((entityId: string, commandId?: number) => void) | null = null;
   #unsubscribeEntities: (() => void) | null = null;
   #unsubscribeConnection: (() => void) | null = null;
   #stopPolling: (() => void) | null = null;
@@ -70,7 +70,7 @@ export class HotelBackend implements Backend {
     );
   }
 
-  onCommandError(cb: (entityId: string) => void): void {
+  onCommandError(cb: (entityId: string, commandId?: number) => void): void {
     this.#onCmdErr = cb;
   }
 
@@ -79,11 +79,11 @@ export class HotelBackend implements Backend {
 
   /* Die Domain kommt bewusst nicht mit: der Proxy leitet sie aus der Entity-ID
      ab, damit ein manipulierter Client sie nicht verschieben kann. */
-  callService(_domain: string, service: string, entityId: string, data: Record<string, unknown>): void {
-    void this.#send(service, entityId, data);
+  callService(_domain: string, service: string, entityId: string, data: Record<string, unknown>, commandId?: number): void {
+    void this.#send(service, entityId, data, commandId);
   }
 
-  async #send(action: string, entityId: string, data: Record<string, unknown>): Promise<void> {
+  async #send(action: string, entityId: string, data: Record<string, unknown>, commandId?: number): Promise<void> {
     try {
       const response = await this.#fetchImpl(HOTEL_COMMAND_ENDPOINT, {
         method: 'POST',
@@ -98,7 +98,7 @@ export class HotelBackend implements Backend {
     } catch {
       // Kein Retry und keine Warteschlange: der optimistische Intent wird sofort
       // verworfen, statt eine nicht ausgeführte Bedienung als Erfolg zu zeigen.
-      this.#onCmdErr?.(entityId);
+      this.#onCmdErr?.(entityId, commandId);
       return;
     }
     // Home Assistant hat den Aufruf ausgeführt; der Server hat seinen kurzen
