@@ -3,31 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — A picture of your home, until you reach for it</title>
-<meta name="description" content="Hauser is a calm interface for your home: a self-hosted panel for Home Assistant on wall tablets and phones, and an iOS app that runs with Apple Home or Home Assistant. Most of the day it is a quiet illustration of your home that follows the sun and the weather. Touch it, and the controls come forward.">
+<title>Hauser — Less interface. More home.</title>
+<meta name="description" content="Your smart home, in familiar rooms. Hauser is the everyday interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://ralleur.github.io/hauser/">
-
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hauser — A picture of your home, until you reach for it">
-<meta property="og:description" content="A self-hosted panel for Home Assistant and an iOS app for Apple Home or Home Assistant, described as calm and beautiful rather than practical. The house is the stage; the interface is the light on it.">
+<meta property="og:title" content="Hauser — Less interface. More home.">
+<meta property="og:description" content="Familiar rooms. Light you can see. An everyday interface for Home Assistant and, on iPhone and iPad, Apple Home. Try the demo.">
 <meta property="og:url" content="https://ralleur.github.io/hauser/">
 <meta property="og:image" content="https://ralleur.github.io/hauser/media/social-preview.jpg">
+<meta property="og:image:alt" content="Hauser — Less interface. More home. The actual living-room interface beneath the original Hauser logo.">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
 <meta name="twitter:card" content="summary_large_image">
-
+<meta name="theme-color" content="#faf8f4">
 <link rel="icon" href="brand/hauser-icon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)">
-<link rel="preload" href="media/hero-home-1100.webp" as="image" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="min(100vw, 1320px)">
+<link rel="preload" href="fonts/AlegreyaSans-Regular-subset.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="media/hero-home-1100.webp" as="image" media="(min-width: 600px)" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
+<link rel="preload" href="media/hero-rooms-detail.webp" as="image" media="(max-width: 599px)">
 <link rel="stylesheet" href="site.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Hauser",
-  "description": "A calm interface for your home: a self-hosted panel for Home Assistant on wall tablets and phones, and an iOS app that runs with Apple Home or Home Assistant. Most of the day it is a quiet illustration of your home that follows the sun and the weather; touch it, and the controls come forward.",
+  "description": "An everyday smart-home interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.",
   "applicationCategory": "Home automation",
   "operatingSystem": "Home Assistant OS, Docker, iOS",
   "url": "https://ralleur.github.io/hauser/",
@@ -37,1132 +39,227 @@
 </script>
 </head>
 <body>
-
 <a class="skip-link" href="#main">Skip to content</a>
-
-<!-- ── Navigation ────────────────────────────────────────────────────── -->
-<nav class="nav">
-  <div class="wrap nav-row">
-    <a class="brand" href="#" aria-label="Hauser — back to top">
-      <svg class="brand-mark" viewBox="0 0 512 512" width="26" height="26" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round">
-          <path d="M168 96 V416"/>
-          <path d="M168 300 C168 222 344 222 344 300 V416"/>
-        </g>
-        <circle cx="344" cy="140" r="44"/>
-      </svg>
-      <span class="brand-word">hauser</span>
-    </a>
-    <div class="nav-actions">
-      <a class="nav-link" href="https://github.com/ralleur/hauser">GitHub</a>
-      <a class="nav-link" href="#app">iOS app</a>
-      <a class="nav-link" href="#install">Install</a>
-      <a class="btn btn-sm" href="docs/">Wiki</a>
-      <a class="btn btn-sm btn-primary" href="demo/">Demo</a>
-    </div>
-  </div>
-</nav>
-
-<!-- ── Hero ──────────────────────────────────────────────────────────────
-     Erst der Satz, dann das Bild. Die Kopfzeile lag früher im Bildrahmen und
-     wurde auf dem Telefon von dessen Seitenverhältnis abgeschnitten: Man sah
-     ein Wohnzimmer und keinen einzigen Satz darüber, was Hauser ist.
-     Die Bühne zeigt die beiden Ansichten der Startseite — Vollbild und Alle
-     Räume — als echte Aufnahmen, nicht mehr das Raumbild allein. -->
-<header class="hero" id="main">
-  <div class="wrap hero-copy">
-    <p class="eyebrow">A panel for Home Assistant. An app for Apple Home or Home Assistant.</p>
-    <h1>A picture of your home.<br>Until you reach for it.</h1>
-    <p class="lead">
-      Hauser turns a wall tablet or your phone into a calm view of your home.
-      One room filling the screen, or all of them at once — either way the
-      picture is the state: it follows the sun, the weather and the lamps that
-      are on. Touch it, and the controls come forward. On the wall it runs on
-      Home Assistant. In your pocket it is a native iOS app that also runs
-      with Apple Home, no server needed.
-    </p>
-    <div class="actions">
-      <a class="btn btn-primary" href="demo/">Open the live demo</a>
-      <a class="btn" href="#install">Install it</a>
-    </div>
-    <ul class="badge-row" aria-label="What installing Hauser involves">
-      <li>Home Assistant add-on</li>
-      <li>or Docker Compose</li>
-      <li>iOS app in TestFlight</li>
-      <li>Six languages</li>
-      <li>No account, no cloud</li>
-    </ul>
-  </div>
-
-  <div class="stage-wrap">
-    <div class="state-demo" data-state="fullscreen" data-cycle="fullscreen,rooms" data-interval="6200">
-      <div class="state-switch" role="group" aria-label="Show the home screen in its two views">
-        <button type="button" class="state-btn" data-state="fullscreen" aria-pressed="true">Full screen</button>
-        <button type="button" class="state-btn" data-state="rooms" aria-pressed="false">All rooms</button>
-      </div>
-      <div class="stage state-stack">
-        <img class="stage-img state-shot" data-for="fullscreen" src="media/hero-home.webp"
-             srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
-             sizes="min(100vw, 1320px)" width="1696" height="960" fetchpriority="high"
-             alt="The home screen in full screen: the sunlit living-room illustration fills the panel, and one narrow control surface on the left carries the six rooms, the scenes Cozy, Bright and Off, the room&rsquo;s lamps, its blinds and its climate. The h signet sits in the middle of the title bar.">
-        <img class="stage-img state-shot" data-for="rooms" src="media/home-rooms-dark.webp"
-             srcset="media/home-rooms-dark-700.webp 700w, media/home-rooms-dark-1100.webp 1100w, media/home-rooms-dark.webp 1696w"
-             sizes="min(100vw, 1320px)" width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same home screen in the all-rooms view after dark: six room tiles, each with its own illustration. The living room and the bedroom carry their lit evening picture and a small note saying how many lamps are on; the kitchen and the bathroom stand in their dark picture with no lamp on at all.">
-        <p class="stage-label" aria-live="polite">
-          <span data-for="fullscreen">Full screen. One room, the whole wall.</span>
-          <span data-for="rooms">All rooms. Lit where a lamp is on.</span>
-        </p>
-      </div>
-    </div>
-  </div>
-  <p class="stage-under">Two views of the same home screen, both captured from the running app. After dark the all-rooms view reads from across the hallway: a room with a lamp on carries its lit picture, a room with every lamp out carries the dark one. Your own rooms are drawn from a photograph you take with your phone.</p>
+<header class="site-header wrap">
+  <a class="brand" href="#main" aria-label="Hauser — home"><img src="brand/hauser-logo-light.svg" width="416" height="144" alt="Hauser"></a>
+  <nav class="nav-links" aria-label="Main navigation">
+    <a class="nav-docs" href="docs/">Guide</a>
+    <a href="#install">Get Hauser</a>
+    <a href="demo/">Demo <span aria-hidden="true">↗</span></a>
+  </nav>
 </header>
 
-<!-- ── Was es ist ────────────────────────────────────────────────────────
-     Drei nüchterne Sätze, bevor die Seite poetisch wird. Wer hier landet,
-     soll nach zehn Sekunden wissen, was das Ding tut und wo es läuft. -->
-<section id="what">
-  <div class="wrap">
-    <ul class="facts">
-      <li class="reveal">
-        <h3>It sits on top of Home Assistant</h3>
-        <p>
-          Hauser does not replace your setup, it gives it a face. Install it as
-          an add-on on Home Assistant OS, or with Docker Compose anywhere else.
-          A guided setup reads your areas and devices, proposes rooms and lets
-          you correct the result. And it keeps following: move a device to
-          another area in Home Assistant and it moves room in Hauser, without
-          a reload. No YAML, no source edits.
-        </p>
-      </li>
-      <li class="reveal">
-        <h3>Made for the wall and for the hand</h3>
-        <p>
-          On a wall panel or tablet you pick the view: one room filling the
-          screen with a narrow control surface beside it, or all rooms as tiles
-          side by side. On a phone the rooms are the same cards under your
-          thumb — in the browser, or in the iOS app, which also runs directly
-          with Apple Home. Lights, heating, blinds, media, the calendar, the
-          shopping list and the household's notes are all there, in six
-          languages.
-        </p>
-      </li>
-      <li class="reveal">
-        <h3>Yours, and nobody else's</h3>
-        <p>
-          It runs on your own hardware and talks only to your Home Assistant
-          or your Apple Home. No account, no cloud service, no telemetry. Code,
-          design tokens and documentation are open source under the AGPL.
-        </p>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<!-- ── Manifest: drei Momente ─────────────────────────────────────────── -->
-<section class="band" id="moments">
-  <div class="wrap">
-    <div class="manifesto">
-      <p class="statement">The house is the stage.<br>The interface is the light on it.</p>
-      <p class="body-text">
-        A wall panel is touched for perhaps five per cent of its day. Most home
-        dashboards are designed for those five per cent: tiles, numbers, a
-        grid. Hauser is designed for the other ninety-five. It is the first
-        smart-home interface that people describe not as practical, but as
-        calm and beautiful. Whether that holds is decided in three moments.
-      </p>
-    </div>
-    <ol class="moments">
-      <li class="moment reveal">
-        <a href="#glance">
-          <span class="moment-num">01</span>
-          <h3>The glance</h3>
-          <p>Standby is a picture on the wall that lives with the day: paper, map, week, season, weather as an ink trace.</p>
-        </a>
-      </li>
-      <li class="moment reveal">
-        <a href="#room">
-          <span class="moment-num">02</span>
-          <h3>The room</h3>
-          <p>The illustration is the state — one room on the whole wall, or all of them as tiles. Light, dusk, weather and the lamps show in the picture.</p>
-        </a>
-      </li>
-      <li class="moment reveal">
-        <a href="#touch">
-          <span class="moment-num">03</span>
-          <h3>The touch</h3>
-          <p>Every command has physical weight. Light comes on fast and goes out slowly. Undo instead of confirmation.</p>
-        </a>
-      </li>
-    </ol>
-  </div>
-</section>
-
-<!-- ── 01 Der Blick: Standby ──────────────────────────────────────────── -->
-<section id="glance">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">01 · The glance</p>
-      <h2>Most of the day, the panel is a picture on the wall. So the picture got the most care.</h2>
-      <p class="body-text">
-        After a few idle minutes the panel settles into standby: a large clock,
-        the household's post-its, the shopping list, and the week ahead lying
-        open on the map as seven columns with a fine line per day. And behind
-        all of it, faintly, the streets of your own neighbourhood.
-      </p>
-      <p class="body-text">
-        The map is not a texture. It is drawn once from OpenStreetMap around
-        the place Home Assistant already knows, and the radius picks itself: a
-        city centre gets its grid, a village its handful of lanes. Six places,
-        the same wall.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="state-demo city-demo" data-state="day" data-city="cologne"
-         data-cycle-city="cologne,paris,barcelona,new-york,amsterdam,petting" data-interval="4200">
-      <div class="state-switch" role="group" aria-label="Show the standby screen by day or by night">
-        <button type="button" class="state-btn" data-state="day" aria-pressed="true">Day</button>
-        <button type="button" class="state-btn" data-state="night" aria-pressed="false">Night</button>
+<main id="main">
+  <!-- A: Real panel capture; an explicitly labelled iOS detail on phones. -->
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div class="hero-intro">
+      <h1 id="hero-title">Less interface.<br><span class="telling">More home.</span></h1>
+      <div class="hero-copy" id="what">
+        <p class="lead">The everyday face of your smart home. Recognise a room, turn on the lights, get on with your day.</p>
+        <p>For Home Assistant. And for Apple Home with the native iPhone and iPad app.</p>
+        <div class="actions">
+          <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#install">Set up <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="small hero-note">Free. Open source. Public beta.</p>
       </div>
-      <div class="device state-stack reveal">
-        <img class="state-shot" data-for="day" data-city="cologne" src="media/lockscreen.webp"
-             srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in Cologne: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Ring around the old town and the bend of the Rhine.">
-        <img class="state-shot" data-for="night" data-city="cologne" src="media/lockscreen-dark.webp"
-             srcset="media/lockscreen-dark-700.webp 700w, media/lockscreen-dark-1100.webp 1100w, media/lockscreen-dark.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in Cologne: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Ring around the old town and the bend of the Rhine.">
-        <img class="state-shot" data-for="day" data-city="paris" src="media/standby-paris-day.webp"
-             srcset="media/standby-paris-day-700.webp 700w, media/standby-paris-day-1100.webp 1100w, media/standby-paris-day.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in Paris: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the avenues meeting at the Étoile.">
-        <img class="state-shot" data-for="night" data-city="paris" src="media/standby-paris-night.webp"
-             srcset="media/standby-paris-night-700.webp 700w, media/standby-paris-night-1100.webp 1100w, media/standby-paris-night.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in Paris: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the avenues meeting at the Étoile.">
-        <img class="state-shot" data-for="day" data-city="barcelona" src="media/standby-barcelona-day.webp"
-             srcset="media/standby-barcelona-day-700.webp 700w, media/standby-barcelona-day-1100.webp 1100w, media/standby-barcelona-day.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in Barcelona: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Eixample grid cut by the Diagonal.">
-        <img class="state-shot" data-for="night" data-city="barcelona" src="media/standby-barcelona-night.webp"
-             srcset="media/standby-barcelona-night-700.webp 700w, media/standby-barcelona-night-1100.webp 1100w, media/standby-barcelona-night.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in Barcelona: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Eixample grid cut by the Diagonal.">
-        <img class="state-shot" data-for="day" data-city="new-york" src="media/standby-new-york-day.webp"
-             srcset="media/standby-new-york-day-700.webp 700w, media/standby-new-york-day-1100.webp 1100w, media/standby-new-york-day.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in New York: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Manhattan grid with Broadway across it.">
-        <img class="state-shot" data-for="night" data-city="new-york" src="media/standby-new-york-night.webp"
-             srcset="media/standby-new-york-night-700.webp 700w, media/standby-new-york-night-1100.webp 1100w, media/standby-new-york-night.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in New York: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the Manhattan grid with Broadway across it.">
-        <img class="state-shot" data-for="day" data-city="amsterdam" src="media/standby-amsterdam-day.webp"
-             srcset="media/standby-amsterdam-day-700.webp 700w, media/standby-amsterdam-day-1100.webp 1100w, media/standby-amsterdam-day.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in Amsterdam: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the canal rings drawn by their quays.">
-        <img class="state-shot" data-for="night" data-city="amsterdam" src="media/standby-amsterdam-night.webp"
-             srcset="media/standby-amsterdam-night-700.webp 700w, media/standby-amsterdam-night-1100.webp 1100w, media/standby-amsterdam-night.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in Amsterdam: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing the canal rings drawn by their quays.">
-        <img class="state-shot" data-for="day" data-city="petting" src="media/standby-petting-day.webp"
-             srcset="media/standby-petting-day-700.webp 700w, media/standby-petting-day-1100.webp 1100w, media/standby-petting-day.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen by day in Petting, Bavaria: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing a village: a handful of lanes.">
-        <img class="state-shot" data-for="night" data-city="petting" src="media/standby-petting-night.webp"
-             srcset="media/standby-petting-night-700.webp 700w, media/standby-petting-night-1100.webp 1100w, media/standby-petting-night.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="1060" loading="lazy" decoding="async"
-             alt="The Hauser standby screen at night in Petting, Bavaria: clock, date, the week as seven columns along the bottom, post-its and the shopping list over a faint street map showing a village: a handful of lanes.">
-      </div>
-      <p class="device-caption city-caption">
-        <span data-city="cologne">Cologne. The Ring around the old town, the Rhine as a gap.</span>
-        <span data-city="paris">Paris. Twelve avenues meeting at the Étoile.</span>
-        <span data-city="barcelona">Barcelona. The Eixample grid, cut by the Diagonal.</span>
-        <span data-city="new-york">New York. Midtown Manhattan, Broadway crossing the grid.</span>
-        <span data-city="amsterdam">Amsterdam. The canal rings, drawn by their quays.</span>
-        <span data-city="petting">Petting, Bavaria. A village: a handful of lanes, and that is the map.</span>
-      </p>
     </div>
-  </div>
-  <div class="wrap">
-    <ul class="notes">
-      <li class="reveal"><strong>Your streets, not a texture.</strong> The map is rendered once on the server, as one monochrome file that takes whatever colour the text has. Day and night share it, and when it rains outside, rain runs over it.</li>
-      <li class="reveal"><strong>Everything on it is a door.</strong> Touch the shopping list and you are in the list. Touch the week and you are in the calendar. Touch a post-it and you are with that person's reminders. Nothing to unlock first.</li>
-      <li class="reveal"><strong>It knows when to be quiet.</strong> Deep at night the screen keeps only a dimmed red clock. The hourly pixel shift that protects the panel is a soft slide, not a jump.</li>
-    </ul>
-  </div>
-</section>
-
-<!-- ── 02 Der Raum ────────────────────────────────────────────────────── -->
-<section class="band" id="room">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">02 · The room</p>
-      <h2>The illustration is the state.</h2>
-      <p class="body-text">
-        Every room carries an illustration of itself, and the picture is the
-        reading. When the sun sets, the evening picture fades in over the length
-        of dusk. When a lamp is on, it is on in the picture. When the last one
-        goes out, the room goes dark. When it rains outside, the window light
-        turns grey and the rain runs down exactly where the glass is.
-      </p>
-      <p class="body-text">
-        Beside the picture sits one narrow control surface: rooms, scenes, the
-        lamps, the room's climate. It follows the sun too, so nobody in the
-        household ever reaches for a theme setting. Try the four states.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="state-demo" data-state="sun">
-      <div class="state-switch" role="group" aria-label="Show the room screen in different states">
-        <button type="button" class="state-btn" data-state="sun" aria-pressed="true">Sun</button>
-        <button type="button" class="state-btn" data-state="rain" aria-pressed="false">Rain</button>
-        <button type="button" class="state-btn" data-state="evening" aria-pressed="false">Evening</button>
-        <button type="button" class="state-btn" data-state="off" aria-pressed="false">Lights off</button>
-      </div>
-      <div class="device state-stack reveal">
-        <img class="state-shot" data-for="sun" src="media/hero-home.webp"
+    <figure class="hero-product">
+      <picture>
+        <source media="(max-width: 599px)" srcset="media/hero-rooms-detail.webp" width="740" height="808">
+        <img src="media/hero-home-1100.webp"
              srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The room screen by day: a compact control surface on the left with rooms, scenes, lamps and the room's climate, and the sunlit living-room illustration filling the rest.">
-        <img class="state-shot" data-for="rain" src="media/home-rain.webp"
-             srcset="media/home-rain-700.webp 700w, media/home-rain-1100.webp 1100w, media/home-rain.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same screen on a rainy day: the room in flat grey window light with rain on the balcony door, the control surface unchanged.">
-        <img class="state-shot" data-for="evening" src="media/home-dark.webp"
-             srcset="media/home-dark-700.webp 700w, media/home-dark-1100.webp 1100w, media/home-dark.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same screen after dark: dark surfaces on the control side, the living room lit by its own lamps.">
-        <img class="state-shot" data-for="off" src="media/home-off.webp"
-             srcset="media/home-off-700.webp 700w, media/home-off-1100.webp 1100w, media/home-off.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same screen at night with every lamp off: the room illustration has gone dark, only a faint glow from the balcony door, all lamp tiles unlit.">
-      </div>
-      <p class="device-caption">Real captures of the same panel. Sun and rain by day, evening and lights off after dark; the controls change with it.</p>
-    </div>
-  </div>
+             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
+             width="1696" height="960" fetchpriority="high"
+             alt="Hauser shows familiar room illustrations alongside the state of their lights.">
+      </picture>
+      <figcaption>
+        <span class="desktop-only">A living room, with its lights at hand. <span class="caption-meta">Web demo.</span></span>
+        <span class="mobile-only">Your rooms, at a glance. <span class="caption-meta">iOS demo · detail.</span></span>
+        <a class="desktop-only" href="media/hero-home.webp">View full size <span aria-hidden="true">↗</span></a>
+        <a class="mobile-only" href="media/ios-home.webp">Full screen <span aria-hidden="true">↗</span></a>
+      </figcaption>
+    </figure>
+  </section>
 
-  <div class="wrap">
-    <div class="showcase-head showcase-head-later">
-      <h3 class="h3-large">Or every room at once.</h3>
-      <p class="body-text">
-        The same screen has a second view. Instead of one stage it shows all
-        rooms as tiles, each with its own illustration, and the control surface
-        steps out of the picture until you touch one. After dark the view earns
-        its keep: a room with a lamp on carries its lit evening picture, a room
-        with every lamp out carries the dark one. A green dot appears on a tile
-        while a motion sensor in that room reports someone, and a room with a
-        camera carries a quiet camera mark. Nobody reads a list to see which
-        lights are still burning — the wall shows it from the hallway.
-      </p>
+  <!-- B: The contributed photograph and its actual illustration. -->
+  <section class="recognition section-space wrap" id="room" aria-labelledby="room-title">
+    <div class="section-intro">
+      <div><p class="section-label">01 / A familiar place</p><h2 id="room-title">Your rooms.<br>Instantly familiar.</h2></div>
+      <p class="intro-copy">The sofa by the window. The table where everything happens. Hauser puts the rooms you know at the centre of the screen, with their lights and scenes close by. Start with the included illustrations, upload a picture, or make a set from a photo of your own room.</p>
     </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="state-demo" data-state="day" data-cycle="day,evening" data-interval="5200">
-      <div class="state-switch" role="group" aria-label="Show all rooms by day or after dark">
-        <button type="button" class="state-btn" data-state="day" aria-pressed="true">Day</button>
-        <button type="button" class="state-btn" data-state="evening" aria-pressed="false">After dark</button>
-      </div>
-      <div class="device state-stack reveal">
-        <img class="state-shot" data-for="day" src="media/home-rooms.webp"
-             srcset="media/home-rooms-700.webp 700w, media/home-rooms-1100.webp 1100w, media/home-rooms.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The all-rooms view by day: six tiles with the living room, the kids&rsquo; room, the bedroom, the bathroom, the kitchen and the hallway, each in its own daylight illustration, with the heating and the house status along the bottom edge.">
-        <img class="state-shot" data-for="evening" src="media/home-rooms-dark.webp"
-             srcset="media/home-rooms-dark-700.webp 700w, media/home-rooms-dark-1100.webp 1100w, media/home-rooms-dark.webp 1696w"
-             sizes="(min-width: 1360px) 1296px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The same six tiles after dark: the living room and the bedroom are lit from inside and note how many lamps are on, while the kitchen and the bathroom stand in their dark picture with every lamp out.">
-      </div>
-      <p class="device-caption">
-        <span data-for="day">Six rooms by day. A tap puts one of them into the control surface.</span>
-        <span data-for="evening">The same six after dark. Two rooms have a lamp on; the kitchen and the bathroom do not, and look it.</span>
-      </p>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="showcase-head showcase-head-later">
-      <h3 class="h3-large">Photograph the room. That is the whole input.</h3>
-      <p class="body-text">
-        The rooms that ship with Hauser are of one particular home, which is
-        no use to yours. So the room-image wizard draws yours from a phone
-        photograph: choose the crop and the focus point, and it returns the
-        room as a set of pictures for sun, overcast, evening and lights off,
-        with its windows already known, so the rain finds the glass.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="pair">
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/wizard-input-raw.webp"
-               srcset="media/wizard-input-raw-700.webp 700w, media/wizard-input-raw-1100.webp 1100w, media/wizard-input-raw.webp 1400w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1400" height="1050" loading="lazy" decoding="async"
-               alt="An ordinary phone photograph of a living room in evening light, with a sofa, a dining table, a balcony door and children's toys on the floor.">
-        </div>
-        <p class="device-caption"><span class="shot-label">Input</span> Evening light, a wide lens, toys on the floor. Nothing staged.</p>
-      </div>
-      <div class="pair-item reveal">
-        <!-- Die vier Fassungen laufen hier durch: Sie sind das Ergebnis des
-             Assistenten und zugleich das, was die Bühne oben den ganzen Tag
-             zeigt. -->
-        <div class="state-demo" data-state="light" data-cycle="light,overcast,dark,dark-off" data-interval="3400">
-          <div class="device state-stack">
-            <img class="state-shot" data-for="light" src="media/room-light.webp"
-                 srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-                 width="1696" height="1200" loading="lazy" decoding="async"
-                 alt="The same living room redrawn as the Hauser illustration: the balcony door, the grey sofa and the wooden dining table in their original positions, in afternoon sun.">
-            <img class="state-shot" data-for="overcast" src="media/room-overcast.webp"
-                 srcset="media/room-overcast-700.webp 700w, media/room-overcast-1100.webp 1100w, media/room-overcast.webp 1696w"
-                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-                 width="1696" height="1200" loading="lazy" decoding="async"
-                 alt="The same living room under an overcast sky: flat grey light from the balcony door, colours cooler, the pendant lamp still off.">
-            <img class="state-shot" data-for="dark" src="media/room-dark.webp"
-                 srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
-                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-                 width="1696" height="1200" loading="lazy" decoding="async"
-                 alt="The same living room in the evening: the pendant lamp and the reading lamp are on, warm pools of light on the table and the sofa.">
-            <img class="state-shot" data-for="dark-off" src="media/room-dark-off.webp"
-                 srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
-                 sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-                 width="1696" height="1200" loading="lazy" decoding="async"
-                 alt="The same living room at night with every lamp off: only a faint blue glow from the balcony door outlines the sofa and the table.">
-          </div>
-        </div>
-        <p class="device-caption"><span class="shot-label shot-label-out">Output</span> The same room in the four states it ships in: sun, overcast, evening, every lamp out. This is the living room in the pictures above.</p>
-      </div>
-    </div>
-  </div>
-  <div class="wrap">
-    <p class="body-text fine-print">
-      This is the one place where Hauser talks to a paid third party: the wizard
-      needs your own OpenAI access, and your photo is sent there to be redrawn.
-      That trade is stated before anything is uploaded, every paid step is
-      confirmed by hand, and the wizard is not part of the public demo. It is
-      an interim solution: for the iOS app a free way through Apple Intelligence
-      is in development, and for the web app local models and your own keys for
-      other providers are planned.
-    </p>
-  </div>
-</section>
-
-<!-- ── 03 Die Berührung ───────────────────────────────────────────────── -->
-<section id="touch">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">03 · The touch</p>
-      <h2>Light physics.</h2>
-      <p class="body-text">
-        Every command in Hauser has weight. Light comes on fast and goes out
-        slowly, the way a room does. Nothing jumps; everything fades like dusk.
-        The interface answers before the house does, and when the house
-        disagrees, the control eases back to the truth instead of lying.
-      </p>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="physics reveal" aria-hidden="true">
-      <div class="physics-room">
-        <span class="physics-lamp"></span>
-        <span class="physics-glow"></span>
-        <span class="physics-tap"></span>
-      </div>
-      <div class="physics-row">
-        <span class="physics-name">Reading lamp</span>
-        <span class="physics-switch"><span class="physics-knob"></span></span>
-      </div>
-      <p class="physics-status">
-        <span class="physics-line physics-on">On in a blink</span>
-        <span class="physics-line physics-off">Off over the length of dusk</span>
-      </p>
-    </div>
-
-    <div class="cards cards-touch">
-      <div class="card reveal">
-        <h3>It answers before the house does</h3>
-        <p>
-          Tap a light and it is on, on screen, immediately. The command
-          travels to Home Assistant afterwards. Every intent is tracked and
-          reconciled against the state that comes back.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Undo instead of confirmation</h3>
-        <p>
-          "Everything off" does not ask whether you are sure. It goes out,
-          and for five seconds a small strip offers the way back. Undo is a
-          second command, not a dialog.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>A pulse when the house is silent</h3>
-        <p>
-          If no answer arrives within a second, the control pulses softly
-          until it does. If the house says no, the control fades back to the
-          true state. Nothing snaps.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>A moving blind stops with a tap</h3>
-        <p>
-          While a blind, shutter or garage door is on its way, a tap on its
-          tile stops it where it is, like the switch on the wall. No second
-          control, no confirmation.
-        </p>
-      </div>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="detail-wide reveal">
-      <img src="media/undo.webp" width="1400" height="360" loading="lazy" decoding="async"
-           alt="The bottom of the panel after a scene change: a small strip reads 'Scene Bright applied' with an Undo button and a close mark, and a thin gold bar along its lower edge running out.">
-      <p class="device-caption">The undo strip after a scene change. The gold bar is the five seconds running out.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ── Einrichten: Blaupause und Bedienen-Modus ───────────────────────── -->
-<section class="band" id="setup">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">Setting up</p>
-      <h2>Configure on the blueprint. Then hand the panel over.</h2>
-      <p class="body-text">
-        One mark in the middle of the title bar carries the mode: the h signet
-        alone means use, the h with a gold dot means edit. In edit mode a long
-        press on a room opens its configuration, and the room picture dissolves
-        in place into a blueprint of itself — fine light lines on blue, computed
-        from the picture you already have, so it works with your own photos too.
-      </p>
-      <p class="body-text">
-        Devices are arranged by moving their tiles: hold one, drag it, the
-        others glide aside. A small minus takes a device out of the room, a
-        dashed tile opens the search, and adding a device celebrates with a
-        gold check and six sparks. Rename the room where you set it up, pick
-        its sensors, decide what its tile shows.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="device reveal">
-      <img src="media/edit-blueprint.webp"
-           srcset="media/edit-blueprint-700.webp 700w, media/edit-blueprint-1100.webp 1100w, media/edit-blueprint.webp 1696w"
-           sizes="(min-width: 1360px) 1296px, 100vw"
-           width="1696" height="960" loading="lazy" decoding="async"
-           alt="The living room's configuration on the panel: a dark sheet with quick setup, the six devices in their order with drag handles, and a search field to add a device, over a blueprint of the living room drawn in fine light lines on blue.">
-    </div>
-    <p class="device-caption">The living room's configuration on the panel: quick setup, the device order and the search, over the blueprint of the room.</p>
-  </div>
-
-  <div class="wrap">
-    <div class="split split-later">
-      <div class="split-text">
-        <h3 class="h3-large">Use mode closes every door.</h3>
-        <p class="body-text">
-          Switch to use mode and the panel belongs to the household: lights,
-          scenes, climate, blinds and everything else keep working, including a
-          long press on a lamp for its brightness, but no configuration opens.
-          The panel can fall back into use mode by itself after a while, and
-          the way back to editing can sit behind a PIN. The mode belongs to the
-          device: the hallway panel can be locked while your own phone keeps
-          configuring.
-        </p>
-      </div>
-      <div class="state-demo" data-state="edit" data-cycle="edit,use" data-interval="3200">
-        <div class="device state-stack reveal">
-          <img class="state-shot" data-for="edit" src="media/mode-edit.webp" width="1200" height="960" loading="lazy" decoding="async"
-               alt="The middle of the title bar in edit mode: the h signet with a gold dot, and the word Edit beside it for a moment.">
-          <img class="state-shot" data-for="use" src="media/mode-use.webp" width="1200" height="960" loading="lazy" decoding="async"
-               alt="The middle of the title bar in use mode: the h signet on its own, and the word Use beside it for a moment.">
-        </div>
-        <p class="device-caption">
-          <span data-for="edit">Edit. The gold dot sits on the h; a long press opens configuration.</span>
-          <span data-for="use">Use. The h on its own; every control keeps working.</span>
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Eine Hand, zwei Stimmen ────────────────────────────────────────── -->
-<section id="voices">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">One hand, two voices</p>
-      <h2>Paper for the household. Instruments for the house.</h2>
-      <p class="body-text">
-        Everything a household says to itself is written on paper: post-its
-        in a colour per person, the shopping list grouped by shop, the week
-        as seven columns, the calendar as a sheet, the energy of the day as
-        notes pinned into a picture. Everything you do to the house is an
-        instrument: gold on a cool ground, tick scales, switches with travel.
-        There is no third voice. No dashboard tiles, no generic grid.
-      </p>
-      <p class="body-text">
-        And both voices write in one hand. Alegreya Sans carries everything
-        you operate, Alegreya the paper — the greeting in standby, the notes,
-        the calendar sheet, the energy figures. Figures stand upright and keep
-        their width, so a clock or a slider value never jumps.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="pair">
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/notes.webp"
-               srcset="media/notes-700.webp 700w, media/notes-1100.webp 1100w, media/notes.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The notes screen: a shopping list on the left grouped by shop, and reminders as coloured sticky notes grouped per person on the right.">
-        </div>
-        <p class="device-caption">Reminders are post-its per person. The shopping list reads in the order you walk, and a ticked item stays under its shop for a day.</p>
-      </div>
-      <div class="pair-item reveal">
-        <div class="device">
-          <img src="media/calendar.webp"
-               srcset="media/calendar-700.webp 700w, media/calendar-1100.webp 1100w, media/calendar.webp 1696w"
-               sizes="(min-width: 1360px) 630px, (min-width: 760px) 47vw, 100vw"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The calendar screen as a sheet: the month name in a serif, small-caps weekdays, hairline rules between the weeks, timed events listed under their day, multi-day events as bars across the week, today carrying a small gold mark.">
-        </div>
-        <p class="device-caption">The calendar is the paper of the week band, only larger. Your Home Assistant calendars, one sheet.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="showcase-head showcase-head-later">
-      <h3 class="h3-large">The instruments.</h3>
-      <p class="body-text">
-        Hold a lamp and its panel comes up: a tick scale for brightness, warm
-        to cool, the colours it can take. Hold a fan and the panel shows what
-        that fan can do and nothing it cannot: speed, presets, oscillation,
-        direction. Hold the TV and, when Home Assistant places a remote beside
-        it, a direction pad comes up. Every device gets the same hand, the same
-        scale, the same weight under the finger.
-      </p>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="instruments">
-      <figure class="instrument state-demo reveal" data-state="a" data-cycle="a,b,c" data-interval="2600">
-        <div class="state-stack">
-          <img class="state-shot" data-for="a" src="media/lamp-100.webp" width="1016" height="1620" loading="lazy" decoding="async"
-               alt="The lamp panel: a large vertical tick scale for brightness at one hundred per cent, a warm-to-cool scale beneath it and a row of colour swatches.">
-          <img class="state-shot" data-for="b" src="media/lamp-60.webp" width="1016" height="1620" loading="lazy" decoding="async"
-               alt="The same lamp panel with the brightness scale at sixty per cent.">
-          <img class="state-shot" data-for="c" src="media/lamp-25.webp" width="1016" height="1620" loading="lazy" decoding="async"
-               alt="The same lamp panel with the brightness scale at twenty-five per cent.">
-        </div>
-        <figcaption>
-          <span data-for="a">Dining table, 100 %</span>
-          <span data-for="b">Dining table, 60 %</span>
-          <span data-for="c">Dining table, 25 %</span>
-        </figcaption>
+    <div class="room-pair">
+      <figure class="room-before">
+        <img src="media/wizard-input-raw-700.webp"
+             srcset="media/wizard-input-raw-700.webp 700w, media/wizard-input-raw-1100.webp 1100w, media/wizard-input-raw.webp 1400w"
+             sizes="(min-width: 1440px) 420px, (min-width: 768px) 34vw, calc(100vw - 96px)"
+             width="1400" height="1050" loading="lazy" decoding="async"
+             alt="The original phone photo: a lived-in room with a grey sofa, dining table, plants and toys.">
+        <figcaption><span><b>From a phone photo.</b><br>The project’s own living room.</span></figcaption>
       </figure>
-      <figure class="instrument state-demo reveal" data-state="a" data-cycle="a,b,c" data-interval="2600">
-        <div class="state-stack">
-          <img class="state-shot" data-for="a" src="media/fan-low.webp" width="1016" height="1668" loading="lazy" decoding="async"
-               alt="The fan panel: a vertical tick scale for speed at thirty-five per cent, four preset cards, and two-way switches for oscillation and direction.">
-          <img class="state-shot" data-for="b" src="media/fan-turbo.webp" width="1016" height="1668" loading="lazy" decoding="async"
-               alt="The same fan panel in turbo with oscillation switched on.">
-          <img class="state-shot" data-for="c" src="media/fan-breeze.webp" width="1016" height="1668" loading="lazy" decoding="async"
-               alt="The same fan panel in breeze mode with the direction reversed.">
-        </div>
-        <figcaption>
-          <span data-for="a">Ceiling fan, 35 %</span>
-          <span data-for="b">Turbo, oscillating</span>
-          <span data-for="c">Breeze, reversed</span>
-        </figcaption>
+      <figure class="room-after">
+        <img src="media/room-light-1100.webp"
+             srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
+             sizes="(min-width: 1440px) 796px, (min-width: 768px) 58vw, calc(100vw - 48px)"
+             width="1696" height="1200" loading="lazy" decoding="async"
+             alt="The actual Hauser illustration made from that photo, with the same sofa, balcony door and dining table.">
+        <figcaption><span><b>To a room you recognise.</b> The illustration used in Hauser.</span></figcaption>
       </figure>
     </div>
-  </div>
+    <aside class="image-note" aria-label="About making room pictures">
+      <p>Optional image generation sends your photo to your chosen provider: OpenAI or Cloudflare. It needs your own access; OpenAI plans or usage charges apply, and Cloudflare’s free allowance has limits. Uploading your own picture needs neither.</p>
+      <a class="text-link" href="docs/using/room-images/">Ways to make your room pictures <span aria-hidden="true">→</span></a>
+    </aside>
+  </section>
 
-  <div class="wrap">
-    <div class="split split-later">
-      <div class="split-text">
-        <h3 class="h3-large">The energy lives in the picture.</h3>
-        <p class="body-text">
-          There is no column of numbers. Live load, generation and grid are
-          notes pinned to the sun, the house and the pole in a picture of
-          your home; the day's curve runs along the bottom edge in the same
-          hand, and a small arc between sunrise and sunset says how far the
-          day has walked. When it is cloudy, the house is drawn under an
-          overcast sky, and rain falls over the picture. A second tap on
-          Today lays the day's balance beside the wall: the share of your use
-          that came from your own sun, the gap the grid filled, two bars on
-          one kWh axis. What a house cannot measure is not shown: without a
-          solar meter there is no solar note. No dash stands in for a number,
-          anywhere.
-        </p>
+  <!-- C: Native radios also work without JavaScript. -->
+  <section class="light-story section-space" id="touch" aria-labelledby="light-title">
+    <div class="wrap">
+      <div class="section-intro">
+        <div><p class="section-label">02 / The picture tells you</p><h2 id="light-title">Same room.<br>A different moment.</h2></div>
+        <p class="intro-copy">By day, a sunlit room. In the evening, a warm glow. After dark, when the last light goes out, the picture settles into darkness. Hauser moves between prepared room images with the time of day and the room’s lights. You can see the change before reading a label.</p>
       </div>
-      <div class="state-demo" data-state="wall" data-cycle="wall,balance" data-interval="5200">
-        <div class="state-switch" role="group" aria-label="Show the energy screen with or without today's balance">
-          <button type="button" class="state-btn" data-state="wall" aria-pressed="true">The wall</button>
-          <button type="button" class="state-btn" data-state="balance" aria-pressed="false">Today's balance</button>
-        </div>
-        <div class="device state-stack reveal">
-          <img class="state-shot" data-for="wall" src="media/energy.webp"
-               srcset="media/energy-700.webp 700w, media/energy-1100.webp 1100w, media/energy.webp 1696w"
-               sizes="(min-width: 880px) 540px, 100vw"
+      <fieldset class="room-preview" aria-describedby="preview-note">
+        <legend>Room-picture preview</legend>
+        <input class="preview-radio" type="radio" name="room-light" id="preview-day">
+        <label for="preview-day">Day</label>
+        <input class="preview-radio" type="radio" name="room-light" id="preview-evening" checked>
+        <label for="preview-evening">Evening</label>
+        <input class="preview-radio" type="radio" name="room-light" id="preview-off">
+        <label for="preview-off">Lights off</label>
+        <div class="preview-stage">
+          <img class="state-day" src="media/room-light-1100.webp"
+               srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
+               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
                width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The energy screen on an overcast afternoon: an illustration of a house with solar panels under a grey sky, three paper notes pinned into the picture at the panels, the house wall and the grid pole reading solar, measured load and feed-in, today's figures written top left in a serif with a small sun arc beneath them, and the day's curves drawn as thin lines along the bottom edge.">
-          <img class="state-shot" data-for="balance" src="media/energy-balance.webp"
-               srcset="media/energy-balance-700.webp 700w, media/energy-balance-1100.webp 1100w, media/energy-balance.webp 1696w"
-               sizes="(min-width: 880px) 540px, 100vw"
+               alt="Day: sunlight reaches the sofa and the dining table through the balcony windows.">
+          <img class="state-evening" src="media/room-dark-1100.webp"
+               srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
+               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
                width="1696" height="1200" loading="lazy" decoding="async"
-               alt="The same screen with today's balance laid over the house: a large percentage of today's use came from your own sun, the gap the grid filled in one line beneath it, and two bars on one kWh axis, produced above and household use below, with the part used at home bridged in gold.">
+               alt="Evening: the same room lit warmly by its lamps, with the night visible outside.">
+          <img class="state-off" src="media/room-dark-off-1100.webp"
+               srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
+               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
+               width="1696" height="1200" loading="lazy" decoding="async"
+               alt="Lights off: the sofa and table are dark, outlined by a faint glow from the windows.">
         </div>
-        <p class="device-caption">
-          <span data-for="wall">Late afternoon under clouds. The notes hang on the panels, the wall and the pole; the sun arc says the day is nearly walked.</span>
-          <span data-for="balance">A second tap on Today. How much of the day came from your own roof, and what the grid filled in.</span>
-        </p>
+      </fieldset>
+      <p class="preview-note small" id="preview-note">Three actual room images from Hauser. This preview changes pictures; it is not connected to a home and does not control individual lamps.</p>
+    </div>
+  </section>
+
+  <!-- D: Two situations, with one concrete product moment each. -->
+  <section class="everyday section-space wrap" id="moments" aria-labelledby="everyday-title">
+    <p class="section-label">03 / Part of the day</p>
+    <h2 id="everyday-title">On the wall.<br>In your hand.</h2>
+    <div class="wall-moment" id="glance">
+      <div class="moment-copy">
+        <h3>On your way past.</h3>
+        <p>Before anyone touches it, the panel has a job. A clock you can read from across the room. The week ahead. A note you meant to remember. After a few idle minutes, standby brings the household’s day into view.</p>
+        <a class="text-link" href="docs/using/standby/">A closer look at standby <span aria-hidden="true">→</span></a>
+      </div>
+      <figure>
+        <a class="image-link" href="media/lockscreen.webp" aria-label="View the full-size standby screenshot">
+          <img src="media/lockscreen-1100.webp"
+               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
+               sizes="(min-width: 1440px) 850px, (min-width: 900px) 62vw, calc(100vw - 48px)"
+               width="1696" height="1060" loading="lazy" decoding="async"
+               alt="Hauser’s standby screen: a large clock, the family week, shopping list and notes over a faint neighbourhood map.">
+        </a>
+        <figcaption><span>Standby · web demo. Optional map from OpenStreetMap.</span><a href="media/lockscreen.webp">Full size <span aria-hidden="true">↗</span></a></figcaption>
+      </figure>
+    </div>
+    <div class="hand-moment">
+      <figure class="phone-figure">
+        <img src="media/ios-room.webp" width="804" height="1748" loading="lazy" decoding="async"
+             alt="The iOS living-room screen with Cozy, Bright and Off scenes above the individual light controls.">
+        <figcaption>Living room · native iOS demo.</figcaption>
+      </figure>
+      <div class="moment-copy">
+        <p class="small">iPhone &amp; iPad</p>
+        <h3>Settle in.<br>Set the lights.</h3>
+        <p>Open the living room and choose a scene, or tap a lamp. The room’s controls are together, right where you expect them. No need to remember which integration a light belongs to.</p>
+        <p>The native app works directly with <strong>Apple Home</strong>, without a Hauser server. With <strong>Home Assistant</strong>, it pairs to your Hauser installation. The web interface also adapts to a phone; available devices and features depend on the connection you choose.</p>
+        <a class="text-link" href="#app">Get the iOS beta <span aria-hidden="true">→</span></a>
       </div>
     </div>
+  </section>
 
-    <div class="split reverse split-later">
-      <div class="split-text">
-        <h3 class="h3-large">Same language, different hand.</h3>
-        <p class="body-text">
-          On the phone the rooms are the same cards the panel shows in its
-          all-rooms view, and they go dark with the room in the evening.
-          Navigation moves to the thumb as a floating bar. Under the rooms
-          sits a quick bar with four fields that are yours: everything off,
-          the central temperature, and buttons of your own that run scenes and
-          devices from any room in one tap. A room opens as a sheet with its
-          readings under the name — temperature, humidity, presence — and its
-          climate behind the temperature. Configuring happens where you
-          control: the picture dissolves into its blueprint and every tile
-          stays where it is.
-        </p>
+  <!-- E: The author's documented household, not an invented testimonial. -->
+  <section class="about section-space" id="beta" aria-labelledby="about-title">
+    <div class="wrap about-grid">
+      <div>
+        <p class="section-label">04 / A personal project</p>
+        <h2 class="telling" id="about-title">Made for a home.<br>Shared with yours.</h2>
+        <p class="free-line">Free. No subscription.</p>
       </div>
-      <div class="state-demo" data-state="home" data-cycle="home,room,edit" data-interval="3600">
-        <div class="phone reveal">
-          <div class="phone-screen state-stack">
-            <img class="state-shot" data-for="home" src="media/phone.webp" width="390" height="844" loading="lazy" decoding="async"
-                 alt="The phone layout: six room cards with their illustrations in two columns, the living room with a green presence dot and two lamps on, a quick bar with the all-off button and the central temperature, and a floating bottom bar with Home, Shopping, Reminders and More.">
-            <img class="state-shot" data-for="room" src="media/phone-room.webp" width="390" height="844" loading="lazy" decoding="async"
-                 alt="The living room as a sheet on the phone: the room name over its picture, the temperature reading under it, the scenes Cozy, Bright and Off, and the room's lamps and blinds as tiles.">
-            <img class="state-shot" data-for="edit" src="media/phone-edit.webp" width="390" height="844" loading="lazy" decoding="async"
-                 alt="The same room in configuration on the phone: the picture has become a blueprint, every tile carries a small minus, a dashed tile reads Add device, and the climate card and quick setup follow below.">
-          </div>
+      <div class="about-copy">
+        <p class="lead">Hauser began on its maker’s wall panel, for the people living in that home. The room you’ve seen here is that living room: sofa, plants, toys and all.</p>
+        <p>The idea is simple: the person switching on a light shouldn’t have to understand the system behind it. The code is open source, so you can see how it works and make it your own.</p>
+        <p>Everyday control needs no Hauser account or subscription. Home Assistant runs on your hardware; the iOS app can use Apple Home directly. Optional image generation and other integrations have their own external services.</p>
+        <p class="beta-note"><strong>Still in public beta.</strong> Compatibility is growing, and this is a personal project without guaranteed support. The iOS app is a TestFlight beta with time-limited builds. <a href="https://github.com/ralleur/hauser/releases">Read what’s changed</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- F: Entrances organised around the home people already have. -->
+  <section class="get-started section-space wrap" id="install" aria-labelledby="install-title">
+    <span class="anchor" id="setup"></span>
+    <div class="section-intro install-intro">
+      <div><p class="section-label">05 / Come on in</p><h2 id="install-title">Make yourself<br>at home.</h2></div>
+      <div class="intro-copy">
+        <p>Look around first. The live demo is the real web interface with simulated devices. Nothing connects to your home. When you’re ready, choose the way that fits your setup.</p>
+        <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div class="setup-path" id="app">
+      <div class="path-heading"><p class="small">iPhone &amp; iPad · iOS 17+</p><h3>I use Apple Home.</h3></div>
+      <div class="path-copy">
+        <p>Install TestFlight, join the Hauser beta, then choose Apple Home. Your rooms and supported devices come from your Apple Home. No Home Assistant or Hauser server required.</p>
+        <div class="actions">
+          <a class="button button-outline" href="https://testflight.apple.com/join/WPcA1eE1">Join the iOS beta <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="docs/integrations/companion-app/">App details &amp; requirements</a>
         </div>
-        <p class="device-caption">
-          <span data-for="home">Home. The rooms, the quick bar, the bar under the thumb.</span>
-          <span data-for="room">A room. Its readings under the name, scenes and devices below.</span>
-          <span data-for="edit">Configuring. The picture becomes its blueprint; the tiles stay where they are.</span>
-        </p>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ── Die iOS-App ────────────────────────────────────────────────────── -->
-<section class="band" id="app">
-  <div class="wrap">
-    <div class="showcase-head">
-      <p class="eyebrow">The iOS app</p>
-      <h2>The same home in your pocket. With Apple Home or Home Assistant.</h2>
-      <p class="body-text">
-        Hauser is also a native app for iPhone and iPad, drawn screen by screen
-        in SwiftUI rather than wrapped around a web view: the same look, the
-        same words, the same gestures. It runs three ways. With Home Assistant,
-        paired to your Hauser installation by a QR code shown on the panel.
-        Directly with Apple Home, with no server at all. Or with a built-in
-        demo household, to look around before anything is connected. On an
-        iPad it becomes the wall panel.
-      </p>
-      <p class="body-text">
-        It is in TestFlight today, free, with a public link. Builds update in
-        place, and what changes in each one follows the same release notes as
-        the panel.
-      </p>
-      <div class="actions">
-        <a class="btn btn-primary" href="https://testflight.apple.com/join/WPcA1eE1">Join the TestFlight</a>
-        <a class="btn" href="docs/integrations/companion-app/">How pairing works</a>
-      </div>
-    </div>
-  </div>
-  <div class="showcase-wide">
-    <div class="phones">
-      <div class="state-demo" data-state="day" data-cycle="day,night" data-interval="4400">
-        <div class="phone reveal">
-          <div class="phone-screen state-stack">
-            <img class="state-shot" data-for="day" src="media/ios-home.webp" width="402" height="874" loading="lazy" decoding="async"
-                 alt="The iOS app's home by day: a line saying one window is open, the washer with 23 minutes left, six room cards with their illustrations, the living room with two lamps on, the quick bar and the bottom bar with Home, Shopping, Reminders and More.">
-            <img class="state-shot" data-for="night" src="media/ios-home-night.webp" width="402" height="874" loading="lazy" decoding="async"
-                 alt="The same home after dark: the living room and the kitchen carry their lit evening picture, the bedroom and the hallway their dark one.">
-          </div>
+    <div class="setup-path">
+      <div class="path-heading"><p class="small">Wall tablet, browser &amp; paired iOS app</p><h3>I use Home Assistant.</h3></div>
+      <div class="path-copy">
+        <p>Install Hauser on your own hardware. The guided setup finds your areas and devices and lets you arrange your rooms. On iPhone and iPad, the native app pairs with this installation by QR code.</p>
+        <div class="ha-paths">
+          <div><h4>Home Assistant OS</h4><p>Add the repository, install Hauser and open the web UI.</p><a class="text-link" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser">Add to Home Assistant <span aria-hidden="true">↗</span></a><a class="small setup-guide" href="docs/getting-started/home-assistant-app/">Step-by-step guide</a></div>
+          <div><h4>Home Assistant Container or NAS</h4><p>Run the same Hauser server with Docker Compose.</p><a class="text-link" href="docs/getting-started/docker-compose/">Docker installation guide <span aria-hidden="true">→</span></a></div>
         </div>
-        <p class="device-caption">
-          <span data-for="day">Home. A window open, the washer nearly done, the rooms with their lamps.</span>
-          <span data-for="night">The same home after dark. Lit where a lamp is on.</span>
-        </p>
-      </div>
-      <div class="reveal">
-        <div class="phone">
-          <div class="phone-screen">
-            <img src="media/ios-room.webp" width="402" height="874" loading="lazy" decoding="async"
-                 alt="A room in the iOS app: the living room's picture with its temperature, the scenes, the lamps as tiles, the patio door contact reading closed, and the camera as a live picture.">
-          </div>
-        </div>
-        <p class="device-caption">A room. Scenes, lamps, the patio door contact and the camera, live.</p>
-      </div>
-      <div class="reveal">
-        <div class="phone">
-          <div class="phone-screen">
-            <img src="media/ios-energy.webp" width="402" height="874" loading="lazy" decoding="async"
-                 alt="Energy in the iOS app: the power right now, production and grid, the sun arc beside the title, and under Today the balance of the day with its two bars over a pale picture of the house.">
-          </div>
-        </div>
-        <p class="device-caption">Energy. The day's balance under Today, the house pale behind it.</p>
       </div>
     </div>
-  </div>
-
+    <div class="practical-notes">
+      <details>
+        <summary>What should I check before installing?</summary>
+        <p>Hauser is beta software. Check the <a href="docs/getting-started/requirements/">requirements</a> and <a href="https://github.com/ralleur/hauser/releases">release notes</a> for your setup. Keep the server on a trusted network; do not expose its port to the internet. See the <a href="docs/integrations/remote-access/">remote-access guide</a> for access away from home.</p>
+      </details>
+      <details id="dignity">
+        <summary>What happens if my home is unreachable?</summary>
+        <p>The web panel keeps the room picture and dims its controls when Home Assistant is disconnected. Standby’s clock and date keep running on the panel. Device control needs the connection back. <a href="docs/reference/troubleshooting/">Connection help</a>.</p>
+      </details>
+      <details id="voices">
+        <summary>How does the rest of Hauser work?</summary>
+        <p>The <a href="docs/overview/features/">feature guide</a> covers the calendar, shopping, media and more, with their integration requirements. For the thinking behind the interface, read the <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">design system</a> and <a href="https://github.com/ralleur/hauser/blob/main/docs/02-interaction-contract.md">interaction contract</a>. The <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">roadmap</a> distinguishes what works today, what is experimental and what is planned.</p>
+      </details>
+    </div>
+  </section>
+</main>
+<footer class="site-footer">
   <div class="wrap">
-    <div class="cards cards-app">
-      <div class="card reveal">
-        <h3>Widgets and a Live Activity</h3>
-        <p>
-          A room, a scene, a device, the home or the energy as a widget on the
-          home screen. A lamp you switch on shows up as a Live Activity in the
-          Dynamic Island until it is off again.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Siri, NFC and the share sheet</h3>
-        <p>
-          Add to the shopping list from anywhere with Siri or the share sheet.
-          Stick an NFC tag by the door and a tap runs a scene. Leaving or
-          arriving home can send a notification with buttons on it.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Your calendars, on the device</h3>
-        <p>
-          iCloud, Google and Exchange calendars of the phone merge with the
-          events the server knows. The shopping list sorts itself into shop
-          sections on the device with Apple Intelligence, no subscription.
-        </p>
-      </div>
-      <div class="card reveal">
-        <h3>Offline and private</h3>
-        <p>
-          Ticks on the shopping list and reminders queue while you are out of
-          reach and land when you are back. Documents open behind Face ID.
-          Nothing leaves your home but the pairing with your own server.
-        </p>
-      </div>
+    <div class="footer-top">
+      <a class="brand" href="#main" aria-label="Hauser — back to top"><img src="brand/hauser-logo-light.svg" width="416" height="144" alt="Hauser" loading="lazy"></a>
+      <nav class="footer-links" aria-label="Project links">
+        <a href="demo/">Demo</a><a href="#install">Installation</a><a href="docs/">Documentation</a><a href="https://github.com/ralleur/hauser">GitHub</a><a href="https://github.com/ralleur/hauser/blob/main/CONTRIBUTING.md">Contribute</a>
+      </nav>
     </div>
-    <p class="body-text fine-print">
-      The app is a project of its own beside the panel. It needs iOS 17 or
-      newer; the glass surfaces come with iOS 26, and the features that use
-      Apple Intelligence need a device that supports it.
-    </p>
-  </div>
-</section>
-
-<!-- ── Schwäche mit Würde ─────────────────────────────────────────────── -->
-<section id="dignity">
-  <div class="wrap">
-    <div class="split">
-      <div class="split-text">
-        <p class="eyebrow">Weakness with dignity</p>
-        <h2>A wall clock never goes out.</h2>
-        <p class="body-text">
-          When Home Assistant cannot be reached, the stage stays lit. The
-          controls dim, the connection state is one quiet word in the title
-          bar, and nothing stacks a banner over the room. In standby the
-          clock, the date and the week keep going from the panel itself.
-        </p>
-        <p class="body-text">
-          Empty states are designed like the rest: a clock instead of a
-          message, leaving out instead of a dash, a mood instead of a warning.
-          A disconnected home should look like a quiet one, not a broken one.
-        </p>
-      </div>
-      <div class="device reveal">
-        <img src="media/offline-home.webp"
-             srcset="media/offline-home-700.webp 700w, media/offline-home-1100.webp 1100w, media/offline-home.webp 1696w"
-             sizes="(min-width: 880px) 540px, 100vw"
-             width="1696" height="960" loading="lazy" decoding="async"
-             alt="The home screen while Home Assistant is unreachable: the living-room illustration stays exactly as it was, the scenes and lamp controls are dimmed, and the status chip in the title bar reads Disconnected.">
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Beta-Hinweis ──────────────────────────────────────────────────── -->
-<section class="honest" id="beta">
-  <div class="wrap">
-    <p class="eyebrow">Technical beta</p>
-    <h2 style="max-width:17ch">Built in the open, for one household first.</h2>
-    <p class="lead" style="margin-top:26px">
-      Hauser installs and runs today. Compatibility with the enormous range of
-      Home Assistant setups is still growing, there is no support SLA, and it is
-      built for trusted deployments on your own network rather than for the
-      public internet. Which version is current, and what changed in it, is in
-      the <a href="https://github.com/ralleur/hauser/releases">release notes</a>;
-      the iOS app follows the same beta in TestFlight.
-    </p>
-
-    <div class="honest-grid">
-      <div class="honest-col">
-        <h3>What you get</h3>
-        <ul class="honest-list honest-yes">
-          <li>A complete, working interface you can run and read</li>
-          <li>A documented design system, interaction contract and performance budget</li>
-          <li>A guided Home Assistant setup with versioned external configuration</li>
-          <li>A stress house before every release: the built app is set up against a simulated Home Assistant full of real-world pitfalls and clicked through end to end, in the web app and in the iOS app</li>
-          <li>AGPL licensed: fork it, run it, modify it; share your changes if you offer it to others</li>
-        </ul>
-      </div>
-      <div class="honest-col">
-        <h3>Worth knowing</h3>
-        <ul class="honest-list honest-no">
-          <li>No SLA and no promised response time</li>
-          <li>Device and Home Assistant coverage grows release by release</li>
-          <li>Intended for trusted local networks, not for internet exposure</li>
-          <li>Versions move fast; read the release notes before upgrading</li>
-          <li>The iOS app is a TestFlight beta; its builds expire after ninety days and are replaced by the next one</li>
-        </ul>
-      </div>
-    </div>
-
-    <p class="body-text" style="margin-top:40px">
-      Installations outside this household exist and report back. The first
-      one ran on an <a href="https://github.com/ralleur/hauser/issues/7">Asustor NAS
-      with Docker Compose</a> against Home Assistant Container, with the first light
-      under control ten minutes in. Reports like that, on GitHub and in the Home
-      Assistant community, shape the next release; the full picture lives in the
-      <a href="https://github.com/ralleur/hauser/releases">release notes</a> and the
-      <a href="https://github.com/ralleur/hauser#readme">README</a>.
-    </p>
-  </div>
-</section>
-
-<!-- ── Install ───────────────────────────────────────────────────────── -->
-<section id="install">
-  <div class="wrap">
-    <div class="section-narrow centered">
-      <p class="eyebrow">Install</p>
-      <h2>One click on Home Assistant OS. Compose everywhere else. TestFlight on the phone.</h2>
-      <p class="lead centered-lead">
-        Both server paths end in the same guided setup: it scans Home Assistant,
-        proposes rooms and devices, lets you correct the result and activates a
-        validated configuration in one step. No source edits, no YAML. The iOS
-        app pairs to that installation — or skips it and talks to Apple Home.
-      </p>
-    </div>
-
-    <div class="install-paths">
-      <div class="card path-preferred reveal">
-        <p class="path-tag">Home Assistant OS &amp; Supervised</p>
-        <h3>As a Home Assistant App</h3>
-        <ol class="path-steps">
-          <li>Add <code>github.com/ralleur/hauser</code> as an App repository.</li>
-          <li>Select Hauser, install it, start it.</li>
-          <li>Open the web UI and run the setup wizard.</li>
-        </ol>
-        <a class="btn btn-primary" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser">Add the repository</a>
-        <p class="path-note">
-          A thin wrapper around the same image, with all state in Home
-          Assistant's persistent storage, so App backups cover your household
-          configuration.
-        </p>
-      </div>
-
-      <div class="card reveal">
-        <p class="path-tag">Container, Docker hosts, NAS</p>
-        <h3>With Docker Compose</h3>
-        <ol class="path-steps">
-          <li>Copy <code>.env.example</code> to <code>.env</code>.</li>
-          <li>Run <code>docker compose up -d</code>.</li>
-          <li>Open port 4173 and run the setup wizard.</li>
-        </ol>
-        <a class="btn" href="docs/getting-started/docker-compose/">Read the install guide</a>
-        <p class="path-note">
-          Home Assistant Container has no App system, so this is the path there.
-          Backup, restore, update and rollback are documented end to end.
-        </p>
-      </div>
-
-      <div class="card reveal">
-        <p class="path-tag">iPhone &amp; iPad, iOS 17 or newer</p>
-        <h3>As the iOS app, via TestFlight</h3>
-        <ol class="path-steps">
-          <li>Install TestFlight from the App Store.</li>
-          <li>Open the public link and accept the invitation.</li>
-          <li>Choose Home Assistant, Apple Home or the demo household.</li>
-        </ol>
-        <a class="btn" href="https://testflight.apple.com/join/WPcA1eE1">Join the TestFlight</a>
-        <p class="path-note">
-          With Home Assistant the app pairs to your Hauser installation with a
-          QR code from the panel's System screen. With Apple Home there is
-          nothing to install on the wall.
-        </p>
-      </div>
-    </div>
-
-    <div class="actions centered-actions">
-      <a class="btn btn-primary" href="demo/">Open the live demo</a>
-      <a class="btn" href="https://github.com/ralleur/hauser/releases">Release notes</a>
-    </div>
-  </div>
-</section>
-
-<!-- ── Footer ────────────────────────────────────────────────────────── -->
-<footer>
-  <div class="wrap">
-    <div class="footer-links">
-      <a href="https://github.com/ralleur/hauser">GitHub</a>
-      <a href="demo/">Live demo</a>
-      <a href="docs/">Wiki</a>
-      <a href="https://testflight.apple.com/join/WPcA1eE1">iOS app on TestFlight</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/docs/00-architecture.md">Architecture</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">Design system</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">Roadmap</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/CONTRIBUTING.md">Contribute</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/LICENSE">License</a>
-      <a href="https://github.com/ralleur/hauser/blob/main/TRADEMARKS.md">Brand policy</a>
-    </div>
-    <p>
-      Code, design tokens and technical documentation are under AGPL-3.0-only.
-      Original artwork and public screenshots are CC&nbsp;BY&nbsp;4.0. Official
-      Hauser branding is reserved. Typeset in Alegreya Sans and Alegreya, both
-      under the SIL Open Font License. Map data © OpenStreetMap contributors.
-    </p>
-    <p>Not affiliated with Home Assistant or Apple. Apple Home, TestFlight and Siri are trademarks of Apple Inc.</p>
+    <p>Code and documentation: <a href="https://github.com/ralleur/hauser/blob/main/LICENSE">AGPL-3.0-only</a>. Original illustrations and screenshots: <a href="https://github.com/ralleur/hauser/blob/main/ASSETS-LICENSE.md">CC BY 4.0</a>. <a href="https://github.com/ralleur/hauser/blob/main/TRADEMARKS.md">Hauser branding is reserved</a>. Alegreya Sans &amp; Alegreya: SIL Open Font License. Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.</p>
+    <p>Not affiliated with Home Assistant or Apple. Apple Home and TestFlight are trademarks of Apple Inc.</p>
   </div>
 </footer>
-
-<script>
-  // Zustandsvorführungen. Ein Container trägt `data-state`; Bilder und
-  // Beschriftungen mit passendem `data-for` bekommen `is-shown`. Ohne
-  // JavaScript steht das erste Bild, die Knöpfe bleiben verborgen — eine
-  // leere Sektion wäre kaputt, nicht interaktiv.
-  document.documentElement.classList.add('has-js');
-
-  function inView(el) {
-    var box = el.getBoundingClientRect();
-    return box.bottom > 0 && box.top < (window.innerHeight || 0);
-  }
-
-  function refresh(demo) {
-    var state = demo.dataset.state;
-    var city = demo.dataset.city;
-    var items = demo.querySelectorAll('[data-for], [data-city]');
-    for (var i = 0; i < items.length; i++) {
-      var el = items[i];
-      var forOk = !el.hasAttribute('data-for') || el.dataset.for === state;
-      var cityOk = !el.hasAttribute('data-city') || el.dataset.city === city;
-      var shown = forOk && cityOk;
-      el.classList.toggle('is-shown', shown);
-      if (el.tagName === 'IMG') el.setAttribute('aria-hidden', String(!shown));
-    }
-    var buttons = demo.querySelectorAll('.state-btn');
-    for (var j = 0; j < buttons.length; j++) {
-      buttons[j].setAttribute('aria-pressed', String(buttons[j].dataset.state === state));
-    }
-  }
-
-  function setupStateDemo(demo) {
-    var buttons = demo.querySelectorAll('.state-btn');
-    for (var k = 0; k < buttons.length; k++) {
-      buttons[k].addEventListener('click', function (event) {
-        demo.dataset.state = event.currentTarget.dataset.state;
-        refresh(demo);
-      });
-    }
-    refresh(demo);
-  }
-
-  // Schleifen: `data-cycle` zählt den Zustand weiter, `data-cycle-city` den
-  // Ort. Nur solange das Bild im Blick ist, und nie bei reduzierter Bewegung.
-  // Bewusst ohne Abbruch bei Berührung: auf dem Telefon beginnt jedes Scrollen
-  // mit einem Fingerdruck, und ein Umschalter für Tag und Nacht soll die
-  // Städte nicht anhalten.
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  function setupCycle(el, attr, key) {
-    var order = (el.getAttribute(attr) || '').split(',').filter(Boolean);
-    if (reduceMotion || order.length < 2) return;
-    var interval = parseInt(el.dataset.interval, 10) || 5200;
-    setInterval(function () {
-      if (document.hidden || !inView(el)) return;
-      var index = order.indexOf(el.dataset[key]);
-      el.dataset[key] = order[(index + 1) % order.length];
-      if (el.classList.contains('state-demo')) refresh(el);
-    }, interval);
-  }
-
-  (function () {
-    var demos = document.querySelectorAll('.state-demo');
-    for (var i = 0; i < demos.length; i++) setupStateDemo(demos[i]);
-    var cycled = document.querySelectorAll('[data-cycle]');
-    for (var j = 0; j < cycled.length; j++) setupCycle(cycled[j], 'data-cycle', 'state');
-    var cities = document.querySelectorAll('[data-cycle-city]');
-    for (var k = 0; k < cities.length; k++) setupCycle(cities[k], 'data-cycle-city', 'city');
-  })();
-</script>
-
-<script>
-  // Scroll-Reveal. `.has-js` schaltet den Effekt überhaupt erst scharf — ohne
-  // JavaScript bleibt die Seite vollständig sichtbar.
-  (function () {
-    var root = document.documentElement;
-    var targets = document.querySelectorAll('.reveal');
-
-    function revealAll() {
-      for (var i = 0; i < targets.length; i++) targets[i].classList.add('is-visible');
-    }
-
-    if (!('IntersectionObserver' in window)) { revealAll(); return; }
-
-    root.classList.add('has-js');
-
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.06 });
-
-    for (var i = 0; i < targets.length; i++) observer.observe(targets[i]);
-
-    // Sicherheitsnetz: falls der Observer in einem gedrosselten oder
-    // unsichtbaren Tab nie feuert, wird nach kurzer Zeit alles gezeigt.
-    setTimeout(revealAll, 2500);
-  })();
-</script>
-
 </body>
 </html>
