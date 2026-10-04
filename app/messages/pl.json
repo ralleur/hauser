@@ -2117,5 +2117,13 @@
   "camera_popup_required": "Wybierz wyzwalacz, aby włączyć obraz.",
   "camera_popup_empty": "Brak wyzwalaczy. Sprawdź połączenie i ponownie otwórz ustawienia.",
   "camera_popup_hint": "Ruch, wykrycie osoby lub dzwonek na chwilę otwierają tę kamerę na pełnym ekranie. Na tym urządzeniu, gdy Hauser jest otwarty.",
-  "camera_popup_done": "Gotowe"
+  "camera_popup_done": "Gotowe",
+  "rimg_manage_current": "Twój obraz pokoju",
+  "rimg_manage_origin": "Utworzono za pomocą",
+  "rimg_manage_origin_legacy": "Obraz przesłany lub utworzony zewnętrznie",
+  "rimg_manage_versions": "Wersje obrazu",
+  "rimg_manage_replace": "Użyj innego obrazu",
+  "rimg_manage_replace_hint": "Własny obraz, biblioteka lub asystent — obecny obraz pozostanie do wyboru nowego.",
+  "rimg_manage_setup": "Obraz dla Twojego pokoju",
+  "rimg_manage_assistant_hint": "Te wersje pochodzą z asystenta. Zmień sposób tworzenia, aby utworzyć nowy zestaw lub użyć własnych obrazów."
 }

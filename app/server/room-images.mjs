@@ -2423,10 +2423,12 @@ function roomImageAssetPublic(assetId, focus, entry = null) {
     /* Selbst gezeichnet (R55): welche Fassungen der Nutzer wirklich mitgebracht
        hat — die übrigen sind aus dem Tagbild abgedunkelt. */
     ...(entry?.manual ? { manual: structuredClone(entry.manual) } : {}),
+    ...(entry?.origin ? { origin: entry.origin } : {}),
   };
 }
 
 const ROOM_IMAGE_MANUAL_OWN_KEYS = Object.freeze(['light', 'dark', 'darkOff', 'overcast']);
+const ROOM_IMAGE_ORIGINS = new Set(['upload', 'manual', 'assistant', 'apple', 'chatgpt', 'openai', 'cloudflare']);
 function validRoomImageManualRecord(value) {
   return roomImageExactObject(value, ['own']) && Array.isArray(value.own) && value.own.length <= ROOM_IMAGE_MANUAL_OWN_KEYS.length
     && value.own.every((key, index) => ROOM_IMAGE_MANUAL_OWN_KEYS.includes(key) && value.own.indexOf(key) === index);
@@ -2477,6 +2479,8 @@ function validRoomImageCatalogEntry(entry) {
   if (Object.hasOwn(entry ?? {}, 'regions')) optional.push('regions');
   if (Object.hasOwn(entry ?? {}, 'windows')) optional.push('windows');
   if (Object.hasOwn(entry ?? {}, 'manual')) optional.push('manual');
+  if (Object.hasOwn(entry ?? {}, 'origin')) optional.push('origin');
+  if (optional.includes('origin') && !ROOM_IMAGE_ORIGINS.has(entry.origin)) return false;
   if (optional.includes('regions') && !validRegionsRecord(entry.regions)) return false;
   if (optional.includes('manual') && !validRoomImageManualRecord(entry.manual)) return false;
   if (!roomImageExactObject(entry, [
@@ -2680,9 +2684,10 @@ export function createRoomImageAssetStore({
       return { ...roomImageAssetPublic(entry.assetId, entry.focus, entry), createdAt: entry.createdAt, byteLength };
     });
   }
-  function publish(assetId, focus, variants) {
+  function publish(assetId, focus, variants, origin = null) {
     assertMutable();
-    if (!ROOM_IMAGE_ASSET_ID_PATTERN.test(assetId || '') || !validStoredRoomImageFocus(focus)
+    if ((origin !== null && !ROOM_IMAGE_ORIGINS.has(origin))
+        || !ROOM_IMAGE_ASSET_ID_PATTERN.test(assetId || '') || !validStoredRoomImageFocus(focus)
         || !roomImageExactObject(variants, [...ROOM_IMAGE_VARIANT_KEYS])
         || !Object.values(variants).every((bytes) => bytes instanceof Uint8Array && bytes.byteLength > 0)) {
       throw roomImageAssetStoreError('Ungültiger Room-Image-Publishinput.');
@@ -2729,6 +2734,7 @@ export function createRoomImageAssetStore({
         variants: structuredClone(ROOM_IMAGE_VARIANT_FILES),
         focus: structuredClone(focus),
         createdAt: new Date(now()).toISOString(),
+        ...(origin ? { origin } : {}),
         status: 'active', files,
         manifestSha256: createHash('sha256').update(manifest).digest('hex'),
       };
@@ -4889,7 +4895,7 @@ async function serveRoomImagePublish(req, res, identity, jobId, context) {
           context.assertSetupRecoveryHealthy();
           const asset = await context.configMutations.run(() => {
             context.assertSetupRecoveryHealthy();
-            return context.assetStore.publish(record.reservedAssetId, record.request.focus, publishVariants);
+            return context.assetStore.publish(record.reservedAssetId, record.request.focus, publishVariants, 'assistant');
           });
           context.publishStep('before_job_commit', { jobId, assetId: asset.assetId });
           context.assertSetupRecoveryHealthy();
@@ -5139,7 +5145,8 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
       } else if (wholeSet) {
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
         const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
-        createdAsset = context.assetStore.publish(assetId, focus, manualVariants);
+        const origin = new URL(req.url, 'http://localhost').searchParams.get('origin') === 'manual' ? 'manual' : 'upload';
+        createdAsset = context.assetStore.publish(assetId, focus, manualVariants, origin);
         manual = { own: ['light'] };
         context.assetStore.setManual(assetId, manual);
         room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
@@ -5169,7 +5176,7 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
         if (req.method === 'POST') own.add(key); else own.delete(key);
         manual = { own: [...own] };
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
-        createdAsset = context.assetStore.publish(assetId, structuredClone(entry.focus), variants);
+        createdAsset = context.assetStore.publish(assetId, structuredClone(entry.focus), variants, entry.origin ?? null);
         context.assetStore.setManual(assetId, manual);
         /* Was das alte Set sonst noch wusste, zieht mit: Flächen und, sofern nicht gerade entfernt, die trübe Fassung. */
         if (entry.regions) context.assetStore.setRegions(assetId, structuredClone(entry.regions));
@@ -5271,7 +5278,7 @@ export async function refreshBrightManualRoomImages(context, { onStart = () => u
         const snapshot = readRoomImageHouseholdSnapshot(householdConfigPath);
         const roomIds = assignedRoomIds(snapshot.document, previousAssetId);
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
-        const created = assetStore.publish(assetId, structuredClone(entry.focus), variants);
+        const created = assetStore.publish(assetId, structuredClone(entry.focus), variants, entry.origin ?? null);
         assetStore.setManual(assetId, entry.manual ? structuredClone(entry.manual) : { own: ['light'] });
         if (entry.regions) assetStore.setRegions(assetId, structuredClone(entry.regions));
         if (entry.files?.overcast) {

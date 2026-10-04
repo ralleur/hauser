@@ -5,11 +5,11 @@ sidebar:
   order: 2
 ---
 
-A few words come up on every page. Here is what they mean.
+These terms describe the Home Assistant web interface unless noted otherwise. The [native iOS app](/hauser/docs/integrations/companion-app/) can also use Apple Home directly.
 
 | Word | Meaning |
 |---|---|
-| **Room** | A Hauser room. Usually created from a Home Assistant Area during setup. It has a picture, devices and scenes. |
+| **Room** | A space in your home. In the web interface it is usually created from a Home Assistant Area; with Apple Home it comes from your HomeKit home. It has a picture, devices and scenes. |
 | **Device** | A Home Assistant entity that Hauser shows in a room, for example a light, a thermostat or a window contact. |
 | **Stage** | The large room picture on the panel. It changes with daylight, weather and the lights in the room. |
 | **Control surface** | The panel area with the room's scenes and devices. It sits next to the stage and can be swiped away. |

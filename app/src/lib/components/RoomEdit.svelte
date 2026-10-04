@@ -37,6 +37,7 @@
   import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
   import RoomImageLibrary from './settings/RoomImageLibrary.svelte';
   import RoomImageWizard from './settings/RoomImageWizard.svelte';
+  import RoomImageManual from './settings/RoomImageManual.svelte';
   import {
     autoSensorId,
     cameraSplit,
@@ -85,6 +86,7 @@
   let categoryFilter = $state<DeviceCategory | null>(null);
   let view = $state<'devices' | 'immersion' | 'background'>('devices');
   let wizardOpen = $state(false);
+  let changeImageWay = $state(false);
   let selectedLightId = $state('');
   let backgroundInput = $state<HTMLInputElement>();
   let backgroundBusy = $state(false);
@@ -364,7 +366,7 @@
     return `max(${preset.slotMinPx}px, min(${preset.totalPercent}vw, calc(100vw - ${preset.heroMinPx}px - var(--space-8))))`;
   });
   /* Eine Kachel in der Hand gehört dem Ordnen — dort greifen weder Raumwechsel noch Schließen. */
-  const MIRROR_SWIPE_IGNORE = `${SHEET_SWIPE_IGNORE}, [data-reorder-tile]`;
+  const MIRROR_SWIPE_IGNORE = `${SHEET_SWIPE_IGNORE}, [data-reorder-tile], .room-image-windows-stage`;
   /* Wie das Raumblatt: die Demo hat Kameras ohne Bild und zeigt sie deshalb nicht. */
   const IS_DEMO_BUILD = import.meta.env?.VITE_DEMO === '1';
   let adding = $state(false);
@@ -1140,10 +1142,18 @@
             </div>
           {:else}
             <section class="re-background-editor">
+              {#if background && room}
+                {#key room.id}
+                  <RoomImageManual roomId={room.id} managing refreshKey={wizardOpen || libraryOpen}
+                    onchangeway={() => { changeImageWay = true; wizardOpen = true; }} />
+                {/key}
+              {:else}
               <div class="re-background-preview" style:background-image={`url("${backgroundUrl}")`}
                    aria-label={m.room_background_preview()}></div>
-              <div class="re-background-actions">
-                <p class="re-empty">{m.room_background_hint()}</p>
+              {/if}
+              <div class="re-background-actions" class:has-image={!!background}>
+                <h3>{background ? m.rimg_manage_replace() : m.rimg_manage_setup()}</h3>
+                <p class="re-empty">{background ? m.rimg_manage_replace_hint() : m.room_background_hint()}</p>
                 <input bind:this={backgroundInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif"
                        onchange={chooseBackground} />
                 <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
@@ -1153,7 +1163,7 @@
                 <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
                         onclick={() => libraryOpen = true}>{m.rimg_lib_from_library()}</button>
                 <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
-                        onclick={() => wizardOpen = true}>{m.rimg_wizard_entry()}</button>
+                        onclick={() => { changeImageWay = true; wizardOpen = true; }}>{m.rimg_wizard_entry()}</button>
                 {#if background}
                   <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
                           onclick={restoreBackground}>{m.room_background_restore()}</button>
@@ -1178,5 +1188,5 @@
   <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}
                     onclose={() => libraryOpen = false}
                     onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
-  <RoomImageWizard open={wizardOpen} roomId={room?.id ?? null} onclose={() => wizardOpen = false} />
+  <RoomImageWizard open={wizardOpen} chooseOnOpen={changeImageWay} roomId={room?.id ?? null} onclose={() => wizardOpen = false} />
 {/if}

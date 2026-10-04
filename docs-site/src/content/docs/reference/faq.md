@@ -7,11 +7,11 @@ sidebar:
 
 ### Do I need Home Assistant?
 
-Yes. Hauser shows and controls what Home Assistant knows. Without it there is nothing to show.
+For the web interface, yes. The native iPhone and iPad app also works directly with **Apple Home**, without Home Assistant or a Hauser server. See [Choose your setup](/hauser/docs/getting-started/requirements/).
 
 ### Does Hauser replace Home Assistant?
 
-No. Automations, integrations and device setup stay in Home Assistant. Hauser is the everyday surface for the household.
+Hauser provides the everyday controls. With Home Assistant, integrations and automations stay there; with Apple Home, the native app uses your existing HomeKit home.
 
 ### Can I run it as a Home Assistant Container user?
 
@@ -31,7 +31,7 @@ In the volumes, as JSON. See [Configuration reference](/hauser/docs/reference/co
 
 ### Does Hauser need cloud services?
 
-No. Home Assistant, Jellyfin, Paperless and Notion are your own services. Weather and the street map use free public data. The room-image wizard is optional, and only its ChatGPT way is paid; it also draws with a free Cloudflare account, or you draw the pictures yourself.
+Everyday room control needs no Hauser cloud account. Optional features can contact external services: weather and maps request public data, Notion is a cloud service, and image providers receive the photo you choose. Those services have their own accounts, costs and limits. See [requirements](/hauser/docs/getting-started/requirements/) and [room pictures](/hauser/docs/using/room-images/).
 
 ### How are room pictures made?
 
@@ -39,7 +39,7 @@ Four ways: keep the defaults, upload your own, let the wizard draw one from a ph
 
 ### Will the room-image wizard become free?
 
-It already is, in two ways: with a free Cloudflare account the wizard draws within Cloudflare's daily allowance, and without any account you copy the wizard's wording into Gemini, ChatGPT, Bing or any other service, bring the picture back and mark the windows yourself. The iOS app adds an experimental way through Apple Intelligence on iOS 27. Local models are still planned. See [Room pictures](/hauser/docs/using/room-images/).
+Hauser does not charge for the wizard. You can keep the bundled pictures or upload your own without an image provider. Cloudflare offers an allowance under its own terms; OpenAI needs your own access, and any external service you use manually sets its own costs. Experimental Apple Intelligence generation is separate from the normal setup. See [Room pictures](/hauser/docs/using/room-images/).
 
 ### What happens when Home Assistant is unreachable?
 
@@ -51,7 +51,7 @@ Yes. Every device shows the same household. There are no user accounts. Resident
 
 ### Is there a login?
 
-No. The port is meant for a trusted home network. For access from outside, use [Remote access](/hauser/docs/integrations/remote-access/), which only lets paired devices through.
+The Hauser server’s web port has no separate login and belongs on a trusted home network. Native Apple Home access uses iOS permissions instead. For access to a Hauser server from outside, use [Remote access](/hauser/docs/integrations/remote-access/), which only lets paired devices through.
 
 ### How do I update?
 

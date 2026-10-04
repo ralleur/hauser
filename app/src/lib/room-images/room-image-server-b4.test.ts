@@ -559,7 +559,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const body = await listing.json();
     expect(body).toEqual({
       assets: [{
-        ...asset, createdAt: expect.any(String), assignedRoomIds: [],
+        ...asset, origin: 'assistant', createdAt: expect.any(String), assignedRoomIds: [],
         byteLength: expect.any(Number),
       }],
       totalByteLength: expect.any(Number),
@@ -625,14 +625,14 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     await expect(privateListing.json()).resolves.toMatchObject({ code: 'AUTH_BOUNDARY_MISSING' });
   });
 
-  it('uploads a manual room background, serves it and restores the default', async () => {
+  it.each(['upload', 'manual'])('keeps the %s image method and windows when replacing a version, then restores the default', async (origin) => {
     const app = await startB4();
     const household = await fetch(`${app.base}/api/household-config`);
     const etag = household.headers.get('etag')!;
     await household.arrayBuffer();
     const png = readFileSync(new URL('./fixtures/neutral-alpha.png', import.meta.url));
     const avif = await providerPngToFinalAvif(png);
-    const upload = await fetch(`${app.base}/api/room-backgrounds/den`, {
+    const upload = await fetch(`${app.base}/api/room-backgrounds/den?variant=light&origin=${origin}`, {
       method: 'POST', headers: { origin: ORIGIN, 'if-match': etag, 'content-type': 'image/avif' }, body: Buffer.from(avif),
     });
     expect(upload.status).toBe(200);
@@ -644,8 +644,26 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
     expect(JSON.parse(readFileSync(app.householdConfigPath, 'utf8')).rooms[0].hero.assetId).toBe(uploaded.hero.assetId);
 
+    const regions = [{ kind: 'window', points: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.1 }, { x: 0.5, y: 0.8 }, { x: 0.1, y: 0.8 }] }];
+    const marked = await fetch(`${app.base}/api/room-image-assets/${uploaded.hero.assetId}/regions`, {
+      method: 'PUT', headers: privateHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ regions }),
+    });
+    expect(marked.status).toBe(200);
+    await marked.arrayBuffer();
+    const replaced = await fetch(`${app.base}/api/room-backgrounds/den?variant=dark`, {
+      method: 'POST', headers: { origin: ORIGIN, 'if-match': uploaded.etag, 'content-type': 'image/avif' }, body: Buffer.from(avif),
+    });
+    expect(replaced.status).toBe(200);
+    const replacement = await replaced.json();
+    const listing = await (await fetch(`${app.base}/api/room-image-assets`, { headers: privateHeaders() })).json();
+    expect(listing.assets.find((entry: any) => entry.assetId === replacement.hero.assetId)).toMatchObject({
+      origin, manual: { own: ['light', 'dark'] }, regions: { source: 'manual', regions },
+    });
+    const reloaded = createRoomImageAssetStore({ catalogPath: join(app.sandbox, 'config', 'room-images', 'assets.json'), assetRoot: join(app.sandbox, 'assets') });
+    expect(reloaded.activeEntry(replacement.hero.assetId).origin).toBe(origin);
+
     const restore = await fetch(`${app.base}/api/room-backgrounds/den`, {
-      method: 'DELETE', headers: { origin: ORIGIN, 'if-match': uploaded.etag },
+      method: 'DELETE', headers: { origin: ORIGIN, 'if-match': replacement.etag },
     });
     expect(restore.status).toBe(200);
     await expect(restore.json()).resolves.toMatchObject({ roomId: 'den', hero: null });

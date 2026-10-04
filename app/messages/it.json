@@ -2117,5 +2117,13 @@
   "camera_popup_required": "Scegli un attivatore per attivare il popup.",
   "camera_popup_empty": "Nessun attivatore disponibile. Controlla la connessione e riapri le impostazioni.",
   "camera_popup_hint": "Movimento, rilevamento di persone o campanello aprono brevemente questa videocamera a schermo intero. Su questo dispositivo, mentre Hauser è aperto.",
-  "camera_popup_done": "Fine"
+  "camera_popup_done": "Fine",
+  "rimg_manage_current": "La tua immagine della stanza",
+  "rimg_manage_origin": "Creata con",
+  "rimg_manage_origin_legacy": "Immagine caricata o creata altrove",
+  "rimg_manage_versions": "Versioni dell’immagine",
+  "rimg_manage_replace": "Usa un’altra immagine",
+  "rimg_manage_replace_hint": "Una tua immagine, la libreria o l’assistente: l’immagine attuale resta fino alla nuova scelta.",
+  "rimg_manage_setup": "Un’immagine per la tua stanza",
+  "rimg_manage_assistant_hint": "Queste versioni provengono dall’assistente. Cambia metodo per creare un nuovo set o usare le tue immagini."
 }

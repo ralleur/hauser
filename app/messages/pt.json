@@ -2116,5 +2116,13 @@
   "camera_popup_required": "Escolha um acionador para ativar a janela.",
   "camera_popup_empty": "Nenhum acionador disponível. Verifique a ligação e reabra as definições.",
   "camera_popup_hint": "Movimento, deteção de pessoas ou campainha abrem brevemente esta câmara em ecrã inteiro. Neste dispositivo, enquanto o Hauser estiver aberto.",
-  "camera_popup_done": "Concluído"
+  "camera_popup_done": "Concluído",
+  "rimg_manage_current": "A imagem da divisão",
+  "rimg_manage_origin": "Criada com",
+  "rimg_manage_origin_legacy": "Imagem carregada ou criada externamente",
+  "rimg_manage_versions": "Versões da imagem",
+  "rimg_manage_replace": "Usar outra imagem",
+  "rimg_manage_replace_hint": "Uma imagem sua, a biblioteca ou o assistente — a imagem atual mantém-se até escolher outra.",
+  "rimg_manage_setup": "Uma imagem para a sua divisão",
+  "rimg_manage_assistant_hint": "Estas versões vêm do assistente. Mude o método para criar um novo conjunto ou usar as suas imagens."
 }

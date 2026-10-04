@@ -1,11 +1,18 @@
 ---
 title: OpenAI (room pictures)
-description: Optional and the only paid third party. One of the ways the room-image wizard draws.
+description: Connect your own OpenAI access for room illustrations, with external photo processing and provider usage limits.
 sidebar:
   order: 3
 ---
 
-OpenAI is inert until you supply your own access. Only the [room-image wizard](/hauser/docs/using/room-images/) uses it, and only if you choose it: the wizard also draws with a free Cloudflare account, or you draw the pictures yourself with any image service and bring them back. OpenAI remains the most convenient way — it draws all three lighting states and finds the windows by itself — and the only paid one.
+OpenAI is one optional provider for the [room-image wizard](/hauser/docs/using/room-images/).
+It is not needed for everyday control. Hauser only uses it after you connect
+your own access and choose that provider. Your access plan, costs and usage
+limits are set by OpenAI; Hauser’s call count is not a billing estimate.
+
+The wizard can also use Cloudflare, accept pictures made in another service,
+or keep your uploaded and bundled images. Compare these paths in the
+[room-picture guide](/hauser/docs/using/room-images/).
 
 ## Access
 

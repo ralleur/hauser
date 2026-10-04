@@ -7,6 +7,11 @@ import type { EntityCatalogItem } from '../state/fake-discovery-catalog.ts';
 import { platformEntities, platformValue, platformWrites, type PlatformEntity } from './platform-entities.ts';
 import type { Backend, ConnectionStatus } from './types.ts';
 
+/* Die HomeKit-Rampe bleibt beim nachgeladenen Backend. Die Dauer gilt für
+   schnelle Antworten; langsamere Geräte behalten jede Stufe. */
+const HOMEKIT_DIMMING_SECONDS = 0.42;
+const HOMEKIT_DIMMING_STEPS = 16;
+
 export class PlatformBackend implements Backend {
   #home: HomeBridge;
   #entities = new Map<string, PlatformEntity>();
@@ -17,6 +22,7 @@ export class PlatformBackend implements Backend {
   #errorListeners = new Set<(entityId: string, commandId?: number) => void>();
   #catalogListeners = new Set<(items: unknown[]) => void>();
   #unsubscribe: (() => void) | null = null;
+  #lightCommands = new Map<string, { controller: AbortController; done: Promise<void> }>();
 
   constructor(home: HomeBridge) {
     this.#home = home;
@@ -30,7 +36,8 @@ export class PlatformBackend implements Backend {
       if (!entity) return;
       const characteristic = entity.service.characteristics.find((c) => c.id === characteristicId);
       if (characteristic) characteristic.value = value;
-      this.#push?.(entity.entityId, platformValue(entity));
+      // Zwischenwerte einer Dimmfahrt sind kein Widerspruch zum UI-Zielwert.
+      if (!this.#lightCommands.has(entity.entityId)) this.#push?.(entity.entityId, platformValue(entity));
     });
   }
 
@@ -65,6 +72,39 @@ export class PlatformBackend implements Backend {
     if (!entity) return;
     const writes = platformWrites(entity, domain, service, data);
     if (writes.length === 0) return;
+    if (domain === 'light' && (service === 'turn_on' || service === 'turn_off')) {
+      const previous = this.#lightCommands.get(entityId);
+      previous?.controller.abort();
+      const controller = new AbortController();
+      const command = { controller, done: Promise.resolve() };
+      this.#lightCommands.set(entityId, command);
+      command.done = (async () => {
+        await previous?.done;
+        if (controller.signal.aborted) return;
+        try {
+          for (const w of writes) {
+            if (controller.signal.aborted) return;
+            const c = entity.service.characteristics.find((x) => x.id === w.characteristicId);
+            // Eine bereits leuchtende Lampe nach dem Dimmen nicht erneut einschalten.
+            if (c?.type === 'power' && c.value === true && w.value === true) continue;
+            const send = async (value: unknown) => {
+              await this.#home.write(w.characteristicId, value);
+              if (c) c.value = value;
+            };
+            if (c?.type === 'brightness' && typeof c.value === 'number' && typeof w.value === 'number'
+              && entity.service.characteristics.some((x) => x.type === 'power' && x.value === true)) {
+              await dimBrightness(c.value, w.value, controller.signal, send);
+            } else await send(w.value);
+          }
+          if (!controller.signal.aborted) this.#push?.(entityId, platformValue(entity));
+        } catch {
+          if (!controller.signal.aborted) for (const cb of this.#errorListeners) cb(entityId, commandId);
+        } finally {
+          if (this.#lightCommands.get(entityId) === command) this.#lightCommands.delete(entityId);
+        }
+      })();
+      return;
+    }
     void Promise.all(writes.map((w) => this.#home.write(w.characteristicId, w.value)))
       .then(() => {
         for (const w of writes) {
@@ -121,5 +161,29 @@ export class PlatformBackend implements Backend {
     if (this.#status === status) return;
     this.#status = status;
     for (const cb of this.#statusListeners) cb(status);
+  }
+}
+
+/* Apple-Home-Bridges schreiben Helligkeit direkt, ohne HA-Transition. Ein
+   neuer Befehl bricht die Zwischenwerte ab und wartet nur den laufenden Write ab. */
+async function dimBrightness(from: number, target: number, signal: AbortSignal, write: (value: number) => Promise<void>): Promise<void> {
+  const steps = Math.min(HOMEKIT_DIMMING_STEPS, Math.ceil(Math.abs(target - from)));
+  if (steps === 0) return;
+  const interval = HOMEKIT_DIMMING_SECONDS * 1000 / steps;
+  let sent = from;
+  for (let step = 1; step <= steps; step += 1) {
+    if (signal.aborted) return;
+    const tick = performance.now();
+    const progress = step / steps;
+    const eased = progress * progress * (3 - 2 * progress);
+    const value = Math.round(from + (target - from) * eased);
+    if (value !== sent) { await write(value); sent = value; }
+    if (sent === target || signal.aborted) return;
+    const pause = Math.max(0, interval - (performance.now() - tick));
+    if (pause > 0) await new Promise<void>((resolve) => {
+      const finish = () => { clearTimeout(timer); signal.removeEventListener('abort', finish); resolve(); };
+      const timer = setTimeout(finish, pause);
+      signal.addEventListener('abort', finish, { once: true });
+    });
   }
 }

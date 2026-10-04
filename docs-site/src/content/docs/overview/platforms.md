@@ -1,30 +1,48 @@
 ---
 title: Supported platforms
-description: Where Hauser runs and which devices can show it.
+description: Choose the native iOS app or a self-hosted Hauser server, and see where each runs.
 sidebar:
   order: 4
 ---
 
+Hauser has a web interface for Home Assistant and a native iOS app. The native
+app can use Apple Home directly or pair with a Hauser server. Choose the
+connection first, then the device you want to use.
+
+## Native iPhone and iPad app
+
+| Connection | What you need |
+| --- | --- |
+| **Apple Home** | iOS 17 or newer, your configured Apple Home and permission to access it. No Hauser server. |
+| **Home Assistant** | iOS 17 or newer and a Hauser server installed using one of the paths below. Pair the app by QR code. |
+
+The native app is available through [TestFlight](/hauser/docs/integrations/companion-app/).
+iPhone uses a room grid and room controls; iPad uses the panel layout. Optional
+Apple Intelligence features need additional hardware and OS support.
+
 ## Where the server runs
 
-| Platform | Path | Notes |
-|---|---|---|
-| Home Assistant OS or Supervised | [Home Assistant App](/hauser/docs/getting-started/home-assistant-app/) | Recommended. `amd64` and `aarch64`. |
-| Home Assistant Container | [Docker Compose](/hauser/docs/getting-started/docker-compose/) | Container has no app store. |
-| NAS or any Docker host | [Docker Compose](/hauser/docs/getting-started/docker-compose/) | Confirmed on an Asustor NAS (Linux, x86_64). |
+| Platform | Installation | Architecture |
+| --- | --- | --- |
+| Home Assistant OS or Supervised | [Home Assistant App](/hauser/docs/getting-started/home-assistant-app/) | `amd64`, `aarch64` |
+| Home Assistant Container | [Docker Compose](/hauser/docs/getting-started/docker-compose/) | `amd64`, `aarch64` |
+| NAS or another Docker host | [Docker Compose](/hauser/docs/getting-started/docker-compose/) | `amd64`, `aarch64` |
 
-The image is multi-architecture. Older x86 CPUs without SSE4.2 work too: the image library falls back to a portable build.
+Both packages use the same Hauser server and guided setup. Home Assistant
+Container has no App store, so it needs the Compose path.
 
-## What shows the interface
+## What shows the web interface
 
-Hauser is a web app. Any current browser can open it. In practice it is made for:
+- **Wall panels and tablets:** a current browser, usually in full-screen or kiosk mode.
+- **Phones:** open the server address in a browser, or add it to the home screen for the web app layout.
+- **Desktop browsers:** useful for initial setup and arranging rooms.
 
-- **Wall panels and tablets** in landscape. Run the browser in kiosk or full-screen mode.
-- **Phones** as a home-screen app. Add it to the home screen and it runs standalone, with safe areas and the phone layout.
-- **iPhone and iPad** with the native [Hauser app](/hauser/docs/integrations/companion-app/) from TestFlight. It pairs with the server above, or runs directly with Apple Home, with no server at all.
-
-Room pictures are delivered in AVIF, with JPEG for devices that cannot decode AVIF.
+See [Phones and panels](/hauser/docs/getting-started/phones-and-panels/) for the
+steps. Room pictures have fallback formats for devices that cannot decode AVIF.
 
 ## Network
 
-Hauser is meant for a trusted home network. The published port has no login of its own. Do not forward it to the internet. For access from outside, see [Remote access](/hauser/docs/integrations/remote-access/).
+The server’s web port has no separate login and belongs on a trusted home
+network. Do not forward it to the internet. The
+[remote-access guide](/hauser/docs/integrations/remote-access/) covers the
+separate path for paired devices.

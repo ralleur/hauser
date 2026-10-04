@@ -3,6 +3,28 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.40.0] - 2026-10-04
+
+### Changed
+
+- Room-picture settings now separate choosing a first picture from managing
+  an existing one. The current picture, its creation method, window marking
+  and lighting variants are available directly in the room editor. You can
+  change the method or choose another picture from the same overview.
+- Uploaded and manually created pictures expose their supplied and derived
+  variants. Replacing a variant preserves the creation method and window areas.
+  The native iOS app includes the same workflow in build 106 and saves Home
+  Assistant picture changes to the shared server.
+- Reworked the README and wiki around setup choices, everyday use and the
+  differences between the web and native apps.
+
+### Fixed
+
+- Drawing window areas on a phone no longer triggers a room swipe.
+- Apple Home brightness changes through the web bridge ease through every
+  dimming step, including with slow devices. A newer command cancels the
+  previous transition without switching the light back on.
+
 ## [0.39.2] - 2026-10-03
 
 ### Fixed

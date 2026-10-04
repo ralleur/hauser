@@ -5,6 +5,8 @@ sidebar:
   order: 5
 ---
 
+This page covers the **web interface** on a Hauser server. On iPhone or iPad, you can also use the [native app](/hauser/docs/integrations/companion-app/) — directly with Apple Home or paired to that server.
+
 The wizard ends by showing the address Hauser was opened through. The same address is always available under **Settings → Services**, with a copy button and a QR code.
 
 ## Wall panel or tablet

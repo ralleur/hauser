@@ -24,7 +24,7 @@
   import { reloadRoomRegions } from '../../state/room-regions.svelte.ts';
   import { buildRoomImagePrompt } from '../../room-images/room-image-prompt-policy-v1.ts';
 
-  let { roomId }: { roomId: string } = $props();
+  let { roomId, managing = false, refreshKey = false, onchangeway }: { roomId: string; managing?: boolean; refreshKey?: boolean; onchangeway?: () => void } = $props();
 
   const exterior = $derived(roomId === EXTERIOR_HERO_ID);
   const variants = $derived<RoomBackgroundVariant[]>(exterior ? ['light', 'dark', 'overcast'] : ['light', 'dark', 'dark-off', 'overcast']);
@@ -38,6 +38,14 @@
   });
   const manualSet = $derived(asset?.assetId.startsWith('manual_') ?? false);
   const hasLight = $derived(asset !== null);
+  const showWording = $derived(!managing || asset?.origin === 'manual' || (manualSet && !asset?.origin));
+  const originLabel = $derived(asset?.origin === 'manual' ? m.rimg_way_chip_manual()
+    : asset?.origin === 'upload' ? m.room_background_custom()
+    : asset?.origin === 'apple' ? 'Apple'
+    : asset?.origin === 'cloudflare' ? 'Cloudflare'
+    : asset?.origin === 'chatgpt' ? 'ChatGPT'
+    : asset?.origin === 'openai' ? 'OpenAI'
+    : manualSet ? m.rimg_manage_origin_legacy() : m.rimg_wizard_entry());
 
   type Status = 'present' | 'derived' | 'missing' | 'wizard';
   function status(variant: RoomBackgroundVariant): Status {
@@ -71,11 +79,13 @@
 
   /* Aufgeklappt ist zuerst, was fehlt oder nur abgeleitet ist. */
   let open = $state<RoomBackgroundVariant | null>(null);
+  let touched = $state(false);
   const firstOpen = $derived(variants.find((variant) => !['present', 'wizard'].includes(status(variant))) ?? 'light');
-  function isOpen(variant: RoomBackgroundVariant): boolean { return open === null ? variant === firstOpen : open === variant; }
+  function isOpen(variant: RoomBackgroundVariant): boolean { return !touched && !managing ? variant === firstOpen : open === variant; }
   function toggle(variant: RoomBackgroundVariant) {
-    if (isOpen(variant)) open = variant === firstOpen ? (variants.find((entry) => entry !== variant) ?? null) : firstOpen;
-    else open = variant;
+    const next = isOpen(variant) ? null : variant;
+    touched = true;
+    open = next;
   }
 
   let busy = $state<RoomBackgroundVariant | null>(null);
@@ -85,7 +95,7 @@
   let fileInput = $state<HTMLInputElement>();
   let uploadFor = $state<RoomBackgroundVariant>('light');
 
-  $effect(() => { void load(); });
+  $effect(() => { void roomHeroConfig(roomId)?.assetId; void refreshKey; void load(); });
   async function load() {
     try {
       assets = (await loadRoomImageLibrary()).assets;
@@ -146,11 +156,12 @@
     busy = variant;
     message = null;
     try {
-      await uploadRoomBackgroundVariant(roomId, variant, file);
+      await uploadRoomBackgroundVariant(roomId, variant, file, showWording ? 'manual' : 'upload');
       await load();
       await reloadRoomRegions();
       message = { variant, text: m.rimg_manual_saved(), error: false };
       /* Das Tagbild führt weiter zur nächsten Fassung; jede andere bleibt offen, damit „Gespeichert“ zu sehen ist. */
+      touched = true;
       open = variant === 'light' ? (variants.find((entry) => entry !== 'light') ?? null) : variant;
     } catch (failure) {
       message = { variant, text: failure instanceof Error ? failure.message : m.room_background_failed(), error: true };
@@ -167,6 +178,7 @@
       await resetRoomBackgroundVariant(roomId, variant);
       await load();
       await reloadRoomRegions();
+      touched = true;
       open = variant;
     } catch (failure) {
       message = { variant, text: failure instanceof Error ? failure.message : m.room_background_failed(), error: true };
@@ -259,7 +271,18 @@
 
 <input bind:this={fileInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif" onchange={chosen} />
 
-<section class="room-image-manual" aria-labelledby="room-image-manual-title">
+<section class="room-image-manual" class:is-managing={managing} aria-label={managing ? m.rimg_manage_current() : m.rimg_manual_title()}>
+  {#if managing}
+    <div class="room-image-current-head">
+      {#if asset}<img class="room-image-current-thumb" src={asset.variants.light} alt={m.room_background_preview()} />{/if}
+      <div class="room-image-manual-text">
+        <h3>{m.rimg_manage_current()}</h3>
+        <small>{m.rimg_manage_origin()}</small>
+        <strong>{asset ? originLabel : m.rimg_lib_loading()}</strong>
+      </div>
+      <button class="secondary-btn pressable" type="button" onclick={onchangeway}>{m.rimg_way_change()}</button>
+    </div>
+  {:else}
   <div class="room-image-manual-head">
     <h3 id="room-image-manual-title">{m.rimg_manual_title()}</h3>
     <p>{m.rimg_manual_intro()}</p>
@@ -269,6 +292,7 @@
       <a class="secondary-btn pressable" href="https://www.bing.com/images/create" target="_blank" rel="noreferrer">{m.rimg_manual_bing()}</a>
     </div>
   </div>
+  {/if}
   {#if loadError}<p class="room-image-alert is-error" role="alert">{loadError}</p>{/if}
 
   {#if marking && asset}
@@ -296,6 +320,24 @@
       {#if windowsMessage}<p class="room-image-alert is-error" role="alert">{windowsMessage}</p>{/if}
     </section>
   {:else}
+    {#if !exterior}
+      <article class="room-image-manual-card room-image-manual-windows">
+        <div class="room-image-manual-row">
+          <span class="room-image-manual-thumb is-icon" aria-hidden="true">▭</span>
+          <span class="room-image-manual-text">
+            <strong>{m.rimg_manual_windows()}</strong>
+            <small class={`room-image-manual-status ${windowCount ? 'is-present' : 'is-missing'}`}>
+              {windowCount ? m.rimg_manual_windows_count({ count: windowCount }) : m.rimg_manual_windows_none()}
+            </small>
+          </span>
+          <button class="secondary-btn pressable" type="button" disabled={!hasLight} onclick={startMarking}>
+            {windowCount ? m.rimg_manual_windows_change() : m.rimg_manual_windows_mark()}
+          </button>
+        </div>
+        {#if windowsMessage}<p class="room-image-alert" role="status">{windowsMessage}</p>{/if}
+      </article>
+    {/if}
+    {#if managing}<h3 class="room-image-versions-title">{m.rimg_manage_versions()}</h3>{/if}
     {#each variants as variant (variant)}
       {@const line = statusLine(variant)}
       {@const url = variantUrl(variant)}
@@ -310,6 +352,7 @@
         </button>
         {#if isOpen(variant)}
           <div class="room-image-manual-steps">
+            {#if showWording}
             <div class="room-image-manual-step">
               <span class="room-image-step" aria-hidden="true">1</span>
               <div>
@@ -334,8 +377,10 @@
                 <button class="primary-btn pressable" type="button" onclick={() => copy(variant)}>{copied === variant ? m.rimg_manual_copied() : m.rimg_manual_copy()}</button>
               </div>
             </div>
+            {/if}
+            {#if manualSet || !managing}
             <div class="room-image-manual-step">
-              <span class="room-image-step" aria-hidden="true">3</span>
+              {#if showWording}<span class="room-image-step" aria-hidden="true">3</span>{/if}
               <div>
                 <strong>{m.rimg_manual_step_result()}</strong>
                 <p>{m.rimg_manual_result_hint()}</p>
@@ -357,27 +402,16 @@
                 {/if}
               </div>
             </div>
+            {:else}
+              {#if url}<img class="room-image-version-preview" src={url} alt={name(variant)} />{/if}
+              <p>{m.rimg_manage_assistant_hint()}</p>
+              <button class="secondary-btn pressable" type="button" onclick={onchangeway}>{m.rimg_way_change()}</button>
+            {/if}
           </div>
         {/if}
       </article>
     {/each}
 
-    {#if !exterior}
-      <article class="room-image-manual-card room-image-manual-windows">
-        <div class="room-image-manual-row">
-          <span class="room-image-manual-thumb is-icon" aria-hidden="true">▭</span>
-          <span class="room-image-manual-text">
-            <strong>{m.rimg_manual_windows()}</strong>
-            <small class={`room-image-manual-status ${windowCount ? 'is-present' : 'is-missing'}`}>
-              {windowCount ? m.rimg_manual_windows_count({ count: windowCount }) : m.rimg_manual_windows_none()}
-            </small>
-          </span>
-          <button class="secondary-btn pressable" type="button" disabled={!hasLight} onclick={startMarking}>
-            {windowCount ? m.rimg_manual_windows_change() : m.rimg_manual_windows_mark()}
-          </button>
-        </div>
-        {#if windowsMessage}<p class="room-image-alert" role="status">{windowsMessage}</p>{/if}
-      </article>
-    {/if}
+
   {/if}
 </section>

@@ -38,7 +38,7 @@ async function errorMessage(response: Response): Promise<string> {
   return m.room_background_failed();
 }
 
-async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, variant?: RoomBackgroundVariant): Promise<AssignmentResponse> {
+async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, variant?: RoomBackgroundVariant, origin?: 'upload' | 'manual'): Promise<AssignmentResponse> {
   if (!/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/.test(roomId)) throw new Error(m.rimg_err_invalid_room());
   if (file && (!MIME_TYPES.has(file.type) || file.size === 0 || file.size > 12_582_912)) {
     throw new Error(m.rimg_err_file_type());
@@ -46,7 +46,7 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, va
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const etag = await householdEtag();
-    const query = variant ? `?variant=${variant}` : '';
+    const query = variant ? `?variant=${variant}${origin ? `&origin=${origin}` : ''}` : '';
     const response = await fetch(`/api/room-backgrounds/${encodeURIComponent(roomId)}${query}`, {
       method,
       headers: {
@@ -78,8 +78,8 @@ export async function removeRoomBackground(roomId: string): Promise<RoomHeroConf
 
 /* Selbst zeichnen (R55): eine einzelne Fassung hochladen — das Tagbild beginnt
    ein neues Set, Abend, Nacht und trüb ersetzen ihre abgeleitete Fassung. */
-export function uploadRoomBackgroundVariant(roomId: string, variant: RoomBackgroundVariant, file: File): Promise<AssignmentResponse> {
-  return mutate(roomId, 'POST', file, variant);
+export function uploadRoomBackgroundVariant(roomId: string, variant: RoomBackgroundVariant, file: File, origin: 'upload' | 'manual' = 'manual'): Promise<AssignmentResponse> {
+  return mutate(roomId, 'POST', file, variant, origin);
 }
 
 /** Abend und Nacht wieder aus dem Tagbild ableiten, trüb entfernen. */

@@ -17,7 +17,7 @@
   /* Eine Frage nach der anderen (R55), damit niemand vor vier Optionen steht:
      ChatGPT-Abo? Cloudflare-Konto? Sonst selbst zeichnen lassen. `onmanual`
      meldet dem Assistenten den letzten Weg — der braucht keinen Zugang. */
-  let { onchange, onmanual, onclose }: { onchange?: (status: RoomImageAccessStatus) => void; onmanual?: () => void; onclose?: () => void } = $props();
+  let { onchange, onmanual, onclose, chooseOnOpen = false }: { onchange?: (status: RoomImageAccessStatus) => void; onmanual?: () => void; onclose?: () => void; chooseOnOpen?: boolean } = $props();
   let access = $state<RoomImageAccessStatus>({ configured: false, mode: null, source: null, valid: null });
   /* Ein grüner Punkt, der stimmt (R15, docs/23): Eine abgelaufene Anmeldung
      sieht in der Datei aus wie eine gültige. Sagt der Server, dass sie nicht
@@ -89,7 +89,7 @@
   }
 
   async function load() {
-    try { update(await getRoomImageAccess()); } catch { error = m.rimg_access_err_load(); }
+    try { update(await getRoomImageAccess()); if (chooseOnOpen) choosing = true; } catch { error = m.rimg_access_err_load(); }
   }
 
   function next(from: Question) {

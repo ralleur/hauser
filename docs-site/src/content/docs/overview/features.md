@@ -5,6 +5,8 @@ sidebar:
   order: 3
 ---
 
+This index describes the **Home Assistant web interface** unless a row names the native app. Apple Home has a different data source and does not include every Home Assistant integration. Start with the [iOS app guide](/hauser/docs/integrations/companion-app/) for that path.
+
 Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/ROADMAP.md): **Live** runs daily in the author's home, **Built** works but is less exercised, **Experimental** is off by default or needs extra pieces.
 
 ## Rooms and control

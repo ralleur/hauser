@@ -2116,5 +2116,13 @@
   "camera_popup_required": "Wähle einen Auslöser, damit das Pop-up aktiv wird.",
   "camera_popup_empty": "Keine Auslöser verfügbar. Prüfe die Verbindung und öffne diese Einstellung erneut.",
   "camera_popup_hint": "Bewegung, Personenerkennung oder Klingel öffnen diese Kamera kurz im Vollbild. Gilt auf diesem Gerät, solange Hauser geöffnet ist.",
-  "camera_popup_done": "Fertig"
+  "camera_popup_done": "Fertig",
+  "rimg_manage_current": "Dein Raumbild",
+  "rimg_manage_origin": "Erstellt mit",
+  "rimg_manage_origin_legacy": "Eigenes oder extern erstelltes Bild",
+  "rimg_manage_versions": "Bildfassungen",
+  "rimg_manage_replace": "Anderes Bild verwenden",
+  "rimg_manage_replace_hint": "Eigenes Bild, Bibliothek oder Assistent — das bisherige Bild bleibt, bis du ein neues auswählst.",
+  "rimg_manage_setup": "Ein Bild für deinen Raum",
+  "rimg_manage_assistant_hint": "Diese Fassungen stammen vom Bild-Assistenten. Über „Weg ändern“ kannst du ein neues Set erstellen oder eigene Bilder verwenden."
 }

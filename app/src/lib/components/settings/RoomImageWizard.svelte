@@ -24,8 +24,8 @@
 
   /* `roomId` kommt aus dem Raum-Overlay: Wer den Assistenten dort öffnet, hat
      den Raum längst gewählt — dann steht er hier schon in der Auswahl. */
-  let { open, roomId = null, onclose }:
-    { open: boolean; roomId?: string | null; onclose: () => void } = $props();
+  let { open, roomId = null, chooseOnOpen = false, onclose }:
+    { open: boolean; roomId?: string | null; chooseOnOpen?: boolean; onclose: () => void } = $props();
 
   const controller = createRoomImageWizardController({ api: createRoomImageClient() });
   let wizardState = $state<RoomImageWizardState>(controller.state());
@@ -107,6 +107,7 @@
      bleibt im Kopf nur ein Chip, ueber den man ihn wieder aufklappen kann. */
   let accessStatus = $state<RoomImageAccessStatus | null>(null);
   let accessOpen = $state(false);
+  let accessLoaded = false;
   /* Der Weg (R55): Wer selbst zeichnet, braucht keinen Zugang — die Wahl
      überlebt das Schließen, bis sie im Kopf über „Weg ändern" fällt. */
   const WAY_KEY = 'hmi:room-image-way';
@@ -146,6 +147,7 @@
     if (open && !wasOpen) {
       previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       resetLocalDraft();
+      if (chooseOnOpen) { way = 'auto'; accessOpen = true; }
       void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
       if (!IS_DEMO) void loadAccess();
       void controller.resume();
@@ -183,6 +185,7 @@
     centerY = 0.5;
     consentConfirmed = false;
     accessOpen = false;
+    accessLoaded = false;
     selectedCandidateId = null;
     finalCostConfirmed = false;
     retryConfirmed = false;
@@ -425,7 +428,7 @@
       {#if IS_DEMO}
         <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
       {:else if !manualWay && showAccess}
-        <RoomImageAccess onmanual={() => chooseWay('manual')} onclose={() => accessOpen = false} onchange={(status) => {
+        <RoomImageAccess chooseOnOpen={chooseOnOpen} onmanual={() => chooseWay('manual')} onclose={() => accessOpen = false} onchange={(status) => {
           /* Schließen nur, wenn sich etwas getan hat: neu verbunden oder der
              Weg gewechselt. Beim bloßen Aufklappen lädt die Karte den Stand
              nach — der ist dann schon „verbunden" und darf sie nicht gleich
@@ -433,7 +436,8 @@
           const wasReady = accessStatus?.configured === true && accessStatus.valid !== false;
           const wasMode = accessStatus?.mode ?? null;
           accessStatus = status;
-          if (status.configured && status.valid !== false && (!wasReady || wasMode !== status.mode)) accessOpen = false;
+          if (accessLoaded && status.configured && status.valid !== false && (!wasReady || wasMode !== status.mode)) accessOpen = false;
+          accessLoaded = true;
           void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
         }} />
       {/if}

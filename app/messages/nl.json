@@ -2116,5 +2116,13 @@
   "camera_popup_required": "Kies een trigger om de pop-up te activeren.",
   "camera_popup_empty": "Geen triggers beschikbaar. Controleer de verbinding en open deze instellingen opnieuw.",
   "camera_popup_hint": "Beweging, persoonsdetectie of de deurbel opent deze camera kort op volledig scherm. Geldt op dit apparaat terwijl Hauser geopend is.",
-  "camera_popup_done": "Gereed"
+  "camera_popup_done": "Gereed",
+  "rimg_manage_current": "Je kamerbeeld",
+  "rimg_manage_origin": "Gemaakt met",
+  "rimg_manage_origin_legacy": "Geüpload of extern gemaakt beeld",
+  "rimg_manage_versions": "Beeldversies",
+  "rimg_manage_replace": "Een ander beeld gebruiken",
+  "rimg_manage_replace_hint": "Je eigen beeld, de bibliotheek of de assistent — het huidige beeld blijft totdat je een nieuw kiest.",
+  "rimg_manage_setup": "Een beeld voor je kamer",
+  "rimg_manage_assistant_hint": "Deze versies komen van de assistent. Wijzig de methode om een nieuwe set te maken of je eigen beelden te gebruiken."
 }

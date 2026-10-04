@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.40.0 - 2026-10-04
+
+- Room-picture settings show the current picture, creation method, windows
+  and lighting variants directly. First-time setup and changing a picture
+  have separate, clearer sections. Also available in iOS build 106.
+- Uploaded and manually created pictures can be adjusted in place. Replacing
+  a variant preserves its creation method and window markings.
+- Drawing windows on a phone no longer swipes to another room.
+- Apple Home dimming through the web bridge follows a smooth transition and
+  stops immediately for a newer command.
+- Updated README and wiki with clearer setup paths and platform guidance.
+
 ## 0.39.2 - 2026-10-03
 
 - Light commands fade over 300 ms, including brightness changes from sliders,

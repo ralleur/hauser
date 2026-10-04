@@ -27,7 +27,7 @@ export interface RoomImageRegions {
 
 export interface RoomImageLibraryAsset {
   assetId: string;
-  variants: { light: string; dark: string; darkOff: string };
+  variants: { light: string; dark: string; darkOff: string; overcast?: string };
   focus: RoomImageFocus;
   createdAt: string;
   byteLength: number;
@@ -35,6 +35,7 @@ export interface RoomImageLibraryAsset {
   regions?: RoomImageRegions;
   /** Selbst gezeichnet (R55): welche Fassungen eigen sind; fehlt bei Sets des Assistenten. */
   manual?: { own: string[] };
+  origin?: 'upload' | 'manual' | 'assistant' | 'apple' | 'chatgpt' | 'openai' | 'cloudflare';
 }
 
 export interface RoomImageLibrary {

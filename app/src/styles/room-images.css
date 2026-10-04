@@ -698,7 +698,12 @@
 .room-image-manual-status.is-present { color: var(--color-success); }
 .room-image-manual-status.is-derived { color: var(--color-warning); }
 .room-image-manual-chevron {
+  display: grid;
+  place-items: center;
   flex: none;
+  width: var(--space-6);
+  height: var(--space-6);
+  line-height: 1;
   color: var(--color-text-tertiary);
   font-size: var(--text-2xl);
   transform: rotate(90deg);
@@ -731,6 +736,46 @@
 .room-image-manual-step a.secondary-btn { display: inline-grid; place-items: center; color: var(--color-text-primary); text-decoration: none; }
 .room-image-manual-windows .room-image-manual-row { cursor: default; }
 .room-image-manual-windows .secondary-btn { flex: none; }
+
+/* The existing picture is the editor; replacement is a separate, quieter section. */
+.room-image-current-head {
+  display: grid;
+  grid-template-columns: var(--space-8) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+}
+.room-image-current-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+.room-image-current-head h3,
+.room-image-versions-title,
+.re-background-actions h3 { margin: 0; }
+.room-image-current-head small { color: var(--color-text-secondary); }
+.room-image-current-head > button { grid-column: 2; justify-self: start; }
+@media (min-width: 720px) {
+  .room-image-current-head { grid-template-columns: calc(var(--space-8) * 2) minmax(0, 1fr) auto; }
+  .room-image-current-head > button { grid-column: auto; }
+}
+.room-image-version-preview {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+.room-image-manual-windows .room-image-manual-row { flex-wrap: wrap; }
+.room-image-manual-windows .room-image-manual-text { flex-basis: 50%; }
+.re-background-actions.has-image {
+  border-top: 1px solid var(--overlay-border);
+  padding-top: var(--space-5);
+}
+.re-background-actions .secondary-btn { max-width: 100%; white-space: normal; text-align: start; }
+.room-image-manual.is-managing .room-image-manual-thumb:not(.is-icon) { width: var(--space-8); }
+.room-image-manual.is-managing .room-image-manual-card {
+  -webkit-backdrop-filter: var(--glass-blur, none);
+  backdrop-filter: var(--glass-blur, none);
+}
 
 .room-image-windows-editor {
   display: flex;

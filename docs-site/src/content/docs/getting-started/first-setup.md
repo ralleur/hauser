@@ -5,6 +5,8 @@ sidebar:
   order: 4
 ---
 
+This guide is for the **Hauser server connected to Home Assistant**. For Apple Home, use the [native iOS setup](/hauser/docs/integrations/companion-app/#apple-home).
+
 On first start Hauser opens a guided wizard. It ends with a validated household configuration. Nothing is written until you confirm the last step.
 
 ## The steps

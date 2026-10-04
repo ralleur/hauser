@@ -1,40 +1,78 @@
 ---
-title: iOS app and pairing
-description: The native Hauser app for iPhone and iPad, with Apple Home or Home Assistant, and how a phone pairs with a one-time QR code.
+title: Hauser for iPhone and iPad
+description: Join the iOS beta, connect directly to Apple Home, or pair with a Hauser server for Home Assistant.
 sidebar:
+  label: iOS app and pairing
   order: 8
 ---
 
-Hauser is also a native app for iPhone and iPad, drawn screen by screen in SwiftUI rather than wrapped around a web view: the same look, the same words and the same gestures as the panel. It is in TestFlight with a public link: [testflight.apple.com/join/WPcA1eE1](https://testflight.apple.com/join/WPcA1eE1). Install TestFlight from the App Store, open the link, accept the invitation.
+The native Hauser app puts your rooms and their everyday controls on iPhone
+and iPad. Choose **Apple Home**, connect to **Home Assistant through your
+Hauser server**, or open the built-in demo household.
 
-## Three ways in
+## Get the beta
 
-- **Home Assistant.** The app pairs with your Hauser installation, as a Home Assistant App or with Docker Compose. Rooms, devices, scenes, lists, energy and the notifications you configure come from the server, the same as on the panel.
-- **Apple Home.** The app talks to HomeKit directly, with no server at all. Rooms and devices come from Apple Home, the shopping list and reminders are the lists of the Reminders app, and the standby map is drawn on the device.
-- **Demo household.** A built-in home to look around before anything is connected.
+1. Install Apple’s **TestFlight** app on your iPhone or iPad.
+2. [Open the Hauser invitation](https://testflight.apple.com/join/WPcA1eE1), accept it and install Hauser.
+3. Open Hauser and choose the connection for your home.
 
-On an iPad the app shows the wall-panel layout, on an iPhone the [phone layout](/hauser/docs/using/phone/).
+The app requires **iOS 17 or newer**. It is a TestFlight beta with its own
+release schedule, separate from the Hauser server. TestFlight builds expire
+after 90 days; keep the app updated through TestFlight.
 
-## Pairing with a QR code
+## Apple Home
 
-The System screen of the panel shows a one-time pairing code as a QR code. A paired phone gets its own device token. Only the hash is stored on the server.
+Choose **Apple Home** during onboarding and allow access when iOS asks. Hauser
+reads your rooms and supported accessories directly through HomeKit. There is
+no Hauser server to install, and Home Assistant is not required.
 
-- The code lives five minutes and is only shown on a panel in the LAN, so showing it proves presence.
-- A device token replaces the browser-origin check for that device and is required over [remote access](/hauser/docs/integrations/remote-access/).
-- Someone who opened Hauser in the phone's browser gets **Open in the app on this device** instead of a code to scan.
+Shopping lists and reminders use Apple Reminders in this mode. Device calendars
+and other native features may ask for their own permissions. Home Assistant
+integrations such as its energy sensors do not become available just because
+the app is connected to Apple Home.
 
-## What the app adds
+## Home Assistant
 
-- Widgets for a room, a scene, a device, the home and the energy; a lamp you switch on shows as a Live Activity in the Dynamic Island.
-- A Siri shortcut and the share sheet for the shopping list; NFC tags that run a scene; notifications with buttons when you leave or arrive.
-- The calendars of the device (iCloud, Google, Exchange) merged with the server's events.
-- The shopping list sorts itself into shop sections on the device with Apple Intelligence, without a subscription.
-- An offline queue for the shopping list and reminders; documents behind Face ID; the document scanner.
-- An experimental way to draw a room picture on the device through Apple Intelligence, see [Room images](/hauser/docs/using/room-images/).
+First install Hauser as a [Home Assistant App](/hauser/docs/getting-started/home-assistant-app/)
+or with [Docker Compose](/hauser/docs/getting-started/docker-compose/) and complete
+its setup. Then choose Home Assistant in the native app and pair it with that
+installation. Rooms, devices and the supported household data come from your
+Hauser server.
 
-## Worth knowing
+### Pairing with a QR code
 
-- The app needs iOS 17 or newer. The glass surfaces come with iOS 26, and the features that use Apple Intelligence need a device that supports it.
-- TestFlight builds expire after ninety days and are replaced by the next one.
-- [Notifications](/hauser/docs/using/notifications/) from Home Assistant reach the panel and the phone in the browser, not the app yet.
-- The app is a project of its own beside the panel and has its own version numbers.
+1. Open the Hauser web interface on your home network.
+2. In **System**, open the pairing card and display a new QR code.
+3. Scan it with the native app. The code is valid for five minutes; the paired
+   device receives its own token.
+
+If the web interface is already open on the phone you are pairing, use
+**Open in the app on this device** instead of trying to scan the same screen.
+
+Only a hash of the device token is stored on the server. Pairing is also
+required for the separate [remote-access path](/hauser/docs/integrations/remote-access/).
+
+## A room in your hand
+
+<figure class="guide-phone">
+  <a href="https://ralleur.github.io/hauser/media/ios-room.webp"><img src="/hauser/media/ios-room.webp" width="804" height="1748" loading="lazy" decoding="async" alt="The actual native iOS demo: the living-room picture, Cozy, Bright and Off scenes, and individual light controls." /></a>
+  <figcaption>Native iOS demo. Choose a scene or operate one light in the room.</figcaption>
+</figure>
+
+On iPhone, a grid of rooms leads to the controls for one room. On iPad, the
+native app uses the panel layout. It draws its own interface in SwiftUI; it
+is not the web page inside an app wrapper.
+
+## What differs from the web interface
+
+| Area | Native app |
+| --- | --- |
+| Connection | Apple Home directly, or a paired Hauser server for Home Assistant. |
+| iOS features | Widgets, Siri shortcuts, shopping-list sharing and device calendars. Availability depends on the feature and permissions. |
+| Appearance | Native glass surfaces on iOS 26; the app also supports earlier iOS versions. |
+| Apple Intelligence | Optional features require compatible hardware and OS support. They are not needed for everyday room control. |
+| Notifications | Local hints such as open windows, laundry and due reminders are available. Home Assistant’s persistent notifications are not yet forwarded into the native app; see [notifications](/hauser/docs/using/notifications/). |
+| Room pictures | Provider choices and experimental native generation are described in [Room pictures](/hauser/docs/using/room-images/). |
+
+For the browser-based phone interface, see
+[Phones and panels](/hauser/docs/getting-started/phones-and-panels/).

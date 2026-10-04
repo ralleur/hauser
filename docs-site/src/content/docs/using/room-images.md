@@ -1,67 +1,130 @@
 ---
 title: Room pictures
-description: Default illustrations, your own photos, the wizard that draws your room — with ChatGPT, a free Cloudflare account or by hand.
+description: Use the bundled illustrations, upload your own pictures, or turn a room photo into an illustration with an optional provider.
 sidebar:
   order: 20
 ---
 
-Every room has a picture in three lighting states: day, evening and lights-off. The picture follows the sun and the lamps. There are four ways to get one.
+A picture makes a room recognisable before you read its name. Hauser uses
+prepared day, evening and lights-off versions, selected according to the sun
+and the room’s lighting state. These are variants of the same room, not a live
+camera view.
+
+## Choose how to make yours
+
+<dl class="guide-options not-content">
+  <div><dt>Keep the defaults</dt><dd>Nothing extra to connect. The illustrations come bundled with Hauser.</dd></div>
+  <div><dt>Upload a picture</dt><dd>Use your own JPEG, PNG, WebP or AVIF. Hauser stores it on your server and derives the darker variants locally.</dd></div>
+  <div><dt>OpenAI</dt><dd>Connect your own API or ChatGPT access. Your selected photo and prompts go to OpenAI; provider charges or plan limits apply.</dd></div>
+  <div><dt>Cloudflare Workers AI</dt><dd>Connect your Cloudflare account and API token. Cloudflare processes the photo under its own allowance and limits; Hauser derives darker variants locally.</dd></div>
+  <div><dt>A service you choose</dt><dd>Take the wizard’s prompt to an image service you use, then upload the finished versions. That service determines the cost and where processing happens.</dd></div>
+</dl>
+
+Hauser does not charge for the wizard. It cannot promise that a provider is
+free, available or included in your existing plan. Generation is optional;
+everyday room control works without it. The hosted demo does not generate
+pictures.
 
 ## 1. Keep the defaults
 
-Hauser ships illustrations drawn from a real household. Each room gets one by its name, in every supported language. They are of the author's home, so they will not match yours.
+The bundled illustrations come from the maker’s home. Hauser selects a default
+for each room by name. You can replace it later or restore it after removing
+a custom picture.
 
 ## 2. Upload your own
 
-Open **Settings → Home → Rooms & devices**, tap the room's picture, then upload a JPEG, PNG, WebP or AVIF. Evening and lights-off are derived from it, darkened, so the photo follows the day instead of staying bright at night. Replace or remove it any time. Without your own picture the default returns.
+Open **Settings → Home → Rooms & devices**, tap the room’s picture and upload
+a JPEG, PNG, WebP or AVIF. Hauser derives darker evening and lights-off
+versions. An upload does not recreate the room or find its windows; use the
+editor if you want to mark window areas for weather effects.
+
+## Adjust an existing picture
+
+Open the room’s picture settings. Once a custom picture is assigned, the
+overview shows its preview and creation method, followed by **Windows** and
+the lighting variants. Mark or adjust the windows here, without reopening
+the wizard. On a phone, draw directly on the image.
+
+For uploaded pictures, replace individual variants or derive them again from
+the day picture. For manually created pictures, the prompts are available
+with each variant. Generated sets show their available versions. Older
+pictures without a recorded method use a general source label.
+
+Use **Change method** to choose another creation path. The choices to upload,
+use the library or open the wizard remain below the current picture under
+**Use a different picture**. If no custom picture is assigned, these choices form
+the initial setup instead.
+
+The native iOS app offers the same overview. Changes to Home Assistant room
+pictures are saved to the shared server; Apple Home pictures stay on the device.
 
 ## 3. Let the wizard draw it
 
-The room-image wizard turns a phone photo of your room into an illustration in Hauser's style. The first time, it asks one question at a time instead of showing four options:
+The wizard turns a selected photo into an illustration in Hauser’s style.
+The example below is the existing source photo and the illustration used for
+the demo living room. Generated results need your review.
 
-1. **Do you have a ChatGPT plan?** Sign in with the device code, or store your own OpenAI key. ChatGPT draws day, evening and night and finds the windows by itself — the most convenient way, and the only paid one.
-2. **Do you have a Cloudflare account?** Cloudflare gives every account a daily allowance of its Workers AI — a good sixty room pictures a day, no plan, no card. Enter the account ID and an API token with the *Workers AI* template; both stay on the server. Hauser derives evening and night from the day picture, and you mark the windows yourself.
-3. **Otherwise you draw it yourself** — see way 4.
+<div class="guide-comparison">
+  <figure><a href="https://ralleur.github.io/hauser/media/wizard-input-raw-1100.webp"><img src="/hauser/media/wizard-input-raw-1100.webp" width="1100" height="825" loading="lazy" decoding="async" alt="The original living-room photo, with a sofa, dining table, balcony door and toys." /></a><figcaption>Source photo · the maker’s living room.</figcaption></figure>
+  <figure><a href="https://ralleur.github.io/hauser/media/room-light-1100.webp"><img src="/hauser/media/room-light-1100.webp" width="1100" height="778" loading="lazy" decoding="async" alt="The same living room as Hauser’s bundled illustration, retaining the sofa, table and balcony door." /></a><figcaption>The illustration used in Hauser. Select either image to enlarge.</figcaption></figure>
+</div>
 
-The way you chose stays until you change it in the wizard's header.
+1. Open **Settings → Home → Rooms & devices → Create room images**, or the
+   room’s picture menu.
+2. Choose a provider and connect your own access. The wizard guides this one
+   choice at a time; you can change it later in the header.
+3. Select the room and photo, then choose the crop and focus point.
+4. Create and review the variants. OpenAI generates the lighting variants and
+   analyses visible surfaces. With Cloudflare, Hauser derives darker variants
+   from the day image; you mark the windows yourself.
+5. Publish the reviewed set. Hauser activates it together and derives the
+   smaller phone images.
 
-| | |
-|---|---|
-| ![An ordinary phone photo of a living room.](/hauser/media/wizard-input-raw-1100.webp) | ![The same room as a warm illustration.](/hauser/media/room-light-1100.webp) |
-| **Input** – evening light, a wide lens, toys on the floor | **Output** – the same room |
+An overcast variant can support rainy-day scenes. **Outside (energy)** is
+also a target: a house picture becomes the stage of the
+[energy screen](/hauser/docs/using/energy/).
 
-How it works:
-
-1. Open **Settings → Home → Rooms & devices → Create room images**, or the room's picture menu.
-2. Pick the room, pick the photo, choose the crop and the focus point.
-3. The first pass may correct perspective. After that the camera, the geometry and the object positions are frozen, so what comes back is still your room.
-4. Day, evening and lights-off are generated as one set, plus an overcast variant for rainy days. With OpenAI, a vision model notes the surfaces it sees (windows, floor, seats) so rain is drawn only inside the windows; with Cloudflare, evening and night are darkened from the day picture and the windows are marked by hand.
-5. Review the set and publish it. Publishing is atomic. Phone-sized variants are derived automatically.
-
-**Outside (energy)** is a target too: a photo of your house becomes the stage of the [energy screen](/hauser/docs/using/energy/).
+:::caution[Before sending a photo]
+With OpenAI or Cloudflare, the photo you select leaves your home. Provider
+credentials are stored on the Hauser server. The wizard explains the upload;
+OpenAI steps also show confirmations and a provider-call count, which is not
+a bill estimate. Check your provider’s access and usage terms before starting.
+See [OpenAI access](/hauser/docs/integrations/openai/) for that connection.
+:::
 
 ## 4. Draw it yourself
 
-Free, anywhere, with whatever image service you already use. Choose **you draw it yourself** in the wizard, and it becomes a small workbench for the room: one card per version — day, evening with lights, night without lights, overcast — each saying whether a picture is there, only derived (the darkened day picture) or missing. Each card has three steps:
+Choose **you draw it yourself** to use the image service you prefer. That
+service determines any cost and how your photo is handled. Hauser provides a
+workbench with one card per variant: day, evening, lights-off and overcast.
 
-1. **Input picture** — for the day: your room photo. For the others: the day picture from Hauser, downloaded with one tap.
-2. **Wording** — copy it. It is the wizard's own wording, one per version; paste it together with the input picture into Gemini, ChatGPT, Bing or any other service that redraws pictures.
-3. **Finished picture** — upload it. Evening and night can be derived from the day picture again, an overcast picture can be removed.
+1. Download the input image for the pass: the original photo for day, or the
+   accepted day illustration for later variants.
+2. Copy the prompt and use it with that image in your chosen service.
+3. Upload the finished image to its matching card. Review which variants are
+   supplied, derived from day, or still missing.
 
-Below the cards, **Windows**: drag a rectangle over each pane, and rain and snow are drawn only there. That works for every set, including the ones Cloudflare drew.
-
-:::caution[Only ChatGPT is a paid step]
-The ChatGPT way needs your own OpenAI access, either an API key or a signed-in ChatGPT account, and your photo is sent there to be redrawn. Hauser says so before anything is uploaded, every paid step is confirmed by hand, and a running count of provider calls stays on screen. No other feature calls OpenAI. See [OpenAI](/hauser/docs/integrations/openai/). The Cloudflare way sends the photo to Cloudflare's Workers AI within your own free allowance; drawing it yourself sends nothing anywhere Hauser can see.
-:::
-
-:::note[The iOS app]
-The [iOS app](/hauser/docs/integrations/companion-app/) has the same four ways, plus an experimental fifth on iOS 27: Apple draws the day picture through Apple Intelligence, free within the daily limit of your iCloud account.
-:::
+Under **Windows**, mark each pane so that rain and snow stay inside those
+areas. This also works for sets generated with Cloudflare. Hauser does not
+send a photo to the service for you in this manual path.
 
 ## The library
 
-Finished sets stay in the library under **Rooms & devices**. Assign a set to a room, switch between sets, delete old ones. A set assigned to a room takes effect immediately.
+Finished sets stay in the library under **Rooms & devices**. Assign a set to a
+room, switch between sets or delete an old one. Assigning a set updates that
+room’s picture.
 
 ## Lamp placement
 
-In the room editor you can place the room's lamps in the picture. Placed lamps light their cone when they are on and fade out slowly when they go off. When the last lamp goes out the picture dims into its unlit version.
+In the room editor, you can place lamps in the picture. Their light cones
+follow their state. When the last lamp goes out, the room moves to its
+lights-off variant. These effects use the prepared images; they do not
+regenerate the room for each command.
+
+## In the native iOS app
+
+The [native app](/hauser/docs/integrations/companion-app/) has its own image
+workflow and provider availability. Apple Intelligence image generation is
+experimental and depends on the OS, hardware and beta build; do not rely on it
+as part of the standard setup. Local model support for the web server remains
+roadmap work.

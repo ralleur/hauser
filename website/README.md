@@ -33,12 +33,14 @@ demo action. The original outlined logo is copied byte for byte from
 | Personal story | Public README, `ROADMAP.md`, photograph provenance in `ASSETS-LICENSE.md` | Built for the author's own household. No invented quote, user count or testimonial. |
 | Accounts, cloud and cost | Server architecture, optional-provider paths, native connection modes | Free Hauser software, no Hauser subscription/account for everyday control. Removed the blanket “no cloud” promise. Optional services and TestFlight have their own terms and data flows. |
 
-One documentation discrepancy remains outside this website's scope: the app
-guide says Home Assistant notifications are not in the native app yet, while
-the public roadmap lists them as implemented. That coverage is not resolved by
-this website update; no notification or whole-feature-parity claim is made here. Experimental
-Apple Intelligence image generation and planned local models stay in the guide
-and roadmap, not in the landing page's feature promise.
+The native-app guide previously mixed configured Home Assistant notifications
+with the app’s own local hints. The documentation refresh on 2026-10-04 checks
+`Hauser/Services/HouseholdStore.swift` in the native project: open windows,
+laundry and due reminders are local hints; Home Assistant persistent
+notifications are not forwarded into the native app yet. The guide now states
+that distinction. No notification or whole-feature-parity claim is made on the
+website. Experimental Apple Intelligence image generation and planned local
+models remain in the guide and roadmap, not in the landing page’s promise.
 
 ## Image provenance and accessibility
 

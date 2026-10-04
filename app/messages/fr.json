@@ -2117,5 +2117,13 @@
   "camera_popup_required": "Choisissez un déclencheur pour activer l’affichage.",
   "camera_popup_empty": "Aucun déclencheur disponible. Vérifiez la connexion et rouvrez ces réglages.",
   "camera_popup_hint": "Un mouvement, une personne détectée ou la sonnette affiche brièvement cette caméra en plein écran. Sur cet appareil, lorsque Hauser est ouvert.",
-  "camera_popup_done": "Terminé"
+  "camera_popup_done": "Terminé",
+  "rimg_manage_current": "Votre image de pièce",
+  "rimg_manage_origin": "Créée avec",
+  "rimg_manage_origin_legacy": "Image importée ou créée ailleurs",
+  "rimg_manage_versions": "Versions de l’image",
+  "rimg_manage_replace": "Utiliser une autre image",
+  "rimg_manage_replace_hint": "Votre image, la bibliothèque ou l’assistant : l’image actuelle reste jusqu’à votre nouveau choix.",
+  "rimg_manage_setup": "Une image pour votre pièce",
+  "rimg_manage_assistant_hint": "Ces versions viennent de l’assistant. Changez de méthode pour créer un nouvel ensemble ou utiliser vos images."
 }

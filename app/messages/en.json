@@ -2116,5 +2116,13 @@
   "camera_popup_required": "Choose a trigger to activate the popup.",
   "camera_popup_empty": "No triggers available. Check the connection and reopen these settings.",
   "camera_popup_hint": "Motion, person detection or a doorbell briefly opens this camera fullscreen. Applies on this device while Hauser is open.",
-  "camera_popup_done": "Done"
+  "camera_popup_done": "Done",
+  "rimg_manage_current": "Your room picture",
+  "rimg_manage_origin": "Created with",
+  "rimg_manage_origin_legacy": "Uploaded or externally created picture",
+  "rimg_manage_versions": "Picture versions",
+  "rimg_manage_replace": "Use a different picture",
+  "rimg_manage_replace_hint": "Your own picture, the library or the assistant — the current picture stays until you choose a new one.",
+  "rimg_manage_setup": "A picture for your room",
+  "rimg_manage_assistant_hint": "These versions come from the picture assistant. Use “Change method” to create a new set or use your own pictures."
 }
