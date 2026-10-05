@@ -1322,9 +1322,9 @@
   "rimg_assigned": "Jeu d’images attribué.",
   "notif_rimg_source": "Image de pièce",
   "notif_rimg_darken_running_title": "Hauser met à jour les anciennes images de pièce",
-  "notif_rimg_darken_done_title": "Les anciennes images de pièce s’assombrissent désormais le soir",
-  "notif_rimg_darken_msg": "Soir et nuit pour {rooms}",
-  "notif_rimg_darken_msg_library": "Soir et nuit pour les images de la bibliothèque",
+  "notif_rimg_darken_done_title": "Les versions des images ont été complétées",
+  "notif_rimg_darken_msg": "Versions des images pour {rooms}",
+  "notif_rimg_darken_msg_library": "Versions des images de la bibliothèque",
   "notif_rimg_darken_exterior": "Vue extérieure",
   "notif_rimg_draft_title": "Vos propositions sont prêtes",
   "notif_rimg_draft_msg": "Choisissez celle qui correspond le mieux à votre pièce.",
@@ -1460,7 +1460,7 @@
   "rimg_manual_windows_count": "{count} fenêtres marquées — la météo s'y affiche.",
   "rimg_manual_windows_mark": "Marquer les fenêtres",
   "rimg_manual_windows_change": "Modifier les fenêtres",
-  "rimg_manual_windows_hint": "Tracez un rectangle sur chaque vitre. Cliquez sur un rectangle pour le retirer.",
+  "rimg_manual_windows_hint": "Tracez un rectangle sur chaque vitre, puis déplacez ses coins. Touchez l’intérieur pour le supprimer.",
   "rimg_manual_windows_clear": "Tout retirer",
   "rimg_manual_windows_save": "Terminé",
   "rimg_manual_windows_saved": "Les fenêtres sont enregistrées — la météo s'y affiche désormais.",
@@ -2125,5 +2125,7 @@
   "rimg_manage_replace": "Utiliser une autre image",
   "rimg_manage_replace_hint": "Votre image, la bibliothèque ou l’assistant : l’image actuelle reste jusqu’à votre nouveau choix.",
   "rimg_manage_setup": "Une image pour votre pièce",
-  "rimg_manage_assistant_hint": "Ces versions viennent de l’assistant. Changez de méthode pour créer un nouvel ensemble ou utiliser vos images."
+  "rimg_manage_assistant_hint": "Ces versions viennent de l’assistant. Changez de méthode pour créer un nouvel ensemble ou utiliser vos images.",
+  "rimg_manual_window_corner": "Fenêtre {window}, coin {corner} — glisser ou utiliser les flèches",
+  "rimg_manual_s_overcast_derived": "Dérivée — image de jour atténuée"
 }

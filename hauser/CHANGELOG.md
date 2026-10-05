@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.41.0 - 2026-10-05
+
+- Room and touch: drag window corners to fit slanted panes; existing polygon
+  markings keep their shape when edited. Available in web and native iOS.
+- Room: uploaded pictures now receive a local overcast version alongside evening
+  and night. Older pictures get missing overcast versions after updating, while
+  supplied versions stay intact. Each derived version can be restored from day,
+  without an AI account or provider call.
+
 ## 0.40.0 - 2026-10-04
 
 - Room-picture settings show the current picture, creation method, windows

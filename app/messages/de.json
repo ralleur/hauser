@@ -1321,9 +1321,9 @@
   "rimg_assigned": "Bildset zugewiesen.",
   "notif_rimg_source": "Raumbild",
   "notif_rimg_darken_running_title": "Hauser rechnet alte Raumbilder nach",
-  "notif_rimg_darken_done_title": "Alte Raumbilder werden jetzt abends dunkel",
-  "notif_rimg_darken_msg": "Abend und Nacht für {rooms}",
-  "notif_rimg_darken_msg_library": "Abend und Nacht für Bilder in der Bibliothek",
+  "notif_rimg_darken_done_title": "Bildfassungen wurden ergänzt",
+  "notif_rimg_darken_msg": "Bildfassungen für {rooms}",
+  "notif_rimg_darken_msg_library": "Bildfassungen für Bilder in der Bibliothek",
   "notif_rimg_darken_exterior": "Außenansicht",
   "notif_rimg_draft_title": "Deine Entwürfe sind fertig",
   "notif_rimg_draft_msg": "Wähle den Entwurf, der dein Zimmer am besten trifft.",
@@ -1459,7 +1459,7 @@
   "rimg_manual_windows_count": "{count} Fenster markiert — dort zeigt sich das Wetter.",
   "rimg_manual_windows_mark": "Fenster markieren",
   "rimg_manual_windows_change": "Fenster ändern",
-  "rimg_manual_windows_hint": "Zieh über jede Fensterscheibe ein Rechteck. Ein Klick auf ein Rechteck entfernt es.",
+  "rimg_manual_windows_hint": "Zieh über jede Fensterscheibe ein Rechteck und verschiebe dann die Ecken. Ein Tipp in die Fläche entfernt sie.",
   "rimg_manual_windows_clear": "Alle entfernen",
   "rimg_manual_windows_save": "Fertig",
   "rimg_manual_windows_saved": "Die Fenster sind gespeichert — dort zeigt sich jetzt das Wetter.",
@@ -2124,5 +2124,7 @@
   "rimg_manage_replace": "Anderes Bild verwenden",
   "rimg_manage_replace_hint": "Eigenes Bild, Bibliothek oder Assistent — das bisherige Bild bleibt, bis du ein neues auswählst.",
   "rimg_manage_setup": "Ein Bild für deinen Raum",
-  "rimg_manage_assistant_hint": "Diese Fassungen stammen vom Bild-Assistenten. Über „Weg ändern“ kannst du ein neues Set erstellen oder eigene Bilder verwenden."
+  "rimg_manage_assistant_hint": "Diese Fassungen stammen vom Bild-Assistenten. Über „Weg ändern“ kannst du ein neues Set erstellen oder eigene Bilder verwenden.",
+  "rimg_manual_window_corner": "Fenster {window}, Ecke {corner} — ziehen oder Pfeiltasten verwenden",
+  "rimg_manual_s_overcast_derived": "Abgeleitet — gedämpftes Tagbild"
 }

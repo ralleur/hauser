@@ -813,3 +813,40 @@
 @media (max-width: 720px) {
   .room-image-manual-thumb { width: 84px; }
 }
+
+.room-image-window-polygons, .room-image-window-hit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.room-image-window-polygons { pointer-events: none; }
+.room-image-window-polygons polygon {
+  fill: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  stroke: var(--color-accent-warm);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+.room-image-window-hit { border: 0; background: transparent; padding: 0; }
+.room-image-window-corner {
+  position: absolute;
+  z-index: 1;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: move;
+  touch-action: none;
+}
+.room-image-window-corner::after {
+  content: '';
+  display: block;
+  width: var(--space-3);
+  height: var(--space-3);
+  margin: auto;
+  border: 2px solid var(--color-accent-warm);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-0);
+}

@@ -103,7 +103,7 @@ export const API_ROUTES = [
   { id: 'roomImageRegions', methods: ['POST', 'PUT'], path: '/api/room-image-assets/:assetId/regions', area: 'room-images', access: 'admin', purpose: 'Flächen eines Bildsets erkennen (POST; Fenster, Sitzflächen, Tische …) oder von Hand setzen (PUT) und im Katalog festhalten.' },
   { id: 'roomImageAssetDelete', methods: ['DELETE'], path: '/api/room-image-assets/:assetId', area: 'room-images', access: 'admin', purpose: 'Bildset löschen.' },
   { id: 'roomImageAssignment', methods: ['PUT'], path: '/api/room-image-assignments/:roomId', area: 'room-images', access: 'admin', purpose: 'Bildset einem Raum zuweisen.' },
-  { id: 'roomBackground', methods: ['POST', 'DELETE'], path: '/api/room-backgrounds/:roomId', area: 'room-images', access: 'admin', purpose: 'Eigenes Raumbild setzen oder auf den Projekt-Fallback zurückgehen; mit `?variant=dark|dark-off|overcast` eine einzelne Fassung des selbst gezeichneten Sets ersetzen oder wieder ablegen.' },
+  { id: 'roomBackground', methods: ['POST', 'DELETE'], path: '/api/room-backgrounds/:roomId', area: 'room-images', access: 'admin', purpose: 'Eigenes Raumbild setzen oder auf den Projekt-Fallback zurückgehen; mit `?variant=dark|dark-off|overcast` eine einzelne Fassung ersetzen oder zurücksetzen; DELETE mit `derive=1` leitet auch trüb lokal aus Tag ab, ohne `derive` entfernt DELETE die trübe Fassung.' },
   { id: 'roomImageAssignmentLegacy', methods: ['PUT'], path: '/api/rooms/:roomId/room-image-assignment', area: 'room-images', access: 'admin', purpose: 'Ältere Zuweisungsroute; bleibt für bestehende Clients beantwortet.' },
 
   /* ── Ambient ── */

@@ -35,7 +35,9 @@ a custom picture.
 
 Open **Settings → Home → Rooms & devices**, tap the room’s picture and upload
 a JPEG, PNG, WebP or AVIF. Hauser derives darker evening and lights-off
-versions. An upload does not recreate the room or find its windows; use the
+versions plus a locally muted overcast version, without an AI call. Missing
+overcast versions of older uploads are filled in after an update; supplied
+versions are preserved. An upload does not recreate the room or find its windows; use the
 editor if you want to mark window areas for weather effects.
 
 ## Adjust an existing picture
@@ -43,10 +45,14 @@ editor if you want to mark window areas for weather effects.
 Open the room’s picture settings. Once a custom picture is assigned, the
 overview shows its preview and creation method, followed by **Windows** and
 the lighting variants. Mark or adjust the windows here, without reopening
-the wizard. On a phone, draw directly on the image.
+the wizard. Draw a rectangle over each pane, then drag its corners to fit
+slanted or perspective windows. Existing polygon markings keep their shape.
+Tap inside a marking to remove it. On a phone, draw directly on the image.
 
 For uploaded pictures, replace individual variants or derive them again from
-the day picture. For manually created pictures, the prompts are available
+the day picture, including **Overcast**. The local overcast version mutes the
+colours and brightness; it does not redraw sunlight or shadows already in the
+illustration. For manually created pictures, the prompts are available
 with each variant. Generated sets show their available versions. Older
 pictures without a recorded method use a general source label.
 

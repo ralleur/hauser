@@ -46,7 +46,7 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, va
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const etag = await householdEtag();
-    const query = variant ? `?variant=${variant}${origin ? `&origin=${origin}` : ''}` : '';
+    const query = variant ? `?variant=${variant}${method === 'DELETE' ? '&derive=1' : ''}${origin ? `&origin=${origin}` : ''}` : '';
     const response = await fetch(`/api/room-backgrounds/${encodeURIComponent(roomId)}${query}`, {
       method,
       headers: {
@@ -82,7 +82,7 @@ export function uploadRoomBackgroundVariant(roomId: string, variant: RoomBackgro
   return mutate(roomId, 'POST', file, variant, origin);
 }
 
-/** Abend und Nacht wieder aus dem Tagbild ableiten, trüb entfernen. */
+/** Abend, Nacht und trüb wieder aus dem Tagbild ableiten. */
 export function resetRoomBackgroundVariant(roomId: string, variant: Exclude<RoomBackgroundVariant, 'light'>): Promise<AssignmentResponse> {
   return mutate(roomId, 'DELETE', undefined, variant);
 }

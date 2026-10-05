@@ -1321,9 +1321,9 @@
   "rimg_assigned": "Afbeeldingsset toegewezen.",
   "notif_rimg_source": "Kamer-afbeelding",
   "notif_rimg_darken_running_title": "Hauser werkt oudere kamerafbeeldingen bij",
-  "notif_rimg_darken_done_title": "Oudere kamerafbeeldingen worden nu 's avonds donker",
-  "notif_rimg_darken_msg": "Avond en nacht voor {rooms}",
-  "notif_rimg_darken_msg_library": "Avond en nacht voor afbeeldingen in de bibliotheek",
+  "notif_rimg_darken_done_title": "Beeldvarianten zijn aangevuld",
+  "notif_rimg_darken_msg": "Beeldvarianten voor {rooms}",
+  "notif_rimg_darken_msg_library": "Beeldvarianten voor afbeeldingen in de bibliotheek",
   "notif_rimg_darken_exterior": "Buitenaanzicht",
   "notif_rimg_draft_title": "Je concepten zijn klaar",
   "notif_rimg_draft_msg": "Kies het concept dat het beste bij je kamer past.",
@@ -1459,7 +1459,7 @@
   "rimg_manual_windows_count": "{count} ramen gemarkeerd — daar toont zich het weer.",
   "rimg_manual_windows_mark": "Ramen markeren",
   "rimg_manual_windows_change": "Ramen wijzigen",
-  "rimg_manual_windows_hint": "Sleep een rechthoek over elke ruit. Klik op een rechthoek om die te verwijderen.",
+  "rimg_manual_windows_hint": "Trek een rechthoek over elke ruit en verplaats daarna de hoeken. Tik binnen de vorm om deze te verwijderen.",
   "rimg_manual_windows_clear": "Alles verwijderen",
   "rimg_manual_windows_save": "Klaar",
   "rimg_manual_windows_saved": "De ramen zijn opgeslagen — daar toont zich nu het weer.",
@@ -2124,5 +2124,7 @@
   "rimg_manage_replace": "Een ander beeld gebruiken",
   "rimg_manage_replace_hint": "Je eigen beeld, de bibliotheek of de assistent — het huidige beeld blijft totdat je een nieuw kiest.",
   "rimg_manage_setup": "Een beeld voor je kamer",
-  "rimg_manage_assistant_hint": "Deze versies komen van de assistent. Wijzig de methode om een nieuwe set te maken of je eigen beelden te gebruiken."
+  "rimg_manage_assistant_hint": "Deze versies komen van de assistent. Wijzig de methode om een nieuwe set te maken of je eigen beelden te gebruiken.",
+  "rimg_manual_window_corner": "Raam {window}, hoek {corner} — slepen of pijltoetsen gebruiken",
+  "rimg_manual_s_overcast_derived": "Afgeleid — gedempt dagbeeld"
 }

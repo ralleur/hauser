@@ -1308,9 +1308,9 @@
   "rimg_assigned": "Set di immagini assegnato.",
   "notif_rimg_source": "Immagine della stanza",
   "notif_rimg_darken_running_title": "Hauser aggiorna le vecchie immagini delle stanze",
-  "notif_rimg_darken_done_title": "Le vecchie immagini delle stanze ora si scuriscono la sera",
-  "notif_rimg_darken_msg": "Sera e notte per {rooms}",
-  "notif_rimg_darken_msg_library": "Sera e notte per le immagini della libreria",
+  "notif_rimg_darken_done_title": "Le versioni delle immagini sono state completate",
+  "notif_rimg_darken_msg": "Versioni delle immagini per {rooms}",
+  "notif_rimg_darken_msg_library": "Versioni delle immagini nella libreria",
   "notif_rimg_darken_exterior": "Vista esterna",
   "notif_rimg_draft_title": "Le tue bozze sono pronte",
   "notif_rimg_draft_msg": "Scegli la bozza che rispecchia meglio la tua stanza.",
@@ -1446,7 +1446,7 @@
   "rimg_manual_windows_count": "{count} finestre segnate — lì si vede il meteo.",
   "rimg_manual_windows_mark": "Segna le finestre",
   "rimg_manual_windows_change": "Modifica le finestre",
-  "rimg_manual_windows_hint": "Traccia un rettangolo su ogni vetro. Clicca su un rettangolo per rimuoverlo.",
+  "rimg_manual_windows_hint": "Trascina un rettangolo su ogni vetro, poi sposta gli angoli. Tocca al suo interno per rimuoverlo.",
   "rimg_manual_windows_clear": "Rimuovi tutto",
   "rimg_manual_windows_save": "Fatto",
   "rimg_manual_windows_saved": "Le finestre sono salvate — lì ora si vede il meteo.",
@@ -2125,5 +2125,7 @@
   "rimg_manage_replace": "Usa un’altra immagine",
   "rimg_manage_replace_hint": "Una tua immagine, la libreria o l’assistente: l’immagine attuale resta fino alla nuova scelta.",
   "rimg_manage_setup": "Un’immagine per la tua stanza",
-  "rimg_manage_assistant_hint": "Queste versioni provengono dall’assistente. Cambia metodo per creare un nuovo set o usare le tue immagini."
+  "rimg_manage_assistant_hint": "Queste versioni provengono dall’assistente. Cambia metodo per creare un nuovo set o usare le tue immagini.",
+  "rimg_manual_window_corner": "Finestra {window}, angolo {corner} — trascina o usa i tasti freccia",
+  "rimg_manual_s_overcast_derived": "Derivata — immagine diurna attenuata"
 }

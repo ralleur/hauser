@@ -5099,10 +5099,11 @@ function manualOwnList(entry) {
 }
 
 /* Ein eigenes Bild (R55, vorher „Raumbild setzen"): ohne `variant` oder mit
-   `variant=light` entsteht ein neues Set — Tag vom Nutzer, Abend und Nacht
-   daraus abgedunkelt. `variant=dark|dark-off|overcast` ersetzt genau diese
+   `variant=light` entsteht ein neues Set — Tag vom Nutzer, Abend, Nacht und trüb
+   lokal daraus abgeleitet. `variant=dark|dark-off|overcast` ersetzt genau diese
    Fassung im laufenden selbst gezeichneten Set; DELETE mit `variant` legt
-   sie wieder ab (Abend und Nacht: neu abgeleitet, trüb: fort). Bildsets
+   sie wieder ab (Abend und Nacht: neu abgeleitet, trüb: mit derive=1
+   ebenfalls abgeleitet, sonst entfernt). Bildsets
    sind unveränderlich, also entsteht dabei ein neues Set mit derselben
    Zuweisung, das alte wird zum Tombstone. */
 async function serveManualRoomBackground(req, res, roomId, context, variant = null) {
@@ -5123,9 +5124,11 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
     if (wholeSet) {
       const dark = await derivedManualVariant(uploaded.panel, 'dark');
       const darkOff = await derivedManualVariant(uploaded.panel, 'dark-off');
+      const overcast = await derivedManualVariant(uploaded.panel, 'overcast');
       manualVariants = {
         light: uploaded.panel, dark: dark.panel, darkOff: darkOff.panel,
         phoneLight: uploaded.phone, phoneDark: dark.phone, phoneDarkOff: darkOff.phone,
+        overcast: overcast.panel,
       };
     }
 
@@ -5146,7 +5149,9 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
         const assetId = `manual_${randomBytes(16).toString('hex')}`;
         const focus = { panel: { x: 0.5, y: 0.5 }, phone: { x: 0.5, y: 0.5 } };
         const origin = new URL(req.url, 'http://localhost').searchParams.get('origin') === 'manual' ? 'manual' : 'upload';
-        createdAsset = context.assetStore.publish(assetId, focus, manualVariants, origin);
+        const { overcast, ...requiredVariants } = manualVariants;
+        createdAsset = context.assetStore.publish(assetId, focus, requiredVariants, origin);
+        context.assetStore.addOptionalVariant(assetId, 'overcast', overcast);
         manual = { own: ['light'] };
         context.assetStore.setManual(assetId, manual);
         room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
@@ -5164,6 +5169,7 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
           return { type: 'written', roomId, hero: structuredClone(room.hero), etag: snapshot.etag, manual };
         }
         const key = MANUAL_VARIANT_KEYS[variant];
+        const deriveOvercast = key === 'overcast' && req.method === 'DELETE' && new URL(req.url, 'http://localhost').searchParams.get('derive') === '1';
         const variants = {};
         for (const variantKey of ROOM_IMAGE_VARIANT_KEYS) variants[variantKey] = context.assetStore.variantBytes(previousAssetId, variantKey);
         if (key !== 'overcast') {
@@ -5180,7 +5186,10 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
         context.assetStore.setManual(assetId, manual);
         /* Was das alte Set sonst noch wusste, zieht mit: Flächen und, sofern nicht gerade entfernt, die trübe Fassung. */
         if (entry.regions) context.assetStore.setRegions(assetId, structuredClone(entry.regions));
-        if (entry.files?.overcast && !(key === 'overcast' && req.method === 'DELETE')) {
+        if (deriveOvercast) {
+          const derived = await derivedManualVariant(variants.light, 'overcast');
+          context.assetStore.addOptionalVariant(assetId, 'overcast', derived.panel);
+        } else if (entry.files?.overcast && !(key === 'overcast' && req.method === 'DELETE')) {
           context.assetStore.addOptionalVariant(assetId, 'overcast', context.assetStore.variantBytes(previousAssetId, 'overcast'));
         }
         room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
@@ -5256,9 +5265,9 @@ export async function refreshBrightManualRoomImages(context, { onStart = () => u
     .map((asset) => asset.assetId)
     .filter((assetId) => assetId.startsWith('manual_'))
     .map((assetId) => assetStore.activeEntry(assetId))
-    .filter((entry) => entry && entry.files.dark.sha256 === entry.files.light.sha256
+    .filter((entry) => entry && (!entry.files.overcast || (entry.files.dark.sha256 === entry.files.light.sha256
       && entry.files.darkOff.sha256 === entry.files.light.sha256
-      && !manualOwnList(entry).has('dark') && !manualOwnList(entry).has('darkOff'));
+      && !manualOwnList(entry).has('dark') && !manualOwnList(entry).has('darkOff'))));
   if (pending.length === 0) return { status: 'ok', refreshed, failed, rooms: [] };
   const household = readRoomImageHouseholdSnapshot(householdConfigPath).document;
   const rooms = pending.flatMap((entry) => assignedRoomIds(household, entry.assetId))
@@ -5269,9 +5278,14 @@ export async function refreshBrightManualRoomImages(context, { onStart = () => u
     try {
       const variants = {};
       for (const key of ROOM_IMAGE_VARIANT_KEYS) variants[key] = assetStore.variantBytes(previousAssetId, key);
-      const dark = await derivedManualVariant(variants.light, 'dark');
-      const darkOff = await derivedManualVariant(variants.light, 'dark-off');
-      Object.assign(variants, { dark: dark.panel, phoneDark: dark.phone, darkOff: darkOff.panel, phoneDarkOff: darkOff.phone });
+      if (entry.files.dark.sha256 === entry.files.light.sha256 && entry.files.darkOff.sha256 === entry.files.light.sha256
+        && !manualOwnList(entry).has('dark') && !manualOwnList(entry).has('darkOff')) {
+        const dark = await derivedManualVariant(variants.light, 'dark');
+        const darkOff = await derivedManualVariant(variants.light, 'dark-off');
+        Object.assign(variants, { dark: dark.panel, phoneDark: dark.phone, darkOff: darkOff.panel, phoneDarkOff: darkOff.phone });
+      }
+      const overcast = entry.files.overcast ? assetStore.variantBytes(previousAssetId, 'overcast')
+        : (await derivedManualVariant(variants.light, 'overcast')).panel;
       const done = await context.configMutations.run(async () => {
         context.assertSetupRecoveryHealthy();
         if (!assetStore.activeEntry(previousAssetId)) return false;
@@ -5281,9 +5295,8 @@ export async function refreshBrightManualRoomImages(context, { onStart = () => u
         const created = assetStore.publish(assetId, structuredClone(entry.focus), variants, entry.origin ?? null);
         assetStore.setManual(assetId, entry.manual ? structuredClone(entry.manual) : { own: ['light'] });
         if (entry.regions) assetStore.setRegions(assetId, structuredClone(entry.regions));
-        if (entry.files?.overcast) {
-          assetStore.addOptionalVariant(assetId, 'overcast', assetStore.variantBytes(previousAssetId, 'overcast'));
-        }
+        assetStore.addOptionalVariant(assetId, 'overcast', entry.files?.overcast
+          ? assetStore.variantBytes(previousAssetId, 'overcast') : overcast);
         /* Nur in der Bibliothek: kein Raum zeigt darauf, die Haushaltsdatei bleibt, wie sie ist. */
         if (roomIds.length > 0) {
           for (const roomId of roomIds) {

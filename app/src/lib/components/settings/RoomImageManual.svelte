@@ -7,6 +7,7 @@
      entstehen daraus; ohne eigenes Abend- und Nachtbild bleibt das
      abgedunkelte Tagbild. Dazu die Fenster von Hand. */
   import '../../../styles/room-images.css';
+  import { moveCorner } from '../../room-images/window-polygon.ts';
   import { m } from '../../../paraglide/messages.js';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
@@ -71,7 +72,7 @@
     const current = status(variant);
     if (current === 'present') return { text: m.rimg_manual_s_present(), tone: 'is-present' };
     if (current === 'wizard') return { text: m.rimg_manual_s_wizard(), tone: 'is-present' };
-    if (current === 'derived') return { text: m.rimg_manual_s_derived(), tone: 'is-derived' };
+    if (current === 'derived') return { text: variant === 'overcast' ? m.rimg_manual_s_overcast_derived() : m.rimg_manual_s_derived(), tone: 'is-derived' };
     if (variant === 'light') return { text: m.rimg_manual_s_missing_light(), tone: 'is-missing' };
     if (variant === 'overcast') return { text: m.rimg_manual_s_missing_overcast(), tone: 'is-missing' };
     return { text: m.rimg_manual_s_missing(), tone: 'is-missing' };
@@ -190,7 +191,9 @@
   // ── Fenster von Hand ──
   type Rect = { x: number; y: number; w: number; h: number };
   let marking = $state(false);
-  let rects = $state<Rect[]>([]);
+  let windows = $state<RoomImageRegion[]>([]);
+  let cornerDrag: { window: number; point: number } | null = null;
+  let stage = $state<HTMLDivElement>();
   let drawing = $state<Rect | null>(null);
   let dragStart: { x: number; y: number } | null = null;
   let windowsBusy = $state(false);
@@ -199,19 +202,14 @@
   /* Kleiner als drei Promille der Fläche ist ein verrutschter Klick, kein Fenster. */
   const MIN_AREA = 0.003;
 
-  function rectOf(region: RoomImageRegion): Rect {
-    const xs = region.points.map((point) => point.x);
-    const ys = region.points.map((point) => point.y);
-    const x = Math.min(...xs), y = Math.min(...ys);
-    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
-  }
   function startMarking() {
-    rects = (asset?.regions?.regions ?? []).filter((region) => region.kind === 'window').map(rectOf);
+    windows = (asset?.regions?.regions ?? []).filter((region) => region.kind === 'window')
+      .map((region) => ({ ...region, points: region.points.map((point) => ({ ...point })) }));
     windowsMessage = null;
     marking = true;
   }
   function unit(event: PointerEvent): { x: number; y: number } {
-    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const box = stage!.getBoundingClientRect();
     return {
       x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
       y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)),
@@ -227,18 +225,24 @@
     drawing = null;
   }
   function pointerMove(event: PointerEvent) {
+    if (cornerDrag) {
+      const { window, point } = cornerDrag;
+      windows[window] = { ...windows[window], points: moveCorner(windows[window].points, point, unit(event)) };
+      return;
+    }
     if (!dragStart) return;
     drawing = normalized(dragStart, unit(event));
   }
   function pointerUp(event: PointerEvent) {
+    if (cornerDrag) { pointerMove(event); cornerDrag = null; return; }
     if (!dragStart) return;
     const rect = normalized(dragStart, unit(event));
     dragStart = null;
     drawing = null;
-    if (rect.w * rect.h >= MIN_AREA) rects = [...rects, rect];
+    if (rect.w * rect.h >= MIN_AREA) windows = [...windows, region(rect)];
   }
   function removeRect(index: number) {
-    rects = rects.filter((_, position) => position !== index);
+    windows = windows.filter((_, position) => position !== index);
   }
   function region(rect: Rect): RoomImageRegion {
     const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -256,7 +260,7 @@
     windowsMessage = null;
     try {
       const others = (asset.regions?.regions ?? []).filter((entry) => entry.kind !== 'window');
-      await setRoomImageRegions(asset.assetId, [...others, ...rects.map(region)]);
+      await setRoomImageRegions(asset.assetId, [...others, ...windows]);
       await load();
       await reloadRoomRegions();
       marking = false;
@@ -298,23 +302,39 @@
   {#if marking && asset}
     <section class="room-image-windows-editor">
       <p>{m.rimg_manual_windows_hint()}</p>
-      <div class="room-image-windows-stage" role="application" aria-label={m.rimg_manual_windows_mark()}
+      <div bind:this={stage} class="room-image-windows-stage" role="application" aria-label={m.rimg_manual_windows_mark()}
            style:background-image={`url("${asset.variants.light}")`}
-           onpointerdown={pointerDown} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={() => { dragStart = null; drawing = null; }}>
-        {#each rects as rect, index (index)}
-          <button class="room-image-window-rect pressable" type="button" aria-label={m.rimg_manual_remove()}
-                  style:left={`${rect.x * 100}%`} style:top={`${rect.y * 100}%`} style:width={`${rect.w * 100}%`} style:height={`${rect.h * 100}%`}
+           onpointerdown={pointerDown} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={() => { dragStart = null; drawing = null; cornerDrag = null; }}>
+        <svg class="room-image-window-polygons" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {#each windows as window}
+            <polygon points={window.points.map((p) => `${p.x * 100},${p.y * 100}`).join(' ')} />
+          {/each}
+        </svg>
+        {#each windows as window, index (index)}
+          <button class="room-image-window-hit" type="button" aria-label={m.rimg_manual_remove()}
+                  style:clip-path={`polygon(${window.points.map((p) => `${p.x * 100}% ${p.y * 100}%`).join(',')})`}
                   onpointerdown={(event) => event.stopPropagation()} onclick={() => removeRect(index)}></button>
+          {#each window.points as point, pointIndex}
+            <button class="room-image-window-corner" type="button" aria-label={m.rimg_manual_window_corner({ window: index + 1, corner: pointIndex + 1 })}
+                    style:left={`${point.x * 100}%`} style:top={`${point.y * 100}%`}
+                    onpointerdown={(event) => { if (event.button !== 0) return; event.stopPropagation(); cornerDrag = { window: index, point: pointIndex }; stage!.setPointerCapture(event.pointerId); }}
+                    onkeydown={(event) => {
+                      const delta = ({ ArrowLeft: [-0.01, 0], ArrowRight: [0.01, 0], ArrowUp: [0, -0.01], ArrowDown: [0, 0.01] } as Record<string, number[]>)[event.key];
+                      if (!delta) return;
+                      event.preventDefault();
+                      windows[index] = { ...window, points: moveCorner(window.points, pointIndex, { x: point.x + delta[0], y: point.y + delta[1] }) };
+                    }}></button>
+          {/each}
         {/each}
         {#if drawing}
           <span class="room-image-window-rect is-drawing" aria-hidden="true"
                 style:left={`${drawing.x * 100}%`} style:top={`${drawing.y * 100}%`} style:width={`${drawing.w * 100}%`} style:height={`${drawing.h * 100}%`}></span>
         {/if}
       </div>
-      <p class="room-image-manual-status is-present">{m.rimg_manual_windows_count({ count: rects.length })}</p>
+      <p class="room-image-manual-status is-present">{m.rimg_manual_windows_count({ count: windows.length })}</p>
       <footer class="room-image-wizard-actions">
         <button class="secondary-btn pressable" type="button" disabled={windowsBusy} onclick={() => { marking = false; }}>{m.rimg_way_back()}</button>
-        <button class="secondary-btn pressable" type="button" disabled={windowsBusy || rects.length === 0} onclick={() => { rects = []; }}>{m.rimg_manual_windows_clear()}</button>
+        <button class="secondary-btn pressable" type="button" disabled={windowsBusy || windows.length === 0} onclick={() => { windows = []; }}>{m.rimg_manual_windows_clear()}</button>
         <button class="primary-btn pressable" type="button" disabled={windowsBusy} onclick={saveWindows}>{m.rimg_manual_windows_save()}</button>
       </footer>
       {#if windowsMessage}<p class="room-image-alert is-error" role="alert">{windowsMessage}</p>{/if}
@@ -388,9 +408,9 @@
                   <button class="primary-btn pressable" type="button" disabled={busy !== null || (variant !== 'light' && !manualSet)} onclick={() => pick(variant)}>
                     {busy === variant ? m.room_background_saving() : status(variant) === 'present' ? m.rimg_manual_replace() : m.rimg_manual_upload()}
                   </button>
-                  {#if variant !== 'light' && status(variant) === 'present'}
+                  {#if variant !== 'light' && hasLight}
                     <button class="secondary-btn pressable" type="button" disabled={busy !== null} onclick={() => reset(variant)}>
-                      {variant === 'overcast' ? m.rimg_manual_remove() : m.rimg_manual_derive_again()}
+                      {m.rimg_manual_derive_again()}
                     </button>
                   {/if}
                 </div>

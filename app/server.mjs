@@ -788,14 +788,14 @@ export function createHmiServer(
     const result = await refreshBrightManualRoomImages(manualDarkenContext, {
       onStart: ({ count, rooms }) => {
         roomImageMaintenance = { id: `darken-${startedAt}`, kind: 'darken', status: 'running', count, rooms, startedAt };
-        console.log(`[hauser] Rechne Abend und Nacht fuer ${count} alte(s) eigene(s) Raumbild(er) nach${rooms.length ? ` (${rooms.join(', ')})` : ''} ...`);
+        console.log(`[hauser] Ergaenze Bildfassungen fuer ${count} alte(s) eigene(s) Raumbild(er) nach${rooms.length ? ` (${rooms.join(', ')})` : ''} ...`);
       },
     });
     if (result.refreshed?.length) {
       const finishedAt = Date.now();
       roomImageMaintenance = { ...roomImageMaintenance, status: 'done', count: result.refreshed.length, finishedAt };
       try { if (maintenancePath) writeFileSync(maintenancePath, `${JSON.stringify(roomImageMaintenance)}\n`, { mode: 0o600 }); } catch { /* Die Meldung lebt dann bis zum nächsten Neustart. */ }
-      console.log(`[hauser] Abend und Nacht nachgerechnet fuer ${result.refreshed.length} eigene(s) Raumbild(er) in ${Math.max(1, Math.round((finishedAt - startedAt) / 1000))} s.`);
+      console.log(`[hauser] Bildfassungen nachgerechnet fuer ${result.refreshed.length} eigene(s) Raumbild(er) in ${Math.max(1, Math.round((finishedAt - startedAt) / 1000))} s.`);
     } else if (roomImageMaintenance?.status === 'running') {
       roomImageMaintenance = null;
     }

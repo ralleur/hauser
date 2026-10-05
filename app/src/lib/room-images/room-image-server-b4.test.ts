@@ -671,6 +671,41 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect((await fetch(`${app.base}/assets/room-images/${uploaded.hero.assetId}/light.avif`)).status).toBe(404);
   });
 
+  it('derives missing overcast on request and preserves perspective windows and custom evening', async () => {
+    const app = await startB4();
+    const config = await fetch(`${app.base}/api/household-config`);
+    const etag = config.headers.get('etag')!;
+    await config.arrayBuffer();
+    const png = readFileSync(new URL('./fixtures/neutral-alpha.png', import.meta.url));
+    const uploaded = await (await fetch(`${app.base}/api/room-backgrounds/den?variant=light`, {
+      method: 'POST', headers: { origin: ORIGIN, 'if-match': etag, 'content-type': 'image/png' }, body: png,
+    })).json();
+    const initial = await fetch(`${app.base}/assets/room-images/${uploaded.hero.assetId}/overcast.avif`);
+    expect(initial.status).toBe(200);
+    const derivedBytes = Buffer.from(await initial.arrayBuffer());
+    const regions = [{ kind: 'window', points: [{ x: .3, y: .1 }, { x: .6, y: .2 }, { x: .8, y: .8 }, { x: .1, y: .8 }] }];
+    const marked = await fetch(`${app.base}/api/room-image-assets/${uploaded.hero.assetId}/regions`, {
+      method: 'PUT', headers: privateHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ regions }),
+    });
+    expect(marked.status).toBe(200); await marked.arrayBuffer();
+    const custom = await (await fetch(`${app.base}/api/room-backgrounds/den?variant=dark`, {
+      method: 'POST', headers: { origin: ORIGIN, 'if-match': uploaded.etag, 'content-type': 'image/png' }, body: png,
+    })).json();
+    const customDark = Buffer.from(await (await fetch(`${app.base}/assets/room-images/${custom.hero.assetId}/dark.avif`)).arrayBuffer());
+    const removed = await (await fetch(`${app.base}/api/room-backgrounds/den?variant=overcast`, {
+      method: 'DELETE', headers: { origin: ORIGIN, 'if-match': custom.etag },
+    })).json();
+    const result = await fetch(`${app.base}/api/room-backgrounds/den?variant=overcast&derive=1`, {
+      method: 'DELETE', headers: { origin: ORIGIN, 'if-match': removed.etag },
+    });
+    expect(result.status).toBe(200);
+    const restored = await result.json();
+    expect(Buffer.from(await (await fetch(`${app.base}/assets/room-images/${restored.hero.assetId}/overcast.avif`)).arrayBuffer())).toEqual(derivedBytes);
+    expect(Buffer.from(await (await fetch(`${app.base}/assets/room-images/${restored.hero.assetId}/dark.avif`)).arrayBuffer())).toEqual(customDark);
+    const catalog = createRoomImageAssetStore({ catalogPath: join(app.sandbox, 'config', 'room-images', 'assets.json'), assetRoot: join(app.sandbox, 'assets') });
+    expect(catalog.activeEntry(restored.hero.assetId)).toMatchObject({ manual: { own: ['light', 'dark'] }, regions: { regions } });
+  }, 120_000);
+
   it('recomputes evening and night for an own photo from before 0.33 and repoints the room', async () => {
     const sandbox = root();
     const householdConfigPath = join(sandbox, 'config', 'household.json');
@@ -686,6 +721,7 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     // Nur in der Bibliothek, keinem Raum zugewiesen — wird trotzdem nachgerechnet.
     const libraryId = `manual_${'b'.repeat(32)}`;
     store.publish(libraryId, focus, bright);
+    store.setManual(libraryId, { own: ['light', 'dark', 'darkOff'] });
     const household = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
     household.rooms[0].hero = { assetId: oldId, focus };
     writeFileSync(householdConfigPath, `${JSON.stringify(household)}\n`);
@@ -715,7 +751,11 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     const library = JSON.parse(readFileSync(join(sandbox, 'config', 'room-images', 'assets.json'), 'utf8')).assets
       .filter((entry: any) => entry.status === 'active' && entry.assetId.startsWith('manual_'));
     expect(library).toHaveLength(2);
-    expect(library.every((entry: any) => entry.files.dark.sha256 !== entry.files.light.sha256)).toBe(true);
+    expect(library.find((entry: any) => entry.assetId === heroId).files.dark.sha256).not.toBe(library.find((entry: any) => entry.assetId === heroId).files.light.sha256);
+    const customLibrary = library.find((entry: any) => entry.assetId !== heroId);
+    expect(customLibrary.files.dark.sha256).toBe(customLibrary.files.light.sha256);
+    expect(customLibrary.manual.own).toEqual(['light', 'dark', 'darkOff']);
+    expect(library.every((entry: any) => entry.files.overcast)).toBe(true);
     expect(JSON.parse(readFileSync(join(sandbox, 'config', 'room-image-maintenance.json'), 'utf8')).status).toBe('done');
   }, 120_000);
 

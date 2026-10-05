@@ -1307,9 +1307,9 @@
   "rimg_assigned": "Conjunto de imagens atribuído.",
   "notif_rimg_source": "Imagem da divisão",
   "notif_rimg_darken_running_title": "O Hauser está a atualizar imagens antigas das divisões",
-  "notif_rimg_darken_done_title": "As imagens antigas das divisões escurecem agora à noite",
-  "notif_rimg_darken_msg": "Fim de tarde e noite para {rooms}",
-  "notif_rimg_darken_msg_library": "Fim de tarde e noite para imagens da biblioteca",
+  "notif_rimg_darken_done_title": "As versões das imagens foram completadas",
+  "notif_rimg_darken_msg": "Versões das imagens de {rooms}",
+  "notif_rimg_darken_msg_library": "Versões das imagens na biblioteca",
   "notif_rimg_darken_exterior": "Vista exterior",
   "notif_rimg_draft_title": "Os teus rascunhos estão prontos",
   "notif_rimg_draft_msg": "Escolhe o que melhor representa a tua divisão.",
@@ -1445,7 +1445,7 @@
   "rimg_manual_windows_count": "{count} janelas marcadas — o tempo aparece aí.",
   "rimg_manual_windows_mark": "Marcar janelas",
   "rimg_manual_windows_change": "Alterar janelas",
-  "rimg_manual_windows_hint": "Arraste um retângulo sobre cada vidro. Clique num retângulo para o remover.",
+  "rimg_manual_windows_hint": "Desenhe um retângulo sobre cada vidro e depois mova os cantos. Toque no interior para o remover.",
   "rimg_manual_windows_clear": "Remover todas",
   "rimg_manual_windows_save": "Concluído",
   "rimg_manual_windows_saved": "As janelas estão guardadas — o tempo aparece agora aí.",
@@ -2124,5 +2124,7 @@
   "rimg_manage_replace": "Usar outra imagem",
   "rimg_manage_replace_hint": "Uma imagem sua, a biblioteca ou o assistente — a imagem atual mantém-se até escolher outra.",
   "rimg_manage_setup": "Uma imagem para a sua divisão",
-  "rimg_manage_assistant_hint": "Estas versões vêm do assistente. Mude o método para criar um novo conjunto ou usar as suas imagens."
+  "rimg_manage_assistant_hint": "Estas versões vêm do assistente. Mude o método para criar um novo conjunto ou usar as suas imagens.",
+  "rimg_manual_window_corner": "Janela {window}, canto {corner} — arraste ou use as setas",
+  "rimg_manual_s_overcast_derived": "Derivada — imagem diurna atenuada"
 }

@@ -1321,9 +1321,9 @@
   "rimg_assigned": "Image set assigned.",
   "notif_rimg_source": "Room image",
   "notif_rimg_darken_running_title": "Hauser is updating older room images",
-  "notif_rimg_darken_done_title": "Older room images now darken in the evening",
-  "notif_rimg_darken_msg": "Evening and night for {rooms}",
-  "notif_rimg_darken_msg_library": "Evening and night for pictures in the library",
+  "notif_rimg_darken_done_title": "Picture versions have been updated",
+  "notif_rimg_darken_msg": "Picture versions for {rooms}",
+  "notif_rimg_darken_msg_library": "Picture versions for images in the library",
   "notif_rimg_darken_exterior": "Exterior view",
   "notif_rimg_draft_title": "Your drafts are ready",
   "notif_rimg_draft_msg": "Pick the draft that matches your room best.",
@@ -1459,7 +1459,7 @@
   "rimg_manual_windows_count": "{count} windows marked — the weather shows there.",
   "rimg_manual_windows_mark": "Mark windows",
   "rimg_manual_windows_change": "Change windows",
-  "rimg_manual_windows_hint": "Drag a rectangle over each window pane. Click a rectangle to remove it.",
+  "rimg_manual_windows_hint": "Drag a rectangle over each window pane, then move its corners. Tap inside a shape to remove it.",
   "rimg_manual_windows_clear": "Remove all",
   "rimg_manual_windows_save": "Done",
   "rimg_manual_windows_saved": "The windows are saved — the weather now shows there.",
@@ -2124,5 +2124,7 @@
   "rimg_manage_replace": "Use a different picture",
   "rimg_manage_replace_hint": "Your own picture, the library or the assistant — the current picture stays until you choose a new one.",
   "rimg_manage_setup": "A picture for your room",
-  "rimg_manage_assistant_hint": "These versions come from the picture assistant. Use “Change method” to create a new set or use your own pictures."
+  "rimg_manage_assistant_hint": "These versions come from the picture assistant. Use “Change method” to create a new set or use your own pictures.",
+  "rimg_manual_window_corner": "Window {window}, corner {corner} — drag or use arrow keys",
+  "rimg_manual_s_overcast_derived": "Derived — muted day picture"
 }

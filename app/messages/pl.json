@@ -1308,9 +1308,9 @@
   "rimg_assigned": "Zestaw obrazów przypisany.",
   "notif_rimg_source": "Obraz pokoju",
   "notif_rimg_darken_running_title": "Hauser aktualizuje starsze obrazy pomieszczeń",
-  "notif_rimg_darken_done_title": "Starsze obrazy pomieszczeń ciemnieją teraz wieczorem",
-  "notif_rimg_darken_msg": "Wieczór i noc: {rooms}",
-  "notif_rimg_darken_msg_library": "Wieczór i noc dla obrazów w bibliotece",
+  "notif_rimg_darken_done_title": "Uzupełniono wersje obrazów",
+  "notif_rimg_darken_msg": "Wersje obrazów dla {rooms}",
+  "notif_rimg_darken_msg_library": "Wersje obrazów w bibliotece",
   "notif_rimg_darken_exterior": "Widok z zewnątrz",
   "notif_rimg_draft_title": "Twoje propozycje są gotowe",
   "notif_rimg_draft_msg": "Wybierz tę, która najlepiej oddaje Twój pokój.",
@@ -1446,7 +1446,7 @@
   "rimg_manual_windows_count": "{count} okien zaznaczonych — tam pokazuje się pogoda.",
   "rimg_manual_windows_mark": "Zaznacz okna",
   "rimg_manual_windows_change": "Zmień okna",
-  "rimg_manual_windows_hint": "Przeciągnij prostokąt po każdej szybie. Kliknij prostokąt, aby go usunąć.",
+  "rimg_manual_windows_hint": "Narysuj prostokąt na każdej szybie, a potem przesuń jego narożniki. Dotknij wnętrza, aby go usunąć.",
   "rimg_manual_windows_clear": "Usuń wszystkie",
   "rimg_manual_windows_save": "Gotowe",
   "rimg_manual_windows_saved": "Okna zapisane — tam pokazuje się teraz pogoda.",
@@ -2125,5 +2125,7 @@
   "rimg_manage_replace": "Użyj innego obrazu",
   "rimg_manage_replace_hint": "Własny obraz, biblioteka lub asystent — obecny obraz pozostanie do wyboru nowego.",
   "rimg_manage_setup": "Obraz dla Twojego pokoju",
-  "rimg_manage_assistant_hint": "Te wersje pochodzą z asystenta. Zmień sposób tworzenia, aby utworzyć nowy zestaw lub użyć własnych obrazów."
+  "rimg_manage_assistant_hint": "Te wersje pochodzą z asystenta. Zmień sposób tworzenia, aby utworzyć nowy zestaw lub użyć własnych obrazów.",
+  "rimg_manual_window_corner": "Okno {window}, narożnik {corner} — przeciągnij lub użyj strzałek",
+  "rimg_manual_s_overcast_derived": "Pochodny — przygaszony obraz dzienny"
 }
