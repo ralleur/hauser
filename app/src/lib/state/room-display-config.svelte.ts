@@ -9,6 +9,8 @@
    Reine Logik plus eine Rune für den persistierten Teil; die Auflösung gegen
    den Katalog passiert beim Lesen. */
 
+import type { RoomImageRegion } from './room-image-library-client.ts';
+import { OBJECT_KINDS, validShape } from '../room-images/object-shapes.ts';
 import { appState } from './app.svelte.ts';
 import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
@@ -27,6 +29,7 @@ const SHOW_KEY = { temperature: 'showTemperature', humidity: 'showHumidity', co2
 const SENSOR_KEY = { temperature: 'temperatureSensorId', humidity: 'humiditySensorId', co2: 'co2SensorId' } as const satisfies Record<RoomMetric, keyof RoomDisplayEntry>;
 
 export interface RoomDisplayEntry {
+  imageObjects?: { image: string; regions: RoomImageRegion[] };
   /** Temperatur auf der Kachel zeigen (Default: ja) */
   showTemperature?: boolean;
   /** Luftfeuchte auf der Kachel zeigen (Default: nein) */
@@ -412,6 +415,10 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
       if (typeof cand.cameraSplit === 'boolean') next.cameraSplit = cand.cameraSplit;
       if (cand.hideClimate === true) next.hideClimate = true;
+      if (cand.imageObjects && typeof cand.imageObjects.image === 'string' && Array.isArray(cand.imageObjects.regions)
+        && cand.imageObjects.regions.length <= 24 && cand.imageObjects.regions.every(r => r && OBJECT_KINDS.includes(r.kind) && Array.isArray(r.points) && r.points.length <= 12 && r.points.every(p => p && typeof p.x === 'number' && typeof p.y === 'number') && validShape(r.points))) {
+        next.imageObjects = cand.imageObjects;
+      }
       if (cand.weatherWholeImage === true) next.weatherWholeImage = true;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
@@ -437,4 +444,13 @@ function save(config: RoomDisplayConfig): void {
   } catch {
     // Storage voll oder gesperrt: die Anzeige bleibt für diese Sitzung stehen.
   }
+}
+
+/** Corrections of a bundled image belong to this room and image identity. */
+export function setDefaultRoomObjects(roomId: string, image: string, regions: RoomImageRegion[]): void {
+  writeEntry(roomId, { ...entry(roomId), imageObjects: { image, regions } });
+}
+export function defaultRoomObjects(roomId: string, image: string): RoomImageRegion[] | undefined {
+  const objects = entry(roomId).imageObjects;
+  return objects?.image === image ? objects.regions : undefined;
 }

@@ -90,6 +90,7 @@
   let selectedLightId = $state('');
   let backgroundInput = $state<HTMLInputElement>();
   let backgroundBusy = $state(false);
+  let objectsOpen = $state(false);
   let backgroundMessage = $state<string | null>(null);
   let backgroundError = $state(false);
   let libraryOpen = $state(false);
@@ -336,7 +337,7 @@
   });
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && roomEdit.mode === 'open') closeRoomEdit();
+    if (e.key === 'Escape' && !objectsOpen && roomEdit.mode === 'open') closeRoomEdit();
   }
 
   /* Die Wischgeste gehört dem Telefon: am Wandpanel steht die Konfiguration
@@ -1142,6 +1143,7 @@
             </div>
           {:else}
             <section class="re-background-editor">
+              <button class="secondary-btn pressable" type="button" onclick={() => objectsOpen = true}>{m.rimg_objects_title()}</button>
               {#if background && room}
                 {#key room.id}
                   <RoomImageManual roomId={room.id} managing refreshKey={wizardOpen || libraryOpen}
@@ -1189,4 +1191,10 @@
                     onclose={() => libraryOpen = false}
                     onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
   <RoomImageWizard open={wizardOpen} chooseOnOpen={changeImageWay} roomId={room?.id ?? null} onclose={() => wizardOpen = false} />
+{/if}
+
+{#if objectsOpen && room}
+  {#await import('./settings/RoomObjectEditor.svelte') then loaded}
+    <loaded.default roomId={room.id} title={m.rimg_objects_title()} imageAlt={m.room_background_preview()} savingText={m.room_background_saving()} onclose={() => objectsOpen = false} />
+  {/await}
 {/if}

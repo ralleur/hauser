@@ -3,6 +3,14 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.42.0] - 2026-10-05
+
+- Room-picture settings now offer “Define objects” directly in the web and native
+  iOS apps. View existing objects, change their type and outline, or add shapes
+  freehand or with a rectangle and draggable corners.
+- Object edits also work with the bundled room pictures and remain associated
+  with the selected room and picture.
+
 ## [0.41.0] - 2026-10-05
 
 - Room and touch: drag window corners to fit slanted panes; existing polygon
