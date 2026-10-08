@@ -15,7 +15,20 @@ describe('camera feed app interaction', () => {
     expect(component).toContain("backend.getCameraStreamPath?.(id)");
     expect(component).toContain('attachHls(element, url)');
     /* Standbilder laufen nur, solange kein Video liefert. */
-    expect(component).toMatch(/const url = snapshotUrl;\s*\n\s*if \(videoReady\) return;/);
+    expect(component).toMatch(/const url = snapshotUrl;\s*\n\s*if \(videoReady \|\| !watching\) return;/);
+  });
+
+  it('öffnet einen abgebrochenen Strom erst nach der Wartezeit neu (Cpt.Hardy, 0.42.0)', () => {
+    /* Verfolgte die Schleife `streamUrl`, startete jeder Abbruch sofort den nächsten Versuch. */
+    expect(component).toContain('if (!untrack(() => streamUrl)) {');
+    expect(component).toContain('timer = setTimeout(tick, STREAM_RETRY_MS);');
+  });
+
+  it('hält Strom und Standbilder an, solange niemand hinsieht', () => {
+    expect(component).toContain('const watching = $derived(pageVisible && inView && !(pauseInStandby && ambientState.active));');
+    expect(component).toContain('if (!cameraAvailable || !watching) {');
+    const popup = readFileSync(new URL('./CameraPopupHost.svelte', import.meta.url), 'utf8');
+    expect(popup).toContain('pauseInStandby={false}');
   });
 
   it('opens the live image on tap and closes it on double tap', () => {

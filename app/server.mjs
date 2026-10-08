@@ -180,6 +180,7 @@ import {
 } from './server/notification-rules.mjs';
 import { createSongLibrary, serveSongs, songRequestAllowed, songTargetPath } from './server/songs.mjs';
 import { ablageRequestAllowed, createAblageAccess, paperlessUpstream, serveAblage } from './server/ablage.mjs';
+import { BACKUP_RESTART_EXIT_CODE, backupRoute, serveBackup } from './server/backup.mjs';
 import {
   ambientMapAdminRoute,
   ambientMapHomeAssistantConfigured,
@@ -394,6 +395,9 @@ export function createHmiServer(
     ambientMapAssetDirectory = AMBIENT_MAP_SERVER_ASSET_DIRECTORY,
     ambientMapHaFetchImpl = undefined,
     ambientMapJobRunner = null,
+    /* Nach dem Wiederherstellen einer Sicherung: Container-Einstieg und
+       launchd starten den Dienst bei Exit 75 neu. */
+    requestRestart = () => setTimeout(() => process.exit(BACKUP_RESTART_EXIT_CODE), 200),
   } = {},
 ) {
   /* Ein ausdrücklich übergebener Ambient-Upstream gilt als konfiguriert;
@@ -1272,6 +1276,24 @@ export function createHmiServer(
       } else {
         serveLaundry(req, res, laundry, laundryRoute, origin);
       }
+    } else if (backupRoute(req.url || '/') && requestOriginAllowed(req, allowedOrigins)) {
+      void serveBackup(req, res, backupRoute(req.url || '/'), {
+        paths: {
+          householdConfigPath,
+          configPath,
+          familyDataPath,
+          notificationRulesPath,
+          momentsStatePath,
+          ambientMapPath: ambientMapConfigPath,
+          roomImageCatalogPath: resolvedRoomImageAssetCatalogPath,
+          roomImageAssetRoot,
+        },
+        configMutations,
+        version: buildInfo.version ?? '',
+        requestRestart,
+      });
+    } else if (backupRoute(req.url || '/')) {
+      jsonResponse(res, 403, { ok: false, code: 'BACKUP_FORBIDDEN', message: 'Sicherungs-Route nicht freigegeben.' });
     } else if (notionShoppingRoute(req.url || '/') && familyDataRequestAllowed(req, allowedOrigins)) {
       serveNotionShopping(req, res, { configStore });
     } else if (notionShoppingRoute(req.url || '/')) {

@@ -338,6 +338,8 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['zuletzt verwendet', 'symbole', 'picker', 'zwischenspeicher', 'cache'] },
   { id: 'demo-mode', section: 'maintenance', get label() { return m.settings_entry_demo_mode_label(); },
     keywords: ['fake', 'backend', 'mock', 'simulation', 'entwicklung', 'testdaten', 'live', 'echt'] },
+  { id: 'backup', needsServer: true, section: 'maintenance', get label() { return m.settings_entry_backup_label(); },
+    keywords: ['sicherung', 'backup', 'wiederherstellen', 'restore', 'umzug', 'export', 'import', 'datei'] },
   { id: 'reload-app', section: 'maintenance', get label() { return m.settings_entry_reload_app_label(); },
     keywords: ['neustart', 'refresh', 'reload', 'browser', 'kiosk'] },
 ];

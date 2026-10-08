@@ -86,23 +86,31 @@ if (typeof process.getuid === 'function' && process.getuid() === 0) {
   process.setuid(NODE_UID);
 }
 
-const child = spawn(process.execPath, ['server.mjs'], {
-  env: process.env,
-  stdio: 'inherit',
-});
-
+/* Exit 75 heißt „bitte neu starten“: nach dem Wiederherstellen einer
+   Sicherung lädt der Server Katalog, Familiendaten und Regeln frisch. */
+const RESTART_EXIT_CODE = 75;
 let requestedSignal = null;
+let child = null;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     requestedSignal = signal;
-    child.kill(signal);
+    child?.kill(signal);
   });
 }
 
-const exitCode = await new Promise((resolve) => {
-  child.once('error', () => resolve(1));
-  child.once('exit', (code, signal) => {
-    resolve(requestedSignal && signal === requestedSignal ? 0 : (code ?? 1));
+let exitCode;
+for (;;) {
+  child = spawn(process.execPath, ['server.mjs'], {
+    env: process.env,
+    stdio: 'inherit',
   });
-});
+  exitCode = await new Promise((resolve) => {
+    child.once('error', () => resolve(1));
+    child.once('exit', (code, signal) => {
+      resolve(requestedSignal && signal === requestedSignal ? 0 : (code ?? 1));
+    });
+  });
+  if (exitCode !== RESTART_EXIT_CODE || requestedSignal) break;
+  console.log('[hauser] Neustart nach Wiederherstellung einer Sicherung.');
+}
 process.exitCode = exitCode;

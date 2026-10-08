@@ -2,7 +2,7 @@
   import CameraPopupSettings from './CameraPopupSettings.svelte';
   import { editMode } from '../state/edit-mode.svelte.ts';
   import { m } from '../../paraglide/messages.js';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { backend, runtime, configuredHaUrl, configuredHaTransport } from '../adapter/runtime.svelte.ts';
   import { attachHls } from '../state/playback.svelte.ts';
   import type { CameraValue } from '../adapter/types.ts';
@@ -11,6 +11,7 @@
   import { slider } from '../actions/slider.ts';
   import type { CameraPopoutMode } from '../state/camera-popouts.svelte.ts';
   import { rememberCameraStill, restoreCameraStill } from '../state/camera-still.ts';
+  import { ambientState } from '../state/ambient.svelte.ts';
 
   let {
     entityId,
@@ -18,6 +19,7 @@
     titlebarVisible = true,
     popoutMode = null,
     disableFullscreen = false,
+    pauseInStandby = true,
     onpopout = null,
     ondock = null,
     onmodechange = null,
@@ -30,6 +32,7 @@
     titlebarVisible?: boolean;
     popoutMode?: CameraPopoutMode | null;
     disableFullscreen?: boolean;
+    pauseInStandby?: boolean;
     onpopout?: (() => void) | null;
     ondock?: (() => void) | null;
     onmodechange?: ((mode: CameraPopoutMode) => void) | null;
@@ -77,13 +80,39 @@
   });
   const live = $derived(videoReady || (snapshotUrl !== null && !failed));
 
+  /* Bild und Strom laufen nur, solange jemand hinsehen kann: Seite im
+     Vordergrund, Karte im Sichtfeld (nicht weggeblendete Kontrollfläche), kein
+     Ruhebild darüber. Sonst zieht Home Assistant den Kamerastrom ohne
+     Zuschauer weiter — Last auf dem Host und im Netz rund um die Uhr. Das
+     Kamera-Popup liegt über dem Ruhebild und läuft dort weiter. */
+  let pageVisible = $state(typeof document === 'undefined' || document.visibilityState !== 'hidden');
+  let inView = $state(true);
+  const watching = $derived(pageVisible && inView && !(pauseInStandby && ambientState.active));
+
+  onMount(() => {
+    const syncVisibility = () => { pageVisible = document.visibilityState !== 'hidden'; };
+    document.addEventListener('visibilitychange', syncVisibility);
+    const observer = typeof IntersectionObserver === 'function' && root
+      ? new IntersectionObserver((entries) => { inView = entries.some((entry) => entry.isIntersecting); })
+      : null;
+    if (observer && root) observer.observe(root);
+    return () => {
+      document.removeEventListener('visibilitychange', syncVisibility);
+      observer?.disconnect();
+    };
+  });
+
   /* Solange die Kamera verfügbar ist, sorgt diese Schleife dafür, dass ein
      Streampfad vorliegt. Fällt der Player aus, setzt er `streamUrl` zurück und
-     bekommt beim nächsten Durchlauf einen frisch signierten Pfad. */
+     bekommt beim nächsten Durchlauf einen frisch signierten Pfad — frühestens
+     nach `STREAM_RETRY_MS`. Darum liest die Schleife `streamUrl` ohne es zu
+     verfolgen: sonst startete jeder Abbruch sofort einen neuen Versuch, und
+     ein in Home Assistant gestörter Strom wurde dutzendfach pro Sekunde neu
+     geöffnet, jedes Mal samt Standbild. */
   $effect(() => {
     const id = entityId;
     const base = haBase;
-    if (!cameraAvailable) {
+    if (!cameraAvailable || !watching) {
       streamUrl = null;
       videoReady = false;
       return;
@@ -92,7 +121,7 @@
     let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = async () => {
       if (stopped) return;
-      if (!streamUrl) {
+      if (!untrack(() => streamUrl)) {
         let path: string | null = null;
         try {
           path = (await backend.getCameraStreamPath?.(id)) ?? null;
@@ -147,7 +176,7 @@
 
   $effect(() => {
     const url = snapshotUrl;
-    if (videoReady) return;
+    if (videoReady || !watching) return;
     const id = entityId;
     source = null;
     failed = false;

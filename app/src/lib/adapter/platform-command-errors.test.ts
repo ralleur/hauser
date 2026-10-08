@@ -49,9 +49,10 @@ describe('Apple-Home-Dimmen über die Web-Bridge', () => {
       expect(writes[0][0]).toBe('brightness');
       expect(writes[0][1]).not.toBe(target);
       expect(updates).not.toHaveBeenCalled();
-      await vi.advanceTimersByTimeAsync(450);
+      await vi.advanceTimersByTimeAsync(120);
       const levels = writes.filter(([id]) => id === 'brightness').map(([, value]) => Number(value));
       expect(levels.length).toBeGreaterThan(1);
+      expect(levels.length).toBeLessThanOrEqual(4);
       expect(levels.at(-1)).toBe(target);
       expect(levels.slice(1).every((level, index) => target === 80 ? level > levels[index] : level < levels[index])).toBe(true);
       expect(updates).toHaveBeenCalledExactlyOnceWith('light.hk_s1', expect.objectContaining({ brightness: target }));
@@ -59,21 +60,14 @@ describe('Apple-Home-Dimmen über die Web-Bridge', () => {
     }
   });
 
-  it('überspringt bei verspäteter HomeKit-Antwort keine Stufen und läuft sanft aus', async () => {
+  it('sendet nach einer langsamen HomeKit-Antwort direkt das Ziel statt Zwischenstufen nachzuholen', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
-    const sequences: number[][] = [];
-    for (const delay of [0, 120]) {
-      const { backend, writes } = await dimmingHarness(delay);
-      backend.callService('light', 'turn_on', 'light.hk_s1', { brightness_pct: 80 });
-      await vi.advanceTimersByTimeAsync(1000);
-      sequences.push(writes.filter(([id]) => id === 'brightness').map(([, value]) => Number(value)));
-    }
-    expect(sequences[1]).toEqual(sequences[0]);
-    const levels = [20, ...sequences[0]];
-    const jumps = levels.slice(1).map((level, index) => level - levels[index]);
-    expect(levels.at(-1)).toBe(80);
-    expect(jumps[0]).toBeLessThan(Math.max(...jumps));
-    expect(jumps.at(-1)).toBeLessThan(Math.max(...jumps));
+    const { backend, writes, updates } = await dimmingHarness(150);
+    backend.callService('light', 'turn_on', 'light.hk_s1', { brightness_pct: 80 });
+    await vi.advanceTimersByTimeAsync(150);
+    expect(writes).toHaveLength(2);
+    expect(writes.at(-1)).toEqual(['brightness', 80]);
+    expect(updates).toHaveBeenCalledExactlyOnceWith('light.hk_s1', expect.objectContaining({ brightness: 80 }));
   });
 
   it('ersetzt laufendes Dimmen sofort durch Aus ohne spätes Wiedereinschalten', async () => {

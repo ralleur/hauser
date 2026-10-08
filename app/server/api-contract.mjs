@@ -42,6 +42,8 @@ export const API_ROUTES = [
 
   /* ── Konfiguration ── */
   { id: 'config', methods: ['GET', 'PUT'], path: '/api/config', area: 'config', access: 'origin', purpose: 'Geteilte Gerätekonfiguration (ETag-geschützt).', response: 'SharedConfigResponse' },
+  { id: 'backup', methods: ['GET'], path: '/api/backup', area: 'config', access: 'origin', purpose: 'Sicherung des Haushalts samt Raumbildern als Datei, ohne Zugangsdaten.' },
+  { id: 'backupRestore', methods: ['POST'], path: '/api/backup/restore', area: 'config', access: 'origin', purpose: 'Sicherung wiederherstellen; der alte Stand bleibt unter backups/, danach Neustart.', response: 'BackupRestoreResponse' },
   { id: 'householdConfigMode', methods: ['GET'], path: '/api/household-config-mode', area: 'config', access: 'origin', purpose: 'Aktiver oder Schattenmodus der Haushaltskonfiguration.', response: 'HouseholdConfigModeResponse' },
   { id: 'householdConfig', methods: ['GET', 'HEAD'], path: '/api/household-config', area: 'config', access: 'origin', purpose: 'Versionierte Haushaltskonfiguration (ETag-geschützt).', cacheable: true },
   { id: 'householdModuleToggle', methods: ['PUT'], path: '/api/household-modules/:moduleId', area: 'config', access: 'origin', purpose: 'Optionales Modul ein- oder ausschalten.' },

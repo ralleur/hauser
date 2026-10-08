@@ -88,6 +88,14 @@ export interface SharedConfigResponse {
   values: Record<string, string>;
 }
 
+export interface BackupRestoreResponse {
+  ok: boolean;
+  restarting?: boolean;
+  createdAt?: string | null;
+  code?: string;
+  message?: string;
+}
+
 export interface HouseholdConfigModeResponse {
   mode: 'active' | 'shadow' | string;
 }

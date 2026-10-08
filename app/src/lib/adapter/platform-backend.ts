@@ -7,10 +7,10 @@ import type { EntityCatalogItem } from '../state/fake-discovery-catalog.ts';
 import { platformEntities, platformValue, platformWrites, type PlatformEntity } from './platform-entities.ts';
 import type { Backend, ConnectionStatus } from './types.ts';
 
-/* Die HomeKit-Rampe bleibt beim nachgeladenen Backend. Die Dauer gilt für
-   schnelle Antworten; langsamere Geräte behalten jede Stufe. */
-const HOMEKIT_DIMMING_SECONDS = 0.42;
-const HOMEKIT_DIMMING_STEPS = 16;
+/* Kurze HomeKit-Rampe: Antwortlatenz darf keine lange Folge von
+   Zwischenwerten erzeugen. Nach dem Zeitfenster zählt nur noch das Ziel. */
+const HOMEKIT_DIMMING_SECONDS = 0.12;
+const HOMEKIT_DIMMING_STEPS = 4;
 
 export class PlatformBackend implements Backend {
   #home: HomeBridge;
@@ -169,17 +169,20 @@ export class PlatformBackend implements Backend {
 async function dimBrightness(from: number, target: number, signal: AbortSignal, write: (value: number) => Promise<void>): Promise<void> {
   const steps = Math.min(HOMEKIT_DIMMING_STEPS, Math.ceil(Math.abs(target - from)));
   if (steps === 0) return;
-  const interval = HOMEKIT_DIMMING_SECONDS * 1000 / steps;
+  const duration = HOMEKIT_DIMMING_SECONDS * 1000;
+  const interval = duration / Math.max(1, steps - 1);
+  const started = performance.now();
   let sent = from;
   for (let step = 1; step <= steps; step += 1) {
     if (signal.aborted) return;
     const tick = performance.now();
-    const progress = step / steps;
+    const progress = Math.min(1, Math.max(step / steps, (tick - started) / duration));
     const eased = progress * progress * (3 - 2 * progress);
     const value = Math.round(from + (target - from) * eased);
     if (value !== sent) { await write(value); sent = value; }
     if (sent === target || signal.aborted) return;
-    const pause = Math.max(0, interval - (performance.now() - tick));
+    const now = performance.now();
+    const pause = Math.max(0, Math.min(interval - (now - tick), duration - (now - started)));
     if (pause > 0) await new Promise<void>((resolve) => {
       const finish = () => { clearTimeout(timer); signal.removeEventListener('abort', finish); resolve(); };
       const timer = setTimeout(finish, pause);

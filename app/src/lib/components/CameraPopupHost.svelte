@@ -22,7 +22,7 @@
 </script>
 <dialog class="camera-popup-fullscreen" bind:this={dialog!} onclose={close} aria-label={active?.label ?? m.camera_popup_title()}>
   {#if active}
-    {#key active.camera}<CameraFeed entityId={active.camera} label={active.label} disableFullscreen={true} />{/key}
+    {#key active.camera}<CameraFeed entityId={active.camera} label={active.label} disableFullscreen={true} pauseInStandby={false} />{/key}
     <button class="secondary-btn pressable" onclick={close} autofocus>{m.camera_fullscreen_close({ label: active.label })}</button>
   {/if}
 </dialog>

@@ -1,7 +1,7 @@
 /* GENERIERT aus server/api-contract.mjs — nicht von Hand ändern.
    Neu erzeugen mit: node scripts/generate-api-contract.mjs */
 
-import type { AppFileListResponse, AppStatesResponse, BuildInfoResponse, HaConnectionResponse, HealthResponse, HouseholdConfigModeResponse, MomentsResponse, NotificationRulesResponse, PairingClaimResponse, PairingDevicesResponse, PairingStartResponse, RemindersResponse, RemoteStatusResponse, SharedConfigResponse, ShoppingResponse } from './types.ts';
+import type { AppFileListResponse, AppStatesResponse, BackupRestoreResponse, BuildInfoResponse, HaConnectionResponse, HealthResponse, HouseholdConfigModeResponse, MomentsResponse, NotificationRulesResponse, PairingClaimResponse, PairingDevicesResponse, PairingStartResponse, RemindersResponse, RemoteStatusResponse, SharedConfigResponse, ShoppingResponse } from './types.ts';
 
 export const API_CONTRACT_VERSION = 1;
 
@@ -19,6 +19,8 @@ export const API_ROUTES = {
   errors: { methods: ['GET', 'POST'], path: '/api/errors', area: 'core', access: 'origin' },
   haCaldavFlow: { methods: ['POST'], path: '/api/ha/caldav-flow', area: 'core', access: 'origin' },
   config: { methods: ['GET', 'PUT'], path: '/api/config', area: 'config', access: 'origin' },
+  backup: { methods: ['GET'], path: '/api/backup', area: 'config', access: 'origin' },
+  backupRestore: { methods: ['POST'], path: '/api/backup/restore', area: 'config', access: 'origin' },
   householdConfigMode: { methods: ['GET'], path: '/api/household-config-mode', area: 'config', access: 'origin' },
   householdConfig: { methods: ['GET', 'HEAD'], path: '/api/household-config', area: 'config', access: 'origin' },
   householdModuleToggle: { methods: ['PUT'], path: '/api/household-modules/:moduleId', area: 'config', access: 'origin' },
@@ -132,6 +134,7 @@ export interface ApiResponses {
   buildInfo: BuildInfoResponse;
   haConnection: HaConnectionResponse;
   config: SharedConfigResponse;
+  backupRestore: BackupRestoreResponse;
   householdConfigMode: HouseholdConfigModeResponse;
   notificationRules: NotificationRulesResponse;
   reminders: RemindersResponse;

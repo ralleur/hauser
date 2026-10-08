@@ -3,6 +3,33 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.43.2] - 2026-10-08
+
+- A camera whose stream keeps breaking no longer floods Home Assistant: Hauser
+  waits half a minute before opening the stream again instead of retrying many
+  times a second, each time with a fresh still image. Cameras also pause while
+  the standby screen covers them, while the room controls are hidden and while
+  the browser tab is in the background; a camera popup still plays over the
+  standby screen. The native iOS app stops fetching camera stills under its
+  standby screen as well.
+- The image library behind room pictures is updated to close a reported
+  security issue in one of its components.
+
+## [0.43.1] - 2026-10-06
+
+- Dimming an Apple Home light no longer keeps ramping after you let go: the
+  brightness glides briefly and then goes straight to the value you chose, even
+  when a lamp answers slowly. Same in the web panel and the native iOS app.
+
+## [0.43.0] - 2026-10-06
+
+- Moving to another Home Assistant no longer means starting over: Settings →
+  Maintenance now downloads one backup file with rooms, devices, scenes,
+  settings, notification rules, family data and room pictures, and restores it
+  on any Hauser server. Credentials such as tokens and PINs stay out of the
+  file. Restoring keeps the previous state as a backup on the server and
+  restarts Hauser by itself. Available in the web panel and the native iOS app.
+
 ## [0.42.0] - 2026-10-05
 
 - Room-picture settings now offer “Define objects” directly in the web and native

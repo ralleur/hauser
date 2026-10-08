@@ -11,6 +11,52 @@
   import { clearCache, isCleared } from '../../state/settings-actions.svelte.ts';
   import { settingsValues, setDemoMode } from '../../state/settings.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+  import { apiPath } from '../../api/client.ts';
+
+  /* Sichern und wiederherstellen: die Datei kommt vom Server und geht an ihn
+     zurück. Nach dem Einspielen startet er neu; die Seite wartet auf ihn und
+     lädt dann selbst. */
+  const backupAvailable = import.meta.env.VITE_DEMO !== '1';
+  let restoreInput = $state<HTMLInputElement | null>(null);
+  let restoreFile = $state<File | null>(null);
+  let restoreState = $state<'idle' | 'sending' | 'restarting' | 'failed'>('idle');
+  let restoreMessage = $state('');
+
+  function pickRestoreFile(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    restoreFile = input.files?.[0] ?? null;
+    restoreState = 'idle';
+    input.value = '';
+  }
+
+  async function waitForRestart() {
+    const deadline = Date.now() + 90_000;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    while (Date.now() < deadline) {
+      try {
+        const response = await fetch(apiPath('health'), { cache: 'no-store' });
+        if (response.ok) { location.reload(); return; }
+      } catch { /* Server ist noch unterwegs */ }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    location.reload();
+  }
+
+  async function applyRestore() {
+    if (!restoreFile) return;
+    restoreState = 'sending';
+    try {
+      const response = await fetch(apiPath('backupRestore'), { method: 'POST', body: restoreFile });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || `HTTP ${response.status}`);
+      restoreState = 'restarting';
+      restoreFile = null;
+      await waitForRestart();
+    } catch (error) {
+      restoreState = 'failed';
+      restoreMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
 </script>
 
 <div class="settings-group">
@@ -81,3 +127,40 @@
   </div>
 </div>
 <p class="settings-note">{m.sys_maintenance_note()}</p>
+
+{#if backupAvailable}
+<div class="settings-group">
+  <SettingsCardHead icon="i-archive-arrow-down" tint="neutral"
+                    title={m.sys_card_backup()} sub={m.sys_card_backup_hint()} />
+
+  <div class="settings-row" data-setting-id="backup">
+    <span class="settings-row-icon"><Icon name="i-archive-arrow-down" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_backup_download()}</span>
+      <span class="settings-row-sub">{m.sys_backup_download_hint()}</span>
+    </div>
+    <a class="secondary-btn pressable" href={apiPath('backup')} download>{m.sys_backup_save()}</a>
+  </div>
+
+  <div class="settings-row" data-setting-id="backup-restore">
+    <span class="settings-row-icon"><Icon name="i-archive-arrow-up" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_backup_restore()}</span>
+      <span class="settings-row-sub" role="status">
+        {#if restoreState === 'restarting'}{m.sys_backup_restarting()}
+        {:else if restoreState === 'failed'}{m.sys_backup_failed({ message: restoreMessage })}
+        {:else if restoreFile}{m.sys_backup_confirm({ name: restoreFile.name })}
+        {:else}{m.sys_backup_restore_hint()}{/if}
+      </span>
+    </div>
+    <input bind:this={restoreInput} type="file" accept=".hauser,application/gzip" hidden onchange={pickRestoreFile} />
+    {#if restoreFile && restoreState !== 'sending'}
+      <button class="secondary-btn pressable" type="button" onclick={() => { restoreFile = null; }}>{m.sys_backup_cancel()}</button>
+      <button class="secondary-btn pressable" type="button" onclick={applyRestore}>{m.sys_backup_apply()}</button>
+    {:else}
+      <button class="secondary-btn pressable" type="button" disabled={restoreState === 'sending' || restoreState === 'restarting'}
+              onclick={() => restoreInput?.click()}>{m.sys_backup_choose()}</button>
+    {/if}
+  </div>
+</div>
+{/if}

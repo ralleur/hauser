@@ -225,6 +225,7 @@ async function main() {
   ]));
   console.log(`Runde: ${[GROSS && 'Großrunde', OPERATE && 'Bedienen', UNREST && 'Unruhe', HOUSE && `Haus ${HOUSE}`, ALL_SETTINGS && 'alle Einstellungen', timezone && `Zeitzone ${timezone}`].filter(Boolean).join(', ') || 'Grundrunde'}`);
   if (SEED !== null) console.log(`Startzahl ${SEED}: Sprache ${locale}, Panel ${panelSize.width}×${panelSize.height}, Telefon ${phoneSize.width}×${phoneSize.height}, ${scenarios.length} Szenarien`);
+  const crawlStartedAt = Date.now();
   const ha = await startFakeHa({
     home, unruhe: UNREST, seed: SEED ?? 1,
     log: (line) => { if (!line.startsWith('Unruhe:')) record('fake-ha', line); },
@@ -757,6 +758,15 @@ async function main() {
     .filter((line) => /error|unhandled|TypeError|fehlgeschlagen/i.test(line) && !/Stresshaus sagt nein|\[vite\] \(client\)/.test(line));
   step = 'Server-Log';
   for (const line of serverErrors.slice(0, 20)) record('Server', line);
+
+  /* Ein gestörter Kamerastrom darf nur nach Wartezeit neu geöffnet werden. Raumwechsel
+     und Neuladen öffnen ihn ebenfalls — eine Schleife lag aber bei Hunderten pro Minute. */
+  step = 'Kamerastrom';
+  const crawlMinutes = Math.max(1, (Date.now() - crawlStartedAt) / 60_000);
+  const streamOpens = ha.seen.get('camera/stream') ?? 0;
+  if (streamOpens / crawlMinutes > 60) {
+    record('Last', `Kamerastrom ${streamOpens}× in ${crawlMinutes.toFixed(1)} min neu geöffnet — Dauerschleife gegen Home Assistant`);
+  }
 
   const report = join(root, 'bericht.json');
   writeFileSync(report, JSON.stringify({ seed: SEED, locale, panelSize, phoneSize, scenarios: scenarios.map((x) => x.name), coverage, findings, haCalls: Object.fromEntries(ha.seen) }, null, 2));

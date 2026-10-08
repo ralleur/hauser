@@ -939,6 +939,7 @@ function hotelCommandMessage(code) {
  */
 const HOTEL_ADMIN_ONLY_PREFIXES = [
   '/api/config',
+  '/api/backup',
   '/api/setup',
   '/api/ha/caldav-flow',
   '/api/room-images',

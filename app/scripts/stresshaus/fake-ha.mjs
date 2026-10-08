@@ -172,7 +172,14 @@ export function startFakeHa({ port = 0, host = '127.0.0.1', home = hostileHome()
         return unruhe ? void setTimeout(respond, rng() < 0.2 ? 1500 : 0) : respond();
       }
       case 'todo/item/list': return ok({ items: home.todoItems[msg.entity_id] ?? [] });
-      case 'camera/stream': return fail('home_assistant_error', 'Stream nicht verfügbar');
+      /* Verfügbare Kameras bekommen einen Strom, der sich nicht abspielen lässt —
+         wie ein in HA gestörter Kamerastrom. Das Panel darf ihn danach erst nach
+         seiner Wartezeit neu öffnen, nicht sofort (Cpt.Hardy, 0.42.0: Dauerschleife). */
+      case 'camera/stream': {
+        const cam = states.get(msg.entity_id);
+        if (!cam || cam.state === 'unavailable') return fail('home_assistant_error', 'Stream nicht verfügbar');
+        return ok({ url: '/api/hls/kaputt/master_playlist.m3u8' });
+      }
       case 'persistent_notification/subscribe': {
         ok();
         const created = new Date().toISOString();
@@ -233,6 +240,11 @@ export function startFakeHa({ port = 0, host = '127.0.0.1', home = hostileHome()
       if (!cam || cam.state === 'unavailable') return json(500, { message: 'Kamera nicht erreichbar' });
       res.writeHead(200, { ...headers, 'Content-Type': 'image/jpeg' });
       res.end(Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AN//Z', 'base64'));
+      return;
+    }
+    if (url.pathname.startsWith('/api/hls/')) {
+      res.writeHead(200, { ...headers, 'Content-Type': 'application/vnd.apple.mpegurl' });
+      res.end('kein HLS');
       return;
     }
     /* REST-Dienstaufrufe: so schaltet der Server für die iOS-App (/api/app/command) und holt ihre
