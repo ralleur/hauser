@@ -19,6 +19,7 @@ body:
         - Portuguese translation
         - Polish translation
         - Dutch translation
+        - Spanish translation
         - Other
     validations:
       required: true

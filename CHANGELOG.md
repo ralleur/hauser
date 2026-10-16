@@ -3,6 +3,12 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+- Hauser speaks Spanish. Choose Español under Settings → Appearance →
+  Interface language. The catalogue was reviewed by a native speaker. The combined phone startup
+  budget moves from 121 to 122 KiB gzip for the additional catalogue.
+
 ## [0.45.0] - 2026-10-15
 
 - Room on the phone: an eye button hides the room controls so only the room

@@ -5,7 +5,7 @@ sidebar:
   order: 23
 ---
 
-The interface speaks **German, English, French, Italian, Portuguese, Polish and Dutch**.
+The interface speaks **German, English, French, Italian, Portuguese, Polish, Dutch and Spanish**.
 
 - It follows the browser language unless you choose one under **Settings → Appearance → Interface language**.
 - Switching happens without a reload. The panel keeps its connection.

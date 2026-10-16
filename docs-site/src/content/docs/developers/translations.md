@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-Translations live in `app/messages/<lang>.json`. They are compiled into plain functions at build time with Paraglide, so seven languages cost about 50 bytes in the initial bundle.
+Translations live in `app/messages/<lang>.json`. They are compiled into plain functions at build time with Paraglide, so eight languages cost about 50 bytes in the initial bundle.
 
 ## Fixing a string
 

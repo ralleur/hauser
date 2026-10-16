@@ -111,8 +111,8 @@ The active boundaries are documented in
 
 ## Language and translations
 
-The interface ships in German, English, French, Italian, Portuguese, Polish and
-Dutch.
+The interface ships in German, English, French, Italian, Portuguese, Polish,
+Dutch and Spanish.
 Message catalogues live in `app/messages/`. Public documentation and
 contributor-facing prose are in English; existing inline code comments may still
 be German.

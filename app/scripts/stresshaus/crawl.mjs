@@ -213,7 +213,7 @@ async function main() {
   if (HOUSE) applyVariant(home, HOUSE);
   const rng = seededRandom(SEED ?? 1);
   const pickOne = (list) => list[Math.floor(rng() * list.length)];
-  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt', 'nl']);
+  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt', 'nl', 'es']);
   const panelSize = SEED === null ? { width: 1280, height: 800 } : pickOne([
     { width: 1280, height: 800 }, { width: 1194, height: 834 }, { width: 1920, height: 1080 }, { width: 1024, height: 600 }, { width: 2560, height: 1440 },
   ]);
