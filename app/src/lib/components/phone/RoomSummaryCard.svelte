@@ -127,6 +127,11 @@
           <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_window_open()}
         </span>
       {/if}
+      {#if summary.doorOpen}
+        <span class="phone-room-fact is-warning">
+          <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_door_open()}
+        </span>
+      {/if}
     </span>
     <strong class="phone-room-card-name" title={summary.name}>{summary.name}</strong>
   </span>

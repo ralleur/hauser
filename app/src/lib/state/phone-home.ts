@@ -1,5 +1,6 @@
 import { m } from '../../paraglide/messages.js';
 import { intlLocale, pluralCategory } from './locale.svelte.ts';
+import { openingsLabel } from './open-label.ts';
 import type { ClimateValue, LightValue } from '../adapter/types.ts';
 import type { RoomHeroConfig } from '../config/household-config.ts';
 import type {
@@ -14,6 +15,8 @@ export interface PhoneHomeReaders {
   climate(roomId: string): ClimateValue | null | undefined;
   /** Live-Kontakte des Raums; ohne Reader gilt der Seed-Wert. */
   windowOpen?(roomId: string, fallback: boolean): boolean;
+  /** Live-Türkontakte des Raums (device_class door/garage_door); ohne Reader zu. */
+  doorOpen?(roomId: string): boolean;
   /** Live-Melder des Raums (Rolle `presence`); ohne Reader gilt der Seed-Wert. */
   presence?(roomId: string, fallback: boolean): boolean;
 }
@@ -26,6 +29,7 @@ export interface PhoneRoomSummary {
   lightsKnown: number;
   lightsTotal: number;
   windowOpen: boolean;
+  doorOpen: boolean;
   presence: boolean;
   /** Dem Raum ist eine Kamera zugeordnet — egal, ob sie gerade ein Bild liefert. */
   camera: boolean;
@@ -93,6 +97,7 @@ export function projectPhoneRooms(
       lightsKnown: values.filter((light) => light !== undefined).length,
       lightsTotal: lights.length,
       windowOpen: safely(() => readers.windowOpen?.(room.id, room.windowOpen) ?? room.windowOpen, room.windowOpen),
+      doorOpen: safely(() => readers.doorOpen?.(room.id) ?? false, false),
       presence: safely(() => readers.presence?.(room.id, room.presence) ?? room.presence, room.presence),
       camera: !IS_DEMO_BUILD && room.lights.some((device) => device.category === 'camera'),
       climateAvailable: safely(() => readers.climate(room.id), null) != null,
@@ -131,7 +136,9 @@ export function accessibleRoomSummary(summary: PhoneRoomSummary): string {
     summary.name,
     temperatureLabel(summary.temperature),
     lightLabel(summary),
-    summary.windowOpen ? m.status_window_open_one() : m.phone_window_closed(),
+    summary.windowOpen || summary.doorOpen
+      ? openingsLabel(summary.windowOpen ? 1 : 0, summary.doorOpen ? 1 : 0)
+      : m.phone_window_closed(),
     summary.presence ? m.phone_presence_yes() : m.phone_presence_no(),
   ].join(', ');
 }

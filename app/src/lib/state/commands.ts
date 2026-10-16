@@ -43,6 +43,14 @@ export function setRoomContactResolver(
   roomContactResolver = resolver;
 }
 
+/* Tür oder Fenster? Die device_class steht im Katalog (room-display-config);
+   ohne Antwort zählt der Kontakt wie bisher als Fenster. */
+let doorContactResolver: ((entityId: string) => boolean) | null = null;
+
+export function setDoorContactResolver(resolver: (entityId: string) => boolean): void {
+  doorContactResolver = resolver;
+}
+
 /* ── Lesen: gemergte Sicht (Server-State bzw. pending Intent) ──
    `undefined`, solange ein frisch eingeblendetes Nicht-Seed-Gerät noch keinen
    Wert hat (kein Seed, kein Cache, ADR-006-Abo greift erst nach der Projektion).
@@ -133,6 +141,16 @@ export function roomContacts(roomId: string, kind: RoomContactKind = 'window'): 
 export function roomWindowOpen(roomId: string, fallback = false): boolean {
   const contacts = roomContacts(roomId, 'window');
   return contacts.length === 0 ? fallback : contacts.some((contact) => contact.open);
+}
+
+/* Was im Raum offen steht, getrennt nach Fenstern und Türen. Ohne zugeordneten
+   Kontakt gilt der Seed-Wert als Fenster, wie bei `roomWindowOpen`. */
+export function roomOpenings(roomId: string, fallback = false): { window: boolean; door: boolean } {
+  const contacts = roomContacts(roomId, 'window');
+  if (contacts.length === 0) return { window: fallback, door: false };
+  const open = contacts.filter((contact) => contact.open);
+  const door = open.filter((contact) => doorContactResolver?.(contact.entityId) === true).length;
+  return { window: open.length > door, door: door > 0 };
 }
 
 export function roomPresence(roomId: string, fallback = false): boolean {

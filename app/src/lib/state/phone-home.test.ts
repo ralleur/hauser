@@ -53,12 +53,12 @@ describe('phone home room projection', () => {
       {
         id: 'living', name: 'Wohnzimmer', temperature: 21.4,
         lightsOn: 1, lightsKnown: 1, lightsTotal: 2,
-        windowOpen: true, presence: true, camera: false, climateAvailable: false,
+        windowOpen: true, doorOpen: false, presence: true, camera: false, climateAvailable: false,
       },
       {
         id: 'empty', name: 'Flur', temperature: null,
         lightsOn: 0, lightsKnown: 0, lightsTotal: 0,
-        windowOpen: false, presence: false, camera: false, climateAvailable: false,
+        windowOpen: false, doorOpen: false, presence: false, camera: false, climateAvailable: false,
       },
     ]);
   });
@@ -79,6 +79,19 @@ describe('phone home room projection', () => {
     expect(accessibleRoomSummary(missing[0])).toContain('Keine Temperaturdaten');
     expect(accessibleRoomSummary(missing[0])).toContain('1 Fenster offen');
     expect(accessibleRoomSummary(missing[1])).toContain('Keine Lichter');
+  });
+
+  it('projects open doors apart from open windows', () => {
+    const [living, empty] = projectPhoneRooms(rooms, readers({
+      windowOpen: () => false,
+      doorOpen: (roomId) => roomId === 'living',
+    }));
+    expect(living).toMatchObject({ windowOpen: false, doorOpen: true });
+    expect(empty).toMatchObject({ windowOpen: false, doorOpen: false });
+    expect(accessibleRoomSummary(living)).toContain('1 Tür offen');
+    expect(accessibleRoomSummary(living)).not.toContain('Fenster');
+    expect(accessibleRoomSummary({ ...living, windowOpen: true })).toContain('1 Fenster offen, 1 Tür offen');
+    expect(accessibleRoomSummary(empty)).toContain('Fenster geschlossen');
   });
 
   it('accepts only configured room ids for the canonical room context', () => {

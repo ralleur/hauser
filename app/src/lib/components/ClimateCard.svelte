@@ -7,7 +7,7 @@
   import '../../styles/room-controls.css';
   import Icon from './Icon.svelte';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
+  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity, roomOpenings, roomWindowOpen } from '../state/commands.ts';
   import { climateStep } from '../state/room-display-config.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { pulse } from '../actions/pulse.ts';
@@ -23,6 +23,11 @@
   const temp = $derived(roomTemperature(room.id));
   const humidity = $derived(roomHumidity(room.id));
   const step = $derived(climateStep(room.id));
+  /* Nur eine offene Tür: die Warnung nennt die Tür statt eines Fensters. */
+  const doorOnly = $derived.by(() => {
+    const open = roomOpenings(room.id, room.windowOpen);
+    return open.door && !open.window;
+  });
 
   /* Klima-Widerspruch (docs/02): Ziel ist ein Stepper (diskret) → 300-ms-
      Korrektur als Opacity-Crossfade des Werts. */
@@ -42,7 +47,7 @@
   <div class="climate-card" class:is-stacked={stacked}
        use:longpress={{ enabled: !!onLongPress, onLongPress: () => onLongPress?.() }}>
     <div class="climate-warning" class:is-visible={roomWindowOpen(room.id, room.windowOpen)}>
-      <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
+      <Icon name="i-window" cls="icon icon-md" /><span>{doorOnly ? m.room_door_open() : m.room_window_open()}</span>
     </div>
     <div class="climate-current">
       <span class="climate-current-label">{m.climate_current()}</span>

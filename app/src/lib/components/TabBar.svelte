@@ -9,13 +9,14 @@
   import { centralClimate } from '../state/climate-central.svelte.ts';
   import { appState } from '../state/app.svelte.ts';
   import { deviceManager } from '../state/device-manager.svelte.ts';
-  import { roomContacts, type RoomContact } from '../state/commands.ts';
+  import { roomContacts, roomOpenings, type RoomContact } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
   import { familyCalendar } from '../state/calendar.svelte.ts';
   import { notifications } from '../state/notifications.svelte.ts';
   import { IS_DEMO } from '../demo/demo-mode.ts';
   import { m } from '../../paraglide/messages.js';
-  import { localeState, pluralCategory } from '../state/locale.svelte.ts';
+  import { localeState } from '../state/locale.svelte.ts';
+  import { openingsLabel } from '../state/open-label.ts';
 
   const visibleTabs = $derived(TABS.filter((tab) => {
     // Ablage bleibt aus der öffentlichen Demo heraus (docs/12).
@@ -44,26 +45,16 @@
         ...contact, kind, roomId: room.id, roomName: room.name, name: catalogName(contact.entityId),
       })))));
 
-  const openWindows = $derived(appState.rooms.filter((room) => {
-    const contacts = contactRows.filter((row) => row.roomId === room.id && row.kind === 'window');
-    return contacts.length === 0 ? room.windowOpen : contacts.some((row) => row.open);
-  }));
+  /* Fenster und Türen getrennt: dieselben Kontakte, nach device_class sortiert. */
+  const openRooms = $derived(appState.rooms
+    .map((room) => ({ room, ...roomOpenings(room.id, room.windowOpen) }))
+    .filter((row) => row.window || row.door));
 
   let detailOpen = $state(false);
   /* Nichts zugeordnet heißt nichts zu zeigen — dann bleibt die Leiste stumm
      statt eine leere Liste anzubieten. */
   const hasDetail = $derived(contactRows.length > 0);
 
-  /* Plusamorm je Sprache: Deutsch hat zwei, Polnisch vier. */
-  const WINDOWS_OPEN = {
-    one: m.status_window_open_one, two: m.status_window_open_two,
-    few: m.status_window_open_few, many: m.status_window_open_many,
-    other: m.status_window_open_other,
-  };
-
-  function windowsOpenLabel(count: number): string {
-    return WINDOWS_OPEN[pluralCategory(count)]({ count });
-  }
   /* „Alles ruhig" ist eine Aussage über das ganze Haus (Paket 3, docs/20).
      Solange eine Meldung auf dem Schirm steht, ist eben nicht alles ruhig —
      dann sagt die Leiste nur, was sie wirklich weiß: die Fenster sind zu. */
@@ -72,13 +63,13 @@
   );
 
   const securityLabel = $derived(
-    openWindows.length === 0
+    openRooms.length === 0
       ? quietLabel
-      : windowsOpenLabel(openWindows.length),
+      : openingsLabel(openRooms.filter((row) => row.window).length, openRooms.filter((row) => row.door).length),
   );
 
   const securityTitle = $derived(
-    openWindows.length ? openWindows.map((room) => room.name).join(', ') : quietLabel,
+    openRooms.length ? openRooms.map((row) => row.room.name).join(', ') : quietLabel,
   );
 
   /* ── Gleiter (Owner-Idee 2026-09-12): statt eines Unterstrichs je Tab
@@ -178,18 +169,18 @@
     {/if}
     {#if hasDetail}
       <button class="security-bar pressable" type="button"
-              class:has-warning={openWindows.length > 0} class:is-active={detailOpen}
+              class:has-warning={openRooms.length > 0} class:is-active={detailOpen}
               aria-expanded={detailOpen} aria-label={m.status_security_title()}
               onclick={() => { detailOpen = !detailOpen; }}
               title={securityTitle}>
-        <Icon name={openWindows.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
+        <Icon name={openRooms.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
         <span>{securityLabel}</span>
       </button>
     {:else}
       <!-- Ohne zugeordnete Sensoren bleibt es reine Anzeige (docs/06 §5:
            `disabled` = nicht anwendbar) — ein Knopf ohne Ziel wäre gelogen. -->
-      <div class="security-bar" class:has-warning={openWindows.length > 0} title={securityTitle}>
-        <Icon name={openWindows.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
+      <div class="security-bar" class:has-warning={openRooms.length > 0} title={securityTitle}>
+        <Icon name={openRooms.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
         <span>{securityLabel}</span>
       </div>
     {/if}

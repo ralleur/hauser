@@ -7,7 +7,7 @@ const fixtures = vi.hoisted(() => ({
 }));
 vi.mock('./app.svelte.ts', () => ({ appState: fixtures }));
 vi.mock('./device-manager.svelte.ts', () => ({ deviceManager: fixtures }));
-vi.mock('./commands.ts', () => ({ setRoomContactResolver() {}, setRoomSensorResolver() {} }));
+vi.mock('./commands.ts', () => ({ setDoorContactResolver() {}, setRoomContactResolver() {}, setRoomSensorResolver() {} }));
 vi.mock('./entities.ts', () => ({ presenceEntityIds: () => [], windowEntityIds: () => [], setClimateHiddenResolver() {} }));
 vi.mock('./shared-config.ts', () => ({ sharedStorage: { getItem: () => null } }));
 

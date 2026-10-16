@@ -12,7 +12,7 @@
 import type { RoomImageRegion } from './room-image-library-client.ts';
 import { OBJECT_KINDS, validShape } from '../room-images/object-shapes.ts';
 import { appState } from './app.svelte.ts';
-import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
+import { setDoorContactResolver, setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
 import { roomIdForArea } from './device-config.ts';
 import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './entities.ts';
@@ -228,6 +228,13 @@ export function setContactIds(
 }
 
 setRoomContactResolver(contactIdsFor);
+
+/* Türen und Garagentore sind Türen, `window` und `opening` bleiben Fenster;
+   ein Kontakt, den der Katalog (noch) nicht kennt, bleibt ein Fenster. */
+const DOOR_DEVICE_CLASSES: readonly string[] = ['door', 'garage_door'];
+setDoorContactResolver((entityId) => DOOR_DEVICE_CLASSES.includes(
+  deviceManager.catalog.find((item) => item.entityId === entityId)?.deviceClass ?? '',
+));
 
 /* ── Persistierter Teil ── */
 

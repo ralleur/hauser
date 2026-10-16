@@ -3,6 +3,14 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+- Open doors and open windows are now told apart: the overview and the room
+  cards say "1 window open", "1 door open" or both, instead of calling every
+  open contact a window. The kind comes from the sensor's Home Assistant device
+  class (`door` and `garage_door` are doors); stored configurations and the
+  weather effects on window regions are unchanged.
+
 ## [0.45.0] - 2026-10-15
 
 - Room on the phone: an eye button hides the room controls so only the room

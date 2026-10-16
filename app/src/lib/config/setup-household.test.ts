@@ -68,6 +68,28 @@ describe('deterministic setup household suggestion', () => {
     expect(suggestion.config.rooms[0].visibleEntities.map(({ entityId }) => entityId)).toEqual(['sensor.raum_temperatur']);
   });
 
+  it('keeps doors, garage doors, openings and windows on the stored window role', () => {
+    const classes = ['door', 'garage_door', 'opening', 'window'];
+    const suggestion = buildSetupHouseholdSuggestion({
+      // Ein Raum je Klasse: `window` ist pro Raum ein Einzelfall in der Einrichtung.
+      areas: classes.map((deviceClass) => ({ area_id: deviceClass, name: deviceClass })),
+      devices: [],
+      entities: classes.map((deviceClass) => ({
+        entity_id: `binary_sensor.${deviceClass}_contact`, area_id: deviceClass, device_id: null,
+      })),
+      states: classes.map((deviceClass) => ({
+        entity_id: `binary_sensor.${deviceClass}_contact`, attributes: { device_class: deviceClass },
+      })),
+    });
+    // Tür oder Fenster entscheidet erst die Anzeige (device_class im Katalog);
+    // die gespeicherte Rolle bleibt `window`, damit alte Konfigurationen gelten.
+    expect(suggestion.config.rooms.flatMap((room) => room.visibleEntities)
+      .map(({ entityId, role }) => [entityId, role]).sort()).toEqual(
+      classes.map((deviceClass) => [`binary_sensor.${deviceClass}_contact`, 'window']).sort(),
+    );
+    expect(parseHouseholdConfig(suggestion.config).ok).toBe(true);
+  });
+
   it('uses HA areas, device inheritance and only unambiguous productive roles', () => {
     const suggestion = buildSetupHouseholdSuggestion(snapshot());
 
