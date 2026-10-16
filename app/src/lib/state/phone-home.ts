@@ -7,6 +7,7 @@ import type {
   RoomHeroResolution,
 } from '../components/room-hero-assets.ts';
 import type { Room } from './app.svelte.ts';
+import { countsForBulb } from './device-config.ts';
 
 export interface PhoneHomeReaders {
   temperature(roomId: string): number | null;
@@ -83,7 +84,7 @@ export function projectPhoneRooms(
   readers: PhoneHomeReaders,
 ): PhoneRoomSummary[] {
   return rooms.map((room) => {
-    const lights = room.lights.filter((device) => !device.domain || device.domain === 'light');
+    const lights = room.lights.filter((device) => countsForBulb(device, !device.domain || device.domain === 'light'));
     const values = lights.map((light) => safely(() => readers.light(room.id, light.id), undefined));
     return {
       id: room.id,

@@ -97,6 +97,15 @@ export interface ManagedDevice {
   /** Sensor-Kacheln zeigen standardmäßig nur den Wert; `true` blendet den
       Namen dazu (Owner-Entscheidung 2026-09-11). */
   showName?: boolean;
+  /** Zählt für die Glühbirne der Raumübersicht (Wahl aus Einrichtung bzw. Override). */
+  countsAsLight?: boolean;
+}
+
+/* Zählt das Gerät für die Glühbirne eines Raums? Ohne ausdrückliche Wahl
+   gilt der bisherige Stand (`legacy`, je Oberfläche verschieden): bestehende
+   Haushalte ändern sich nicht von selbst. */
+export function countsForBulb(device: { countsAsLight?: boolean }, legacy = true): boolean {
+  return device.countsAsLight ?? legacy;
 }
 
 export interface DeviceOverride {
@@ -106,6 +115,8 @@ export interface DeviceOverride {
   name?: string;
   /** Sensor-Kachel: Name neben dem Wert zeigen. */
   showName?: boolean;
+  /** Eigene Wahl für die Glühbirne; schlägt die Vorgabe aus der Einrichtung. */
+  countsAsLight?: boolean;
 }
 
 /* Gerätegruppe (Owner-Wunsch 2026-09-13): mehrere Lampen, Ventilatoren,
@@ -185,6 +196,7 @@ export function parseDeviceConfig(raw: string | null): DeviceConfig {
         const name = typeof v.name === 'string' ? normalizeDeviceName(v.name) : null;
         if (name) o.name = name;
         if (v.showName === true) o.showName = true;
+        if (typeof v.countsAsLight === 'boolean') o.countsAsLight = v.countsAsLight;
         devices[entityId] = o;
       }
     }
@@ -309,7 +321,7 @@ export function buildRuntimeRooms(
       climateByRoom.set(roomId, item.entityId);
       continue;
     }
-    byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName));
+    byRoom.get(roomId)?.push(toManagedDevice(item, seed?.light, override?.name, override?.showName, override?.countsAsLight));
   }
 
   for (const group of Object.values(config.groups ?? {})) {
@@ -451,6 +463,12 @@ export function setDeviceNameVisibility(config: DeviceConfig, entityId: string, 
   return next;
 }
 
+export function setDeviceCountsAsLight(config: DeviceConfig, entityId: string, counts: boolean): DeviceConfig {
+  const next = cloneDeviceConfig(config);
+  if (isManagedEntityId(entityId)) next.devices[entityId] = { ...(next.devices[entityId] ?? {}), countsAsLight: counts };
+  return next;
+}
+
 export function assignDeviceRoom(config: DeviceConfig, entityId: string, roomId: string): DeviceConfig {
   const next = cloneDeviceConfig(config);
   next.devices[entityId] = { ...(next.devices[entityId] ?? {}), visible: true, roomId };
@@ -493,7 +511,7 @@ export function domainOf(entityId: string): ManagedDomain | null {
   return (MANAGED_DOMAINS as readonly string[]).includes(domain) ? (domain as ManagedDomain) : null;
 }
 
-function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride?: string, showName?: boolean): ManagedDevice {
+function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride?: string, showName?: boolean, counts = seed?.countsAsLight): ManagedDevice {
   const domain = item.domain;
   const category = categoryOf(domain);
   const capabilities = item.capabilities ?? {};
@@ -512,6 +530,7 @@ function toManagedDevice(item: EntityCatalogItem, seed?: LightSeed, nameOverride
     deviceClass: item.deviceClass,
     icon: iconForDevice(item.entityId, category, seed?.icon ?? (category === 'info' ? sensorIconFor(item) : undefined)),
     ...(showName ? { showName: true } : {}),
+    ...(counts === undefined ? {} : { countsAsLight: counts }),
   };
 }
 

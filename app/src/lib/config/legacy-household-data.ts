@@ -49,6 +49,9 @@ export interface Light {
   deviceClass?: string | null;
   icon?: string;
   showName?: boolean;
+  /** Glühbirne der Raumübersicht: `true`/`false` setzt die Wahl, ohne Angabe
+      gilt der bisherige Stand (siehe `countsAsLight` in device-config.ts). */
+  countsAsLight?: boolean;
 }
 
 export interface Room {

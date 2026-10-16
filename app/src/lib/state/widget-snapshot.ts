@@ -11,6 +11,8 @@ import { nativeBridge } from '../native/bridge.ts';
 import { climateEntityId, lightEntityId, roomHasClimate, windowEntityIds } from './entities.ts';
 import { energyView } from './energy.svelte.ts';
 import { roomTemperature } from './commands.ts';
+import { countsForBulb } from './device-config.ts';
+import { deviceManager } from './device-manager.svelte.ts';
 import { sceneDefOf, sceneMembers, scenes } from './scene-manager.svelte.ts';
 
 export interface WidgetSnapshot {
@@ -46,7 +48,12 @@ export function buildWidgetSnapshot(): WidgetSnapshot {
       const value = runtime.merged(entityId) as LightValue | undefined;
       return { entityId, name: light.name, on: !!value?.on, brightness: Math.round(value?.brightness ?? 0) };
     });
-    const on = lights.filter((l) => l.on).length;
+    /* Nur Geräte, die für die Glühbirne zählen; die eigene Wahl (Override)
+       geht der Vorgabe aus der Einrichtung vor. */
+    const counted = room.lights.map((light) => countsForBulb({
+      countsAsLight: deviceManager.config.devices[light.entityId]?.countsAsLight ?? light.countsAsLight,
+    }));
+    const on = lights.filter((l, index) => counted[index] && l.on).length;
     lightsOn += on;
     const windowsOpen = windowEntityIds(room.id).filter((id) => (runtime.merged(id) as SwitchValue | undefined)?.on).length;
     if (windowsOpen > 0) openWindows.push(room.name);
@@ -57,7 +64,7 @@ export function buildWidgetSnapshot(): WidgetSnapshot {
     }
     return {
       id: room.id, name: room.name, image: heroPath(room.id),
-      lights, lightsOn: on, lightsTotal: lights.length,
+      lights, lightsOn: on, lightsTotal: counted.filter(Boolean).length,
       temperature: roomTemperature(room.id),
       climate, windowsOpen,
       scenes: scenes(room.id).map((scene) => {

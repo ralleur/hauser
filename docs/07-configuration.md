@@ -105,6 +105,19 @@ so a publishable artifact cannot ship without it.
 
 `hotelMode` is optional and absent on every installation that never opted in.
 
+An entry of a room's `visibleEntities` has the required keys `id`, `name`,
+`entityId` and `role`, and the optional boolean `countsAsLight`. It decides
+whether the entity counts for the room's lightbulb indicator (room overview,
+phone summary, widget snapshot). A missing field keeps the previous counting
+(lights, switches, vacuums and covers on the panel and in widgets, lights only
+on the phone), so existing files need no migration and `schemaVersion` stays 4.
+The setup wizard writes `true` for role `light` and `false` for `switch`,
+`cover` and `vacuum`. The per-device choice in the device settings is stored in
+the shared device configuration and takes precedence over this value. The room
+editor's **Count only lights** and **Count everything** buttons write this
+override for every light, switch, cover and vacuum of one room in a single save
+(local `group.*` devices are skipped).
+
 The complete TypeScript contract and validator live in
 [`../app/src/lib/config/household-config.ts`](../app/src/lib/config/household-config.ts).
 Unknown fields, unsupported schema versions, invalid Home Assistant entity IDs,

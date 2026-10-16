@@ -13,6 +13,7 @@ import {
   newGroupId,
   saveDeviceConfig,
   seedCatalog,
+  setDeviceCountsAsLight,
   setDeviceName,
   setDeviceNameVisibility,
   setDeviceVisibility,
@@ -84,6 +85,11 @@ export function setDeviceShowName(entityId: string, showName: boolean): void {
   updateConfig(setDeviceNameVisibility(deviceManager.config, entityId, showName));
 }
 
+/* Glühbirne der Raumübersicht: zählt dieses Gerät mit? */
+export function setCountsAsLight(entityId: string, counts: boolean): void {
+  updateConfig(setDeviceCountsAsLight(deviceManager.config, entityId, counts));
+}
+
 /* ── Gerätegruppen (Owner-Wunsch 2026-09-13) ── */
 export function groupOf(entityId: string): DeviceGroup | null {
   return deviceManager.config.groups[entityId] ?? null;
@@ -104,7 +110,8 @@ export function dissolveDeviceGroup(id: string): void {
   updateConfig(dissolveGroup(deviceManager.config, id));
 }
 
-function updateConfig(config: DeviceConfig): void {
+/* Eine Änderung der Gerätekonfiguration: speichern, Räume neu ableiten. */
+export function updateConfig(config: DeviceConfig): void {
   deviceManager.config = config;
   saveDeviceConfig(config);
   applyProjection();

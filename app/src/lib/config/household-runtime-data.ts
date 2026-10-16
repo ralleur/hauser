@@ -170,6 +170,7 @@ function projectLight(entity: VisibleEntityConfig): LightSeed {
     ...(metadata.unit === undefined ? {} : { unit: metadata.unit }),
     ...(metadata.deviceClass === undefined ? {} : { deviceClass: metadata.deviceClass }),
     ...(metadata.icon === undefined ? {} : { icon: metadata.icon }),
+    ...(entity.countsAsLight === undefined ? {} : { countsAsLight: entity.countsAsLight }),
   };
 }
 

@@ -21,7 +21,9 @@
     deviceManager,
     hideDevice,
     setRoomDeviceOrder,
+    updateConfig,
   } from '../state/device-manager.svelte.ts';
+  import { isBulbCandidate, setRoomCountsAsLight } from '../state/bulb-choice.ts';
   import {
     categoryOf, CATEGORY_LABELS, type DeviceCategory, type EntityCatalogItem,
   } from '../state/device-config.ts';
@@ -984,6 +986,24 @@
               {/if}
             </div>
           {/each}
+
+          <!-- Glühbirne der Raumübersicht: viele Geräte auf einmal, statt jedes
+               einzeln im Detail umzuschalten. -->
+          {#if room.lights.some(isBulbCandidate)}
+            <div class="re-metric-box">
+              <div class="re-row re-metric-head">
+                <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
+                <span class="re-label">
+                  <span class="re-name">{m.room_bulb_title()}</span>
+                  <small class="re-meta">{m.room_bulb_hint()}</small>
+                </span>
+                <button class="secondary-btn pressable" type="button"
+                        onclick={() => updateConfig(setRoomCountsAsLight(deviceManager.config, room.lights, true))}>{m.room_bulb_only_lights()}</button>
+                <button class="secondary-btn pressable" type="button"
+                        onclick={() => updateConfig(setRoomCountsAsLight(deviceManager.config, room.lights, false))}>{m.room_bulb_everything()}</button>
+              </div>
+            </div>
+          {/if}
         </section>
         {/snippet}
         {#snippet addSection()}

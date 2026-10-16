@@ -3,6 +3,20 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+- Rooms: you choose which devices count for a room's lightbulb. A device's
+  settings have a new **Counts for the room light indicator** switch, so smart
+  plugs, configuration switches, blinds and vacuums no longer light the bulb
+  unless you want them to. They stay listed and controllable. New setups count
+  only lights by default; existing setups keep counting what they counted
+  before until you change a device. The choice applies to the room overview,
+  the phone summary and the widget snapshot.
+- Rooms: the room editor has **Count only lights** and **Count everything**
+  buttons that set the lightbulb choice for all devices of a room at once, in
+  one save. Groups are not affected, and the buttons can be undone by each
+  other.
+
 ## [0.45.0] - 2026-10-15
 
 - Room on the phone: an eye button hides the room controls so only the room

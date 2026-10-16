@@ -140,12 +140,14 @@ describe('deterministic setup household suggestion', () => {
       { entity_id: 'switch.living_lamp', area_id: 'living-area', device_id: null },
       { entity_id: 'switch.living_fountain', area_id: 'living-area', device_id: null },
       { entity_id: 'vacuum.living_roborock', area_id: 'living-area', device_id: null },
+      { entity_id: 'cover.living_blind', area_id: 'living-area', device_id: null },
       { entity_id: 'media_player.living_sonos', area_id: 'living-area', device_id: null },
     );
     withDevices.states.push(
       { entity_id: 'switch.living_lamp', attributes: { friendly_name: 'Lamp switch' } },
       { entity_id: 'switch.living_fountain', attributes: { friendly_name: 'Fountain switch' } },
       { entity_id: 'vacuum.living_roborock', attributes: { friendly_name: 'Roborock' } },
+      { entity_id: 'cover.living_blind', attributes: { friendly_name: 'Blind' } },
       { entity_id: 'media_player.living_sonos', attributes: { friendly_name: 'Sonos' } },
     );
 
@@ -156,6 +158,17 @@ describe('deterministic setup household suggestion', () => {
       expect.objectContaining({ entityId: 'switch.living_fountain', role: 'switch' }),
       expect.objectContaining({ entityId: 'vacuum.living_roborock', role: 'vacuum' }),
     ]));
+    /* Nur echte Lampen zählen für die Glühbirne; Schalter, Rollo und Sauger
+       bleiben gelistet und steuerbar, zählen aber nicht. */
+    const counts = Object.fromEntries((livingRoom?.visibleEntities ?? []).map((entity) => [entity.entityId, entity.countsAsLight]));
+    expect(counts).toMatchObject({
+      'light.living_ceiling': true,
+      'switch.living_lamp': false,
+      'switch.living_fountain': false,
+      'vacuum.living_roborock': false,
+      'cover.living_blind': false,
+    });
+    expect(counts['climate.living_main']).toBeUndefined();
     expect(suggestion.config.mediaTargets).toEqual([
       expect.objectContaining({ entityId: 'media_player.living_sonos', roomId: 'living_room' }),
     ]);

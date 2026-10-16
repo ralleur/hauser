@@ -32,6 +32,9 @@ export interface VisibleEntityConfig {
   name: string;
   entityId: string;
   role: EntityRole;
+  /** Zählt das Gerät für die Glühbirne der Raumübersicht? Fehlt das Feld, gilt
+      der bisherige Stand (alle Lichter, Schalter, Saugroboter und Rollos). */
+  countsAsLight?: boolean;
 }
 
 export interface RoomHeroFocus {
@@ -506,7 +509,7 @@ function parseVisibleEntity(
 ): VisibleEntityConfig {
   const object = validator.object(value, path);
   if (!object) return { id: '', name: '', entityId: '', role: 'other' };
-  validator.exactKeys(object, ['id', 'name', 'entityId', 'role'], path);
+  validator.exactKeys(object, ['id', 'name', 'entityId', 'role', 'countsAsLight'], path);
 
   const id = validator.localId(validator.required(object, 'id', path), `${path}.id`);
   const name = validator.string(validator.required(object, 'name', path), `${path}.name`, 'entity name');
@@ -527,7 +530,9 @@ function parseVisibleEntity(
     `${path}.entityId`,
     expectedDomain,
   );
-  return { id, name, entityId, role };
+  return Object.hasOwn(object, 'countsAsLight')
+    ? { id, name, entityId, role, countsAsLight: validator.boolean(object.countsAsLight, `${path}.countsAsLight`) }
+    : { id, name, entityId, role };
 }
 
 function parseRoomHeroFocus(

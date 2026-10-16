@@ -31,6 +31,8 @@ The wizard writes a human-readable, versioned JSON document. It holds rooms, vis
 
 `hotelMode` is optional and absent unless you opted in.
 
+Each entry in a room's `visibleEntities` may carry an optional `"countsAsLight": true | false`. It decides whether the entity counts for the room's lightbulb indicator. When the field is absent, the entity counts as it did before the field existed. The wizard writes it for lights (`true`) and for switches, covers and vacuums (`false`). Any non-boolean value is rejected. A Hauser version that predates the field rejects a file that contains it as an unknown field.
+
 ## Rules
 
 - Unknown fields, unsupported versions, invalid entity IDs, duplicates and dangling references are rejected with a code and a JSON path, for example `INVALID_ENTITY_ID at $.rooms[0].visibleEntities[0].entityId`.

@@ -6,6 +6,7 @@
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomCo2, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
+  import { countsForBulb } from '../state/device-config.ts';
   import { showsMetric } from '../state/room-display-config.svelte.ts';
   import {
     clampPanelRoomPage,
@@ -78,7 +79,7 @@
           {@const temp = showsMetric(room.id, 'temperature') ? roomTemperature(room.id) : null}
           {@const humidity = showsMetric(room.id, 'humidity') ? roomHumidity(room.id) : null}
           {@const co2 = showsMetric(room.id, 'co2') ? roomCo2(room.id) : null}
-          {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
+          {@const lightsOn = room.lights.filter((light) => countsForBulb(light) && mergedLight(room.id, light.id)?.on).length}
           {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
           <button
             class="room-btn pressable"
