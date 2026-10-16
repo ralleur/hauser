@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import neutralSmall from '../../../config/examples/neutral-small.json';
 import neutralStudio from '../../../config/examples/neutral-studio.json';
+import { projectActiveHouseholdData } from './household-runtime-data.ts';
 import {
+  MAX_ROOM_HERO_SETS,
   compareRuntimeModels,
   compileHouseholdConfig,
   parseHouseholdConfig,
@@ -49,6 +51,68 @@ describe('household config exterior marks', () => {
       'INVALID_VALUE', '$.exterior.marks.sun.point.x');
     expectIssue({ ...neutralSmall, exterior: { hero: null, marks: { ...marks, extra: true } } },
       'UNKNOWN_FIELD', '$.exterior.marks.extra');
+  });
+});
+
+/* Mehrere Bildsets je Raum: `hero` bleibt gültig, `alternates` ist optional. */
+describe('household config room hero alternates', () => {
+  const focus = { panel: { x: 0.25, y: 0.75 }, phone: { x: 0.6, y: 0.4 } };
+  const set = (assetId: string) => ({ assetId, focus: structuredClone(focus) });
+  const withHero = (hero: unknown, key: 'rooms' | 'exterior' = 'rooms') => {
+    const input = structuredClone(neutralSmall) as Record<string, any>;
+    if (key === 'rooms') input.rooms[0].hero = hero;
+    else input.exterior = { hero };
+    return input;
+  };
+
+  it('keeps a hero without alternates exactly as before', () => {
+    const parsed = parseValid(withHero(set('wohnzimmer_a')));
+    expect(parsed.rooms[0].hero).toEqual(set('wohnzimmer_a'));
+    expect(parsed.rooms[0].hero).not.toHaveProperty('alternates');
+  });
+
+  it('accepts alternates and carries them through compile and the runtime projection', () => {
+    const hero = { ...set('wohnzimmer_a'), alternates: [set('wohnzimmer_b'), set('wohnzimmer_c')] };
+    const input = withHero(hero);
+    const parsed = parseValid(input);
+    expect(parsed.rooms[0].hero).toEqual(hero);
+    const compiled = compileHouseholdConfig(parsed);
+    expect(compiled.rooms[0].hero).toEqual(hero);
+    expect(compiled.rooms[0].hero).not.toBe(parsed.rooms[0].hero);
+    expect(compiled.rooms[0].hero?.alternates).not.toBe(parsed.rooms[0].hero?.alternates);
+    expect(projectActiveHouseholdData(compiled).ROOM_HERO_CONFIGS[parsed.rooms[0].id]).toEqual(hero);
+  });
+
+  it('treats an empty list like none', () => {
+    const parsed = parseValid(withHero({ ...set('wohnzimmer_a'), alternates: [] }));
+    expect(parsed.rooms[0].hero).toEqual(set('wohnzimmer_a'));
+  });
+
+  it('rejects duplicates, too many sets, unknown keys and unsafe IDs', () => {
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: [set('wohnzimmer_a')] }),
+      'DUPLICATE_ID', '$.rooms[0].hero.alternates[0].assetId');
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: [set('b'), set('c'), set('b')] }),
+      'DUPLICATE_ID', '$.rooms[0].hero.alternates[2].assetId');
+    const tooMany = Array.from({ length: MAX_ROOM_HERO_SETS }, (_, index) => set(`set_${index}`));
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: tooMany }),
+      'INVALID_VALUE', '$.rooms[0].hero.alternates');
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: [{ ...set('b'), provider: 'x' }] }),
+      'UNKNOWN_FIELD', '$.rooms[0].hero.alternates[0].provider');
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: [set('Bad Id')] }),
+      'INVALID_ID', '$.rooms[0].hero.alternates[0].assetId');
+    expectIssue(withHero({ ...set('wohnzimmer_a'), alternates: set('b') }),
+      'TYPE_MISMATCH', '$.rooms[0].hero.alternates');
+  });
+
+  it('accepts the maximum number of sets', () => {
+    const alternates = Array.from({ length: MAX_ROOM_HERO_SETS - 1 }, (_, index) => set(`set_${index}`));
+    expect(parseValid(withHero({ ...set('wohnzimmer_a'), alternates })).rooms[0].hero?.alternates).toHaveLength(7);
+  });
+
+  it('keeps the outside picture to a single set', () => {
+    expectIssue(withHero({ ...set('haus_a'), alternates: [set('haus_b')] }, 'exterior'),
+      'UNKNOWN_FIELD', '$.exterior.hero.alternates');
+    expect(parseValid(withHero(set('haus_a'), 'exterior')).exterior?.hero).toEqual(set('haus_a'));
   });
 });
 

@@ -3,11 +3,12 @@
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
   import { appState } from '../../state/app.svelte.ts';
-  import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
+  import { EXTERIOR_HERO_ID, MAX_ROOM_HERO_SETS } from '../../config/household-config.ts';
   import { IS_DEMO } from '../../demo/demo-mode.ts';
   import { intlLocale } from '../../state/locale.svelte.ts';
+  import { roomHeroSets } from '../../state/room-hero-config.svelte.ts';
   import {
-    assignRoomImage,
+    assignRoomImages,
     deleteRoomImageAsset,
     formatRoomImageBytes,
     loadRoomImageLibrary,
@@ -39,6 +40,19 @@
   ]);
   const targetRoomName = $derived(rooms.find((room) => room.id === targetRoomId)?.name ?? targetRoomId ?? '');
 
+  /* Die Sets eines Raums kommen aus der frisch geladenen Bibliothek, nicht aus
+     der laufenden Projektion: der ETag gehört zu dieser Bibliothek. Die
+     Reihenfolge (Hauptset zuerst) und der gespeicherte Fokus bleiben erhalten. */
+  function assignedSets(roomId: string): { assetId: string; focus: RoomImageLibraryAsset['focus'] }[] {
+    const stored = new Map(roomHeroSets(roomId).map((set, index) => [set.assetId, { index, focus: set.focus }]));
+    const rank = (assetId: string) => stored.get(assetId)?.index ?? stored.size;
+    return (library?.assets ?? [])
+      .filter((asset) => asset.assignedRoomIds.includes(roomId))
+      .sort((a, b) => rank(a.assetId) - rank(b.assetId))
+      .map(({ assetId, focus }) => ({ assetId, focus: stored.get(assetId)?.focus ?? focus }));
+  }
+  const targetSetCount = $derived(targetRoomId ? assignedSets(targetRoomId).length : 0);
+
   $effect(() => {
     if (open && !wasOpen) {
       error = null;
@@ -67,13 +81,18 @@
     return ids.map((id) => rooms.find((room) => room.id === id)?.name ?? id).join(', ');
   }
 
-  async function assign(asset: RoomImageLibraryAsset, roomId: string) {
+  /* `add` hängt das Set als Alternative an die des Raums, sonst ersetzt es sie. */
+  async function assign(asset: RoomImageLibraryAsset, roomId: string, add = false) {
     if (!library || !roomId || busy) return;
     busy = true;
     error = null;
     notice = null;
     try {
-      await assignRoomImage(roomId, { assetId: asset.assetId, focus: asset.focus }, library.householdEtag);
+      await assignRoomImages(
+        roomId,
+        [...(add ? assignedSets(roomId) : []), { assetId: asset.assetId, focus: asset.focus }],
+        library.householdEtag,
+      );
       notice = m.rimg_lib_assigned_to({ room: rooms.find((room) => room.id === roomId)?.name ?? roomId });
       onassigned?.(asset.assetId);
       await reload();
@@ -83,13 +102,14 @@
     }
   }
 
-  async function unassign(roomId: string) {
+  /* Nimmt nur dieses Set aus dem Raum; die übrigen bleiben zugewiesen. */
+  async function unassign(roomId: string, assetId: string) {
     if (!library || busy) return;
     busy = true;
     error = null;
     notice = null;
     try {
-      await assignRoomImage(roomId, null, library.householdEtag);
+      await assignRoomImages(roomId, assignedSets(roomId).filter((set) => set.assetId !== assetId), library.householdEtag);
       notice = m.rimg_lib_unassigned_notice();
       onassigned?.(null);
       await reload();
@@ -147,6 +167,12 @@
               {m.rimg_lib_loading()}
             {/if}
           </p>
+          {#if targetRoomId && targetSetCount > 1}
+            <p>
+              {m.rimg_lib_room_sets({ count: targetSetCount })}
+              {#if targetSetCount >= MAX_ROOM_HERO_SETS}{m.rimg_lib_max_sets({ max: MAX_ROOM_HERO_SETS })}{/if}
+            </p>
+          {/if}
         </div>
         <button class="dialog-close pressable" type="button" aria-label={m.rimg_lib_close()} onclick={onclose}>×</button>
       </header>
@@ -172,8 +198,15 @@
                 {#if targetRoomId}
                   <button class="primary-btn pressable" type="button" disabled={busy}
                           onclick={() => assign(asset, targetRoomId)}>
-                    {asset.assignedRoomIds.includes(targetRoomId) ? m.rimg_lib_assign_again() : m.rimg_lib_assign_here()}
+                    {asset.assignedRoomIds.includes(targetRoomId)
+                      ? (targetSetCount > 1 ? m.rimg_lib_use_only() : m.rimg_lib_assign_again())
+                      : m.rimg_lib_assign_here()}
                   </button>
+                  {#if targetSetCount > 0 && targetRoomId !== EXTERIOR_HERO_ID && !asset.assignedRoomIds.includes(targetRoomId)}
+                    <button class="secondary-btn pressable" type="button"
+                            disabled={busy || targetSetCount >= MAX_ROOM_HERO_SETS}
+                            onclick={() => assign(asset, targetRoomId, true)}>{m.rimg_lib_add_alternate()}</button>
+                  {/if}
                 {:else}
                   <label>
                     <span class="visually-hidden">{m.rimg_lib_room_for_set()}</span>
@@ -190,7 +223,7 @@
                 {/if}
                 {#each asset.assignedRoomIds as roomId (roomId)}
                   <button class="secondary-btn pressable" type="button" disabled={busy}
-                          onclick={() => unassign(roomId)}>{m.rimg_lib_unassign_from({ room: roomNames([roomId]) })}</button>
+                          onclick={() => unassign(roomId, asset.assetId)}>{m.rimg_lib_unassign_from({ room: roomNames([roomId]) })}</button>
                 {/each}
                 <button class="secondary-btn danger-btn pressable" type="button" disabled={busy}
                         onclick={() => remove(asset)}>

@@ -120,6 +120,32 @@ Finished sets stay in the library under **Rooms & devices**. Assign a set to a
 room, switch between sets or delete an old one. Assigning a set updates that
 room’s picture.
 
+### Several pictures per room
+
+If you photographed a room from more than one angle, keep all the good shots.
+Open the library from the room’s picture menu and choose **Add as an
+alternative** on another set. A room can hold up to eight sets. Hauser picks
+one of them at random when the app starts and keeps it until you reload, so
+the picture does not change while you use the room. There is no slideshow or
+transition. The evening, lights-off and overcast versions of the chosen set
+are used as for any single picture.
+
+To take one set out again, use **Remove from** on its card; the others stay.
+**Use only this set** makes one set the room’s only picture. A set cannot be
+deleted while any room still uses it, including as an alternative.
+
+Some things follow the first set rather than the one currently shown: the
+picture settings under **Rooms & devices** (including their window markings
+and the replacement of individual variants) and the room picture offered to
+the native app and watch. Window markings belong to each set, so weather
+effects follow the set that is shown; the room editor marks the set that is
+currently shown. Lamp positions belong to the room, not to a set; if your
+shots differ a lot in angle, place lamps against the angle you use most.
+Uploading a new picture or creating one with the wizard replaces all of the
+room’s sets with that one; the earlier sets stay in the library. The outside
+picture of the [energy screen](/hauser/docs/using/energy/) always uses a
+single set.
+
 ## Lamp placement
 
 In the room editor, you can place lamps in the picture. Their light cones

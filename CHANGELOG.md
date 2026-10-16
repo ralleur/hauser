@@ -3,6 +3,19 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [Unreleased]
+
+- Room pictures: a room can hold several picture sets (up to eight). Add a
+  set from the library with **Add as an alternative**; Hauser picks one at
+  random when the app starts and keeps it for the whole session, so the room
+  does not change picture while you use it. Day, evening, lights-off and
+  overcast versions of the chosen set work as before. A room with one set
+  behaves exactly as it did. `hero` in the household configuration gains an
+  optional `alternates` list, and `PUT /api/room-image-assignments/:roomId`
+  also accepts `{ "assets": [...] }`, with the first entry as the main set.
+  Existing configurations need no migration; a configuration that uses
+  alternates cannot be read by an older Hauser version.
+
 ## [0.45.0] - 2026-10-15
 
 - Room on the phone: an eye button hides the room controls so only the room

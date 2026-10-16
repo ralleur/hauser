@@ -24,13 +24,7 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
     id: room.id,
     name: room.name,
     visibleEntities: room.visibleEntities.map((entity) => ({ ...entity })).sort(byId),
-    hero: room.hero === null ? null : {
-      assetId: room.hero.assetId,
-      focus: {
-        panel: { ...room.hero.focus.panel },
-        phone: { ...room.hero.focus.phone },
-      },
-    },
+    hero: room.hero === null ? null : structuredClone(room.hero),
   }));
   const navigation = config.navigation
     .map((item) => ({ ...item, target: { ...item.target } }))
@@ -50,13 +44,7 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
         },
         kpis: { ...config.energy.kpis },
       };
-  const exteriorHero = config.exterior?.hero == null ? null : {
-    assetId: config.exterior.hero.assetId,
-    focus: {
-      panel: { ...config.exterior.hero.focus.panel },
-      phone: { ...config.exterior.hero.focus.phone },
-    },
-  };
+  const exteriorHero = config.exterior?.hero == null ? null : structuredClone(config.exterior.hero);
   const marks = config.exterior?.marks;
   const cloneAnchor = (anchor: { point: { x: number; y: number }; note: { x: number; y: number }; tilt: number }) => ({
     point: { ...anchor.point }, note: { ...anchor.note }, tilt: anchor.tilt,

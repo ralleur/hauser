@@ -1197,6 +1197,66 @@ describe('B-08E10 lane B4 publish, assets, ETags and assignment', () => {
     expect(assignmentSteps[3].mode).toBe(0o600);
   });
 
+  it('assigns several picture sets to a room, protects each one from deletion and keeps the outside picture to one', async () => {
+    const sandbox = root();
+    const seed = createRoomImageAssetStore({
+      catalogPath: join(sandbox, 'config', 'room-images', 'assets.json'),
+      assetRoot: join(sandbox, 'assets'),
+    });
+    const focus = { panel: { x: 0.5, y: 0.48 }, phone: { x: 0.56, y: 0.43 } };
+    for (const id of ['set_a', 'set_b', 'set_c']) seed.publish(id, focus, variantSet(`${id}-`));
+    const app = await startB4({ sandbox });
+    const household = await fetch(`${app.base}/api/household-config`);
+    let etag = household.headers.get('etag')!;
+    await household.arrayBuffer();
+    const beforeBytes = readFileSync(app.householdConfigPath);
+    const list = (ids: string[]) => JSON.stringify({ assets: ids.map((assetId) => ({ assetId, focus })) });
+
+    const invalidCases: Array<[string, string, string, number]> = [
+      ['empty list', 'den', list([]), 400],
+      ['duplicate set', 'den', list(['set_a', 'set_a']), 400],
+      ['more sets than a room can hold', 'den', list(Array.from({ length: 9 }, (_, index) => `set_${index}`)), 400],
+      ['both forms at once', 'den', JSON.stringify({ asset: { assetId: 'set_a', focus }, assets: [{ assetId: 'set_a', focus }] }), 400],
+      ['open entry', 'den', JSON.stringify({ assets: [{ assetId: 'set_a', focus, path: '/tmp/leak' }] }), 400],
+      ['not a list', 'den', JSON.stringify({ assets: { assetId: 'set_a', focus } }), 400],
+      ['unknown set in the list', 'den', list(['set_a', 'unknown_asset']), 404],
+      ['several sets for the outside picture', 'exterior', list(['set_a', 'set_b']), 400],
+    ];
+    for (const [label, roomId, body, expected] of invalidCases) {
+      const response = await assignmentRequest(app, roomId, etag, null, body);
+      expect(response.status, label).toBe(expected);
+      expect(readFileSync(app.householdConfigPath), label).toEqual(beforeBytes);
+    }
+
+    const assigned = await assignmentRequest(app, 'den', etag, null, list(['set_a', 'set_b', 'set_c']));
+    expect(assigned.status).toBe(200);
+    const assignment = await assigned.json();
+    expect(assignment.hero).toEqual({
+      assetId: 'set_a', focus, alternates: [{ assetId: 'set_b', focus }, { assetId: 'set_c', focus }],
+    });
+    const stored = JSON.parse(readFileSync(app.householdConfigPath, 'utf8'));
+    expect(stored.rooms.find((room: any) => room.id === 'den').hero).toEqual(assignment.hero);
+    expect(parseHouseholdConfig(stored).ok).toBe(true);
+    etag = assignment.etag;
+
+    const listing = await fetch(`${app.base}/api/room-image-assets`, { headers: privateHeaders() });
+    const { assets } = await listing.json();
+    expect(assets.map((entry: any) => [entry.assetId, entry.assignedRoomIds]).sort()).toEqual([
+      ['set_a', ['den']], ['set_b', ['den']], ['set_c', ['den']],
+    ]);
+    const blocked = await fetch(`${app.base}/api/room-image-assets/set_c`, { method: 'DELETE', headers: privateHeaders() });
+    expect(blocked.status).toBe(409);
+    await expect(blocked.json()).resolves.toMatchObject({ code: 'ASSET_IN_USE', roomIds: ['den'] });
+
+    /* The single-set form still works and drops the alternates again. */
+    const single = await assignmentRequest(app, 'den', etag, { assetId: 'set_a', focus });
+    expect(single.status).toBe(200);
+    const singleBody = await single.json();
+    expect(singleBody.hero).toEqual({ assetId: 'set_a', focus });
+    const deleted = await fetch(`${app.base}/api/room-image-assets/set_c`, { method: 'DELETE', headers: privateHeaders() });
+    expect(deleted.status).toBe(204);
+  });
+
   it.each([
     ['assignment_before_rename', false],
     ['assignment_renamed', true],

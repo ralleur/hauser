@@ -39,12 +39,38 @@ export interface RoomHeroFocus {
   y: number;
 }
 
-export interface RoomHeroConfig {
+/** One picture set of a room: the library asset and where its focus point lies. */
+export interface RoomHeroSet {
   assetId: string;
   focus: {
     panel: RoomHeroFocus;
     phone: RoomHeroFocus;
   };
+}
+
+/** The sets a room may show: `assetId`/`focus` is the primary set, `alternates`
+    adds further ones. One of them is picked at random per session; a room
+    without alternates behaves exactly as before. */
+export interface RoomHeroConfig extends RoomHeroSet {
+  alternates?: RoomHeroSet[];
+}
+
+/** Upper bound of picture sets per room, primary included. */
+export const MAX_ROOM_HERO_SETS = 8;
+
+function cloneRoomHeroSet(set: RoomHeroSet): RoomHeroSet {
+  return {
+    assetId: set.assetId,
+    focus: { panel: { ...set.focus.panel }, phone: { ...set.focus.phone } },
+  };
+}
+
+/** Deep copy of a room assignment, alternates included. */
+export function cloneRoomHero(hero: RoomHeroConfig | null | undefined): RoomHeroConfig | null {
+  if (!hero) return null;
+  return hero.alternates?.length
+    ? { ...cloneRoomHeroSet(hero), alternates: hero.alternates.map(cloneRoomHeroSet) }
+    : cloneRoomHeroSet(hero);
 }
 
 export interface RoomConfig {
@@ -604,23 +630,14 @@ function parseExterior(
   const object = validator.object(value, path);
   if (!object) return { hero: null };
   validator.exactKeys(object, ['hero', 'marks'], path);
-  const hero = parseRoomHero(validator, validator.required(object, 'hero', path), `${path}.hero`);
+  const hero = parseRoomHero(validator, validator.required(object, 'hero', path), `${path}.hero`, false);
   const marks = Object.hasOwn(object, 'marks') && object.marks !== null
     ? parseEnergyMarks(validator, object.marks, `${path}.marks`)
     : undefined;
   return { hero, ...(marks === undefined ? {} : { marks }) };
 }
 
-function parseRoomHero(
-  validator: ConfigValidator,
-  value: unknown | Missing,
-  path: string,
-): RoomHeroConfig | null {
-  if (value === MISSING || value === null) return null;
-  const object = validator.object(value, path);
-  if (!object) return null;
-  validator.exactKeys(object, ['assetId', 'focus'], path);
-
+function parseRoomHeroSet(validator: ConfigValidator, object: JsonObject, path: string): RoomHeroSet {
   const focusValue = validator.required(object, 'focus', path);
   const focus = focusValue === MISSING ? undefined : validator.object(focusValue, `${path}.focus`);
   if (focus) validator.exactKeys(focus, ['panel', 'phone'], `${path}.focus`);
@@ -642,6 +659,42 @@ function parseRoomHero(
       ),
     },
   };
+}
+
+function parseRoomHero(
+  validator: ConfigValidator,
+  value: unknown | Missing,
+  path: string,
+  allowAlternates = true,
+): RoomHeroConfig | null {
+  if (value === MISSING || value === null) return null;
+  const object = validator.object(value, path);
+  if (!object) return null;
+  validator.exactKeys(object, allowAlternates ? ['assetId', 'focus', 'alternates'] : ['assetId', 'focus'], path);
+
+  const hero: RoomHeroConfig = parseRoomHeroSet(validator, object, path);
+  if (!Object.hasOwn(object, 'alternates')) return hero;
+  const items = validator.array(object.alternates, `${path}.alternates`);
+  if (!items) return hero;
+  if (items.length > MAX_ROOM_HERO_SETS - 1) {
+    validator.issue('INVALID_VALUE', `${path}.alternates`, `A room can hold at most ${MAX_ROOM_HERO_SETS} picture sets.`);
+  }
+  const alternates: RoomHeroSet[] = [];
+  const seen = new Set([hero.assetId]);
+  items.forEach((item, index) => {
+    const itemPath = `${path}.alternates[${index}]`;
+    const alternate = validator.object(item, itemPath);
+    if (!alternate) return;
+    validator.exactKeys(alternate, ['assetId', 'focus'], itemPath);
+    const set = parseRoomHeroSet(validator, alternate, itemPath);
+    if (seen.has(set.assetId)) {
+      validator.issue('DUPLICATE_ID', `${itemPath}.assetId`, `Picture set "${set.assetId}" is already assigned to this room.`);
+    }
+    seen.add(set.assetId);
+    alternates.push(set);
+  });
+  /* An empty list is the same as none: keep one canonical form on disk. */
+  return alternates.length ? { ...hero, alternates } : hero;
 }
 
 function parseRoom(validator: ConfigValidator, value: unknown, path: string): RoomConfig {

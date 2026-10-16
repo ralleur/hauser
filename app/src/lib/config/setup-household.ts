@@ -1,4 +1,4 @@
-import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
+import { cloneRoomHero, HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
 import { HEATING_PLANT_NAME } from './heating-plant.ts';
 import { isForeignContact } from '../adapter/capabilities.ts';
 import type {
@@ -7,7 +7,6 @@ import type {
   MediaTargetConfig,
   NavigationItemConfig,
   RoomConfig,
-  RoomHeroConfig,
   VisibleEntityConfig,
 } from './household-config.ts';
 
@@ -53,16 +52,6 @@ export interface SetupHouseholdSuggestion {
 export type SetupRoomRemoval =
   | { type: 'move'; targetRoomId: string }
   | { type: 'omit' };
-
-function cloneRoomHero(hero: RoomHeroConfig | null): RoomHeroConfig | null {
-  return hero === null ? null : {
-    assetId: hero.assetId,
-    focus: {
-      panel: { ...hero.focus.panel },
-      phone: { ...hero.focus.phone },
-    },
-  };
-}
 
 function cloneHouseholdConfig(config: HouseholdConfigV4): HouseholdConfigV4 {
   return {

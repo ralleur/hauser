@@ -203,10 +203,10 @@ export function demoRoomImageLibrary(): RoomImageLibrary {
   return snapshot();
 }
 
-export function demoAssignRoomImage(roomId: string, assetId: string | null): void {
+export function demoAssignRoomImage(roomId: string, assetIds: string[]): void {
   for (const asset of library) {
     asset.assignedRoomIds = asset.assignedRoomIds.filter((id) => id !== roomId);
-    if (assetId && asset.assetId === assetId) asset.assignedRoomIds.push(roomId);
+    if (assetIds.includes(asset.assetId)) asset.assignedRoomIds.push(roomId);
   }
 }
 

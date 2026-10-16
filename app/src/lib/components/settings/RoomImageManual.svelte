@@ -10,7 +10,7 @@
   import { moveCorner } from '../../room-images/window-polygon.ts';
   import { m } from '../../../paraglide/messages.js';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
-  import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
+  import { roomHeroSets } from '../../state/room-hero-config.svelte.ts';
   import {
     loadRoomImageLibrary,
     setRoomImageRegions,
@@ -33,10 +33,10 @@
 
   let assets = $state<RoomImageLibraryAsset[]>([]);
   let loadError = $state<string | null>(null);
-  const asset = $derived.by(() => {
-    const assetId = roomHeroConfig(roomId)?.assetId;
-    return assetId ? assets.find((entry) => entry.assetId === assetId) ?? null : null;
-  });
+  /* Hat der Raum mehrere Sets, gilt dieser Bereich dem Hauptset (dem ersten). */
+  const setCount = $derived(roomHeroSets(roomId).length);
+  const mainSetId = $derived(roomHeroSets(roomId)[0]?.assetId);
+  const asset = $derived(mainSetId ? assets.find((entry) => entry.assetId === mainSetId) ?? null : null);
   const manualSet = $derived(asset?.assetId.startsWith('manual_') ?? false);
   const hasLight = $derived(asset !== null);
   const showWording = $derived(!managing || asset?.origin === 'manual' || (manualSet && !asset?.origin));
@@ -96,7 +96,7 @@
   let fileInput = $state<HTMLInputElement>();
   let uploadFor = $state<RoomBackgroundVariant>('light');
 
-  $effect(() => { void roomHeroConfig(roomId)?.assetId; void refreshKey; void load(); });
+  $effect(() => { void mainSetId; void refreshKey; void load(); });
   async function load() {
     try {
       assets = (await loadRoomImageLibrary()).assets;
@@ -283,6 +283,7 @@
         <h3>{m.rimg_manage_current()}</h3>
         <small>{m.rimg_manage_origin()}</small>
         <strong>{asset ? originLabel : m.rimg_lib_loading()}</strong>
+        {#if setCount > 1}<small>{m.rimg_lib_room_sets({ count: setCount })}</small>{/if}
       </div>
       <button class="secondary-btn pressable" type="button" onclick={onchangeway}>{m.rimg_way_change()}</button>
     </div>

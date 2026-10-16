@@ -109,34 +109,42 @@ export async function assignRoomImage(
   asset: { assetId: string; focus: RoomImageFocus } | null,
   householdEtag: string,
 ): Promise<void> {
+  await assignRoomImages(roomId, asset ? [asset] : [], householdEtag);
+}
+
+/** Wie `assignRoomImage`, aber mit mehreren Bildsets: das erste ist das
+    Hauptset, die übrigen wechseln sich je Sitzung zufällig ab. Eine leere
+    Liste entfernt die Zuweisung. */
+export async function assignRoomImages(
+  roomId: string,
+  assets: { assetId: string; focus: RoomImageFocus }[],
+  householdEtag: string,
+): Promise<void> {
   if (IS_DEMO) {
-    (await import('../demo/demo-room-images.ts')).demoAssignRoomImage(roomId, asset?.assetId ?? null);
-    applyAssignmentToProjection(roomId, asset);
+    (await import('../demo/demo-room-images.ts')).demoAssignRoomImage(roomId, assets.map((asset) => asset.assetId));
+    applyAssignmentToProjection(roomId, assets);
     return;
   }
   const response = await fetch(`/api/room-image-assignments/${encodeURIComponent(roomId)}`, {
     method: 'PUT',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'If-Match': householdEtag },
-    body: JSON.stringify({ asset }),
+    body: JSON.stringify(assets.length > 1 ? { assets } : { asset: assets[0] ?? null }),
   });
   if (!response.ok) throw await readError(response, 'Die Zuweisung ist fehlgeschlagen.');
-  applyAssignmentToProjection(roomId, asset);
+  applyAssignmentToProjection(roomId, assets);
 }
 
 function applyAssignmentToProjection(
   roomId: string,
-  asset: { assetId: string; focus: RoomImageFocus } | null,
+  assets: { assetId: string; focus: RoomImageFocus }[],
 ): void {
-  setRoomHeroConfig(roomId, asset
-    ? {
-        assetId: asset.assetId,
-        focus: {
-          panel: { x: asset.focus.panel.x, y: asset.focus.panel.y },
-          phone: { x: asset.focus.phone.x, y: asset.focus.phone.y },
-        },
-      }
-    : null);
+  const sets = assets.map(({ assetId, focus }) => ({
+    assetId,
+    focus: { panel: { ...focus.panel }, phone: { ...focus.phone } },
+  }));
+  const [primary, ...alternates] = sets;
+  setRoomHeroConfig(roomId, primary ? { ...primary, ...(alternates.length ? { alternates } : {}) } : null);
 }
 
 export async function deleteRoomImageAsset(assetId: string): Promise<void> {

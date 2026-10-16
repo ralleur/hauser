@@ -4822,19 +4822,47 @@ function heroTarget(document, roomId) {
   return document.rooms.find((candidate) => candidate.id === roomId) ?? null;
 }
 
-function assignedRoomIds(document, assetId) {
-  const rooms = document.rooms.filter((room) => room.hero?.assetId === assetId).map((room) => room.id);
-  if (document.exterior?.hero?.assetId === assetId) rooms.push(EXTERIOR_HERO_ID);
+/* Ein Raum zeigt ein Hauptset (`assetId`) und optional weitere (`alternates`);
+   jedes davon zählt als zugewiesen (Löschschutz, Aufräumen eigener Fotos). */
+const ROOM_IMAGE_MAX_SETS_PER_ROOM = 8;
+
+function heroAssetIds(hero) {
+  return hero ? [hero.assetId, ...(hero.alternates ?? []).map((set) => set.assetId)] : [];
+}
+
+export function assignedRoomIds(document, assetId) {
+  const rooms = document.rooms.filter((room) => heroAssetIds(room.hero).includes(assetId)).map((room) => room.id);
+  if (heroAssetIds(document.exterior?.hero).includes(assetId)) rooms.push(EXTERIOR_HERO_ID);
   return rooms.sort();
 }
 
-function normalizeRoomImageAssignment(payload) {
-  if (!roomImageExactObject(payload, ['asset'])) return null;
-  if (payload.asset === null) return { asset: null };
-  if (!roomImageExactObject(payload.asset, ['assetId', 'focus'])
-      || !ROOM_IMAGE_ASSET_ID_PATTERN.test(payload.asset.assetId || '')
-      || !validRoomImageFocus(payload.asset.focus)) return null;
-  return { asset: structuredClone(payload.asset) };
+/* Verweist ein Raum auf `oldAssetId`, zeigt er danach auf `newAssetId` — als
+   Hauptset oder als Alternative, mit seinem Fokus. */
+export function replaceHeroAsset(hero, oldAssetId, newAssetId) {
+  const swap = (set) => (set.assetId === oldAssetId ? { ...set, assetId: newAssetId } : set);
+  return { ...swap(hero), ...(hero.alternates ? { alternates: hero.alternates.map(swap) } : {}) };
+}
+
+export function heroFromAssets(assets) {
+  const [primary, ...alternates] = assets;
+  return primary ? { ...primary, ...(alternates.length ? { alternates } : {}) } : null;
+}
+
+/* Beide Formen: `{ asset }` (ein Set oder null) und `{ assets: [...] }` (eine
+   Liste, das erste ist das Hauptset). Ergebnis ist immer eine Liste; leer heißt entfernen. */
+export function normalizeRoomImageAssignment(payload) {
+  const validAsset = (asset) => roomImageExactObject(asset, ['assetId', 'focus'])
+    && ROOM_IMAGE_ASSET_ID_PATTERN.test(asset.assetId || '')
+    && validRoomImageFocus(asset.focus);
+  if (roomImageExactObject(payload, ['asset'])) {
+    if (payload.asset === null) return { assets: [] };
+    return validAsset(payload.asset) ? { assets: [structuredClone(payload.asset)] } : null;
+  }
+  if (!roomImageExactObject(payload, ['assets']) || !Array.isArray(payload.assets)) return null;
+  const { assets } = payload;
+  if (assets.length < 1 || assets.length > ROOM_IMAGE_MAX_SETS_PER_ROOM || !assets.every(validAsset)
+      || new Set(assets.map((asset) => asset.assetId)).size !== assets.length) return null;
+  return { assets: structuredClone(assets) };
 }
 
 async function serveRoomImagePublish(req, res, identity, jobId, context) {
@@ -5055,13 +5083,15 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
       if (matches[0] !== snapshot.etag) return { type: 'stale' };
       const room = heroTarget(snapshot.document, roomId);
       if (!room) return { type: 'room_absent' };
-      if (payload.asset) {
-        const status = context.assetStore.status(payload.asset.assetId);
+      /* Die Energie-Zettel hängen an genau einem Außenbild. */
+      if (roomId === EXTERIOR_HERO_ID && payload.assets.length > 1) return { type: 'exterior_single' };
+      for (const asset of payload.assets) {
+        const status = context.assetStore.status(asset.assetId);
         if (status !== 'complete') {
           return { type: ['not_found', 'tombstone'].includes(status) ? 'asset_absent' : 'asset_incomplete' };
         }
       }
-      room.hero = payload.asset;
+      room.hero = heroFromAssets(payload.assets);
       const written = writeRoomImageHousehold(
         context.householdConfigPath,
         snapshot.document,
@@ -5075,6 +5105,7 @@ async function serveRoomImageAssignment(req, res, roomId, context) {
     if (result.type === 'room_absent') throw new RoomImageRequestError(404, 'ROOM_NOT_FOUND', 'Der Raum wurde nicht gefunden.');
     if (result.type === 'asset_absent') throw new RoomImageRequestError(404, 'ASSET_NOT_FOUND', 'Das Asset wurde nicht gefunden.');
     if (result.type === 'asset_incomplete') throw new RoomImageRequestError(409, 'ASSET_INCOMPLETE', 'Das Asset ist unvollständig.');
+    if (result.type === 'exterior_single') throw new RoomImageRequestError(400, 'INVALID_REQUEST', 'Das Außenbild nimmt genau ein Bildset.');
     roomImageJsonResponse(req, res, 200, { roomId: result.roomId, hero: result.hero, etag: result.etag });
   } catch (error) { roomImageHandleAsyncError(req, res, error); }
 }
@@ -5192,7 +5223,8 @@ async function serveManualRoomBackground(req, res, roomId, context, variant = nu
         } else if (entry.files?.overcast && !(key === 'overcast' && req.method === 'DELETE')) {
           context.assetStore.addOptionalVariant(assetId, 'overcast', context.assetStore.variantBytes(previousAssetId, 'overcast'));
         }
-        room.hero = { assetId: createdAsset.assetId, focus: createdAsset.focus };
+        /* Die Alternativen des Raums bleiben, nur das bearbeitete Hauptset wird ersetzt. */
+        room.hero = { ...room.hero, assetId: createdAsset.assetId, focus: createdAsset.focus };
       }
 
       let written;
@@ -5301,7 +5333,7 @@ export async function refreshBrightManualRoomImages(context, { onStart = () => u
         if (roomIds.length > 0) {
           for (const roomId of roomIds) {
             const room = heroTarget(snapshot.document, roomId);
-            room.hero = { ...room.hero, assetId: created.assetId };
+            room.hero = replaceHeroAsset(room.hero, previousAssetId, created.assetId);
           }
           try {
             writeRoomImageHousehold(
