@@ -30,6 +30,7 @@ export default defineConfig({
       sidebar: [
         { label: 'Guide home', link: '/hauser/docs/' },
         { label: 'Getting started', items: [
+          { slug: 'getting-started/agent-guided-setup' },
           { slug: 'getting-started/requirements' },
           { slug: 'integrations/companion-app', label: 'iPhone & iPad app' },
           { slug: 'getting-started/home-assistant-app' },

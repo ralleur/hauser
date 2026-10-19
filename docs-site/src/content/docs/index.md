@@ -19,6 +19,10 @@ tableOfContents: false
 
 ## Start here
 
+Starting from zero? [Set up with your AI agent](/hauser/docs/getting-started/agent-guided-setup/).
+Give it that link to work through Home Assistant, Hauser, your phone and optional
+private remote access together, one step at a time.
+
 <div class="guide-paths not-content">
   <a class="guide-path" href="/hauser/docs/integrations/companion-app/#apple-home">
     <span class="guide-path-label">iPhone &amp; iPad</span>

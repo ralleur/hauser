@@ -23,6 +23,9 @@ are optional and are not needed to operate your rooms.
 
 ## Home Assistant
 
+No Home Assistant yet? [Start with your AI agent](/hauser/docs/getting-started/agent-guided-setup/)
+to choose hardware and work through installation together.
+
 You need a working Home Assistant installation, somewhere to run Hauser, and
 a current browser on a device that can reach it.
 
