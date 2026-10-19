@@ -3,6 +3,7 @@ import type {
   HouseholdConfigV4,
   HouseholdRuntimeModel,
 } from './household-config.ts';
+import { batteryKeys } from './household-config.ts';
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -47,6 +48,7 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
           consumptionPower: config.energy.sensors.consumptionPower
             .map((source) => ({ ...source }))
             .sort(byId),
+          ...batteryKeys(config.energy.sensors),
         },
         kpis: { ...config.energy.kpis },
       };
@@ -146,6 +148,8 @@ export function compileHouseholdConfig(config: HouseholdConfigV4): HouseholdRunt
     const producers = energy.sensors.productionPower;
     for (const entityId of !producers ? [] : typeof producers === 'string' ? [producers] : producers) subscriptionEntityIds.add(entityId);
     for (const source of energy.sensors.consumptionPower) subscriptionEntityIds.add(source.entityId);
+    if (energy.sensors.batteryLevel) subscriptionEntityIds.add(energy.sensors.batteryLevel);
+    if (energy.sensors.batteryPower) subscriptionEntityIds.add(energy.sensors.batteryPower);
     for (const entityId of Object.values(energy.kpis)) {
       if (entityId) subscriptionEntityIds.add(entityId);
     }

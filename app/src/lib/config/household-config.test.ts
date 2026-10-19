@@ -330,3 +330,38 @@ describe('household config v4', () => {
     ]));
   });
 });
+
+describe('household config countsAsLight', () => {
+  const withEntity = (extra: Record<string, unknown>) => ({
+    ...neutralSmall,
+    rooms: [{
+      ...neutralSmall.rooms[0],
+      visibleEntities: [
+        ...neutralSmall.rooms[0].visibleEntities,
+        { id: 'plug', name: 'Plug', entityId: 'switch.den_plug', role: 'switch', ...extra },
+      ],
+    }, ...neutralSmall.rooms.slice(1)],
+  });
+  const plugOf = (config: HouseholdConfigV4) => config.rooms[0].visibleEntities.find(({ id }) => id === 'plug');
+
+  it('stays optional: configurations without the field parse unchanged', () => {
+    const parsed = parseValid(withEntity({}));
+    expect(plugOf(parsed)).toEqual({ id: 'plug', name: 'Plug', entityId: 'switch.den_plug', role: 'switch' });
+    expect(Object.hasOwn(plugOf(parsed)!, 'countsAsLight')).toBe(false);
+  });
+
+  it('keeps an explicit boolean through parsing and compilation', () => {
+    for (const value of [true, false]) {
+      const parsed = parseValid(withEntity({ countsAsLight: value }));
+      expect(plugOf(parsed)?.countsAsLight).toBe(value);
+      const compiled = compileHouseholdConfig(parsed);
+      expect(compiled.rooms[0].visibleEntities.find(({ id }) => id === 'plug')?.countsAsLight).toBe(value);
+    }
+  });
+
+  it('rejects non-boolean values fail-closed', () => {
+    for (const value of ['yes', 1, null]) {
+      expectIssue(withEntity({ countsAsLight: value }), 'TYPE_MISMATCH', '$.rooms[0].visibleEntities[2].countsAsLight');
+    }
+  });
+});

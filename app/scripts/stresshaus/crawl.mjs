@@ -193,7 +193,9 @@ async function main() {
      gezählt. */
   const record = (kind, detail) => {
     const text = String(detail).replace(/^\[hauser\] (?:Bereich konnte nicht aufgebaut werden|screen): /, '').slice(0, 600);
-    const key = text.replace(/^Diese Ansicht ist beim Aufbau gescheitert\. /, '').replace(/ Erneut versuchen$/, '').split('\n')[0];
+    /* Die Zählung des Fehlerbuchs gehört in den Text, nicht in den Schlüssel —
+       sonst wird derselbe Fehler jede Nacht ein neues Issue (#27/#28/#41). */
+    const key = text.replace(/^Diese Ansicht ist beim Aufbau gescheitert\. /, '').replace(/ Erneut versuchen$/, '').split('\n')[0].replace(/ \(×\d+\)$/, '');
     const known = findings.find((f) => f.key === key);
     if (known) { known.count++; return; }
     findings.push({ step, kind, text, key, count: 1 });
@@ -213,7 +215,7 @@ async function main() {
   if (HOUSE) applyVariant(home, HOUSE);
   const rng = seededRandom(SEED ?? 1);
   const pickOne = (list) => list[Math.floor(rng() * list.length)];
-  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt', 'nl']);
+  const locale = SEED === null ? null : pickOne(['de', 'en', 'fr', 'it', 'pl', 'pt', 'nl', 'es']);
   const panelSize = SEED === null ? { width: 1280, height: 800 } : pickOne([
     { width: 1280, height: 800 }, { width: 1194, height: 834 }, { width: 1920, height: 1080 }, { width: 1024, height: 600 }, { width: 2560, height: 1440 },
   ]);
@@ -271,8 +273,19 @@ async function main() {
     });
   }
 
-  const evaluate = async (expression) => {
-    const out = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+  /* Die App lädt sich selbst neu, wenn die Prüfung nach dem ersten Bild einen
+     neuen Hausstand findet (`reload_required`); im großen Haus fällt das
+     mitten ins Ausstatten. Die laufende Abfrage geht dabei verloren — sie
+     wird nach dem Neuladen wiederholt, statt die Runde zu beenden
+     (Stresshaus #39). */
+  const evaluate = async (expression, attempt = 0) => {
+    const out = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
+      .catch(async (err) => {
+        if (attempt >= 3 || !/navigated or closed|context was destroyed|Cannot find context/i.test(err.message)) throw err;
+        await sleep(2000);
+        return { retry: true };
+      });
+    if (out.retry) return evaluate(expression, attempt + 1);
     if (out.exceptionDetails) throw new Error(out.exceptionDetails.exception?.description ?? out.exceptionDetails.text);
     return out.result.value;
   };
@@ -415,6 +428,7 @@ async function main() {
         production: ['sensor.pv_leistung', 'sensor.speicher_leistung_mw', 'sensor.leistung_unavailable'].filter((id) => powerSensors.includes(id)),
         consumption: powerSensors.filter((id) => !['sensor.pv_leistung', 'sensor.speicher_leistung_mw', 'sensor.leistung_unavailable'].includes(id))
           .slice(0, 80).map((entityId) => ({ entityId, name: entityId.split('.')[1] })),
+        battery: { level: 'sensor.akku_ladestand', power: 'sensor.akku_leistung' },
       }
       : {
         production: ['sensor.kuche_leistung', 'sensor.verwaist'],
@@ -422,7 +436,10 @@ async function main() {
           { entityId: 'sensor.kuche_leistung', name: 'Küche' },
           { entityId: 'sensor.gibt_es_nicht', name: 'Weg' },
           { entityId: 'sensor.wohnzimmer', name: 'Misst Grad statt Watt' },
+          // Nur die Kennung gespeichert (Produktion 2026-10-19): angezeigt wird „Steckdose Flur“.
+          { entityId: 'sensor.strom_steckdose_power', name: 'sensor.strom_steckdose_power' },
         ],
+        battery: { level: 'sensor.akku_ladestand', power: 'sensor.akku_leistung' },
       };
     const todos = home.states.filter((s) => s.entity_id.startsWith('todo.')).map((s) => s.entity_id);
     /* Läden mit feindlichen Namen an die Listen binden: 60 Zeichen mit Emoji und ł, dazu einer ohne Liste — Web und iOS lesen dieselbe Konfiguration. */

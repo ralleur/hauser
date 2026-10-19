@@ -83,6 +83,7 @@ export const API_ROUTES = [
   { id: 'roomImageCapability', methods: ['GET', 'HEAD'], path: '/api/room-images/capability', area: 'room-images', access: 'origin', purpose: 'Sanitisierter Funktionsstatus des Raumbild-Wizards.' },
   { id: 'roomImageCapabilityDetails', methods: ['GET', 'HEAD'], path: '/api/room-images/capability/details', area: 'room-images', access: 'admin', purpose: 'Detailstatus für die Einstellungen.' },
   { id: 'roomImageProbe', methods: ['POST'], path: '/api/room-images/probe', area: 'room-images', access: 'admin', purpose: 'Provider-Zugang prüfen.' },
+  { id: 'hauserUpdate', methods: ['GET'], path: '/api/hauser-update', area: 'core', access: 'public', purpose: 'Liegt im Add-on eine neuere Hauser-Fassung bereit? Aus der Update-Entität von Home Assistant (0.49.0).' },
   { id: 'roomImageMaintenance', methods: ['GET'], path: '/api/room-images/maintenance', area: 'room-images', access: 'public', purpose: 'Nacharbeit an alten eigenen Raumbildern (Abend und Nacht nachrechnen): läuft sie, oder ist sie in den letzten 24 Stunden fertig geworden (0.37.0)?' },
   { id: 'roomImageAccess', methods: ['GET', 'DELETE'], path: '/api/room-images/access', area: 'room-images', access: 'admin', purpose: 'Provider-Zugang lesen oder entfernen.' },
   { id: 'roomImageAccessApiKey', methods: ['POST'], path: '/api/room-images/access/api-key', area: 'room-images', access: 'admin', purpose: 'OpenAI-Schlüssel hinterlegen.' },

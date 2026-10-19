@@ -14,7 +14,8 @@ import { appState, libItem, resumeTarget, continueInfo, type LibraryItem } from 
 import { installFakeLibrary } from './library-seed.ts';
 import { backend } from '../adapter/runtime.svelte.ts';
 import { FakeBackend } from '../adapter/fake-backend.ts';
-import { jellyfin, JellyfinAuthError } from '../adapter/jellyfin.ts';
+import { jellyfin, JellyfinAuthError, JELLYFIN_URL_CONFIGURED, normalizeJellyfinAddress } from '../adapter/jellyfin.ts';
+import { setJellyfinUrl } from './settings.svelte.ts';
 import { buildLiveLibrary, type LiveShelf } from '../adapter/jellyfin-shelves.ts';
 import { mapSeasons } from '../adapter/jellyfin-map.ts';
 import { createSnapshotStore } from '../data/query-cache.ts';
@@ -48,6 +49,8 @@ interface LibraryLive {
   error: string | null;
   loggingIn: boolean;
   hydrating: string | null; // aktuell im Detail nachgeladene Serien-Id
+  /** Bekannte Jellyfin-Adresse; leer = die Anmeldekarte fragt danach (wie die iOS-App). */
+  address: string;
 }
 
 const live: LibraryLive = $state({
@@ -55,6 +58,7 @@ const live: LibraryLive = $state({
   shelves: [],
   error: null,
   loggingIn: false,
+  address: JELLYFIN_URL_CONFIGURED ? jellyfin.baseUrl : '',
   hydrating: null,
 });
 
@@ -121,6 +125,11 @@ export function isLoggingIn(): boolean {
   return live.loggingIn;
 }
 
+export function libraryAddress(): string {
+  return live.address;
+}
+
+
 /** Wird gerade der Detail-Inhalt (Folgen) dieser Serie nachgeladen? */
 export function isHydrating(id: string | null): boolean {
   return !!id && live.hydrating === id;
@@ -181,8 +190,14 @@ export function retryLoad(): void {
 
 /* ── Login ── */
 
-export async function jellyfinLogin(username: string, password: string): Promise<void> {
+export async function jellyfinLogin(username: string, password: string, address = ''): Promise<void> {
   if (!usingLiveLibrary) return;
+  const typed = normalizeJellyfinAddress(address);
+  if (typed) {
+    jellyfin.setBaseUrl(typed);
+    setJellyfinUrl(typed, { live: true });
+    live.address = typed;
+  }
   live.loggingIn = true;
   live.error = null;
   try {

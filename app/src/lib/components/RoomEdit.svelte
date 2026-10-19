@@ -33,6 +33,10 @@
     roomLightPlacements,
     setLightPlacement,
   } from '../state/immersion-light.svelte.ts';
+  import { isLamp } from '../state/device-tap.ts';
+  import {
+    LIGHT_ZONE_MAX, LIGHT_ZONE_MIN, placementRotation, placementRy, type ImmersionLightPlacement,
+  } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
   import RoomImageLibrary from './settings/RoomImageLibrary.svelte';
@@ -66,8 +70,13 @@
   import { ROOM_NAME_MAX, cleanRoomName, renameRoom } from '../state/room-rename.ts';
   import { cardsAroundTiles } from '../state/room-cards.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { layoutHomeView, layoutRoomsPerRow, widthPreset } from '../state/layout-config.ts';
+  import {
+    AUTO_HIDE_SECONDS_MAX, AUTO_HIDE_SECONDS_MIN, DEFAULT_LAYOUT_CONFIG, ROOMS_ROWS_MAX,
+    layoutHomeView, panelSizeForPercent, panelSizeOf, widthPreset, type HomeViewId,
+  } from '../state/layout-config.ts';
+  import { PANEL_ROOMS_PER_PAGE_MAX, PANEL_ROOMS_PER_PAGE_MIN } from '../state/panel-room-pages.ts';
   import PanelRoomSelector from './PanelRoomSelector.svelte';
+  import TickScale from './TickScale.svelte';
   import '../../styles/room-edit-mirror.css';
 
   const room = $derived(appState.rooms.find((r) => r.id === roomEdit.roomId));
@@ -94,9 +103,21 @@
   let backgroundMessage = $state<string | null>(null);
   let backgroundError = $state(false);
   let libraryOpen = $state(false);
-  const roomLights = $derived((room?.lights ?? []).filter((device) => (device.category ?? 'light') === 'light'));
+  /* Geräte im Bild (Owner 2026-10-19): jedes Gerät des Raums bekommt eine
+     Stelle im Raumbild — Lampen eine Lichtzone, alle anderen einen Punkt. */
+  const placeableDevices = $derived(room?.lights ?? []);
+  const lampIds = $derived(new Set(placeableDevices.filter(isLamp).map((device) => device.entityId)));
+  const selectedIsLamp = $derived(lampIds.has(selectedLightId));
   const placements = $derived(roomLightPlacements(room?.id));
-  const selectedPlacement = $derived(placements[selectedLightId]);
+  /* Während eines Zugs an Ecke oder Drehanker lebt die Zone nur hier;
+     gespeichert wird beim Loslassen, nicht bei jeder Bewegung. */
+  let zoneDraft = $state<ImmersionLightPlacement | null>(null);
+  let zoneDrag: 'corner' | 'rotate' | null = null;
+  let immersionStage = $state<HTMLElement>();
+  const selectedPlacement = $derived(zoneDraft ?? placements[selectedLightId]);
+  const shownPlacements = $derived(Object.entries(placements).map(([entityId, placement]) => [
+    entityId, entityId === selectedLightId && zoneDraft ? zoneDraft : placement,
+  ] as const));
   const background = $derived(roomHeroConfig(room?.id));
   const backgroundUrl = $derived(background
     ? `/assets/room-images/${background.assetId}/light.avif`
@@ -261,7 +282,7 @@
 
   function openImmersionEditor() {
     view = 'immersion';
-    selectedLightId = roomLights[0]?.entityId ?? '';
+    selectedLightId = placeableDevices[0]?.entityId ?? '';
   }
 
   function openBackgroundEditor() {
@@ -311,16 +332,66 @@
     const rect = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
     if (!rect) return;
     setLightPlacement(room.id, selectedLightId, {
+      ...(selectedPlacement && selectedIsLamp ? selectedPlacement : { radius: 0.16 }),
       x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
       y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
-      radius: selectedPlacement?.radius ?? 0.16,
     });
   }
 
+  /* Der Regler vergrößert die Zone als Ganzes; eine Ellipse behält ihr Verhältnis. */
   function setSelectedRadius(event: Event) {
     if (!room || !selectedLightId || !selectedPlacement) return;
     const radius = Number((event.currentTarget as HTMLInputElement).value);
-    setLightPlacement(room.id, selectedLightId, { ...selectedPlacement, radius });
+    const ry = clampZone(placementRy(selectedPlacement) * radius / selectedPlacement.radius);
+    setLightPlacement(room.id, selectedLightId, { ...selectedPlacement, radius, ry });
+  }
+
+  function clampZone(value: number): number {
+    return Math.min(LIGHT_ZONE_MAX, Math.max(LIGHT_ZONE_MIN, value));
+  }
+
+  function startZoneDrag(kind: 'corner' | 'rotate', event: PointerEvent) {
+    if (!selectedPlacement) return;
+    event.preventDefault();
+    event.stopPropagation();
+    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    zoneDrag = kind;
+    zoneDraft = { ...selectedPlacement };
+  }
+
+  /* Ecke: Abstand zum Mittelpunkt in die gedrehte Lage der Zone zurückrechnen,
+     daraus beide Halbachsen (beide relativ zur Bildbreite). Drehanker: Winkel
+     vom Mittelpunkt zum Finger, 0° heißt senkrecht nach oben; nahe 0, 90, 180
+     und 270 Grad rastet er ein. */
+  function moveZoneDrag(event: PointerEvent) {
+    if (!zoneDrag || !zoneDraft || !immersionStage) return;
+    const rect = immersionStage.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + zoneDraft.x * rect.width);
+    const dy = event.clientY - (rect.top + zoneDraft.y * rect.height);
+    if (zoneDrag === 'corner') {
+      const angle = placementRotation(zoneDraft) * Math.PI / 180;
+      const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
+      const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
+      zoneDraft = { ...zoneDraft, radius: clampZone(Math.abs(localX) / rect.width), ry: clampZone(Math.abs(localY) / rect.width) };
+    } else {
+      let rotation = Math.atan2(dx, -dy) * 180 / Math.PI;
+      const snap = Math.round(rotation / 90) * 90;
+      if (Math.abs(rotation - snap) < 4) rotation = snap;
+      if (rotation > 180) rotation -= 360;
+      zoneDraft = { ...zoneDraft, rotation: Math.round(rotation) };
+    }
+  }
+
+  function endZoneDrag() {
+    if (zoneDrag && zoneDraft && room && selectedLightId) {
+      const { ry, rotation, ...rest } = zoneDraft;
+      const next: ImmersionLightPlacement = { ...rest };
+      if (ry !== undefined && Math.abs(ry - rest.radius) > 0.002) next.ry = ry;
+      if (rotation) next.rotation = rotation === -180 ? 180 : rotation;
+      setLightPlacement(room.id, selectedLightId, next);
+    }
+    zoneDrag = null;
+    zoneDraft = null;
   }
 
   // animationend-Fallback (deckt prefers-reduced-motion: 0ms ab)
@@ -362,6 +433,50 @@
      Einstellungen stehen daneben statt darunter. Immersionslicht und
      Raumbild bleiben das Fenster in der Mitte. */
   const panelMirror = $derived(!onPhone && mirrored);
+
+  /* ── Ein Konfigurationsmodus (Owner 2026-10-19) ──
+     Was früher in der Leiste von rechts lag, steht jetzt hier, an der Stelle,
+     die es verändert: die Breite an einer Pille neben der Spalte, die Ansicht
+     oben in der Mitte (wo sonst das h steht), das Raster unter den Räumen.
+     Ausblenden, zweite Fläche und Zurücksetzen stehen in der Seitenspalte.
+     Jede Einstellung gilt sofort, wie in der alten Leiste. */
+  const homeView = $derived(layoutHomeView(layoutManager.applied));
+  const layout = $derived(layoutManager.applied);
+  const secondSlot = $derived(layout.slots[1] ?? null);
+  const HOME_VIEWS: readonly { id: HomeViewId; label: () => string }[] = [
+    { id: 'fullscreen', label: m.layout_home_view_fullscreen },
+    { id: 'rooms', label: m.layout_home_view_rooms },
+    { id: 'image', label: m.layout_home_view_image },
+  ];
+  let columnEl = $state<HTMLElement>();
+  let widthDragging = $state(false);
+
+  /* Die Pille zieht die rechte Kante der Spalte: aus der Fingerposition wird
+     der Anteil an der Fensterbreite, daraus die Größe des Layouts. */
+  function startWidthDrag(event: PointerEvent): void {
+    event.preventDefault();
+    (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    widthDragging = true;
+  }
+  function moveWidthDrag(event: PointerEvent): void {
+    if (!widthDragging || !columnEl) return;
+    const width = event.clientX - columnEl.getBoundingClientRect().left - 8;
+    layoutManager.setPanelSize(panelSizeForPercent((width / window.innerWidth) * 100));
+  }
+  function endWidthDrag(): void {
+    widthDragging = false;
+  }
+  function widthKey(event: KeyboardEvent): void {
+    const step = event.key === 'ArrowRight' ? 5 : event.key === 'ArrowLeft' ? -5 : 0;
+    if (!step) return;
+    event.preventDefault();
+    layoutManager.setPanelSize(panelSizeOf(layout) + step);
+  }
+  function roomForNewSlot(): string | null {
+    const fallback = appState.rooms[0]?.id ?? null;
+    const occupied = new Set(layout.slots.map((slot) => slot.roomId ?? fallback));
+    return appState.rooms.find((candidate) => !occupied.has(candidate.id))?.id ?? fallback;
+  }
   const panelColumn = $derived.by(() => {
     const preset = widthPreset(layoutManager.applied);
     return `max(${preset.slotMinPx}px, min(${preset.totalPercent}vw, calc(100vw - ${preset.heroMinPx}px - var(--space-8))))`;
@@ -615,6 +730,15 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
+  {#if panelMirror && !adding}
+    <!-- Oben in der Mitte, wo sonst das h steht: welche Ansicht die Startseite zeigt. -->
+    <div class="re-view-toggle choice-pill" role="radiogroup" aria-label={m.layout_home_view()}>
+      {#each HOME_VIEWS as option (option.id)}
+        <button class="choice-seg pressable" type="button" role="radio" aria-checked={homeView === option.id}
+                onclick={() => layoutManager.setHomeView(option.id)}>{option.label()}</button>
+      {/each}
+    </div>
+  {/if}
   <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'}
        class:is-blueprint={onPhone} class:has-blueprint={blueprint !== null}
        role="dialog" aria-modal="true"
@@ -822,7 +946,7 @@
               <Icon name="i-chevron-right" cls="icon icon-md" />
             </button>
             <button class="re-quick-entry pressable" type="button" onclick={openImmersionEditor}>
-              <span class="re-icon" aria-hidden="true"><Icon name="i-bulb" /></span>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-cursor-default-click" /></span>
               <span class="re-label">
                 <span class="re-name">{m.room_assign_lamps()}</span>
                 <small class="re-meta">{m.room_set_light_positions()}</small>
@@ -1043,22 +1167,102 @@
         </section>
         {/snippet}
 
+        {#snippet viewSection()}
+        <!-- Aus der alten Leiste von rechts: was nicht an einer Stelle im Bild
+             hängt, steht hier — Ausblenden, zweite Fläche, Zurücksetzen. -->
+        <section class="ld-section re-view-section">
+          <div class="re-metric-box">
+            <div class="re-row re-metric-head">
+              <span class="re-icon" aria-hidden="true"><Icon name="i-eye-off" /></span>
+              <span class="re-label"><span class="re-name">{m.layout_auto_hide()}</span></span>
+              <button class="re-toggle pressable" type="button" role="switch" aria-checked={layout.panelAutoHide}
+                      class:is-on={layout.panelAutoHide} aria-label={m.layout_auto_hide()}
+                      onclick={() => layoutManager.setPanelAutoHide(!layout.panelAutoHide)}>
+                <span class="re-toggle-knob"></span>
+              </button>
+            </div>
+            {#if layout.panelAutoHide}
+              <div class="re-layout-setting">
+                <span>{m.layout_auto_hide_after()}</span>
+                <TickScale ariaLabel={m.layout_auto_hide_after()} orientation="horizontal" mode="fill"
+                           value={layout.panelAutoHideSeconds}
+                           min={AUTO_HIDE_SECONDS_MIN} max={AUTO_HIDE_SECONDS_MAX} step={5} keyStep={5}
+                           onInput={(value) => layoutManager.setPanelAutoHide(true, value)}
+                           format={(value) => `${Math.round(value)} s`} />
+              </div>
+            {/if}
+          </div>
+          <div class="re-metric-box">
+            {#if secondSlot}
+              <div class="re-row re-metric-head">
+                <span class="re-icon" aria-hidden="true"><Icon name="i-view-split-vertical" /></span>
+                <span class="re-label"><span class="re-name">{m.layout_second_room()}</span></span>
+                <button class="text-btn danger-btn pressable" type="button" aria-label={m.layout_remove_second()}
+                        onclick={() => layoutManager.removeSlot()}>{m.layout_remove_short()}</button>
+              </div>
+              <div class="layout-room-choice" role="radiogroup" aria-label={m.layout_second_room()}>
+                {#each appState.rooms as option (option.id)}
+                  <button class="choice-seg pressable" type="button" role="radio" aria-checked={secondSlot.roomId === option.id}
+                          onclick={() => layoutManager.setRoom(secondSlot.id, option.id)}>{option.name}</button>
+                {/each}
+              </div>
+            {:else}
+              <button class="secondary-btn pressable" type="button"
+                      onclick={() => layoutManager.addSlot(roomForNewSlot())}>{m.layout_add_second()}</button>
+            {/if}
+          </div>
+          <button class="text-btn pressable re-layout-reset" type="button"
+                  onclick={() => layoutManager.reset()}>{m.layout_reset()}</button>
+        </section>
+        {/snippet}
+
         {#if panelMirror}
         <!-- Am Wandpanel (wie die iOS-App): die Konfiguration steht in der
              Spalte der Kontrollfläche, in ihrem Maß und mit ihren Klassen —
              jede Kachel bleibt beim Überblenden an ihrem Platz. Raumbild,
              Lampen und Einstellungen stehen rechts daneben. -->
-        <div class="home-panel on-image re-panel-column">
+        <div class="home-panel on-image re-panel-column" bind:this={columnEl}>
           <!-- Oben dieselbe Raumauswahl bzw. derselbe Kopf wie in der Steuerung,
                damit die Kacheln darunter auf derselben Höhe beginnen; ein Tipp
                auf einen anderen Raum stellt dessen Konfiguration ein. -->
           {#if adding}
             {@render editHeader()}
-          {:else if layoutHomeView(layoutManager.applied) === 'rooms'}
+          {:else if homeView === 'rooms'}
             <header class="panel-head"><h2 class="panel-title">{room.name}</h2></header>
           {:else}
             <PanelRoomSelector rooms={appState.rooms} selectedId={room.id}
-                               roomsPerRow={layoutRoomsPerRow(layoutManager.applied)} onselect={showRoom} />
+                               maxPerPage={layoutManager.applied.roomsPerPageMax} onselect={showRoom} />
+          {/if}
+          {#if !adding}
+            <!-- Unter den Räumen: wie viele davon auf einmal zu sehen sind. -->
+            <div class="re-layout-settings">
+              {#if homeView === 'rooms'}
+                <div class="re-layout-setting">
+                  <span>{m.layout_rooms_per_row()}</span>
+                  <TickScale ariaLabel={m.layout_rooms_per_row()} orientation="horizontal" mode="fill"
+                             value={layout.roomsPerRow} min={1} max={4} step={1} keyStep={1} tickCount={4}
+                             onInput={(value) => layoutManager.setRoomsPerRow(Math.round(value))}
+                             format={(value) => String(Math.round(value))} />
+                </div>
+                <div class="re-layout-setting">
+                  <span>{m.layout_rooms_rows()}</span>
+                  <TickScale ariaLabel={m.layout_rooms_rows()} orientation="horizontal" mode="fill"
+                             value={layout.roomsRows} min={1} max={ROOMS_ROWS_MAX} step={1} keyStep={1} tickCount={ROOMS_ROWS_MAX}
+                             onInput={(value) => layoutManager.setRoomsRows(Math.round(value))}
+                             format={(value) => String(Math.round(value))} />
+                </div>
+              {:else}
+                <div class="re-layout-setting">
+                  <span>{m.layout_rooms_per_page()}</span>
+                  <TickScale ariaLabel={m.layout_rooms_per_page()} orientation="horizontal" mode="fill"
+                             value={layout.roomsPerPageMax}
+                             min={PANEL_ROOMS_PER_PAGE_MIN} max={PANEL_ROOMS_PER_PAGE_MAX} step={1} keyStep={1}
+                             tickCount={PANEL_ROOMS_PER_PAGE_MAX - PANEL_ROOMS_PER_PAGE_MIN + 1}
+                             onInput={(value) => layoutManager.setRoomsPerPageMax(Math.round(value))}
+                             format={(value) => String(Math.round(value))} />
+                </div>
+              {/if}
+            </div>
           {/if}
           <div class="panel-controls">
             {#if adding}
@@ -1069,13 +1273,20 @@
           </div>
         </div>
         {#if !adding}
+          <!-- Die Pille rechts neben der Spalte: halten und ziehen stellt die Breite. -->
+          <div class="re-width-grip">
+            <button class="re-width-pill" class:is-dragging={widthDragging} type="button"
+                    aria-label={m.layout_size_aria()}
+                    onpointerdown={startWidthDrag} onpointermove={moveWidthDrag}
+                    onpointerup={endWidthDrag} onpointercancel={endWidthDrag} onkeydown={widthKey}></button>
+          </div>
           <div class="re-panel-side">
             {@render mirrorHead()}
             {#if renameFailed}<p class="re-empty re-rename-failed" role="alert">{m.room_rename_failed()}</p>{/if}
             {@render quickSection()}
             <!-- Kopf und Einstiege bleiben oben stehen, nur die Einstellungen
                  darunter scrollen (hauser#27). -->
-            <div class="re-panel-side-scroll">{@render advancedSection()}</div>
+            <div class="re-panel-side-scroll">{@render advancedSection()}{@render viewSection()}</div>
           </div>
         {/if}
         {:else}
@@ -1099,11 +1310,11 @@
             <div class="re-immersion-editor">
               <aside class="re-immersion-lights" aria-label={m.room_pick_lamps()}>
                 <p class="re-empty">{m.room_pick_lamp_hint()}</p>
-                {#if roomLights.length === 0}
+                {#if placeableDevices.length === 0}
                   <p class="re-empty">{m.room_no_lamps()}</p>
                 {:else}
                   <ul class="re-list">
-                    {#each roomLights as light (light.entityId)}
+                    {#each placeableDevices as light (light.entityId)}
                       <li>
                         <button class="re-row re-light-choice pressable"
                                 class:is-selected={selectedLightId === light.entityId}
@@ -1119,7 +1330,7 @@
                     {/each}
                   </ul>
                 {/if}
-                {#if selectedPlacement}
+                {#if selectedPlacement && selectedIsLamp}
                   <label class="re-radius">
                     <span>{m.room_light_radius()}</span>
                     <input type="range" min="0.06" max="0.32" step="0.01"
@@ -1129,17 +1340,58 @@
                           onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>
                     {m.room_unassign_light()}
                   </button>
+                {:else if selectedPlacement}
+                  <button class="re-unassign pressable" type="button"
+                          onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>
+                    {m.room_unassign_light()}
+                  </button>
                 {/if}
               </aside>
-              <button class="re-immersion-preview" type="button" onclick={placeSelected}
-                      disabled={!selectedLightId}
-                      style:background-image={`url("${immersionUrl}")`}
-                      aria-label={selectedLightId ? m.room_set_position() : m.room_pick_lamp_first()}>
-                {#each Object.entries(placements) as [entityId, placement] (entityId)}
-                  <span class="re-light-marker" class:is-selected={selectedLightId === entityId}
-                        style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}></span>
-                {/each}
-              </button>
+              <div class="re-immersion-stage" bind:this={immersionStage}>
+                <button class="re-immersion-preview" type="button" onclick={placeSelected}
+                        disabled={!selectedLightId}
+                        style:background-image={`url("${immersionUrl}")`}
+                        aria-label={selectedLightId ? m.room_set_position() : m.room_pick_lamp_first()}></button>
+                <!-- Die Zone zeigt, wie weit das Licht reicht: halbtransparent,
+                     weißer Punkt in der Mitte. Die gewählte trägt vier Eckanker
+                     für Breite und Höhe und oben einen Drehanker — so lässt sie
+                     sich einem Lampenschirm anpassen. -->
+                <div class="re-light-zones">
+                  {#each shownPlacements as [entityId, placement] (entityId)}
+                    {@const selected = selectedLightId === entityId}
+                    {#if !lampIds.has(entityId)}
+                      <!-- Kein Licht, keine Zone: ein Punkt, der die Stelle markiert. -->
+                      <div class="re-device-point" class:is-selected={selected}
+                           style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}>
+                        <span class="re-light-zone-center"></span>
+                      </div>
+                    {:else}
+                    <div class="re-light-zone" class:is-selected={selected}
+                         style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}
+                         style:width={`${placement.radius * 200}%`}
+                         style:aspect-ratio={`${placement.radius} / ${placementRy(placement)}`}
+                         style:rotate={`${placementRotation(placement)}deg`}>
+                      <span class="re-light-zone-center"></span>
+                      {#if selected}
+                        {#each ['nw', 'ne', 'se', 'sw'] as corner (corner)}
+                          <button class="re-zone-handle" type="button" data-corner={corner}
+                                  aria-label={m.room_light_zone_resize()}
+                                  onpointerdown={(event) => startZoneDrag('corner', event)}
+                                  onpointermove={moveZoneDrag} onpointerup={endZoneDrag}
+                                  onpointercancel={endZoneDrag}></button>
+                        {/each}
+                        <span class="re-zone-rotate-stem"></span>
+                        <button class="re-zone-handle re-zone-rotate" type="button"
+                                aria-label={m.room_light_zone_rotate()}
+                                onpointerdown={(event) => startZoneDrag('rotate', event)}
+                                onpointermove={moveZoneDrag} onpointerup={endZoneDrag}
+                                onpointercancel={endZoneDrag}></button>
+                      {/if}
+                    </div>
+                    {/if}
+                  {/each}
+                </div>
+              </div>
             </div>
           {:else}
             <section class="re-background-editor">

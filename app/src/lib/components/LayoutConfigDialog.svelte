@@ -5,6 +5,7 @@
   import {
     AUTO_HIDE_SECONDS_MAX, AUTO_HIDE_SECONDS_MIN, DEFAULT_LAYOUT_CONFIG, ROOMS_ROWS_MAX, panelSizeOf, widthPreset,
   } from '../state/layout-config.ts';
+  import { PANEL_ROOMS_PER_PAGE_MAX, PANEL_ROOMS_PER_PAGE_MIN } from '../state/panel-room-pages.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
   import { prefersReducedMotion } from '../motion/index.ts';
   import TickScale from './TickScale.svelte';
@@ -127,6 +128,26 @@
                        format={() => `${Math.round(panelWidth)}%`} />
           </div>
 
+          <!-- Vollbild: die Raumauswahl legt ihre Spalten selbst nach der Zahl
+               der Räume fest; hier steht nur die Obergrenze je Seite, damit
+               es bei vielen Räumen keine Mini-Kacheln gibt (#40). -->
+          {#if config.homeView !== 'rooms'}
+            <div class="layout-slider-setting">
+              <div class="layout-slider-head">
+                <span>{m.layout_rooms_per_page()}</span>
+                <button class="text-btn pressable" type="button"
+                        onclick={() => layoutManager.setRoomsPerPageMax(DEFAULT_LAYOUT_CONFIG.roomsPerPageMax)}>{m.layout_default()}</button>
+              </div>
+              <TickScale ariaLabel={m.layout_rooms_per_page()} orientation="horizontal" mode="fill"
+                         value={config.roomsPerPageMax}
+                         min={PANEL_ROOMS_PER_PAGE_MIN} max={PANEL_ROOMS_PER_PAGE_MAX} step={1} keyStep={1}
+                         tickCount={PANEL_ROOMS_PER_PAGE_MAX - PANEL_ROOMS_PER_PAGE_MIN + 1}
+                         onInput={(value) => layoutManager.setRoomsPerPageMax(Math.round(value))}
+                         format={(value) => String(Math.round(value))} />
+            </div>
+          {/if}
+
+          {#if config.homeView === 'rooms'}
           <div class="layout-slider-setting">
             <div class="layout-slider-head">
               <span>{m.layout_rooms_per_row()}</span>
@@ -141,6 +162,7 @@
                        onInput={(value) => layoutManager.setRoomsPerRow(Math.round(value))}
                        format={(value) => String(Math.round(value))} />
           </div>
+          {/if}
 
           <!-- Alle Räume: so viele Zeilen stehen auf einmal im Bild, der Rest
                scrollt wie am Telefon. Im Vollbild gibt es kein Raster, dort

@@ -8,6 +8,7 @@ const baseView: EnergyView = {
   pv: 3.2,
   load: 1.8,
   grid: 1.4,
+  battery: null,
   today: {
     produced: 12.4,
     consumed: 9.1,

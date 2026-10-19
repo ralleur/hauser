@@ -90,7 +90,12 @@ function publicDemoHouseholdConfig() {
        im Namen; die Demo ist ohnehin simuliert. */
     energy: demoHouseholdConfig.energy ? {
       ...demoHouseholdConfig.energy,
-      sensors: { ...demoHouseholdConfig.energy.sensors, productionPower: DEMO_PV_POWER_ENTITY },
+      sensors: {
+        ...demoHouseholdConfig.energy.sensors,
+        productionPower: DEMO_PV_POWER_ENTITY,
+        batteryLevel: DEMO_BATTERY_LEVEL_ENTITY,
+        batteryPower: DEMO_BATTERY_POWER_ENTITY,
+      },
       kpis: {
         ...demoHouseholdConfig.energy.kpis,
         producedToday: DEMO_PRODUCED_TODAY_ENTITY,
@@ -105,6 +110,8 @@ const DEMO_PV_POWER_ENTITY = 'sensor.demo_pv_power';
 const DEMO_PRODUCED_TODAY_ENTITY = 'sensor.demo_pv_heute';
 const DEMO_FED_IN_TODAY_ENTITY = 'sensor.demo_einspeisung_heute';
 const DEMO_DRAWN_TODAY_ENTITY = 'sensor.demo_netzbezug_heute';
+const DEMO_BATTERY_LEVEL_ENTITY = 'sensor.demo_akku_ladestand';
+const DEMO_BATTERY_POWER_ENTITY = 'sensor.demo_akku_leistung';
 
 /* Das Personen-Präfix ist Zuordnung, kein Text: es steuert Sektion und
    Post-it-Farbe und wird vor der Anzeige entfernt (reminders.ts). Deshalb
@@ -320,6 +327,33 @@ export function demoEnergyToday(now: Date): { pvWatts: number; producedKwh: numb
   };
 }
 
+/* Der Hausakku der Demo (20 kWh): tagsüber nimmt er den Überschuss bis 1,5 kW auf,
+   abends deckt er die Last, bis er bei 15 % stehen bleibt. Leistung wie im
+   HA-Energie-Dashboard: positiv entlädt, negativ lädt. */
+export function demoBattery(now: Date, loadNowWatts: number): { level: number; watts: number } {
+  const hourNow = now.getHours() + now.getMinutes() / 60;
+  const capacityWh = 20000;
+  let stored = 0.1 * capacityWh;
+  let watts = 0;
+  const step = 5 / 60;
+  for (let hour = 0; hour <= hourNow; hour += step) {
+    const { pvWatts, loadWatts } = demoSolarDay(hour);
+    const surplus = pvWatts - loadWatts;
+    watts = surplus > 0
+      ? -Math.min(1500, surplus, (capacityWh - stored) / step)
+      : Math.min(-surplus, 2500, Math.max(0, stored - 0.15 * capacityWh) / step);
+    stored -= watts * step;
+  }
+  /* Jetzt folgt der Akku der Last, die die Demo zeigt — sonst lüde er
+     sichtbar aus dem Netz. */
+  const { pvWatts } = demoSolarDay(hourNow);
+  const surplus = pvWatts - loadNowWatts;
+  watts = surplus > 0
+    ? -Math.min(1500, surplus, capacityWh - stored)
+    : Math.min(-surplus, 2500, Math.max(0, stored - 0.15 * capacityWh));
+  return { level: Math.round((stored / capacityWh) * 100), watts: Math.round(watts) };
+}
+
 export function demoEnergySeed(now = new Date()): [string, unknown][] {
   if (!IS_DEMO) return [];
   const entries: [string, unknown][] = Object.entries(DEMO_LOAD_WATTS)
@@ -330,6 +364,9 @@ export function demoEnergySeed(now = new Date()): [string, unknown][] {
   entries.push([DEMO_PRODUCED_TODAY_ENTITY, { value: today.producedKwh, unit: 'kWh' }]);
   entries.push([DEMO_FED_IN_TODAY_ENTITY, { value: today.fedInKwh, unit: 'kWh' }]);
   entries.push([DEMO_DRAWN_TODAY_ENTITY, { value: today.drawnKwh, unit: 'kWh' }]);
+  const battery = demoBattery(now, Object.values(DEMO_LOAD_WATTS).reduce((sum, watts) => sum + watts, 0));
+  entries.push([DEMO_BATTERY_LEVEL_ENTITY, { value: battery.level, unit: '%' }]);
+  entries.push([DEMO_BATTERY_POWER_ENTITY, { value: battery.watts, unit: 'W' }]);
   return entries;
 }
 

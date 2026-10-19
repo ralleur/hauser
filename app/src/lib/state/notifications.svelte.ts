@@ -77,6 +77,22 @@ class NotificationCenter {
     this.#showLaundry(kind, value);
   }
 
+  /** Update-Hinweis (P28): eine Kachel je neuer Fassung. Weggedrückt bleibt sie
+   *  weg, bis die nächste Fassung erscheint; ist das Update eingespielt, geht sie. */
+  syncUpdate(latest: string | null): void {
+    const source = 'hauser-update';
+    if (!latest) { this.#removeWhere((item) => item.source === source); return; }
+    const dedupeKey = `${source}:${latest}`;
+    this.#removeWhere((item) => item.source === source && item.dedupeKey !== dedupeKey);
+    if (this.#dismissed.has(dedupeKey) || this.items.some((item) => item.dedupeKey === dedupeKey)) return;
+    this.items = sortNotifications([...this.items, {
+      id: dedupeKey, source, sourceLabel: 'Hauser', type: 'info',
+      title: m.notif_update_title({ version: latest }), message: m.notif_update_msg(),
+      icon: 'i-update', priority: 40, createdAt: Date.now(), dedupeKey,
+    }]);
+    this.#save();
+  }
+
   dismiss(dedupeKey: string): void {
     const item = this.items.find((entry) => entry.dedupeKey === dedupeKey);
     if (item && isRemoteNotification(item)) this.onDismissRemote?.(item.id);

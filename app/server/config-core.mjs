@@ -1216,11 +1216,25 @@ function normalizeEnergySelection(payload) {
   if (producers.includes(null)) return null;
   const production = producers.length === 0 ? null : producers.length === 1 ? producers[0] : producers;
   if (!Array.isArray(payload.consumption) || payload.consumption.length > ENERGY_LOAD_MAX) return null;
+  /* Hausakku (Owner 2026-10-19): Ladestand und optional Leistung. Fehlt der
+     Schlüssel — ältere App-Fassungen —, bleibt der gespeicherte Akku stehen.
+     Ohne Ladestand gibt es keinen Akku, also auch keine Leistung. */
+  let battery;
+  if (payload.battery !== undefined) {
+    if (payload.battery !== null && (typeof payload.battery !== 'object' || Array.isArray(payload.battery))) return null;
+    const ref = (value) => (value === null || value === undefined || value === '' ? null : entity(value) ?? false);
+    const level = ref(payload.battery?.level);
+    const power = ref(payload.battery?.power);
+    if (level === false || power === false) return null;
+    if (level !== null && power !== null && level === power) return null;
+    battery = { level, power: level === null ? null : power };
+  }
+  const batteryIds = new Set([battery?.level, battery?.power].filter(Boolean));
   const consumption = [];
   const seen = new Set();
   for (const item of payload.consumption) {
     const entityId = entity(item?.entityId ?? item);
-    if (!entityId || seen.has(entityId) || producers.includes(entityId)) continue;
+    if (!entityId || seen.has(entityId) || producers.includes(entityId) || batteryIds.has(entityId)) continue;
     seen.add(entityId);
     const name = typeof item?.name === 'string' && item.name.trim()
       ? item.name.trim().slice(0, 64)
@@ -1231,6 +1245,7 @@ function normalizeEnergySelection(payload) {
   return {
     production,
     consumption,
+    battery,
     kpis: {
       producedToday: kpi(payload.kpis?.producedToday),
       consumedToday: kpi(payload.kpis?.consumedToday),
@@ -1455,12 +1470,20 @@ export async function serveHouseholdEnergy(req, res, context) {
       if (matches[0] !== snapshot.etag) return { type: 'stale' };
       const document = snapshot.document;
       const previous = document.energy;
+      const batteryLevel = selection.battery ? selection.battery.level : previous?.sensors?.batteryLevel ?? null;
+      const batteryPower = selection.battery ? selection.battery.power : previous?.sensors?.batteryPower ?? null;
       /* Die Sektion bleibt bestehen, auch wenn nichts ausgewählt ist: bei
          aktivem Energie-Modul weist die Prüfung `energy: null` zurück
          (INCONSISTENT_MODULE). Die Tageswerte bleiben, solange die Oberfläche
          sie nicht selbst schickt — sie hängen an anderen Sensoren. */
       document.energy = {
-        sensors: { productionPower: selection.production, consumptionPower: selection.consumption },
+        sensors: {
+          productionPower: selection.production,
+          consumptionPower: selection.consumption,
+          /* Ohne Akku bleiben die Schlüssel weg, wie in jedem älteren Stand. */
+          ...(batteryLevel ? { batteryLevel } : {}),
+          ...(batteryLevel && batteryPower ? { batteryPower } : {}),
+        },
         kpis: {
           producedToday: selection.kpis.producedToday ?? previous?.kpis.producedToday ?? null,
           consumedToday: selection.kpis.consumedToday ?? previous?.kpis.consumedToday ?? null,

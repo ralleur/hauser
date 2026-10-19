@@ -4,6 +4,7 @@
   import { energyBalanceToday } from '../state/energy-balance.ts';
   import { runtime } from '../adapter/runtime.svelte.ts';
   import { energyView, loadBreakdown } from '../state/energy.svelte.ts';
+  import { deviceManager } from '../state/device-manager.svelte.ts';
   import EnergyLoadOverlay from '../components/EnergyLoadOverlay.svelte';
   import EnergyBalanceOverlay from '../components/EnergyBalanceOverlay.svelte';
   import SunArc from '../components/SunArc.svelte';
@@ -55,7 +56,9 @@
   /* Last-Overlay (B-19): eigene hidden→open→closing-Zustandsmaschine (Muster
      wie DeviceDetail). Trigger ist die Haus-Marke, wenn es Last gibt. */
   let loadOverlay = $state<'hidden' | 'open' | 'closing'>('hidden');
-  const breakdown = $derived(loadBreakdown());
+  /* Steht für einen Verbraucher nur die Kennung, gilt der Name aus Home Assistant. */
+  const catalogNames = $derived(new Map(deviceManager.catalog.map((item) => [item.entityId, item.name])));
+  const breakdown = $derived(loadBreakdown((id) => catalogNames.get(id) ?? null));
   function openLoadOverlay() {
     loadOverlay = 'open';
   }

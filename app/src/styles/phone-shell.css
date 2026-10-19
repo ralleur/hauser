@@ -1926,25 +1926,15 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) calc(env(safe-area-inset-right, 0px) + var(--space-4)) calc(var(--phone-nav-height) + var(--space-4)) calc(env(safe-area-inset-left, 0px) + var(--space-4));
-  /* Das Hausbild als blasser Grund: Der Schleier in der Seitenfarbe nimmt es
-     nach unten hin zurück, damit Kurve und Verbraucherliste ruhig bleiben.
-     Es steht fest, während die Zahlen darüber rollen. */
-  background-image:
-    linear-gradient(to bottom,
-      color-mix(in srgb, var(--color-surface-0) 58%, transparent),
-      color-mix(in srgb, var(--color-surface-0) 80%, transparent) 45%,
-      color-mix(in srgb, var(--color-surface-0) 94%, transparent)),
-    var(--phone-energy-hero, none);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: var(--color-surface-0);
 }
 
 .phone-energy-header {
   position: relative;
+  z-index: 1;
   display: grid;
   gap: var(--space-1);
-  margin-bottom: var(--space-4);
+  min-height: 58px;
 }
 /* Sonnenbogen oben rechts neben dem Titel (wie die iOS-App). */
 .phone-energy-sun {
@@ -1980,13 +1970,30 @@
   font-weight: var(--font-weight-normal);
 }
 
-/* ── Jetzt: der Hauptwert ── */
+/* ── Das Haus: groß, randlos, oben und unten weich in die Seite ──
+   Owner 2026-10-19 (Entwurf eines Freundes): das Bild trägt die Seite, statt
+   blass hinter den Zahlen zu liegen. Der Wert jetzt steht im Himmel. */
+.phone-energy-hero {
+  position: relative;
+  /* Der Himmel läuft hinter dem Titel aus, statt mit einer Kante darunter zu beginnen. */
+  margin: calc(-1 * var(--space-6)) calc(-1 * (env(safe-area-inset-right, 0px) + var(--space-4))) 0 calc(-1 * (env(safe-area-inset-left, 0px) + var(--space-4)));
+}
+
+.phone-energy-hero img {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 68vw, 340px);
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 56%, transparent 92%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 56%, transparent 92%);
+}
+
 .phone-energy-now {
+  position: absolute;
+  top: calc(var(--space-6) + var(--space-4));
+  left: calc(env(safe-area-inset-left, 0px) + var(--space-4));
   display: grid;
-  gap: var(--space-1);
-  padding-bottom: var(--space-4);
-  margin-bottom: var(--space-4);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  gap: 0;
 }
 
 .phone-energy-now-label,
@@ -1995,35 +2002,124 @@
 .phone-energy-note,
 .phone-energy-compare,
 .phone-energy-kpis dt,
-.phone-energy-now-lines {
+.phone-energy-tile dt,
+.phone-energy-tile-sub {
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
   line-height: var(--leading-normal);
 }
 
+.phone-energy-now-label {
+  font-weight: var(--font-weight-medium);
+}
+
 .phone-energy-now-value {
-  font-size: 36px;
+  font-size: 44px;
   font-weight: var(--font-weight-medium);
   letter-spacing: var(--tracking-tight);
+  line-height: 1.02;
+}
+
+/* ── Sonne, Akku, Netz: ohne Kartenrand, Farbe nur am Messstrich ── */
+.phone-energy-tiles {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--tile-count, 2), minmax(0, 1fr));
+  gap: var(--space-4) var(--space-5);
+  margin: calc(-1 * var(--space-7)) 0 0;
+}
+
+.phone-energy-tile {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  align-content: start;
+}
+
+.phone-energy-tile dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.phone-energy-tile dt::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--tile-tone, var(--color-border));
+}
+
+.phone-energy-tile.is-solar { --tile-tone: var(--color-accent-warm); }
+.phone-energy-tile.is-battery { --tile-tone: var(--color-success); }
+.phone-energy-tile.is-grid { --tile-tone: var(--color-accent-cool); }
+
+.phone-energy-tile dd {
+  margin: 0;
+}
+
+.phone-energy-tile-value {
+  font-size: 28px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-snug);
   line-height: var(--leading-tight);
 }
 
-.phone-energy-now-lines {
-  display: grid;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
-  list-style: none;
-  padding: 0;
-}
-
-.phone-energy-now-lines li {
+.phone-energy-tile-value {
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
+  align-items: baseline;
+  white-space: nowrap;
 }
 
-.phone-energy-now-lines .num {
-  color: var(--color-text-primary);
+.phone-energy-tile-sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Akkugehäuse mit Pol neben dem Ladestand, gefüllt nach Ladestand. */
+.phone-energy-battery {
+  position: relative;
+  flex: none;
+  align-self: center;
+  margin-left: var(--space-2);
+  width: 28px;
+  height: 13px;
+  padding: 1.5px;
+  border: 1.5px solid var(--color-success);
+  border-radius: 3px;
+}
+
+.phone-energy-battery::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: -4.5px;
+  width: 2.5px;
+  height: 4px;
+  border-radius: 0 1px 1px 0;
+  background: var(--color-success);
+}
+
+.phone-energy-battery > span {
+  display: block;
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--color-success);
+}
+
+.phone-energy-hero + .phone-energy-section,
+.phone-energy-tiles + .phone-energy-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.phone-energy-hero + .phone-energy-section {
+  margin-top: 0;
 }
 
 /* ── Zeitraum ── */

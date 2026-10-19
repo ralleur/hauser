@@ -5,7 +5,7 @@ import { buildSetupHouseholdSuggestion } from '../config/setup-household.ts';
 import { parseHouseholdConfig } from '../config/household-config.ts';
 import { haToValue } from '../adapter/ha-entities.ts';
 import { catalogItemFromHaState } from '../adapter/capabilities.ts';
-import { buildRuntimeRooms, EMPTY_DEVICE_CONFIG, mergeCatalog, setDeviceVisibility } from '../state/device-config.ts';
+import { buildRuntimeRooms, countsForBulb, EMPTY_DEVICE_CONFIG, mergeCatalog, setDeviceVisibility } from '../state/device-config.ts';
 import { groupAgendaDays, isValidCalendarEvent, projectAmbientWeek, projectCalendarWeeks, type CalendarEvent } from '../state/calendar.ts';
 import type { RoomSeed } from '../state/app.svelte.ts';
 
@@ -17,6 +17,42 @@ import type { RoomSeed } from '../state/app.svelte.ts';
    aus jedem Home Assistant einen gültigen Haushalt macht; Optionslisten ohne
    Dubletten (sie werden zu Knöpfen mit dem Wert als Schlüssel); eindeutige
    Kachel-Ids je Raum. */
+
+describe('Stresshaus: Glühbirne im Gästezimmer (ralleur/hauser#32)', () => {
+  const home = hostileHomeWith({}, NOW);
+  const onState = new Map(home.states.map((s) => [s.entity_id, ['on', 'open', 'cleaning'].includes(String(s.state))]));
+  const ids = ['light.gaeste_decke', 'switch.gaeste_steckdose', 'switch.gaeste_wandschalter', 'cover.gaeste_rollo', 'vacuum.gaeste_sauger'];
+
+  it('bleibt nach der Einrichtung dunkel, obwohl Steckdose, Rollo und Sauger an sind', () => {
+    const suggestion = buildSetupHouseholdSuggestion(snapshotOf(home));
+    const room = suggestion.config.rooms.find((r) => r.id.startsWith('gast'));
+    expect(room).toBeDefined();
+    const counted = (room?.visibleEntities ?? []).filter((e) => ids.includes(e.entityId) && countsForBulb(e));
+    expect(counted.map((e) => e.entityId)).toEqual(['light.gaeste_decke']);
+  });
+
+  it('kennt die offene Zimmertür als Tür und das Fenster als Fenster (ralleur/hauser#33)', () => {
+    const suggestion = buildSetupHouseholdSuggestion(snapshotOf(home));
+    const room = suggestion.config.rooms.find((r) => r.id.startsWith('gast'));
+    const contacts = (room?.visibleEntities ?? []).filter((e) => e.role === 'window').map((e) => e.entityId);
+    expect(contacts.length).toBeGreaterThan(0);
+    const classes = new Map(home.states.map((s) => [s.entity_id, catalogItemFromHaState(s as never)?.deviceClass]));
+    expect(classes.get('binary_sensor.gaeste_tuer')).toBe('door');
+    expect(classes.get('binary_sensor.gaeste_fenster')).toBe('window');
+  });
+
+  it('bleibt auch in einem bestehenden Haushalt ohne gespeicherte Wahl dunkel', () => {
+    const catalog = mergeCatalog([], home.states
+      .map((s) => catalogItemFromHaState(s as never))
+      .filter((item): item is NonNullable<typeof item> => item !== null));
+    let config = EMPTY_DEVICE_CONFIG;
+    for (const id of ids) config = setDeviceVisibility(config, id, true, 'gaeste');
+    const [room] = buildRuntimeRooms([{ id: 'gaeste', name: 'Gästezimmer', presence: false, windowOpen: false, lights: [] }] as unknown as RoomSeed[], catalog, config);
+    const lit = room.lights.filter((d) => countsForBulb(d) && onState.get(d.entityId));
+    expect(lit).toEqual([]);
+    expect(room.lights.filter((d) => countsForBulb(d)).map((d) => d.entityId)).toEqual(['light.gaeste_decke']);
+  });
+});
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => 1000 + i * 7919);
 const NOW = new Date('2026-09-24T10:00:00+02:00');

@@ -10,7 +10,10 @@
 export const hud = $state({ active: false });
 export const simulator = $state({ active: false });
 
-const TAP_WINDOW_MS = 800;
+/* Abstand zwischen zwei Tipps, nicht Dauer der ganzen Reihe: fünf Tipps in
+   zusammen 800 ms gelangen mit der Maus kaum, der beworbene Simulator blieb
+   zu (Postfach, Cpt.Hardy 2026-10-06). */
+const TAP_GAP_MS = 600;
 const HUD_TAPS = 3;
 const SIMULATOR_TAPS = 5;
 
@@ -18,7 +21,7 @@ let taps: number[] = [];
 
 export function hudClockTap() {
   const now = Date.now();
-  taps = taps.filter((t) => now - t < TAP_WINDOW_MS);
+  if (taps.length && now - taps[taps.length - 1] >= TAP_GAP_MS) taps = [];
   taps.push(now);
   if (taps.length === HUD_TAPS) hud.active = !hud.active;
   if (taps.length >= SIMULATOR_TAPS) {

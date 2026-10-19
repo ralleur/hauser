@@ -6,9 +6,9 @@
   import { IS_DEMO } from '../demo/demo-mode.ts';
   import { clock } from '../state/clock.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
-  import { roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
+  import { roomOpenings, roomPresence, roomTemperature } from '../state/commands.ts';
   import { fmtTemp } from '../format.ts';
-  import { pluralCategory } from '../state/locale.svelte.ts';
+  import { openingsLabel } from '../state/open-label.ts';
   import { familyCalendar, refreshFamilyCalendar } from '../state/calendar.svelte.ts';
   import { projectAmbientWeek } from '../state/calendar.ts';
   import { reminders, refreshReminders } from '../state/reminders.svelte.ts';
@@ -321,15 +321,9 @@
      Sicherheitsstatus (docs/07). Die Sensormeldung erscheint NUR, wenn ein
      zugewiesener Sensor etwas meldet — kein „Alles ruhig" mehr im Ruhezustand. */
   const refTemp = $derived(roomTemperature('wohnzimmer'));
-  /* Plusamorm je Sprache: Deutsch hat zwei, Polnisch vier. */
-  const WINDOWS_OPEN = {
-    one: m.status_window_open_one, two: m.status_window_open_two,
-    few: m.status_window_open_few, many: m.status_window_open_many,
-    other: m.status_window_open_other,
-  };
-  const openCount = $derived(appState.rooms.filter((r) => roomWindowOpen(r.id, r.windowOpen)).length);
+  const openRooms = $derived(appState.rooms.map((r) => roomOpenings(r.id, r.windowOpen)));
   const safety = $derived(
-    openCount === 0 ? null : openCount === 1 ? m.phone_room_window_open() : WINDOWS_OPEN[pluralCategory(openCount)]({ count: openCount }));
+    openingsLabel(openRooms.filter((r) => r.window).length, openRooms.filter((r) => r.door).length) || null);
 
   /* Außentemperatur Köln (Open-Meteo): beim Mount holen und alle 15 min auffrischen. */
   $effect(() => {

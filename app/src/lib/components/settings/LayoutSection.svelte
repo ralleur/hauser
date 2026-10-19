@@ -2,10 +2,21 @@
   /* ── Darstellung · Layout & Bedienung ── */
   import Icon from '../Icon.svelte';
   import { layoutManager } from '../../state/layout-manager.svelte.ts';
+  import { appState } from '../../state/app.svelte.ts';
+  import { showScreen } from '../../state/nav.svelte.ts';
+  import { openRoomEdit } from '../../state/overlay.svelte.ts';
   import { widthPreset } from '../../state/layout-config.ts';
   import { settingsValues, setOffConfirmBefore } from '../../state/settings.svelte.ts';
   import { confirmThen, isConfirming } from '../../state/settings-actions.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
+
+  /* Ein Konfigurationsmodus (Owner 2026-10-19): Breite, Ansicht und Raster
+     stehen im Raum-Konfigurationsmodus auf der Startseite. */
+  function configureOnHome(): void {
+    const roomId = appState.currentRoom ?? appState.rooms[0]?.id;
+    showScreen('home');
+    if (roomId) openRoomEdit(roomId);
+  }
 
   const layoutSummary = $derived(
     `${layoutManager.applied.slots.length === 1 ? m.sys_one_surface() : m.sys_two_surfaces()} · ${m.sys_width_summary({ width: widthPreset(layoutManager.applied).label })}`,
@@ -19,7 +30,7 @@
       <span class="settings-row-label">{m.sys_control_surfaces()}</span>
       <span class="settings-row-sub">{layoutSummary}</span>
     </div>
-    <button class="secondary-btn pressable" type="button" onclick={() => layoutManager.show()}>{m.sys_configure()}</button>
+    <button class="secondary-btn pressable" type="button" onclick={configureOnHome}>{m.sys_configure()}</button>
   </div>
 
   <div class="settings-row" data-setting-id="layout-reset">

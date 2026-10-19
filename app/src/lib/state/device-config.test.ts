@@ -180,3 +180,28 @@ describe('device runtime projection', () => {
     expect(visible).toEqual([ids[1], ids[0]]);
   });
 });
+
+describe('Rollo-Kachel mit drei Ansichten (P29)', () => {
+  it('schaltet reihum: groß (Standard) → kompakt → alt → groß', async () => {
+    const { nextCoverTileMode } = await import('./device-config.ts');
+    expect(nextCoverTileMode(undefined)).toBe('compact');
+    expect(nextCoverTileMode('compact')).toBe('plain');
+    expect(nextCoverTileMode('plain')).toBe('large');
+  });
+
+  it('speichert nur Abweichungen vom Standard und liest sie wieder', async () => {
+    const { setDeviceCoverTile, parseDeviceConfig, EMPTY_DEVICE_CONFIG } = await import('./device-config.ts');
+    const compact = setDeviceCoverTile(EMPTY_DEVICE_CONFIG, 'cover.rollo', 'compact');
+    expect(compact.devices['cover.rollo']).toEqual({ coverTile: 'compact' });
+    expect(parseDeviceConfig(JSON.stringify(compact)).devices['cover.rollo']?.coverTile).toBe('compact');
+    expect(setDeviceCoverTile(compact, 'cover.rollo', 'large').devices['cover.rollo']).toEqual({});
+  });
+
+  it('verwirft fremde Werte', async () => {
+    const { parseDeviceConfig } = await import('./device-config.ts');
+    const raw = JSON.stringify({ version: 1, devices: { 'cover.a': { coverTile: 'riesig' }, 'cover.b': { coverTile: 'large' } } });
+    const parsed = parseDeviceConfig(raw);
+    expect(parsed.devices['cover.a']?.coverTile).toBeUndefined();
+    expect(parsed.devices['cover.b']?.coverTile).toBeUndefined();
+  });
+});

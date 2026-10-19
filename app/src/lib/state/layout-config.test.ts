@@ -15,6 +15,9 @@ import {
   setSlotRoom,
   setWidthPreset,
   type LayoutStorage,
+  panelSizeForPercent,
+  setHomeView,
+  widthPreset,
 } from './layout-config.ts';
 
 class MemoryStorage implements LayoutStorage {
@@ -57,6 +60,7 @@ describe('layout config persistence', () => {
       panelSize: 70,
       roomsPerRow: 2,
       roomsRows: 3,
+      roomsPerPageMax: 8,
       panelAutoHide: false,
       panelAutoHideSeconds: 30,
       homeView: 'fullscreen',
@@ -75,6 +79,10 @@ describe('layout config persistence', () => {
     const text = parseLayoutConfig(JSON.stringify({ ...base, roomsRows: '4', panelAutoHideSeconds: null }));
     expect([text.roomsRows, text.panelAutoHideSeconds]).toEqual([3, 30]);
     expect(setRoomsRows(DEFAULT_LAYOUT_CONFIG, 9).roomsRows).toBe(5);
+    // Obergrenze je Seite (#40): alter Stand ohne Feld 8, Unsinn wird 8, Riesen werden 16.
+    expect(legacy.roomsPerPageMax).toBe(8);
+    expect(parseLayoutConfig(JSON.stringify({ ...base, roomsPerPageMax: 'viele' })).roomsPerPageMax).toBe(8);
+    expect(parseLayoutConfig(JSON.stringify({ ...base, roomsPerPageMax: 1e9 })).roomsPerPageMax).toBe(16);
     const hidden = setPanelAutoHide(DEFAULT_LAYOUT_CONFIG, true, 2);
     expect([hidden.panelAutoHide, hidden.panelAutoHideSeconds]).toEqual([true, 5]);
     // Aus und wieder an behält die gewählte Zeit.
@@ -133,6 +141,7 @@ describe('layout config updates', () => {
       panelSize: 40,
       roomsPerRow: 2,
       roomsRows: 3,
+      roomsPerPageMax: 8,
       panelAutoHide: false,
       panelAutoHideSeconds: 30,
       homeView: 'fullscreen' as const,
@@ -153,5 +162,20 @@ describe('layout config updates', () => {
     expect(original).toEqual(DEFAULT_LAYOUT_CONFIG);
     expect(next).not.toBe(original);
     expect(next.slots[0]).not.toBe(original.slots[0]);
+  });
+});
+
+describe('Bildsteuerung und Breiten-Pille (Owner 2026-10-19)', () => {
+  it('kennt die Ansicht „image“ und fällt bei Unbekanntem auf Vollbild zurück', () => {
+    expect(setHomeView(DEFAULT_LAYOUT_CONFIG, 'image').homeView).toBe('image');
+    const raw = JSON.stringify({ ...DEFAULT_LAYOUT_CONFIG, homeView: 'kino' });
+    expect(parseLayoutConfig(raw).homeView).toBe('fullscreen');
+  });
+
+  it('rechnet den Anteil der Breite in die Größe zurück, mit Grenzen', () => {
+    const size = panelSizeForPercent(44);
+    expect(widthPreset({ ...DEFAULT_LAYOUT_CONFIG, panelSize: size }).totalPercent).toBe(44);
+    expect(panelSizeForPercent(5)).toBe(0);
+    expect(panelSizeForPercent(400)).toBe(100);
   });
 });

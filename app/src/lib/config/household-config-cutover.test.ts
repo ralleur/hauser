@@ -113,6 +113,7 @@ describe('active household runtime projection', () => {
     ]);
     expect(projected.ENERGY_SENSORS).toEqual({
       pv: null, load: [], producedToday: null, consumedToday: null, fedInToday: null, drawnToday: null,
+      batteryLevel: null, batteryPower: null,
     });
     expect(projected.SUN_ENTITY).toBe('sun.fixture_neutral_studio');
     expect(projected.ENABLED_MODULES).toEqual(['home', 'media']);

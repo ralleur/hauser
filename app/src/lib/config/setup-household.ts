@@ -1,4 +1,4 @@
-import { HOUSEHOLD_SCHEMA_VERSION } from './household-config.ts';
+import { HOUSEHOLD_SCHEMA_VERSION, batteryKeys } from './household-config.ts';
 import { HEATING_PLANT_NAME } from './heating-plant.ts';
 import { isForeignContact } from '../adapter/capabilities.ts';
 import type {
@@ -80,6 +80,7 @@ function cloneHouseholdConfig(config: HouseholdConfigV4): HouseholdConfigV4 {
           ? [...config.energy.sensors.productionPower]
           : config.energy.sensors.productionPower,
         consumptionPower: config.energy.sensors.consumptionPower.map((source) => ({ ...source })),
+        ...batteryKeys(config.energy.sensors),
       },
       kpis: { ...config.energy.kpis },
     },
@@ -354,6 +355,7 @@ export function buildSetupHouseholdSuggestion(
   // Rollen, die mehrfach im selben Raum auftreten dürfen (wie 'light'); alle
   // anderen sind Singleton pro Raum (z. B. genau ein Klima-/Kamera-Entity).
   const multiInstanceRoles = new Set<EntityRole>(['light', 'switch', 'cover']);
+  const bulbCandidateRoles = new Set<EntityRole>(['light', 'switch', 'cover', 'vacuum']);
   /* Eine Heizanlage (Wärmepumpe, Kessel) ist nicht die Heizung des Raums, in
      dem sie steht: Hauser setzte sonst ihren Ein/Aus-Knopf und ihre Vorlauf-
      temperatur auf die Raum-Kachel (Rückmeldung aus der App, 2026-09-24).
@@ -452,6 +454,9 @@ export function buildSetupHouseholdSuggestion(
           name: displayName(item.entry, item.state),
           entityId: item.entry.entity_id,
           role: item.role,
+          /* Nur echte Lampen zählen für die Glühbirne der Raumübersicht;
+             Steckdosen, Rollos und Saugroboter bleiben gelistet und steuerbar. */
+          ...(bulbCandidateRoles.has(item.role) ? { countsAsLight: item.role === 'light' } : {}),
         });
       }
       const roomId = uniqueSlug(roomName, 'room', usedRoomIds);

@@ -7,6 +7,7 @@ import phoneShell from '../shells/PhoneAppShell.svelte?raw';
 import type { EnergyView } from './energy.svelte.ts';
 import type { EnergyCurvePoint } from './energy-history.svelte.ts';
 import type { LoadBreakdown } from './energy-load.ts';
+import { energyLoadLabel } from './energy-load.ts';
 import { compareToYesterday, fmtPower, integrateLoad, projectPhoneEnergy } from './phone-energy.ts';
 
 const phoneShellCss = readFileSync(new URL('../../styles/phone-shell.css', import.meta.url), 'utf8');
@@ -17,6 +18,7 @@ const availableView: EnergyView = {
   pv: 3.2,
   load: 1.8,
   grid: 1.4,
+  battery: null,
   today: {
     produced: 12.4,
     consumed: 9.1,
@@ -34,14 +36,14 @@ const breakdown: LoadBreakdown = {
 };
 
 describe('phone energy projection (R37: a story behind the numbers)', () => {
-  it('leads with the power now, lists solar and grid as lines, and splits the period into lead and rest', () => {
+  it('leads with the power now, puts solar and grid in the grid below the house, and splits the period into lead and rest', () => {
     const model = projectPhoneEnergy(availableView, breakdown, undefined, { loadSourceCount: 1 });
 
     expect(model.status.kind).toBe('available');
     expect(model.now).toEqual({ label: 'Verbrauch jetzt', power: { value: '1,8', unit: 'kW' } });
-    expect(model.nowLines).toEqual([
-      { label: 'Solar', power: { value: '3,2', unit: 'kW' } },
-      { label: 'Einspeisung', power: { value: '1,4', unit: 'kW' } },
+    expect(model.tiles).toEqual([
+      { key: 'solar', label: 'Solar', value: '3,2', unit: 'kW', sub: 'heute 12,4 kWh', level: null },
+      { key: 'grid', label: 'Netz', value: '1,4', unit: 'kW', sub: 'Einspeisung', level: null },
     ]);
     expect(model.lead).toEqual({ label: 'Erzeugt', value: '12,4', unit: 'kWh' });
     expect(model.rest).toEqual([
@@ -59,17 +61,39 @@ describe('phone energy projection (R37: a story behind the numbers)', () => {
   it('calls several plugs measured devices, not the house load, and reads small power in watts', () => {
     const model = projectPhoneEnergy({ ...availableView, hasGeneration: false, pv: null, grid: null, load: 0.2 }, breakdown, undefined, { loadSourceCount: 3 });
     expect(model.now).toEqual({ label: 'Gemessene Geräte', power: { value: '200', unit: 'W' } });
-    // Ohne Erzeugung gibt es keine Netzaussage — und keinen „Netzfluss"-Satz.
-    expect(model.nowLines).toEqual([]);
+    // Ohne Erzeugung gibt es keine Netzaussage — und kein Raster unter dem Bild.
+    expect(model.tiles).toEqual([]);
     expect(fmtPower(0.05)).toEqual({ value: '50', unit: 'W' });
     expect(fmtPower(1)).toEqual({ value: '1,0', unit: 'kW' });
   });
 
-  it('names grid draw with its power and stays silent when the flow is balanced', () => {
-    expect(projectPhoneEnergy({ ...availableView, pv: 0.4, load: 1.9, grid: -1.5 }, breakdown).nowLines)
-      .toContainEqual({ label: 'Netzbezug', power: { value: '1,5', unit: 'kW' } });
-    expect(projectPhoneEnergy({ ...availableView, grid: 0.02 }, breakdown).nowLines.map((line) => line.label))
-      .toEqual(['Solar']);
+  it('names grid draw with its power and gives a balanced flow no direction', () => {
+    expect(projectPhoneEnergy({ ...availableView, pv: 0.4, load: 1.9, grid: -1.5 }, breakdown).tiles)
+      .toContainEqual({ key: 'grid', label: 'Netz', value: '1,5', unit: 'kW', sub: 'Netzbezug', level: null });
+    expect(projectPhoneEnergy({ ...availableView, grid: 0.02 }, breakdown).tiles.find((tile) => tile.key === 'grid'))
+      .toEqual({ key: 'grid', label: 'Netz', value: '0', unit: 'W', sub: null, level: null });
+  });
+
+  it('shows the home battery with its charge level and whether it charges, as HA signs battery power', () => {
+    const charging = projectPhoneEnergy({ ...availableView, battery: { level: 78.4, power: -2.5 } }, breakdown).tiles;
+    expect(charging.map((tile) => tile.key)).toEqual(['solar', 'battery', 'grid']);
+    expect(charging[1]).toEqual({ key: 'battery', label: 'Akku', value: '78', unit: '%', sub: 'lädt · 2,5 kW', level: 0.784 });
+    expect(projectPhoneEnergy({ ...availableView, battery: { level: 40, power: 0.6 } }, breakdown).tiles[1]?.sub)
+      .toBe('entlädt · 600 W');
+    // Ruhend oder ohne Leistungssensor: nur der Ladestand.
+    expect(projectPhoneEnergy({ ...availableView, battery: { level: 40, power: 0.01 } }, breakdown).tiles[1]?.sub).toBeNull();
+    // Ladestand gerade nicht erreichbar: ein Strich, kein erfundenes Gehäuse.
+    expect(projectPhoneEnergy({ ...availableView, battery: { level: null, power: null } }, breakdown).tiles[1])
+      .toEqual({ key: 'battery', label: 'Akku', value: '—', unit: '', sub: null, level: null });
+  });
+
+  it('names a consumer stored only by its entity id after Home Assistant, else readably', () => {
+    expect(energyLoadLabel('Kaffeemaschine', 'sensor.strom_kaffeemaschine_power', 'Kaffee Leistung')).toBe('Kaffeemaschine');
+    expect(energyLoadLabel('sensor.strom_server_power', 'sensor.strom_server_power', 'Server')).toBe('Server');
+    // Der Katalog fällt ohne friendly_name selbst auf die Kennung zurück.
+    expect(energyLoadLabel('sensor.strom_schreibtisch_links_power', 'sensor.strom_schreibtisch_links_power', 'sensor.strom_schreibtisch_links_power'))
+      .toBe('Strom schreibtisch links');
+    expect(energyLoadLabel('  ', 'sensor.0x00124b00c0ffee42_power', null)).toBe('0x00124b00c0ffee42');
   });
 
   it('distinguishes unconfigured from unavailable and shows nothing invented', () => {
@@ -79,6 +103,7 @@ describe('phone energy projection (R37: a story behind the numbers)', () => {
       pv: null,
       load: null,
       grid: null,
+      battery: null,
       today: { produced: null, consumed: null, fedIn: null, drawn: null },
     };
     const unconfigured = projectPhoneEnergy(absentView, { total: 0, segments: [] });
@@ -87,7 +112,7 @@ describe('phone energy projection (R37: a story behind the numbers)', () => {
     expect(unconfigured.status).toEqual({ kind: 'unconfigured', text: 'Keine Energie-Sensoren konfiguriert.' });
     expect(unavailable.status).toEqual({ kind: 'unavailable', text: 'Energie-Sensoren konfiguriert, aber aktuell nicht verfügbar.' });
     expect(unavailable.now).toBeNull();
-    expect(unavailable.nowLines).toEqual([]);
+    expect(unavailable.tiles).toEqual([]);
     expect(unavailable.lead).toBeNull();
     expect(unavailable.consumers).toEqual([]);
   });
@@ -119,7 +144,7 @@ describe('phone energy shell, source and accessibility boundaries', () => {
   it('binds only the shared read-only energy projections and keeps the period with the history, not the live value', () => {
     expect(phoneEnergy).toMatch(/energyView\(\)/);
     expect(phoneEnergy).toMatch(/energyPanelData\(e,\s*period,\s*'flow',\s*sums\)/);
-    expect(phoneEnergy).toMatch(/loadBreakdown\(\)/);
+    expect(phoneEnergy).toMatch(/loadBreakdown\(\(id\) => catalogNames\.get\(id\)/);
     expect(phoneEnergy).toMatch(/initEnergyHistory\(\)/);
     // Der Zeitraum steht unter „Jetzt", nicht darüber: die Auswahl gehört zur Auswertung.
     expect(phoneEnergy.indexOf('class="phone-energy-now"')).toBeLessThan(phoneEnergy.indexOf('class="phone-energy-periods"'));
@@ -129,8 +154,10 @@ describe('phone energy shell, source and accessibility boundaries', () => {
     expect(phoneEnergy).not.toContain('Netzrichtung');
     expect(phoneEnergy).not.toContain('phone_energy_available');
 
-    // Das Haus liegt blass unter den Zahlen (Owner-Wunsch 2026-09-21): vom
-    // Panel kommen nur die Bildadressen, nicht die Bühne mit Zetteln und Ankern.
+    // Das Haus steht groß oben (Owner 2026-10-19), nicht mehr blass dahinter:
+    // vom Panel kommen nur die Bildadressen, nicht die Bühne mit Zetteln und Ankern.
+    expect(phoneEnergy).toMatch(/<div class="phone-energy-hero"[\s\S]*<img src=\{heroUrl\}/);
+    expect(phoneShellCss).not.toContain('--phone-energy-hero');
     // Dazu die trübe Fassung bei Wolken (wie die iOS-App).
     expect(phoneEnergy).toMatch(/import \{ energyAssetUrl, energyOvercastUrl, exteriorAssetUrl \} from '\.\.\/energy-hero-assets\.ts'/);
 

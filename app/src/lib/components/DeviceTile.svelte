@@ -7,7 +7,8 @@
      im Icon-Feld; info/temp/media tragen zusätzlich eine kleine Wert-Zeile. */
   import Icon from './Icon.svelte';
   import { fittext } from '../actions/fittext.ts';
-  import { mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile, toggleDevice } from '../state/commands.ts';
+  import { coverCommand, mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile } from '../state/commands.ts';
+  import { coverHasTileButtons, tapDevice, tapToggles } from '../state/device-tap.ts';
   import { pulse } from '../actions/pulse.ts';
   import { longpress } from '../actions/longpress.ts';
   import { openDeviceDetail } from '../state/overlay.svelte.ts';
@@ -30,10 +31,7 @@
      Rollo fährt auf oder zu, Sauger und Mäher starten oder kehren heim, der
      Taster drückt. Schloss, Ventil und Alarm öffnen bewusst nur das Detail —
      ein versehentlicher Tap darf keine Tür entriegeln. */
-  const toggles = $derived(
-    category === 'light' || category === 'switch' || category === 'fan' || category === 'humidifier'
-    || category === 'cover' || category === 'vacuum' || category === 'mower' || category === 'button',
-  );
+  const toggles = $derived(tapToggles(device));
 
   const cur = $derived(mergedDevice(roomId, device));
   const pending = $derived(devicePending(device.entityId));
@@ -114,9 +112,23 @@
      Kachel leer (R3). Der Name bleibt als Vorlesetext an der Kachel. */
   const valueOnly = $derived(category === 'info' && !device.showName && stateLine !== null);
 
+  /* Rollo mit Tasten auf der Kachel (`ralleur/hauser#39`, Owner 2026-10-19):
+     drei Ansichten, im Gerätedetail reihum umschaltbar. „large“ (Standard)
+     ist eine Kachel breit und zwei hoch, Hoch und Runter untereinander, Stopp
+     daneben; „compact“ bleibt eine normale Kachel, die Tasten ersetzen Name
+     und Zustand; „plain“ ist die alte Kachel, die per Tipp auf- und zufährt.
+     Symbol (und Name) öffnen das Detail mit dem Positionsbalken. */
+  const coverValue = $derived(category === 'cover' ? cur as CoverValue | undefined : undefined);
+  const coverMode = $derived(coverHasTileButtons(coverValue, device) ? device.coverTile ?? 'large' : 'plain');
+  const coverLine = $derived.by(() => {
+    if (!coverValue) return '';
+    const label = coverStateLabel(coverValue.on, coverValue.moving);
+    return coverValue.supportsPosition ? `${label} · ${Math.round(coverValue.position)} %` : label;
+  });
+
+  /* Dieselbe Regel wie ein Tipp aufs Gerät im Raumbild (device-tap.ts). */
   function onTap() {
-    if (toggles) toggleDevice(roomId, device);
-    else openDeviceDetail(roomId, device.id);
+    tapDevice(roomId, device);
   }
 
   /* Widerspruch (docs/02): on-Toggle → Wobble (zurückspringen) — nur bei
@@ -147,6 +159,40 @@
 <!-- Gesamte Kachel = Button. Schaltbare Kategorien spiegeln an/aus über
      aria-pressed; nicht-schaltbare öffnen das Detail (kein pressed-State).
      Icon dekorativ (aria-hidden), der Name trägt die Beschriftung. -->
+{#if coverMode !== 'plain' && coverValue}
+<div class="light-tile cover-tile" class:is-large={coverMode === 'large'} class:is-compact={coverMode === 'compact'}
+     class:is-on={isOn} class:has-stop={coverValue.supportsStop} role="group" aria-label={device.name}>
+  <button class="cover-tile-main pressable" type="button"
+          aria-label={coverMode === 'compact' ? `${device.name}: ${coverLine}` : undefined}
+          use:longpress={{ enabled: true, onLongPress: () => openDeviceDetail(roomId, device.id) }}
+          onclick={() => openDeviceDetail(roomId, device.id)}>
+    <span class="light-tile-icon" aria-hidden="true">
+      <Icon name={device.icon ?? 'i-bulb'} />
+      {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
+    </span>
+    {#if coverMode === 'large'}
+      <span class="light-tile-label">
+        <span class="light-tile-name" use:fittext={{ text: device.name }}>{device.name}</span>
+        <span class="light-tile-state num">{coverLine}</span>
+      </span>
+    {/if}
+  </button>
+  {#if coverValue.supportsOpen}
+    <button class="cover-tile-btn is-up pressable" type="button" aria-label={m.dev_open()}
+            class:is-active={coverValue.moving === 'opening'}
+            onclick={() => coverCommand(device.entityId, 'cover', 'open')}><Icon name="i-arrow-up" /></button>
+  {/if}
+  {#if coverValue.supportsStop}
+    <button class="cover-tile-btn is-stop pressable" type="button" aria-label={m.dev_stop()}
+            onclick={() => coverCommand(device.entityId, 'cover', 'stop')}><Icon name="i-stop" /></button>
+  {/if}
+  {#if coverValue.supportsClose}
+    <button class="cover-tile-btn is-down pressable" type="button" aria-label={m.dev_close()}
+            class:is-active={coverValue.moving === 'closing'}
+            onclick={() => coverCommand(device.entityId, 'cover', 'close')}><Icon name="i-arrow-down" /></button>
+  {/if}
+</div>
+{:else}
 <button class="light-tile pressable" type="button"
         class:is-on={isOn} class:is-value-only={valueOnly} aria-pressed={toggles ? isOn : undefined}
         aria-label={valueOnly ? `${device.name}: ${stateLine}` : undefined}
@@ -170,3 +216,4 @@
     {/if}
   </span>
 </button>
+{/if}

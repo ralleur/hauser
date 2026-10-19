@@ -1196,6 +1196,73 @@ button.security-bar {
   text-overflow: ellipsis;
 }
 
+/* Rollo mit Tasten auf der Kachel (P29, `ralleur/hauser#39`). Zwei
+   Ansichten mit Tasten, die alte Kachel bleibt die dritte:
+   - groß: eine Kachel breit, zwei hoch; oben Symbol, Name und Zustand,
+     darunter Hoch und Runter untereinander, Stopp daneben;
+   - kompakt: eine normale Kachel, die Tasten ersetzen Name und Zustand.
+   Die Richtung, in die das Rollo gerade fährt, trägt den An-Akzent. */
+.light-tile.cover-tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1);
+}
+.light-tile.cover-tile.is-large {
+  grid-row: span 2;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto 1fr 1fr;
+  grid-template-areas: "main main" "up stop" "down stop";
+  align-items: stretch;
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+.light-tile.cover-tile.is-large:not(.has-stop) {
+  grid-template-columns: 1fr;
+  grid-template-areas: "main" "up" "down";
+}
+.light-tile.cover-tile.is-compact {
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  grid-template-areas: "main up stop down";
+  align-items: center;
+}
+.cover-tile-main {
+  grid-area: main;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+}
+.cover-tile.is-compact .cover-tile-main { padding: 0 var(--space-1) 0 var(--space-2); }
+.cover-tile-btn {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-1);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out);
+}
+.cover-tile-btn.is-up { grid-area: up; }
+.cover-tile-btn.is-stop { grid-area: stop; }
+.cover-tile-btn.is-down { grid-area: down; }
+.cover-tile.is-large .cover-tile-btn .icon { width: var(--icon-md); height: var(--icon-md); }
+.cover-tile-btn .icon { width: var(--icon-sm); height: var(--icon-sm); }
+.cover-tile-btn.is-active {
+  background: var(--accent-light-on-fill);
+  border-color: var(--accent-light-on-border);
+  color: var(--accent-light-on-icon);
+}
+.cover-tile-main:focus-visible,
+.cover-tile-btn:focus-visible {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+
 /* Sensor-Kachel ohne Namen: der Messwert ist die Beschriftung. */
 .light-tile-value {
   min-width: 0;
@@ -4247,6 +4314,13 @@ button.security-bar {
   line-height: 1.5;
   color: var(--color-text-secondary);
 }
+/* Bekannte Jellyfin-Adresse in der Anmeldekarte: wohin die Anmeldung geht. */
+.login-address {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
 .login-error {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
@@ -4726,11 +4800,20 @@ select optgroup {
   background: color-mix(in srgb, var(--color-accent-warm) 10%, var(--color-surface-2));
 }
 .re-light-choice.is-placed .re-icon { color: var(--color-accent-warm); }
-.re-immersion-preview {
+/* Bühne des Editors: Bild und Zonen liegen deckungsgleich übereinander. Die
+   Zonen sind Geschwister des Bildknopfs, damit die Anker keine Knöpfe im
+   Knopf sind; Klicks neben den Ankern fallen durch auf das Bild. */
+.re-immersion-stage {
   position: relative;
   width: min(100%, calc((100dvh - var(--re-immersion-chrome)) * 212 / 150));
   margin-inline: auto;
   aspect-ratio: 212 / 150;
+}
+.re-immersion-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -4740,20 +4823,96 @@ select optgroup {
   cursor: crosshair;
 }
 .re-immersion-preview:disabled { cursor: default; }
-.re-light-marker {
+.re-light-zones {
   position: absolute;
-  width: var(--touch-min);
-  height: var(--touch-min);
-  border: 2px solid var(--color-text-on-accent);
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--color-accent-warm) 72%, transparent);
-  box-shadow: var(--elevation-card-shadow);
-  transform: translate(-50%, -50%);
+  inset: 0;
   pointer-events: none;
 }
-.re-light-marker.is-selected {
+/* Die Zone in ihrer echten Größe: halbtransparent, damit das Bild darunter
+   sichtbar bleibt; die gewählte trägt den kräftigeren Rand. */
+.re-light-zone {
+  position: absolute;
+  translate: -50% -50%;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent-warm) 80%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
+}
+.re-light-zone.is-selected {
+  border: 2px solid var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 34%, transparent);
+}
+/* Das gedachte Rechteck um die Zone, an dessen Ecken die Anker sitzen. */
+.re-light-zone.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px dashed color-mix(in srgb, #fff 75%, transparent);
+  pointer-events: none;
+}
+/* Gerät ohne Licht: ein Punkt in Fingergröße, der die Stelle markiert. */
+.re-device-point {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  translate: -50% -50%;
+  border: 2px solid color-mix(in srgb, var(--color-accent-warm) 80%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-accent-warm) 28%, transparent);
+}
+.re-device-point.is-selected {
+  border-color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-accent-warm) 45%, transparent);
+}
+.re-light-zone-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  translate: -50% -50%;
+  border-radius: var(--radius-full);
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--color-accent-warm), 0 1px 3px rgb(0 0 0 / 0.4);
+}
+/* Anker: sichtbar klein, zu greifen in Fingergröße (::before). */
+.re-zone-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  translate: -50% -50%;
+  border: 2px solid var(--color-accent-warm);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: nwse-resize;
+}
+.re-zone-handle::before {
+  content: '';
+  position: absolute;
+  inset: calc((var(--touch-min) - 16px) / -2);
+}
+.re-zone-handle[data-corner='nw'] { left: 0; top: 0; }
+.re-zone-handle[data-corner='ne'] { left: 100%; top: 0; cursor: nesw-resize; }
+.re-zone-handle[data-corner='se'] { left: 100%; top: 100%; }
+.re-zone-handle[data-corner='sw'] { left: 0; top: 100%; cursor: nesw-resize; }
+.re-zone-rotate {
+  left: 50%;
+  top: -28px;
+  border-radius: var(--radius-full);
+  cursor: grab;
+}
+.re-zone-rotate:active { cursor: grabbing; }
+.re-zone-rotate-stem {
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  width: 2px;
+  height: 28px;
+  translate: -50% 0;
   background: var(--color-accent-warm);
-  border-color: var(--color-text-primary);
 }
 .re-radius {
   display: flex;

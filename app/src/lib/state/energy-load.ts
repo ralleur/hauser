@@ -16,6 +16,24 @@ export interface LoadInput {
   group?: string;
 }
 
+/* Ein Verbrauchername, der nur die Kennung ist („sensor.strom_server_power“),
+   steht in älteren Ständen, die ohne Katalognamen gespeichert wurden. Die
+   Anzeige nimmt dann den Namen aus Home Assistant und sonst eine lesbare Form
+   der Kennung — der gespeicherte Stand bleibt, wie er ist. */
+const ENTITY_ID_SHAPE = /^[a-z_]+\.[a-z0-9_]+$/;
+
+export function energyLoadLabel(stored: string, entityId: string, friendlyName?: string | null): string {
+  const name = stored.trim();
+  if (name && name !== entityId && !ENTITY_ID_SHAPE.test(name)) return name;
+  const friendly = friendlyName?.trim();
+  if (friendly && friendly !== entityId && !ENTITY_ID_SHAPE.test(friendly)) return friendly;
+  const object = entityId.slice(entityId.indexOf('.') + 1)
+    .replace(/_(power|leistung|watt|w)$/, '')
+    .replace(/_+/g, ' ')
+    .trim();
+  return object ? object.charAt(0).toLocaleUpperCase() + object.slice(1) : entityId;
+}
+
 export interface LoadSegment {
   /** stabiler Schlüssel fürs `{#each}` (Gruppenname bzw. Label) */
   key: string;

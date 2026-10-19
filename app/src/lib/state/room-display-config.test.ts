@@ -13,6 +13,16 @@ describe('Raumanzeige: Kameras im geteilten Bild', () => {
   });
 });
 
+describe('Temperaturregler im Klima-Overlay', () => {
+  it('liest Plus/Minus und stehend, Standard und Fremdes bleiben ohne Eintrag', () => {
+    const parsed = parseRoomDisplayConfig(JSON.stringify({
+      version: 1,
+      rooms: { bad: { climateControl: 'stepper' }, buro: { climateControl: 'vertical' }, flur: { climateControl: 'ticks' }, hwr: { climateControl: 42 } },
+    }));
+    expect(parsed.rooms).toEqual({ bad: { climateControl: 'stepper' }, buro: { climateControl: 'vertical' } });
+  });
+});
+
 describe('Klimagerät ausblenden', () => {
   it('liest den Schalter und verwirft fremde Werte', () => {
     const parsed = parseRoomDisplayConfig(JSON.stringify({

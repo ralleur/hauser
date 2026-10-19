@@ -1,12 +1,15 @@
 import { sharedStorage } from './shared-config.ts';
+import { normalizeRoomsPerPage, PANEL_ROOMS_PER_PAGE_DEFAULT } from './panel-room-pages.ts';
 
 import { m } from '../../paraglide/messages.js';
 export type LayoutSlotId = 'slot-1' | 'slot-2';
 export type WidthPresetId = 'compact' | 'balanced' | 'wide';
 /* `fullscreen`: ein Raumbild füllt die Bühne, die Raumauswahl sitzt in der
    Kontrollfläche. `rooms`: alle Räume als Kacheln neben der Kontrollfläche,
-   die dann ganz den Szenen und Geräten gehört. */
-export type HomeViewId = 'fullscreen' | 'rooms';
+   die dann ganz den Szenen und Geräten gehört. `image` (Bildsteuerung, Owner
+   2026-10-19): nur das Raumbild, ohne Kontrollfläche; bedient wird über die
+   Geräte im Bild, die Fläche kommt nur im Konfigurationsmodus. */
+export type HomeViewId = 'fullscreen' | 'rooms' | 'image';
 
 export interface LayoutSlot {
   id: LayoutSlotId;
@@ -26,6 +29,9 @@ export interface LayoutConfig {
   /* „Alle Räume“: so viele Kachelzeilen stehen auf einmal im Bild, der Rest
      scrollt — wie am Telefon (Owner-Wunsch 2026-09-27). */
   roomsRows: number;
+  /* Vollbild: höchstens so viele Räume je Seite der Raumauswahl; die Spalten
+     folgen der Zahl (`ralleur/hauser#40`, Owner 2026-10-19). */
+  roomsPerPageMax: number;
   /* Die Kontrollfläche blendet sich nach so vielen Sekunden ohne Berührung
      aus; die nächste Berührung holt sie zurück. */
   panelAutoHide: boolean;
@@ -62,6 +68,7 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   panelSize: 15,
   roomsPerRow: 2,
   roomsRows: 3,
+  roomsPerPageMax: PANEL_ROOMS_PER_PAGE_DEFAULT,
   panelAutoHide: false,
   panelAutoHideSeconds: 30,
   homeView: 'fullscreen',
@@ -79,6 +86,7 @@ export function cloneLayoutConfig(config: LayoutConfig): LayoutConfig {
     panelSize: normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset)),
     roomsPerRow: normalizeRoomsPerRow(config.roomsPerRow ?? DEFAULT_LAYOUT_CONFIG.roomsPerRow),
     roomsRows: normalizeRoomsRows(config.roomsRows),
+    roomsPerPageMax: normalizeRoomsPerPage(config.roomsPerPageMax),
     panelAutoHide: config.panelAutoHide === true,
     panelAutoHideSeconds: normalizeAutoHideSeconds(config.panelAutoHideSeconds),
     homeView: normalizeHomeView(config.homeView),
@@ -117,6 +125,7 @@ export function parseLayoutConfig(raw: string | null): LayoutConfig {
         ? candidate.roomsPerRow
         : DEFAULT_LAYOUT_CONFIG.roomsPerRow),
       roomsRows: normalizeRoomsRows(candidate.roomsRows),
+      roomsPerPageMax: normalizeRoomsPerPage(candidate.roomsPerPageMax),
       panelAutoHide: candidate.panelAutoHide === true,
       panelAutoHideSeconds: normalizeAutoHideSeconds(candidate.panelAutoHideSeconds),
       homeView: normalizeHomeView(candidate.homeView),
@@ -179,6 +188,12 @@ export function panelSizeOf(config: LayoutConfig): number {
   return normalizePanelSize(config.panelSize ?? panelSizeForPreset(config.widthPreset));
 }
 
+/** Umkehrung von `widthPreset`: welche Größe ergibt diesen Anteil der Breite?
+    Für das Ziehen an der Pille neben der Kontrollfläche. */
+export function panelSizeForPercent(percent: number): number {
+  return normalizePanelSize((percent - 28) / 0.4);
+}
+
 export function widthPreset(config: LayoutConfig): WidthPreset {
   const size = panelSizeOf(config);
   const totalPercent = 28 + size * 0.4;
@@ -210,6 +225,12 @@ export function setRoomsPerRow(config: LayoutConfig, roomsPerRow: number): Layou
 export function setRoomsRows(config: LayoutConfig, roomsRows: number): LayoutConfig {
   const next = cloneLayoutConfig(config);
   next.roomsRows = normalizeRoomsRows(roomsRows);
+  return next;
+}
+
+export function setRoomsPerPageMax(config: LayoutConfig, value: number): LayoutConfig {
+  const next = cloneLayoutConfig(config);
+  next.roomsPerPageMax = normalizeRoomsPerPage(value);
   return next;
 }
 
@@ -275,7 +296,7 @@ function normalizeAutoHideSeconds(value: unknown): number {
 }
 
 function normalizeHomeView(value: unknown): HomeViewId {
-  return value === 'rooms' ? 'rooms' : 'fullscreen';
+  return value === 'rooms' || value === 'image' ? value : 'fullscreen';
 }
 
 function isRoomId(value: unknown): value is string {

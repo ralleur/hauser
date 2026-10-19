@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.46.0 - 2026-10-19
+
+- A glance: the room lightbulb only counts lamps; doors and windows are told
+  apart; a notification when a newer Hauser version is waiting.
+- Touch: up, stop and down right on the blind's tile; the temperature control
+  switches between tick slider, plus and minus, and an upright slider.
+- Room: the panel's room picker shows up to eight rooms per page by default.
+- Hauser speaks Spanish.
+- The library asks for the Jellyfin address when none is set; the hidden
+  simulator opens again with five relaxed taps on the clock.
+- A glance: room cards in **All rooms** and on the phone show the room
+  temperature, following the room's **Show temperature** setting.
+- Room: lamp zones show their size and can be stretched into an ellipse and
+  rotated to fit a lampshade.
+- Room: every device can be placed on the room image and is controlled by
+  tapping it there, just like its tile.
+- Room: one configuration mode with width, view and grid in place; new
+  **Image control** view that is used only through devices on the image.
+- Energy on the phone: large house picture with solar, battery and grid
+  below it; a home battery can be assigned, and consumers saved by entity ID
+  show their names.
+
 ## 0.45.0 - 2026-10-15
 
 - Room on the phone: an eye button hides the controls and leaves only the

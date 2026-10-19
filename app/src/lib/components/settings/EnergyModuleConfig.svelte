@@ -3,7 +3,7 @@
   /* Was in dieser Sitzung gespeichert wurde. `ENERGY_SENSORS` kennt den neuen
      Stand erst nach dem Neuladen — wer die Sektion verließ und zurückkam, sah
      sonst wieder die alte Auswahl und hielt das Speichern für wirkungslos. */
-  let savedSelection: { production: string[]; consumption: string[] } | null = null;
+  let savedSelection: { production: string[]; consumption: string[]; batteryLevel: string | null; batteryPower: string | null } | null = null;
 </script>
 
 <script lang="ts">
@@ -30,6 +30,14 @@
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
 
+  /* Ladestand über die Geräteklasse, nie über Stichworte im Namen. */
+  const batteryEntities = $derived<PowerEntity[]>(
+    deviceManager.catalog
+      .filter((item) => item.domain === 'sensor' && item.deviceClass === 'battery')
+      .map((item) => ({ entityId: item.entityId, name: item.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
+
   function isPower(deviceClass?: string | null, unit?: string | null): boolean {
     if (deviceClass === 'power') return true;
     const value = (unit ?? '').trim().toLowerCase();
@@ -44,6 +52,8 @@
   const configured = savedSelection !== null || storedConsumption.size > 0 || Boolean(ENERGY_SENSORS.pv);
 
   let production = $state(new Set(savedSelection?.production ?? energyRefIds(ENERGY_SENSORS.pv)));
+  let batteryLevel = $state(savedSelection ? savedSelection.batteryLevel : energyRefIds(ENERGY_SENSORS.batteryLevel)[0] ?? null);
+  let batteryPower = $state(savedSelection ? savedSelection.batteryPower : energyRefIds(ENERGY_SENSORS.batteryPower)[0] ?? null);
   let consumption = $state(storedConsumption);
   let busy = $state(false);
   let result = $state<'saved' | 'failed' | 'too-many' | null>(null);
@@ -83,7 +93,7 @@
     busy = true;
     result = null;
     const selected = powerEntities
-      .filter((entity) => consumption.has(entity.entityId) && !production.has(entity.entityId))
+      .filter((entity) => consumption.has(entity.entityId) && !production.has(entity.entityId) && entity.entityId !== batteryPower)
       .map((entity) => ({ entityId: entity.entityId, name: entity.name }));
     const producers = powerEntities.filter((entity) => production.has(entity.entityId)).map((entity) => entity.entityId);
     try {
@@ -99,7 +109,11 @@
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'If-Match': etag },
-        body: JSON.stringify({ production: producers.length === 0 ? null : producers.length === 1 ? producers[0] : producers, consumption: selected }),
+        body: JSON.stringify({
+          production: producers.length === 0 ? null : producers.length === 1 ? producers[0] : producers,
+          consumption: selected,
+          battery: { level: batteryLevel, power: batteryPower },
+        }),
       });
       if (!response.ok) {
         /* Der Server kennt seine Grenze; die Oberfläche soll sie nennen statt
@@ -112,7 +126,7 @@
         }
         throw new Error('ENERGY_WRITE_FAILED');
       }
-      savedSelection = { production: producers, consumption: selected.map((entity) => entity.entityId) };
+      savedSelection = { production: producers, consumption: selected.map((entity) => entity.entityId), batteryLevel, batteryPower };
       /* Die Energie-Seite liest ihre Sensoren beim Start — wie beim
          Modulschalter sagt der Hinweis oben, dass ein Neuladen ansteht. */
       settingsUi.needsReload = true;
@@ -144,6 +158,41 @@
         </span>
       </label>
     {/each}
+  </div>
+</div>
+
+<div class="settings-row is-stacked" data-setting-id="energy-battery">
+  <div class="settings-row-text">
+    <span class="settings-row-label">{m.sys_energy_battery()}</span>
+    <span class="settings-row-sub">{m.sys_energy_battery_hint()}</span>
+  </div>
+  <div class="settings-form-grid">
+    <label class="energy-battery-field">
+      <span>{m.sys_energy_battery_level()}</span>
+      <select class="settings-input" value={batteryLevel ?? ''}
+              onchange={(event) => { batteryLevel = event.currentTarget.value || null; result = null; }}>
+        <option value="">{m.sys_energy_battery_none()}</option>
+        {#if batteryLevel && !batteryEntities.some((entity) => entity.entityId === batteryLevel)}
+          <option value={batteryLevel}>{batteryLevel}</option>
+        {/if}
+        {#each batteryEntities as entity (entity.entityId)}
+          <option value={entity.entityId}>{entity.name} · {entity.entityId}</option>
+        {/each}
+      </select>
+    </label>
+    <label class="energy-battery-field">
+      <span>{m.sys_energy_battery_power()}</span>
+      <select class="settings-input" value={batteryPower ?? ''} disabled={!batteryLevel}
+              onchange={(event) => { batteryPower = event.currentTarget.value || null; result = null; }}>
+        <option value="">{m.sys_energy_battery_none()}</option>
+        {#if batteryPower && !powerEntities.some((entity) => entity.entityId === batteryPower)}
+          <option value={batteryPower}>{batteryPower}</option>
+        {/if}
+        {#each powerEntities as entity (entity.entityId)}
+          <option value={entity.entityId}>{entity.name} · {entity.entityId}</option>
+        {/each}
+      </select>
+    </label>
   </div>
 </div>
 
@@ -215,6 +264,14 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
+  }
+
+  .energy-battery-field {
+    display: grid;
+    gap: var(--space-1);
+    min-width: 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
   }
 
   .energy-entity small {

@@ -170,6 +170,7 @@ function projectLight(entity: VisibleEntityConfig): LightSeed {
     ...(metadata.unit === undefined ? {} : { unit: metadata.unit }),
     ...(metadata.deviceClass === undefined ? {} : { deviceClass: metadata.deviceClass }),
     ...(metadata.icon === undefined ? {} : { icon: metadata.icon }),
+    ...(entity.countsAsLight === undefined ? {} : { countsAsLight: entity.countsAsLight }),
   };
 }
 
@@ -279,6 +280,8 @@ function projectEnergy(model: HouseholdRuntimeModel): EnergySensors {
     consumedToday: energy?.kpis.consumedToday ?? null,
     fedInToday: energy?.kpis.fedInToday ?? null,
     drawnToday: energy?.kpis.drawnToday ?? null,
+    batteryLevel: energy?.sensors.batteryLevel ?? null,
+    batteryPower: energy?.sensors.batteryPower ?? null,
   };
 }
 

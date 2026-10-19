@@ -27,6 +27,18 @@ export interface PhoneEnergyLine {
   power: PhonePower;
 }
 
+/* Ein Feld im Raster unter dem Hausbild: Sonne, Akku oder Netz. Nur was das
+   Haus wirklich misst, steht da; Farbe trägt die Bedeutung, kein Symbol. */
+export interface PhoneEnergyTile {
+  key: 'solar' | 'battery' | 'grid';
+  label: string;
+  value: string;
+  unit: string;
+  sub: string | null;
+  /** Akku: Ladestand 0…1 für das Gehäuse, sonst null. */
+  level: number | null;
+}
+
 export interface PhoneEnergyConsumer {
   key: string;
   label: string;
@@ -50,8 +62,8 @@ export interface PhoneEnergyModel {
   };
   /** Der Hauptwert: Leistung jetzt. null, wenn nicht messbar. */
   now: PhoneEnergyLine | null;
-  /** Solar, Netzbezug oder Einspeisung — nur was das Haus wirklich misst. */
-  nowLines: PhoneEnergyLine[];
+  /** Sonne, Akku und Netz unter dem Hausbild — nur was das Haus wirklich misst. */
+  tiles: PhoneEnergyTile[];
   lead: PhoneEnergyMetric | null;
   rest: PhoneEnergyMetric[];
   hint: string | null;
@@ -74,6 +86,49 @@ export function fmtPower(kw: number): PhonePower {
     return { value: Math.round(kw * 1000).toLocaleString(intlLocale()), unit: 'W' };
   }
   return { value: fmtKw(kw), unit: 'kW' };
+}
+
+function powerTile(key: 'solar' | 'grid', label: string, kw: number, sub: string | null): PhoneEnergyTile {
+  const power = fmtPower(kw);
+  return { key, label, value: power.value, unit: power.unit, sub, level: null };
+}
+
+export function projectTiles(view: EnergyView): PhoneEnergyTile[] {
+  const tiles: PhoneEnergyTile[] = [];
+  if (view.hasGeneration && view.pv !== null) {
+    const produced = view.today.produced;
+    tiles.push(powerTile('solar', m.energy_solar(), view.pv,
+      produced === null ? null : m.phone_energy_solar_today({ kwh: fmtKw(produced) })));
+  }
+  if (view.battery) {
+    const { level, power } = view.battery;
+    /* Unter 50 W ruht der Akku — „lädt · 0 W“ wäre Rauschen. */
+    const sub = power === null || Math.abs(power) < 0.05
+      ? null
+      : power < 0
+        ? m.phone_energy_battery_charging({ power: formatPower(-power) })
+        : m.phone_energy_battery_discharging({ power: formatPower(power) });
+    tiles.push({
+      key: 'battery',
+      label: m.phone_energy_battery(),
+      value: level === null ? '—' : Math.round(level).toLocaleString(intlLocale()),
+      unit: level === null ? '' : '%',
+      sub,
+      level: level === null ? null : level / 100,
+    });
+  }
+  /* Netz nur, wenn es aus PV und Last folgt — ohne Erzeugung gibt es keine
+     Netzaussage. Ein ausgeglichener Fluss steht als 0 W ohne Richtung. */
+  if (view.grid !== null) {
+    const sub = view.grid < -0.05 ? m.energy_grid_import() : view.grid > 0.05 ? m.energy_feed_in() : null;
+    tiles.push(powerTile('grid', m.energy_grid(), Math.abs(view.grid) < 0.05 ? 0 : Math.abs(view.grid), sub));
+  }
+  return tiles;
+}
+
+function formatPower(kw: number): string {
+  const power = fmtPower(kw);
+  return `${power.value} ${power.unit}`;
 }
 
 function projectMetric(metric: EnergyMetric): PhoneEnergyMetric {
@@ -124,19 +179,14 @@ export function projectPhoneEnergy(
     label: sources > 1 ? m.phone_energy_devices_label() : m.phone_energy_now_label(),
     power: fmtPower(view.load),
   };
-  const nowLines: PhoneEnergyLine[] = [];
-  if (view.hasGeneration && view.pv !== null) nowLines.push({ label: m.energy_solar(), power: fmtPower(view.pv) });
-  /* Netz nur, wenn es aus PV und Last folgt — ohne Erzeugung gibt es keine
-     Netzaussage, und ein ausgeglichener Fluss ist keine Zeile wert. */
-  if (view.grid !== null && view.grid < -0.05) nowLines.push({ label: m.energy_grid_import(), power: fmtPower(-view.grid) });
-  else if (view.grid !== null && view.grid > 0.05) nowLines.push({ label: m.energy_feed_in(), power: fmtPower(view.grid) });
+  const tiles = projectTiles(view);
 
   const kpis = panel.kpis.map(projectMetric);
 
   return {
     status,
     now,
-    nowLines,
+    tiles,
     lead: kpis[0] ?? null,
     rest: kpis.slice(1),
     hint: panel.hint,

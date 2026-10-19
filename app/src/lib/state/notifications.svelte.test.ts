@@ -129,3 +129,20 @@ describe('NotificationCenter — Persistenz', () => {
     expect(center.items.map((item) => item.dedupeKey)).toEqual(['laundry:washer:done']);
   });
 });
+
+describe('Update-Hinweis (P28)', () => {
+  it('erscheint einmal je Fassung, bleibt weggedrückt und geht nach dem Update', async () => {
+    let center = await freshCenter();
+    center.syncUpdate('0.48.0');
+    center.syncUpdate('0.48.0');
+    expect(center.items.filter((item) => item.source === 'hauser-update')).toHaveLength(1);
+    center.dismiss('hauser-update:0.48.0');
+    center = await freshCenter();
+    center.syncUpdate('0.48.0');
+    expect(center.items.some((item) => item.source === 'hauser-update')).toBe(false);
+    center.syncUpdate('0.49.0');
+    expect(center.items.find((item) => item.source === 'hauser-update')?.dedupeKey).toBe('hauser-update:0.49.0');
+    center.syncUpdate(null);
+    expect(center.items.some((item) => item.source === 'hauser-update')).toBe(false);
+  });
+});

@@ -10,6 +10,7 @@ import {
   setPanelSize,
   setRoomsPerRow,
   setRoomsRows,
+  setRoomsPerPageMax,
   setSlotRoom,
   setWidthPreset,
   type HomeViewId,
@@ -69,6 +70,7 @@ export const layoutManager = {
   setPanelSize(value: number) { commit(setPanelSize(applied, value)); },
   setRoomsPerRow(value: number) { commit(setRoomsPerRow(applied, value)); },
   setRoomsRows(value: number) { commit(setRoomsRows(applied, value)); },
+  setRoomsPerPageMax(value: number) { commit(setRoomsPerPageMax(applied, value)); },
   setPanelAutoHide(enabled: boolean, seconds?: number) { commit(setPanelAutoHide(applied, enabled, seconds)); },
   setHomeView(value: HomeViewId) { commit(setHomeView(applied, value)); },
   /* Nur im Speicher, nie gespeichert: Die Startseite ruft das vor dem Abgleich

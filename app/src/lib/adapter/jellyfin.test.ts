@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { JellyfinClient, JellyfinAuthError } from './jellyfin.ts';
+import { JellyfinClient, JellyfinAuthError, normalizeJellyfinAddress } from './jellyfin.ts';
 
 /* ── Mock-fetch: nimmt eine Antwort-Fabrik, protokolliert Aufrufe ── */
 type Call = { url: string; init?: RequestInit };
@@ -257,5 +257,22 @@ describe('Wiedergabe (Funktionsumfang 9)', () => {
       ItemId: 'i', PlaySessionId: 's', MediaSourceId: 'm', PositionTicks: 0,
     })).not.toThrow();
     await Promise.resolve();
+  });
+});
+
+describe('Adresse aus der Anmeldekarte (Postfach 2026-10-08)', () => {
+  it('macht aus der Eingabe eine Adresse', () => {
+    expect(normalizeJellyfinAddress('  jellyfin.local:8096/ ')).toBe('http://jellyfin.local:8096');
+    expect(normalizeJellyfinAddress('https://media.example.org/')).toBe('https://media.example.org');
+    expect(normalizeJellyfinAddress('HTTP://jellyfin.example:8096')).toBe('HTTP://jellyfin.example:8096');
+    expect(normalizeJellyfinAddress('   ')).toBe('');
+  });
+
+  it('meldet sich nach dem Setzen an der neuen Adresse an', async () => {
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({ AccessToken: 't', User: { Id: 'u' } }), { status: 200 }));
+    const c = new JellyfinClient({ baseUrl: 'http://jellyfin.local:8096', deviceId: 'd', token: null, userId: null, fetchImpl: fetchImpl as unknown as typeof fetch });
+    c.setBaseUrl('http://10.0.0.7:8096/');
+    await c.authenticateByName('sam', 'pw').catch(() => {});
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://10.0.0.7:8096/Users/AuthenticateByName');
   });
 });

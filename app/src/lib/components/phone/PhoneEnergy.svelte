@@ -18,15 +18,20 @@
   import SunArc from '../SunArc.svelte';
   import { intlLocale } from '../../state/locale.svelte.ts';
   import { projectPhoneEnergy } from '../../state/phone-energy.ts';
+  import { deviceManager } from '../../state/device-manager.svelte.ts';
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
 
-  /* Das Haus liegt blass unter den Zahlen (Owner-Wunsch 2026-09-21): dasselbe
-     Motiv wie auf dem Panel, das eigene Haus vor dem Platzhalter. Anders als
-     dort folgt die Fassung dem Theme statt der Sonne — hier steht Schrift
-     direkt auf dem Bild, und ein Nachtbild unter hellem Grund wird grau. */
+  /* Das Haus steht groß und scharf oben (Owner 2026-10-19, statt des blassen
+     Grunds von 2026-09-21): dasselbe Motiv wie auf dem Panel, das eigene Haus
+     vor dem Platzhalter. Die Fassung folgt dem Theme statt der Sonne — der
+     Wert steht direkt auf dem Bild, ein Nachtbild unter hellem Grund wird grau. */
   const heroDay = $derived(appState.theme === 'light');
-  const exteriorAssetId = $derived(roomHeroConfig(EXTERIOR_HERO_ID)?.assetId ?? null);
+  const exteriorHero = $derived(roomHeroConfig(EXTERIOR_HERO_ID));
+  const exteriorAssetId = $derived(exteriorHero?.assetId ?? null);
+  /* Der Platzhalter hat das Haus rechts und Himmel links; ein eigenes Bild
+     bringt seinen Telefon-Ausschnitt mit. */
+  const heroPosition = $derived(exteriorHero ? `${exteriorHero.focus.phone.x}% ${exteriorHero.focus.phone.y}%` : '72% 40%');
   /* Bei Wolken, Regen oder Schnee die trübe Fassung des Hauses (wie die iOS-App). */
   const dull = $derived.by(() => {
     if (!settingsValues.ambientWeather) return false;
@@ -67,7 +72,9 @@
      statt einzelner Tageszahlen. */
   const balance = $derived(period === 'today' ? energyBalanceToday(energyTodayInput(e.today)) : null);
   const curve = $derived(energyCurve());
-  const model = $derived(projectPhoneEnergy(e, loadBreakdown(), panel, {
+  /* Steht für einen Verbraucher nur die Kennung, gilt der Name aus Home Assistant. */
+  const catalogNames = $derived(new Map(deviceManager.catalog.map((item) => [item.entityId, item.name])));
+  const model = $derived(projectPhoneEnergy(e, loadBreakdown((id) => catalogNames.get(id) ?? null), panel, {
     curve, yesterday: energyYesterdayCurve(), nowFraction, loadSourceCount: ENERGY_SENSORS.load.length,
   }));
 
@@ -105,8 +112,7 @@
   const visibleConsumers = $derived(showAll ? model.consumers : model.consumers.slice(0, TOP_COUNT));
 </script>
 
-<main class="phone-energy" aria-labelledby="phone-energy-title"
-      style:--phone-energy-hero={`url("${heroUrl}")`}>
+<main class="phone-energy" aria-labelledby="phone-energy-title">
   <header class="phone-energy-header">
     <h1 bind:this={titleAnchor} id="phone-energy-title" tabindex="-1">{m.phone_energy_title()}</h1>
     <div class="phone-energy-sun"><SunArc width={136} height={58} /></div>
@@ -115,20 +121,32 @@
     {/if}
   </header>
 
-  {#if model.now || model.nowLines.length}
-    <section class="phone-energy-now" aria-label={m.phone_energy_now()}>
-      {#if model.now}
+  <!-- Das Haus vorn, der Wert jetzt im Himmel des Bildes. -->
+  <div class="phone-energy-hero" class:has-tiles={model.tiles.length > 0}>
+    <img src={heroUrl} alt="" style:object-position={heroPosition} decoding="async" />
+    {#if model.now}
+      <section class="phone-energy-now" aria-label={m.phone_energy_now()}>
         <p class="phone-energy-now-label">{model.now.label}</p>
         <p class="phone-energy-now-value num">{model.now.power.value}<span class="phone-energy-unit">{model.now.power.unit}</span></p>
-      {/if}
-      {#if model.nowLines.length}
-        <ul class="phone-energy-now-lines">
-          {#each model.nowLines as line (line.label)}
-            <li><span>{line.label}</span><span class="num">{line.power.value} {line.power.unit}</span></li>
-          {/each}
-        </ul>
-      {/if}
-    </section>
+      </section>
+    {/if}
+  </div>
+
+  {#if model.tiles.length}
+    <dl class="phone-energy-tiles" style:--tile-count={model.tiles.length}>
+      {#each model.tiles as tile (tile.key)}
+        <div class="phone-energy-tile is-{tile.key}">
+          <dt>{tile.label}</dt>
+          <dd class="phone-energy-tile-value num">
+            {tile.value}{#if tile.unit}<span class="phone-energy-unit">{tile.unit}</span>{/if}
+            {#if tile.level !== null}
+              <span class="phone-energy-battery" aria-hidden="true"><span style:width="{tile.level * 100}%"></span></span>
+            {/if}
+          </dd>
+          {#if tile.sub}<dd class="phone-energy-tile-sub num">{tile.sub}</dd>{/if}
+        </div>
+      {/each}
+    </dl>
   {/if}
 
   <section class="phone-energy-section" aria-labelledby="phone-energy-period-title">

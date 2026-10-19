@@ -106,6 +106,15 @@ export class JellyfinClient {
   #userId: string | null;
   #onAuth: (() => void) | null = null;
 
+  /** Adresse nachträglich setzen — aus der Anmeldekarte, wenn noch keine eingetragen war. */
+  setBaseUrl(url: string): void {
+    this.#base = url.replace(/\/+$/, '');
+  }
+
+  get baseUrl(): string {
+    return this.#base;
+  }
+
   constructor(opts: JellyfinClientOptions) {
     this.#base = opts.baseUrl.replace(/\/+$/, '');
     this.#version = opts.version ?? '0.3.0';
@@ -426,6 +435,14 @@ function qs(params: Record<string, string | number | boolean | undefined | null>
   return p.toString();
 }
 
+/* Was man in die Anmeldekarte tippt, wird eine Adresse: ohne Schema gilt
+   http://, Leerzeichen und Schrägstriche am Ende fallen weg. */
+export function normalizeJellyfinAddress(raw: string): string {
+  const v = raw.trim().replace(/\/+$/, '');
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : `http://${v}`;
+}
+
 /* ── Singleton (analog runtime/backend) ──
    Basis-URL: Geräte-Override (Einstellungen → Bibliothek, localStorage) vor
    Env vor Default (Mac-Ethernet aus der Heimnetz-Doku). Keine Secrets hier —
@@ -437,6 +454,12 @@ export const JELLYFIN_URL_DEFAULT: string =
   (import.meta.env?.VITE_JELLYFIN_URL as string | undefined) ?? 'http://jellyfin.local:8096';
 
 export const JELLYFIN_URL: string = readLS(JELLYFIN_URL_KEY) ?? JELLYFIN_URL_DEFAULT;
+
+/* Ist eine Adresse eingetragen (Einstellungen, Einrichtung oder Build)? Ohne
+   sie zielte die Anmeldung auf die eingebaute Vorgabe, und die Bibliothek
+   ließ sich außerhalb der Demo nicht einrichten (Postfach 2026-10-08). */
+export const JELLYFIN_URL_CONFIGURED: boolean =
+  !!readLS(JELLYFIN_URL_KEY) || !!(import.meta.env?.VITE_JELLYFIN_URL as string | undefined);
 
 export const jellyfin = new JellyfinClient({ baseUrl: JELLYFIN_URL });
 

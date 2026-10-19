@@ -16,7 +16,7 @@
   import ScreenBoundary from '../components/ScreenBoundary.svelte';
   import PhoneHomeFeed from '../components/phone/PhoneHomeFeed.svelte';
   import { appState } from '../state/app.svelte.ts';
-  import { mergedClimate, mergedLight, roomPresence, roomTemperature, roomWindowOpen } from '../state/commands.ts';
+  import { mergedClimate, mergedLight, roomOpenings, roomPresence, roomTileTemperature } from '../state/commands.ts';
   import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { applyPwaUpdate, pwaUpdatePrompt } from '../state/pwa-update-prompt.svelte.ts';
   import {
@@ -72,10 +72,11 @@
         : target.area === 'calendar' ? m.nav_calendar() : m.nav_home(),
   );
   const roomSummaries = $derived(projectPhoneRooms(appState.rooms, {
-    temperature: roomTemperature,
+    temperature: roomTileTemperature,
     light: mergedLight,
     climate: mergedClimate,
-    windowOpen: roomWindowOpen,
+    windowOpen: (roomId, fallback) => roomOpenings(roomId, fallback).window,
+    doorOpen: (roomId) => roomOpenings(roomId).door,
     presence: roomPresence,
   }));
   const selectedRoom = $derived(validPhoneRoom(appState.rooms, appState.currentRoom));

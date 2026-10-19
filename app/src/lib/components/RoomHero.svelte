@@ -19,6 +19,7 @@
   import type { LightValue } from '../adapter/types.ts';
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
+  import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { weatherWholeImage } from '../state/room-display-config.svelte.ts';
   import { inDuskBand } from '../state/dusk.ts';
@@ -49,7 +50,10 @@
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
   const placements = $derived(roomLightPlacements(room?.id));
-  const assignedLights = $derived((room?.lights ?? []).filter((light) => placements[light.entityId]));
+  /* Lichtschein und Schleier gehören nur Lampen; andere Geräte im Bild sind
+     ein Punkt zum Antippen (HeroDeviceTargets). */
+  const assignedLights = $derived((room?.lights ?? [])
+    .filter((light) => placements[light.entityId] && (light.category ?? 'light') === 'light'));
   const renderedLights = $derived(assignedLights.map((device) => {
     const value = mergedDevice(room?.id ?? '', device) as LightValue | undefined;
     return { device, placement: placements[device.entityId], value };
@@ -74,6 +78,17 @@
   });
   const allAssignedLightsOff = $derived(simulation.lightsOff ?? roomLightsOff);
   const showImmersion = $derived(appState.heroSun?.day === false && !allAssignedLightsOff);
+  /* Werkstatt-Versuch „Lampe im Bild aus“ (Owner 2026-10-19): Das Raumbild
+     zeigt die Lampen tagsüber immer und nachts brennend, sobald eine im Raum
+     an ist. Eine ausgeschaltete Lampe mit Position bekommt deshalb einen
+     entsättigten, blassen Kreis; geht sie an, blendet er weich weg. Nur im
+     Dev-Bau (Werkstatt), bis Sam entscheidet. Zeigt die Bühne nachts ohnehin
+     die unbeleuchtete Fassung, wäre der Kreis doppelt — dann keiner. */
+  const LAMP_OFF_TRIAL = import.meta.env.DEV;
+  const nightImage = $derived(appState.heroSun ? !appState.heroSun.day : appState.theme === 'dark');
+  const lampShades = $derived(LAMP_OFF_TRIAL && !(nightImage && allAssignedLightsOff)
+    ? renderedLights.map((light) => ({ ...light, off: simulation.lightsOff ?? light.value?.on !== true }))
+    : []);
   /* Trübes Wetter (Paket 13): Hat das Bildset eine trübe Fassung, zeigt die
      Bühne sie bei Regen und Schnee statt des Sonnenbildes — dann trägt sie das
      Wetter im Fenster, und beides zusammen ergibt einen Blick nach draußen.
@@ -285,6 +300,19 @@
          style:background-image={`url("${counterLayer.url}")`}
          style:background-position={counterLayer.position}></div>
   {/if}
+  {#if lampShades.length > 0}
+    <div class="hero-image-space"
+         style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
+         style:--hero-focus-y={heroConfig?.focus.panel.y ?? 0.5}>
+      {#each lampShades as light (light.device.entityId)}
+        <span class="lamp-off-shade" class:is-off={light.off}
+              style:left={`${light.placement.x * 100}%`} style:top={`${light.placement.y * 100}%`}
+              style:width={`${light.placement.radius * 200}%`}
+              style:aspect-ratio={`${light.placement.radius} / ${placementRy(light.placement)}`}
+              style:rotate={`${placementRotation(light.placement)}deg`}></span>
+      {/each}
+    </div>
+  {/if}
   <!-- Alles, was in Bildkoordinaten liegt (Fenster, Flächen), gehört in diesen
        Rahmen: Er bildet exakt die Fläche nach, die das Raumbild nach dem
        `cover`-Zuschnitt einnimmt. Über der ganzen Bühne gezeichnet, säßen die
@@ -320,10 +348,12 @@
             <stop offset="1" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0" />
           </radialGradient>
         </defs>
-        <circle
+        <ellipse
           cx={light.placement.x * 3392}
           cy={light.placement.y * 2400}
-          r={light.placement.radius * 3392}
+          rx={light.placement.radius * 3392}
+          ry={placementRy(light.placement) * 3392}
+          transform={`rotate(${placementRotation(light.placement)} ${light.placement.x * 3392} ${light.placement.y * 2400})`}
           fill={`url(#immersion-light-${index})`}
         />
       </svg>

@@ -346,6 +346,24 @@
   display: contents;
 }
 
+/* Gliederschieber statt Plus/Minus (Klima-Overlay, Owner 2026-10-19). */
+.climate-target-scale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.climate-target-scale.is-vertical { align-items: center; }
+/* Stehend in denselben Farben wie liegend (kalt unten, warm oben); der
+   aktuelle Tick trägt dieselbe Markierung wie in der liegenden Leiste. */
+.climate-target-scale .tickscale.is-vertical .tick.is-current {
+  transform: scaleX(1.12);
+  box-shadow: inset 0 0 0 2px var(--color-surface-inverse);
+  border-radius: 3px;
+}
+/* „21,5°" ist breiter als „100%" der Helligkeit. */
+.climate-target-scale .tickscale.is-vertical .tickscale-value { width: 3.6em; }
+
 .climate-target-control {
   display: grid;
   grid-template-columns: var(--touch-preferred) minmax(0, 1fr) var(--touch-preferred);

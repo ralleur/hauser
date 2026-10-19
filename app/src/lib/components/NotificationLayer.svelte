@@ -71,6 +71,23 @@
     ) : undefined);
   });
 
+  /* Update-Hinweis (P28): der Server liest die Update-Entität des Add-ons;
+     beim Start und danach alle sechs Stunden. Ein älterer Server kennt die
+     Route nicht — dann gibt es nichts zu melden. */
+  $effect(() => {
+    const check = () => {
+      void fetch('/api/hauser-update', { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((body: { available?: unknown; latest?: unknown } | null) => {
+          notifications.syncUpdate(body?.available === true && typeof body.latest === 'string' ? body.latest : null);
+        })
+        .catch(() => {});
+    };
+    check();
+    const timer = setInterval(check, 6 * 60 * 60_000);
+    return () => clearInterval(timer);
+  });
+
   $effect(() => {
     runtime.subscribePersistentNotifications((items) => { remote = items; });
     notifications.onDismissRemote = (id) => { void runtime.dismissPersistentNotification(id); };

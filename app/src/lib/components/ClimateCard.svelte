@@ -6,16 +6,23 @@
      Sollwert, helle Fläche in Kartenbreite). */
   import '../../styles/room-controls.css';
   import Icon from './Icon.svelte';
+  import TickScale from './TickScale.svelte';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
-  import { mergedClimate, climateReconcile, stepTarget, setHvac, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
-  import { climateStep } from '../state/room-display-config.svelte.ts';
+  import { mergedClimate, climateReconcile, stepTarget, setTarget, setHvac, roomTemperature, roomHumidity, roomOpenings, roomWindowOpen } from '../state/commands.ts';
+  import { climateStep, type ClimateControl } from '../state/room-display-config.svelte.ts';
+  import { climateTint } from '../state/light-presets.ts';
   import { longpress } from '../actions/longpress.ts';
   import { pulse } from '../actions/pulse.ts';
   import { fmtTemp } from '../format.ts';
   import type { ClimateValue } from '../adapter/types.ts';
   import { m } from '../../paraglide/messages.js';
 
-  let { room, stacked = false, onLongPress }: { room: Room; stacked?: boolean; onLongPress?: () => void } = $props();
+  /* `control` wählt die Bedienung des Sollwerts: Plus/Minus (Vorgabe für
+     Leiste und Telefonblatt), liegender oder stehender Gliederschieber — das
+     Klima-Overlay reicht die Wahl des Raums durch (Owner 2026-10-19). */
+  let { room, stacked = false, control = 'stepper', onLongPress }: {
+    room: Room; stacked?: boolean; control?: ClimateControl; onLongPress?: () => void;
+  } = $props();
 
   const climate = $derived(mergedClimate(room.id));
   /* Ist-Temperatur mit Fallback-Kette (dedizierter Sensor > Thermostat-Ist >
@@ -23,6 +30,20 @@
   const temp = $derived(roomTemperature(room.id));
   const humidity = $derived(roomHumidity(room.id));
   const step = $derived(climateStep(room.id));
+  /* Nur eine offene Tür: die Warnung nennt die Tür statt eines Fensters. */
+  const doorOnly = $derived.by(() => {
+    const open = roomOpenings(room.id, room.windowOpen);
+    return open.door && !open.window;
+  });
+
+  /* Grenzen vom Thermostat (der Adapter verwirft verdrehte), sonst 16–26 °C. */
+  const range = $derived({ min: climate?.minTemp ?? 16, max: climate?.maxTemp ?? 26 });
+  let dragTarget = $state<number | null>(null);
+  const targetShown = $derived(Math.min(range.max, Math.max(range.min, dragTarget ?? climate?.target ?? 20)));
+  function onTarget(value: number, final: boolean) {
+    dragTarget = final ? null : value;
+    if (final) setTarget(room.id, value);
+  }
 
   /* Klima-Widerspruch (docs/02): Ziel ist ein Stepper (diskret) → 300-ms-
      Korrektur als Opacity-Crossfade des Werts. */
@@ -42,7 +63,7 @@
   <div class="climate-card" class:is-stacked={stacked}
        use:longpress={{ enabled: !!onLongPress, onLongPress: () => onLongPress?.() }}>
     <div class="climate-warning" class:is-visible={roomWindowOpen(room.id, room.windowOpen)}>
-      <Icon name="i-window" cls="icon icon-md" /><span>{m.room_window_open()}</span>
+      <Icon name="i-window" cls="icon icon-md" /><span>{doorOnly ? m.room_door_open() : m.room_window_open()}</span>
     </div>
     <div class="climate-current">
       <span class="climate-current-label">{m.climate_current()}</span>
@@ -76,17 +97,32 @@
           <strong class="num" class:is-unavailable={temp === null}>{temp !== null ? `${fmtTemp(temp)}°` : m.media_unavailable()}</strong>
           {#if humidity !== null}<small>{Math.round(humidity)} %</small>{/if}
         </span>
-        <div class="climate-target-control">
-          <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
-                  onclick={() => stepTarget(room.id, -step)}>
-            <Icon name="i-minus" cls="icon icon-xl" />
-          </button>
-          <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
-          <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
-                  onclick={() => stepTarget(room.id, step)}>
-            <Icon name="i-plus" cls="icon icon-xl" />
-          </button>
-        </div>
+        {#if control === 'stepper'}
+          <div class="climate-target-control">
+            <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
+                    onclick={() => stepTarget(room.id, -step)}>
+              <Icon name="i-minus" cls="icon icon-xl" />
+            </button>
+            <span class="climate-target-value num" use:pulse={{ seq: tempCorrect, cls: 'is-correct-fade', ms: 300 }}>{fmtTemp(climate.target)}°</span>
+            <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
+                    onclick={() => stepTarget(room.id, step)}>
+              <Icon name="i-plus" cls="icon icon-xl" />
+            </button>
+          </div>
+        {:else}
+          <div class="climate-target-scale" class:is-vertical={control === 'vertical'}>
+            {#if control === 'vertical'}
+              <TickScale ariaLabel={m.climate_target_temperature()} orientation="vertical" mode="gradient" tint={climateTint}
+                         value={targetShown} min={range.min} max={range.max} step={0.5} keyStep={1}
+                         onInput={onTarget} format={(v) => `${fmtTemp(v)}°`} />
+            {:else}
+              <TickScale ariaLabel={m.climate_target_temperature()} orientation="horizontal" mode="gradient"
+                         value={targetShown} min={range.min} max={range.max} step={0.5} keyStep={1}
+                         tint={climateTint} onInput={onTarget} format={(v) => `${fmtTemp(v)}°`} />
+              <div class="ld-scale-ends"><span>{fmtTemp(range.min)}°</span><span>{fmtTemp(range.max)}°</span></div>
+            {/if}
+          </div>
+        {/if}
       </div>
       <div class="climate-mode-selector" role="radiogroup" aria-label={m.climate_mode_label()}>
         {#each HVAC_MODES as mode (mode.id)}

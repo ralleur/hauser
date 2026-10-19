@@ -54,6 +54,7 @@ export const API_ROUTES = {
   roomImageCapability: { methods: ['GET', 'HEAD'], path: '/api/room-images/capability', area: 'room-images', access: 'origin' },
   roomImageCapabilityDetails: { methods: ['GET', 'HEAD'], path: '/api/room-images/capability/details', area: 'room-images', access: 'admin' },
   roomImageProbe: { methods: ['POST'], path: '/api/room-images/probe', area: 'room-images', access: 'admin' },
+  hauserUpdate: { methods: ['GET'], path: '/api/hauser-update', area: 'core', access: 'public' },
   roomImageMaintenance: { methods: ['GET'], path: '/api/room-images/maintenance', area: 'room-images', access: 'public' },
   roomImageAccess: { methods: ['GET', 'DELETE'], path: '/api/room-images/access', area: 'room-images', access: 'admin' },
   roomImageAccessApiKey: { methods: ['POST'], path: '/api/room-images/access/api-key', area: 'room-images', access: 'admin' },

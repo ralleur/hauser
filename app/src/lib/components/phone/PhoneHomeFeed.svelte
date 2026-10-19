@@ -7,16 +7,9 @@
   import { swipeleft } from '../../actions/swipeleft.ts';
 
   import { m } from '../../../paraglide/messages.js';
-  import { pluralCategory } from '../../state/locale.svelte.ts';
+  import { openingsLabel } from '../../state/open-label.ts';
 
   type QuickActionsProps = { online: boolean };
-
-  /* Plusamorm je Sprache — dieselben Katalogfassungen wie in der Tab-Leiste. */
-  const WINDOWS_OPEN = {
-    one: m.status_window_open_one, two: m.status_window_open_two,
-    few: m.status_window_open_few, many: m.status_window_open_many,
-    other: m.status_window_open_other,
-  };
 
   let {
     rooms,
@@ -32,7 +25,8 @@
     titleAnchor?: HTMLHeadingElement;
   } = $props();
 
-  const openWindows = $derived(rooms.filter((room) => room.windowOpen).length);
+  const openLabel = $derived(openingsLabel(
+    rooms.filter((room) => room.windowOpen).length, rooms.filter((room) => room.doorOpen).length));
   const heroVariant = $derived<PhoneHeroVariant>(
     appState.heroSun ? (appState.heroSun.day ? 'light' : 'dark') : appState.theme,
   );
@@ -98,7 +92,7 @@
   $effect(() => {
     /* Neu messen, sobald sich Spaltenzahl, Hinweiszeile oder Schnellaktionen ändern. */
     void phoneLayout.roomsPerRow;
-    void openWindows;
+    void openLabel;
     void phoneLayout.quickActions;
     void QuickActionsComponent;
     measureRows();
@@ -142,9 +136,9 @@
 
   {#if HomeExtras}<HomeExtras {currentRoom} />{/if}
 
-  {#if openWindows > 0}
+  {#if openLabel}
     <aside class="phone-home-notice is-warning" aria-label={m.phone_security_note()}>
-      <strong>{WINDOWS_OPEN[pluralCategory(openWindows)]({ count: openWindows })}</strong>
+      <strong>{openLabel}</strong>
       <span>{online ? m.phone_details_at_rooms() : m.phone_last_known()}</span>
     </aside>
   {/if}

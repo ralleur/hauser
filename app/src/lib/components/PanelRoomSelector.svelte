@@ -6,9 +6,12 @@
   import { openRoomEdit } from '../state/overlay.svelte.ts';
   import { HVAC_MODES, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomCo2, roomTemperature, roomHumidity, roomWindowOpen } from '../state/commands.ts';
+  import { countsForBulb } from '../state/device-config.ts';
   import { showsMetric } from '../state/room-display-config.svelte.ts';
   import {
+    PANEL_ROOMS_PER_PAGE_DEFAULT,
     clampPanelRoomPage,
+    panelRoomColumns,
     panelRoomPageForSelection,
     panelRoomPages,
   } from '../state/panel-room-pages.ts';
@@ -19,30 +22,32 @@
   let {
     rooms,
     selectedId,
-    roomsPerRow = 2,
+    maxPerPage = PANEL_ROOMS_PER_PAGE_DEFAULT,
     onselect,
   }: {
     rooms: Room[];
     selectedId: string | null;
-    roomsPerRow?: number;
+    /** Obergrenze je Seite aus dem Layout-Menü; die Spalten folgen der Zahl. */
+    maxPerPage?: number;
     onselect: (roomId: string) => void;
   } = $props();
 
   let viewport = $state<HTMLDivElement>();
   let currentPage = $state(0);
   let lastSelectedId = $state<string | null>(null);
-  const pages = $derived(panelRoomPages(rooms));
+  const pages = $derived(panelRoomPages(rooms, maxPerPage));
+  const roomsPerRow = $derived(panelRoomColumns(rooms.length, maxPerPage));
   const multiPage = $derived(pages.length > 1);
 
   function scrollToPage(page: number, behavior: ScrollBehavior = 'smooth'): void {
-    currentPage = clampPanelRoomPage(page, rooms.length);
+    currentPage = clampPanelRoomPage(page, rooms.length, maxPerPage);
     viewport?.scrollTo({ left: currentPage * viewport.clientWidth, behavior });
   }
 
   function handleScroll(): void {
     if (!viewport?.clientWidth) return;
     const exact = viewport.scrollLeft / viewport.clientWidth;
-    currentPage = clampPanelRoomPage(Math.round(exact), rooms.length);
+    currentPage = clampPanelRoomPage(Math.round(exact), rooms.length, maxPerPage);
     /* Paket 4: Solange der Finger zwischen zwei Seiten steht, folgt das
        Hero-Bild ein kleines Stück. Eingerastet ist der Rest null. */
     setHeroParallaxFraction(exact - Math.round(exact));
@@ -52,8 +57,8 @@
     const nextSelectedId = selectedId ?? null;
     const selectionChanged = nextSelectedId !== lastSelectedId;
     const nextPage = selectionChanged
-      ? panelRoomPageForSelection(rooms, nextSelectedId, currentPage)
-      : clampPanelRoomPage(currentPage, rooms.length);
+      ? panelRoomPageForSelection(rooms, nextSelectedId, currentPage, maxPerPage)
+      : clampPanelRoomPage(currentPage, rooms.length, maxPerPage);
     lastSelectedId = nextSelectedId;
     currentPage = nextPage;
     if (selectionChanged) void tick().then(() => scrollToPage(nextPage, 'auto'));
@@ -78,7 +83,7 @@
           {@const temp = showsMetric(room.id, 'temperature') ? roomTemperature(room.id) : null}
           {@const humidity = showsMetric(room.id, 'humidity') ? roomHumidity(room.id) : null}
           {@const co2 = showsMetric(room.id, 'co2') ? roomCo2(room.id) : null}
-          {@const lightsOn = room.lights.filter((light) => mergedLight(room.id, light.id)?.on).length}
+          {@const lightsOn = room.lights.filter((light) => countsForBulb(light) && mergedLight(room.id, light.id)?.on).length}
           {@const mode = climate ? HVAC_MODES.find((item) => item.id === climate.hvac) : null}
           <button
             class="room-btn pressable"

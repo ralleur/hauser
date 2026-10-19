@@ -18,9 +18,10 @@ describe('room management UI contracts', () => {
     expect(setupWizard).not.toMatch(/Home Assistant Areas|\/api\/config\/area_registry/);
   });
 
-  it('projects the canonical ordered room list through bounded 2x3 panel pages', () => {
+  it('projects the canonical ordered room list through pages bounded by the layout limit', () => {
     expect(homeScreen).toMatch(/<PanelRoomSelector/);
-    expect(panelRoomSelector).toMatch(/panelRoomPages\(rooms\)/);
+    expect(panelRoomSelector).toMatch(/panelRoomPages\(rooms, maxPerPage\)/);
+    expect(homeScreen).toMatch(/maxPerPage=\{layoutManager\.preview\.roomsPerPageMax\}/);
     expect(panelRoomSelector).toMatch(/inert=\{multiPage && pageIndex !== currentPage\}/);
     expect(panelRoomSelector).toMatch(/scrollToPage\(currentPage [+-] 1\)/);
   });

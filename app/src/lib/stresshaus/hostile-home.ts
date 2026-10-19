@@ -164,6 +164,8 @@ export function hostileHome(now: Date = new Date()): HostileHome {
     ['lang', LONG_NAME],
     ['garage', 'Garage'],
     ['wintergarten', 'Wintergarten'],
+    // Alle Lampen aus, trotzdem ist allerhand „an“ (ralleur/hauser#32).
+    ['gaeste', 'Gästezimmer'],
     ['kinderzimmer', 'Kinderzimmer'],
     ['schlafzimmer', 'Schlafzimmer'],
     ['dachboden', '<b>Dachboden</b>'],
@@ -254,6 +256,12 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('sensor.netz_bezug_wh', '8123456', { friendly_name: 'Netzbezug', unit_of_measurement: 'Wh', device_class: 'energy', state_class: 'total_increasing' }, { area_id: null });
   add('sensor.netz_einspeisung', 'unavailable', { friendly_name: 'Einspeisung', unit_of_measurement: 'kWh', device_class: 'energy', state_class: 'total_increasing' }, { area_id: null });
   add('sensor.pv_ertrag', '4321.5', { friendly_name: 'PV Ertrag', unit_of_measurement: 'kWh', device_class: 'energy', state_class: 'total_increasing' }, { area_id: null });
+  /* Hausakku (Energie am Telefon, 2026-10-19): der Ladestand meldet kurz über
+     100 %, die Akkuleistung ist weg; ein Verbraucher ist nur mit seiner
+     Kennung gespeichert und muss trotzdem mit Namen erscheinen. */
+  add('sensor.akku_ladestand', '104', { friendly_name: 'Akku Ladestand', unit_of_measurement: '%', device_class: 'battery', state_class: 'measurement' }, { area_id: null });
+  add('sensor.akku_leistung', 'unavailable', { friendly_name: 'Akku Leistung', unit_of_measurement: 'W', device_class: 'power', state_class: 'measurement' }, { area_id: null });
+  add('sensor.strom_steckdose_power', '42', { friendly_name: 'Steckdose Flur', unit_of_measurement: 'W', device_class: 'power', state_class: 'measurement' }, { area_id: null });
   add('sensor.kuche_energie', '-5', { friendly_name: 'Energie', unit_of_measurement: 'kWh', device_class: 'energy', state_class: 'total_increasing' }, { area_id: 'kuche' });
   add('select.kuche_modus', 'Auto', { friendly_name: 'Modus', options: [] }, { area_id: 'kuche' });
   add('input_select.kuche_programm', 'Pizza', { friendly_name: 'Programm', options: ['Pizza', 'Pizza', 'Brot'] }, { area_id: 'kuche' });
@@ -322,6 +330,18 @@ export function hostileHome(now: Date = new Date()): HostileHome {
   add('cover.wintergarten_jalousie', 'closing', {
     friendly_name: 'Jalousie', current_position: 60, device_class: 'blind', supported_features: 63,
   }, { area_id: 'wintergarten' });
+  /* Gästezimmer: die Deckenlampe ist aus, eingeschaltet sind nur Steckdose,
+     ein entkoppelter Wandschalter, das offene Rollo und der Sauger — die
+     Glühbirne des Raums bleibt dunkel (ralleur/hauser#32). */
+  add('light.gaeste_decke', 'off', { friendly_name: 'Decke', supported_color_modes: ['brightness'] }, { area_id: 'gaeste' });
+  add('switch.gaeste_steckdose', 'on', { friendly_name: 'Steckdose', device_class: 'outlet' }, { area_id: 'gaeste' });
+  add('switch.gaeste_wandschalter', 'on', { friendly_name: 'Wandschalter (entkoppelt)' }, { area_id: 'gaeste' });
+  add('cover.gaeste_rollo', 'open', { friendly_name: 'Rollo', device_class: 'shutter', current_position: 100, supported_features: 15 }, { area_id: 'gaeste' });
+  /* Die Tür steht offen, das Fenster ist zu: der Raum meldet „Tür offen“, nicht
+     „Fenster offen“ (ralleur/hauser#33). */
+  add('binary_sensor.gaeste_tuer', 'on', { friendly_name: 'Zimmertür', device_class: 'door' }, { area_id: 'gaeste' });
+  add('binary_sensor.gaeste_fenster', 'off', { friendly_name: 'Fenster', device_class: 'window' }, { area_id: 'gaeste' });
+  add('vacuum.gaeste_sauger', 'cleaning', { friendly_name: 'Sauger', supported_features: 12796 }, { area_id: 'gaeste' });
   add('binary_sensor.wintergarten_tur', 'off', { friendly_name: 'Tür', device_class: 'door' }, { device_id: 'dev_wintergarten' });
   add('sensor.wintergarten_tur', '87', { friendly_name: 'Tür', unit_of_measurement: '%', device_class: 'battery' }, { device_id: 'dev_wintergarten', entity_category: 'diagnostic' });
 

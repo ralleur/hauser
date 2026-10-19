@@ -6,7 +6,7 @@
   import { appState } from '../state/app.svelte.ts';
   import { m } from '../../paraglide/messages.js';
   import {
-    libraryShelves, libraryStatus, libraryError, isLoggingIn, jellyfinLogin, retryLoad,
+    libraryShelves, libraryStatus, libraryError, isLoggingIn, jellyfinLogin, retryLoad, libraryAddress,
   } from '../state/library.svelte.ts';
   import {
     categoryFromLabel, categoryItems, searchLibrary, type LibraryCategory,
@@ -31,9 +31,13 @@
   let username = $state('');
   let password = $state('');
 
+  /* Ohne bekannte Adresse fragt die Karte danach, wie in der iOS-App. */
+  let address = $state('');
+  const knownAddress = $derived(libraryAddress());
+
   function onLogin(e: SubmitEvent) {
     e.preventDefault();
-    void jellyfinLogin(username, password);
+    void jellyfinLogin(username, password, knownAddress ? '' : address);
     password = '';
   }
 
@@ -235,11 +239,17 @@
         <h2 class="login-title">{m.library_connect()}</h2>
         <p class="login-hint">{m.library_login_hint()}</p>
         {#if libraryError()}<p class="login-error" role="alert">{libraryError()}</p>{/if}
+        {#if knownAddress}
+          <p class="login-address num">{knownAddress}</p>
+        {:else}
+          <input class="login-input" type="url" inputmode="url" autocomplete="url" spellcheck="false"
+                 placeholder="http://jellyfin.local:8096" aria-label={m.settings_entry_jf_url_label()} bind:value={address} />
+        {/if}
         <input class="login-input" type="text" autocomplete="username" spellcheck="false"
                placeholder={m.library_username()} aria-label="Jellyfin-Benutzername" bind:value={username} />
         <input class="login-input" type="password" autocomplete="current-password"
                placeholder={m.library_password()} aria-label="Jellyfin-Passwort" bind:value={password} />
-        <button class="login-submit pressable" type="submit" disabled={username.trim() === '' || isLoggingIn()}>
+        <button class="login-submit pressable" type="submit" disabled={username.trim() === '' || isLoggingIn() || (!knownAddress && address.trim() === '')}>
           {isLoggingIn() ? m.library_connecting() : m.library_signin()}
         </button>
       </form>

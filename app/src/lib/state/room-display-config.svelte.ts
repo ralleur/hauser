@@ -12,7 +12,7 @@
 import type { RoomImageRegion } from './room-image-library-client.ts';
 import { OBJECT_KINDS, validShape } from '../room-images/object-shapes.ts';
 import { appState } from './app.svelte.ts';
-import { setRoomContactResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
+import { setDoorContactResolver, setRoomContactResolver, setRoomMetricShownResolver, setRoomSensorResolver, type RoomContactKind } from './commands.ts';
 import { deviceManager } from './device-manager.svelte.ts';
 import { roomIdForArea } from './device-config.ts';
 import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './entities.ts';
@@ -52,6 +52,11 @@ export interface RoomDisplayEntry {
   climateTileShows?: ClimateTileShows;
   /** Schrittweite der Zieltemperatur in Grad (Default 0,5). */
   climateStep?: number;
+  /** Bedienung der Zieltemperatur im Klima-Overlay (Owner 2026-10-19):
+      liegender Gliederschieber (Standard, ohne Eintrag), Plus/Minus oder
+      stehender Gliederschieber wie die Helligkeit. Die iOS-App liest und
+      schreibt dasselbe Feld. */
+  climateControl?: Exclude<ClimateControl, 'ticks'>;
   /** Mehrere Kameras stehen zusammen im geteilten Bild (Default: ja) — die
       iOS-App liest und schreibt denselben Schalter. */
   cameraSplit?: boolean;
@@ -66,6 +71,8 @@ export interface RoomDisplayEntry {
 
 export type ClimateTileShows = 'target' | 'current' | 'both';
 export const CLIMATE_STEPS: readonly number[] = [0.5, 1];
+export type ClimateControl = 'ticks' | 'stepper' | 'vertical';
+const CLIMATE_CONTROLS: readonly ClimateControl[] = ['ticks', 'stepper', 'vertical'];
 
 export interface RoomDisplayConfig {
   version: 1;
@@ -229,6 +236,13 @@ export function setContactIds(
 
 setRoomContactResolver(contactIdsFor);
 
+/* Türen und Garagentore sind Türen, `window` und `opening` bleiben Fenster;
+   ein Kontakt, den der Katalog (noch) nicht kennt, bleibt ein Fenster. */
+const DOOR_DEVICE_CLASSES: readonly string[] = ['door', 'garage_door'];
+setDoorContactResolver((entityId) => DOOR_DEVICE_CLASSES.includes(
+  deviceManager.catalog.find((item) => item.entityId === entityId)?.deviceClass ?? '',
+));
+
 /* ── Persistierter Teil ── */
 
 export const roomDisplay = $state({
@@ -251,6 +265,8 @@ export function showsMetric(roomId: string, metric: RoomMetric): boolean {
   const e = entry(roomId);
   return e[SHOW_KEY[metric]] ?? DEFAULTS[metric];
 }
+
+setRoomMetricShownResolver(showsMetric);
 
 /** Der tatsächlich verwendete Sensor: eigene Wahl, sonst die HA-Zuordnung. */
 export function sensorIdFor(roomId: string, metric: RoomMetric): string {
@@ -353,6 +369,19 @@ export function setClimateStep(roomId: string, value: number): void {
   writeEntry(roomId, next);
 }
 
+export function climateControl(roomId: string): ClimateControl {
+  return entry(roomId).climateControl ?? 'ticks';
+}
+
+/** Reihum wie die Rollo-Kachel: Gliederschieber → Plus/Minus → stehend. */
+export function cycleClimateControl(roomId: string): void {
+  const next = { ...entry(roomId) };
+  const following = CLIMATE_CONTROLS[(CLIMATE_CONTROLS.indexOf(climateControl(roomId)) + 1) % CLIMATE_CONTROLS.length];
+  if (following === 'ticks') delete next.climateControl;
+  else next.climateControl = following;
+  writeEntry(roomId, next);
+}
+
 /* Leere Einträge werden entfernt, damit „alles Standard" auch den Storage räumt. */
 function writeEntry(roomId: string, next: RoomDisplayEntry): void {
   const rooms = { ...roomDisplay.config.rooms };
@@ -413,6 +442,7 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (cand.climateInline === true) next.climateInline = true;
       if (cand.climateTileShows === 'target' || cand.climateTileShows === 'current') next.climateTileShows = cand.climateTileShows;
       if (typeof cand.climateStep === 'number' && CLIMATE_STEPS.includes(cand.climateStep) && cand.climateStep !== 0.5) next.climateStep = cand.climateStep;
+      if (cand.climateControl === 'stepper' || cand.climateControl === 'vertical') next.climateControl = cand.climateControl;
       if (typeof cand.cameraSplit === 'boolean') next.cameraSplit = cand.cameraSplit;
       if (cand.hideClimate === true) next.hideClimate = true;
       if (cand.imageObjects && typeof cand.imageObjects.image === 'string' && Array.isArray(cand.imageObjects.regions)

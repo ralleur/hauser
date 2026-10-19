@@ -68,6 +68,28 @@ describe('deterministic setup household suggestion', () => {
     expect(suggestion.config.rooms[0].visibleEntities.map(({ entityId }) => entityId)).toEqual(['sensor.raum_temperatur']);
   });
 
+  it('keeps doors, garage doors, openings and windows on the stored window role', () => {
+    const classes = ['door', 'garage_door', 'opening', 'window'];
+    const suggestion = buildSetupHouseholdSuggestion({
+      // Ein Raum je Klasse: `window` ist pro Raum ein Einzelfall in der Einrichtung.
+      areas: classes.map((deviceClass) => ({ area_id: deviceClass, name: deviceClass })),
+      devices: [],
+      entities: classes.map((deviceClass) => ({
+        entity_id: `binary_sensor.${deviceClass}_contact`, area_id: deviceClass, device_id: null,
+      })),
+      states: classes.map((deviceClass) => ({
+        entity_id: `binary_sensor.${deviceClass}_contact`, attributes: { device_class: deviceClass },
+      })),
+    });
+    // Tür oder Fenster entscheidet erst die Anzeige (device_class im Katalog);
+    // die gespeicherte Rolle bleibt `window`, damit alte Konfigurationen gelten.
+    expect(suggestion.config.rooms.flatMap((room) => room.visibleEntities)
+      .map(({ entityId, role }) => [entityId, role]).sort()).toEqual(
+      classes.map((deviceClass) => [`binary_sensor.${deviceClass}_contact`, 'window']).sort(),
+    );
+    expect(parseHouseholdConfig(suggestion.config).ok).toBe(true);
+  });
+
   it('uses HA areas, device inheritance and only unambiguous productive roles', () => {
     const suggestion = buildSetupHouseholdSuggestion(snapshot());
 
@@ -140,12 +162,14 @@ describe('deterministic setup household suggestion', () => {
       { entity_id: 'switch.living_lamp', area_id: 'living-area', device_id: null },
       { entity_id: 'switch.living_fountain', area_id: 'living-area', device_id: null },
       { entity_id: 'vacuum.living_roborock', area_id: 'living-area', device_id: null },
+      { entity_id: 'cover.living_blind', area_id: 'living-area', device_id: null },
       { entity_id: 'media_player.living_sonos', area_id: 'living-area', device_id: null },
     );
     withDevices.states.push(
       { entity_id: 'switch.living_lamp', attributes: { friendly_name: 'Lamp switch' } },
       { entity_id: 'switch.living_fountain', attributes: { friendly_name: 'Fountain switch' } },
       { entity_id: 'vacuum.living_roborock', attributes: { friendly_name: 'Roborock' } },
+      { entity_id: 'cover.living_blind', attributes: { friendly_name: 'Blind' } },
       { entity_id: 'media_player.living_sonos', attributes: { friendly_name: 'Sonos' } },
     );
 
@@ -156,6 +180,17 @@ describe('deterministic setup household suggestion', () => {
       expect.objectContaining({ entityId: 'switch.living_fountain', role: 'switch' }),
       expect.objectContaining({ entityId: 'vacuum.living_roborock', role: 'vacuum' }),
     ]));
+    /* Nur echte Lampen zählen für die Glühbirne; Schalter, Rollo und Sauger
+       bleiben gelistet und steuerbar, zählen aber nicht. */
+    const counts = Object.fromEntries((livingRoom?.visibleEntities ?? []).map((entity) => [entity.entityId, entity.countsAsLight]));
+    expect(counts).toMatchObject({
+      'light.living_ceiling': true,
+      'switch.living_lamp': false,
+      'switch.living_fountain': false,
+      'vacuum.living_roborock': false,
+      'cover.living_blind': false,
+    });
+    expect(counts['climate.living_main']).toBeUndefined();
     expect(suggestion.config.mediaTargets).toEqual([
       expect.objectContaining({ entityId: 'media_player.living_sonos', roomId: 'living_room' }),
     ]);

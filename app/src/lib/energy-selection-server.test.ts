@@ -99,6 +99,31 @@ describe('Energie-Auswahl', () => {
     expect(stored.energy.sensors.consumptionPower).toHaveLength(3);
   });
 
+  it('speichert den Hausakku, nimmt ihn aus den Verbrauchern und behält ihn, wenn eine ältere App ihn nicht schickt', async () => {
+    const { base, householdConfigPath } = await start();
+    const first = await putEnergy(base, await etagOf(base), {
+      production: 'sensor.pv_dach_leistung',
+      consumption: [...loads(2), { entityId: 'sensor.akku_leistung', name: 'Akku' }],
+      battery: { level: 'sensor.akku_ladestand', power: 'sensor.akku_leistung' },
+    });
+    expect(first.status).toBe(200);
+    let stored = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(stored.energy.sensors.batteryLevel).toBe('sensor.akku_ladestand');
+    expect(stored.energy.sensors.batteryPower).toBe('sensor.akku_leistung');
+    expect(stored.energy.sensors.consumptionPower).toHaveLength(2);
+
+    expect((await putEnergy(base, await etagOf(base), { production: null, consumption: loads(1) })).status).toBe(200);
+    stored = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(stored.energy.sensors.batteryLevel).toBe('sensor.akku_ladestand');
+
+    // Ohne Ladestand kein Akku, auch keine Leistung; eine kaputte Kennung ist ungültig.
+    expect((await putEnergy(base, await etagOf(base), { production: null, consumption: [], battery: { level: null, power: 'sensor.akku_leistung' } })).status).toBe(200);
+    stored = JSON.parse(readFileSync(householdConfigPath, 'utf8'));
+    expect(stored.energy.sensors).not.toHaveProperty('batteryLevel');
+    expect(stored.energy.sensors).not.toHaveProperty('batteryPower');
+    expect((await putEnergy(base, await etagOf(base), { production: null, consumption: [], battery: { level: 'Akku!' } })).status).toBe(400);
+  });
+
   it('nennt die Grenze, statt nur „ungültig" zu sagen', async () => {
     const { base } = await start();
     const response = await putEnergy(base, await etagOf(base), {

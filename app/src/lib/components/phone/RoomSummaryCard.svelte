@@ -1,5 +1,6 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import { fmtTemp } from '../../format.ts';
   import { iconAssetUrlFromId } from '../../state/icon-path.ts';
   import { whenEditable } from '../../state/edit-mode.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
@@ -117,6 +118,9 @@
          statt umzuspringen; leer ist sie unsichtbar. -->
     <span class="phone-room-facts">
       <span class="phone-room-presence" class:is-on={summary.presence} aria-hidden="true"></span>
+      {#if summary.temperature !== null}
+        <span class="phone-room-fact phone-room-temp num">{fmtTemp(summary.temperature)}°</span>
+      {/if}
       {#if summary.lightsOn > 0}
         <span class="phone-room-fact">
           <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_lights_on({ count: summary.lightsOn })}
@@ -125,6 +129,11 @@
       {#if summary.windowOpen}
         <span class="phone-room-fact is-warning">
           <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_window_open()}
+        </span>
+      {/if}
+      {#if summary.doorOpen}
+        <span class="phone-room-fact is-warning">
+          <span class="phone-room-fact-dot" aria-hidden="true"></span>{m.phone_room_door_open()}
         </span>
       {/if}
     </span>

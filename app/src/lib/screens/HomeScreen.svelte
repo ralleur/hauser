@@ -1,5 +1,6 @@
 <script lang="ts">
   import RoomHero from '../components/RoomHero.svelte';
+  import HeroDeviceTargets from '../components/HeroDeviceTargets.svelte';
   import RoomControls from '../components/RoomControls.svelte';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
   import PanelRoomSelector from '../components/PanelRoomSelector.svelte';
@@ -17,7 +18,7 @@
   import { layoutManager } from '../state/layout-manager.svelte.ts';
   import { layoutHomeView, layoutRoomsPerRow, widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
   import { cameraPopouts } from '../state/camera-popouts.svelte.ts';
-  import { deviceDetail, roomEdit } from '../state/overlay.svelte.ts';
+  import { deviceDetail, openRoomEdit, roomEdit } from '../state/overlay.svelte.ts';
   import { currentMoment, initMoments } from '../state/moments.svelte.ts';
   import type { Component } from 'svelte';
 
@@ -32,6 +33,10 @@
      kommt erst, wenn die Ansicht gewählt ist — im Vollbild bleibt der
      Startpfad unverändert. */
   const roomsView = $derived(layoutHomeView(layoutManager.preview) === 'rooms');
+  /* Bildsteuerung (Owner 2026-10-19): nur das Raumbild, die Kontrollfläche
+     bleibt draußen; bedient wird über die Geräte im Bild. Ein Wisch wechselt
+     den Raum, langer Druck öffnet die Konfiguration. */
+  const imageView = $derived(layoutHomeView(layoutManager.preview) === 'image');
   const activeRoomIds = $derived(layoutManager.preview.slots.map((slot) => slotRoom(slot.roomId)?.id ?? ''));
   let HomeRoomGrid = $state<Component<{
     rooms: typeof appState.rooms;
@@ -54,10 +59,10 @@
      (Owner-Wunsch 2026-09-12). */
   let panelsHidden = $state(false);
   $effect(() => {
-    panelsHidden = roomsView && !ambientState.active;
+    panelsHidden = (roomsView || imageView) && !ambientState.active;
   });
   $effect(() => {
-    if (!panelsHidden || roomsView) return;
+    if (!panelsHidden || roomsView || imageView) return;
     const show = () => { panelsHidden = false; };
     window.addEventListener('pointerdown', show, { capture: true });
     return () => window.removeEventListener('pointerdown', show, { capture: true });
@@ -84,6 +89,42 @@
   const layoutStyle = $derived(
     `--layout-total:${preset.totalPercent}%;--slot-min:${preset.slotMinPx}px;--hero-min:${preset.heroMinPx}px;--slot-count:${layoutManager.preview.slots.length}`,
   );
+
+  /* Ein Konfigurationsmodus (Owner 2026-10-19): langer Druck auf den
+     Hintergrund und der Wisch nach links öffnen den Raum-Konfigurationsmodus
+     des gezeigten Raums. Dort stehen auch Breite, Ansicht und Raster, die
+     früher in der Leiste von rechts lagen. */
+  const openConfig = whenEditable(() => {
+    const roomId = appState.currentRoom ?? appState.rooms[0]?.id;
+    if (roomId) openRoomEdit(roomId);
+  });
+
+  function stepRoom(delta: 1 | -1): void {
+    const rooms = appState.rooms;
+    if (rooms.length < 2) return;
+    const index = Math.max(0, rooms.findIndex((room) => room.id === appState.currentRoom));
+    selectRoom(layoutManager.applied.slots[0].id, rooms[(index + delta + rooms.length) % rooms.length].id);
+  }
+
+  /* Bildsteuerung: zweimal kurz hintereinander auf eine Stelle ohne Gerät
+     getippt, zeigt das Bild für einen Moment, was wo liegt. */
+  let revealDevices = $state(false);
+  let revealTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastTap = { at: 0, x: 0, y: 0 };
+  function onFreeTap(event: PointerEvent): void {
+    if (!imageView) return;
+    const now = event.timeStamp;
+    const near = Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) < 40;
+    if (now - lastTap.at < 450 && near) {
+      lastTap = { at: 0, x: 0, y: 0 };
+      revealDevices = true;
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(() => { revealDevices = false; }, 2600);
+      return;
+    }
+    lastTap = { at: now, x: event.clientX, y: event.clientY };
+  }
+  $effect(() => () => clearTimeout(revealTimer));
 
   function slotRoom(roomId: string | null) {
     return appState.rooms.find((room) => room.id === roomId) ?? appState.rooms[0];
@@ -144,11 +185,14 @@
   });
 </script>
 
-<!-- Wisch von rechts nach links irgendwo auf der Bühne öffnet das Layout-Menü
-     (Owner-Wunsch 2026-09-11); die Kontrollfläche behält ihre eigene Geste. -->
+<!-- Wisch von rechts nach links irgendwo auf der Bühne öffnet den Raum-
+     Konfigurationsmodus (früher das Layout-Menü, Owner 2026-10-19); in der
+     Bildsteuerung wechselt er stattdessen den Raum. Die Kontrollfläche behält
+     ihre eigene Geste. -->
 <div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2}
      class:is-rooms-view={roomsView} style={layoutStyle}
-     use:swipeleft={{ onSwipe: whenEditable(() => layoutManager.show()), move: false, ignore: '.home-panels', threshold: 120, angle: 60, enabled: !layoutManager.open }}>
+     use:swipeleft={{ onSwipe: () => (imageView ? stepRoom(1) : openConfig()), move: false, ignore: '.home-panels', threshold: 120, angle: 60 }}
+     use:swipeleft={{ onSwipe: () => stepRoom(-1), move: false, direction: 'right', threshold: 120, angle: 60, enabled: imageView }}>
   {#if !roomsView}
     <RoomHero />
   {/if}
@@ -156,8 +200,14 @@
   <!-- Eigene freie Trefferfläche: sie liegt ausschließlich rechts neben den
        Kontrollflächen. Controls und Raumkacheln sind keine Nachfahren und können
        den Layout-Long-Press deshalb nicht versehentlich auslösen. -->
+  <!-- svelte-ignore a11y_no_static_element_interactions — der Doppeltipp
+       der Bildsteuerung ist eine Zusatzgeste; die Geräte im Bild sind Knöpfe. -->
   <div class="hero-config-hitarea" aria-label={m.home_free_hero_area()}
-       use:longpress={{ onLongPress: whenEditable(() => layoutManager.show()) }}></div>
+       use:longpress={{ onLongPress: openConfig }} onpointerup={onFreeTap}></div>
+
+  {#if !roomsView}
+    <HeroDeviceTargets reveal={revealDevices} />
+  {/if}
 
   <div class="camera-popout-layer">
     {#each cameraPopouts.items as item (item.entityId)}
@@ -182,7 +232,7 @@
           <PanelRoomSelector
             rooms={appState.rooms}
             selectedId={selected?.id ?? null}
-            {roomsPerRow}
+            maxPerPage={layoutManager.preview.roomsPerPageMax}
             onselect={(roomId) => selectRoom(slot.id, roomId)}
           />
         {/if}

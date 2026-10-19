@@ -3,6 +3,83 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.46.0] - 2026-10-19
+
+- A glance: the lightbulb on a room only lights up for lamps. Smart plugs,
+  configuration switches, open blinds and vacuums stay listed and
+  controllable without lighting it, in existing homes too. A plug or relay
+  that powers a lamp can be counted with **Counts for the room light
+  indicator** in the device settings. Thanks to @ferlodavid (#32, #35).
+- A glance: open doors and open windows are told apart. The overview, the
+  phone notice, the ambient screen and the room cards say "1 window open",
+  "1 door open" or both, based on the contact's Home Assistant device class
+  (`door` and `garage_door` are doors). Thanks to @ferlodavid (#33, #36).
+- A glance: when the add-on has a newer Hauser version waiting, a
+  notification says so and where to update it. Hauser reads Home Assistant's
+  own update entity for the add-on, so nothing is fetched from the internet.
+  Dismissed, it stays away until the next version.
+- Touch: blinds can be raised, stopped and lowered right on their tile. The
+  blind's settings cycle through three tile views: large (one tile wide, two
+  high, up and down stacked with stop beside them; the default), compact
+  (the buttons replace name and state on a normal tile) and the previous
+  tile without buttons. Only the buttons a blind supports are shown, and the
+  direction it is moving in lights up. Suggested by @ferlodavid (#39).
+- Touch: the temperature control can be switched. A button at the top right
+  of the climate overlay and the thermostat detail cycles through a tick
+  slider (default, as in the iOS app), plus and minus, and an upright tick
+  slider like a lamp's brightness. The choice is kept per room.
+- Room: the panel's room picker shows as many rooms on a page as look good,
+  up to eight by default (two columns, up to four rows), so a home with eight
+  rooms no longer has to page. The room configuration sets the upper limit per page
+  (4 to 16); with more rooms per page the picker uses three or four columns.
+  "Rooms per row" now belongs to the "All rooms" view. Suggested by
+  @ferlodavid (#40).
+- Gate: Hauser speaks Spanish (Spain, informal "tú"). The whole interface is
+  translated, Spanish dates and numbers follow es-ES, and the language picker
+  offers Español. Translation by @ferlodavid (#30, #31).
+- Weakness with dignity: the library asks for the Jellyfin server address on
+  its sign-in card when none is set yet. Before, it signed in against a
+  built-in default and could not be set up from there.
+- Hidden simulator: tapping the clock five times opens it again with a mouse
+  or at a relaxed pace; only the pause between two taps counts now.
+- A glance: the room temperature now shows on the room cards of the
+  **All rooms** view and on the phone, not only in the panel's room picker,
+  and it follows the room's **Show temperature** setting everywhere.
+- Room: in **Assign lamps** the light zone shows its real size as a
+  see-through area with a white dot at its centre. Handles at the corners
+  stretch it into an ellipse of any width and height, and a handle on top
+  rotates it, so the zone can follow a lampshade. The night glow on the room
+  image takes the same shape.
+- Room: **Assign lamps** is now **Assign devices**. Every device in the room
+  can get a spot on the room image: lamps keep their light zone, everything
+  else gets a point. Tapping a placed device on the room image does what
+  tapping its tile does (switch, open or show the detail), holding it opens
+  the detail, and a soft ring confirms the tap. A camera tapped on the image
+  brings its picture to the front.
+- Room: one configuration mode. Pressing and holding a room or the
+  background opens the room configuration, which now also holds what the
+  layout panel from the right used to: a pill next to the control surface
+  drags its width, the view switch sits at the top centre, rooms per page,
+  rooms per row and rows at once sit under the rooms, and auto-hide, the
+  second control surface and reset are in the side column. Swiping left on
+  the stage opens it as well.
+- Room: a third view, **Image control**. Only the room image is shown; the
+  control surface stays away outside configuration, and devices are used
+  through their spots on the image. Swipe to change rooms; double-tap an
+  empty spot to see the zones and names for a moment.
+- Energy on the phone: the house now stands large and sharp at the top
+  instead of lying pale behind the numbers. The power right now sits in the
+  sky of the picture; below it, solar, battery and grid stand side by side,
+  each marked by a small coloured line instead of an icon.
+- Energy: a home battery can be assigned under Services → Energy (charge
+  level, optionally its power, signed like the Home Assistant energy
+  dashboard). The phone shows the charge level with a small battery and
+  whether it is charging or discharging; the grid value accounts for it.
+- Energy: consumers that were saved with only their entity ID (such as
+  `sensor.strom_pi_power`) now show their Home Assistant name, or else a
+  readable form of the ID, on the phone and the wall panel.
+- The iOS app follows all of this with its next TestFlight build.
+
 ## [0.45.0] - 2026-10-15
 
 - Room on the phone: an eye button hides the room controls so only the room

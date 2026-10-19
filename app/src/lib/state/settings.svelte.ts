@@ -291,11 +291,12 @@ export function setHaUrl(value: string): void {
 }
 
 /* Jellyfin-Basis-URL: Singleton entsteht beim App-Start → Neuladen nötig. */
-export function setJellyfinUrl(value: string): void {
+export function setJellyfinUrl(value: string, { live = false }: { live?: boolean } = {}): void {
   const v = value.trim().replace(/\/+$/, '');
   settingsValues.jellyfinUrl = v;
   lsSet('hmi:jf-url', v || null);
-  settingsUi.needsReload = true;
+  /* Aus der Anmeldekarte setzt der Aufrufer die Adresse auch am laufenden Client. */
+  if (!live) settingsUi.needsReload = true;
 }
 
 /* Bibliotheks-Modus (hmi:library, docs/08): auto folgt dem HA-Backend,

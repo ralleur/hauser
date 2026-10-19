@@ -9,6 +9,9 @@
   import Icon from './Icon.svelte';
 
   import TickScale from './TickScale.svelte';
+  import ClimateControlToggle from './ClimateControlToggle.svelte';
+  import '../../styles/room-controls.css';
+  import { climateControl, climateStep } from '../state/room-display-config.svelte.ts';
   import { appState, COLOR_TEMP_MIN, COLOR_TEMP_MAX, HVAC_MODES, HVAC_MODES_ALL, ROOM_SEED, type Light } from '../state/app.svelte.ts';
   import {
     mergedDevice, devicePending, deviceUnconfirmed, deviceReconcile,
@@ -21,7 +24,8 @@
     mowerCommand, alarmCommand, setNumberValue, selectOption, pressButton, type AlarmAction,
   } from '../state/commands.ts';
   import { deviceDetail, closeDeviceDetail, finishDeviceDetailClose, openDeviceDetail } from '../state/overlay.svelte.ts';
-  import { isGroupableCategory } from '../state/device-config.ts';
+  import { countsForBulb, isGroupableCategory } from '../state/device-config.ts';
+  import { isBulbCandidate } from '../state/bulb-choice.ts';
   import { pulse } from '../actions/pulse.ts';
   import { LIGHT_COLOR_SWATCHES, tempTint, climateTint, lightLevel } from '../state/light-presets.ts';
   import { fanPresetIcon, fanPresetLabel, fanSpinDuration } from '../state/fan-presets.ts';
@@ -30,7 +34,7 @@
   import { defaultIconFor, iconForDevice, persistLightIconOverride, resetLightIconOverride } from '../state/light-icons.ts';
 
   import { binaryLabel, fmtSensor } from '../state/info-display.ts';
-  import { deviceManager, renameDevice, setDeviceShowName } from '../state/device-manager.svelte.ts';
+  import { deviceManager, renameDevice, setCountsAsLight, setDeviceShowName, cycleCoverTile } from '../state/device-manager.svelte.ts';
   import { pressRemoteKey, remoteEntityFor, type RemoteKey } from '../state/remote-keys.ts';
   import { fmtTemp } from '../format.ts';
   import type {
@@ -46,6 +50,10 @@
   );
   const category = $derived(device?.category ?? 'light');
   const entityId = $derived(device?.entityId ?? '');
+  /* Glühbirne der Raumübersicht: nur Geräte, die dort überhaupt mitgezählt
+     werden könnten (Lichter, Schalter, Rollos, Saugroboter), und keine Gruppen. */
+  const counts = $derived(device ? countsForBulb(device) : true);
+  const bulbChoice = $derived(!!device && isBulbCandidate(device));
 
   // Gemergte Sicht (Server bzw. pending Intent); undefined tolerieren —
   // frisch eingeblendete Geräte haben ggf. noch keinen Wert (commands.ts).
@@ -390,6 +398,18 @@
               {#if pending}<span class="pending-dot" aria-hidden="true"></span>{/if}
             </button>
           {/if}
+          <!-- Rollo-Kachel: drei Ansichten reihum — ohne Tasten, groß mit
+               Tasten (Standard), nur Tasten (Owner-Entscheidung 2026-10-19). -->
+          {#if category === 'cover' && cover && (cover.supportsOpen || cover.supportsClose)}
+            {@const tileMode = device.coverTile ?? 'large'}
+            <button class="ld-close ld-group pressable" type="button"
+                    aria-label={m.dev_cover_tile({ mode: tileMode === 'plain' ? m.dev_cover_tile_plain() : tileMode === 'compact' ? m.dev_cover_tile_compact() : m.dev_cover_tile_large() })}
+                    title={m.dev_cover_tile({ mode: tileMode === 'plain' ? m.dev_cover_tile_plain() : tileMode === 'compact' ? m.dev_cover_tile_compact() : m.dev_cover_tile_large() })}
+                    onclick={() => cycleCoverTile(entityId, device.coverTile)}>
+              <Icon name={tileMode === 'plain' ? 'i-card-text-outline' : tileMode === 'compact' ? 'i-arrow-up-down' : 'i-view-dashboard-outline'} cls="icon icon-md" />
+            </button>
+          {/if}
+          {#if category === 'temp'}<ClimateControlToggle {roomId} />{/if}
           {#if groupable}
             <button class="ld-close ld-group pressable" type="button" aria-label={m.grp_open()}
                     aria-haspopup="dialog" aria-expanded={groupEditOpen} onclick={() => void openGroupEdit()}>
@@ -525,14 +545,36 @@
               </section>
             {/if}
           {:else if category === 'temp'}
+            {@const tempControl = climateControl(roomId)}
             <section class="ld-section">
               <span class="caps-label">{m.dev_target_temp()}</span>
-              <TickScale ariaLabel={m.dev_target_temp()} orientation="horizontal" mode="gradient"
-                         value={Math.min(climateRange.max, Math.max(climateRange.min, targetDisplay))}
-                         min={climateRange.min} max={climateRange.max} step={0.5} keyStep={1}
-                         tint={climateTint}
-                         onInput={onTarget} format={(v) => `${fmtTemp(v)} °C`} />
-              <div class="ld-scale-ends"><span>{fmtTemp(climateRange.min)}°</span><span>{fmtTemp(climateRange.max)}°</span></div>
+              {#if tempControl === 'stepper'}
+                <div class="climate-target-control">
+                  <button class="climate-step climate-step-down pressable" type="button" aria-label={m.room_temp_down()}
+                          onclick={() => setClimateTarget(entityId, Math.max(Math.min(climateRange.min, targetDisplay), targetDisplay - climateStep(roomId)))}>
+                    <Icon name="i-minus" cls="icon icon-xl" />
+                  </button>
+                  <span class="climate-target-value num">{fmtTemp(targetDisplay)} °C</span>
+                  <button class="climate-step climate-step-up pressable" type="button" aria-label={m.room_temp_up()}
+                          onclick={() => setClimateTarget(entityId, Math.min(Math.max(climateRange.max, targetDisplay), targetDisplay + climateStep(roomId)))}>
+                    <Icon name="i-plus" cls="icon icon-xl" />
+                  </button>
+                </div>
+              {:else if tempControl === 'vertical'}
+                <div class="climate-target-scale is-vertical">
+                  <TickScale ariaLabel={m.dev_target_temp()} orientation="vertical" mode="gradient" tint={climateTint}
+                             value={Math.min(climateRange.max, Math.max(climateRange.min, targetDisplay))}
+                             min={climateRange.min} max={climateRange.max} step={0.5} keyStep={1}
+                             onInput={onTarget} format={(v) => `${fmtTemp(v)}°`} />
+                </div>
+              {:else}
+                <TickScale ariaLabel={m.dev_target_temp()} orientation="horizontal" mode="gradient"
+                           value={Math.min(climateRange.max, Math.max(climateRange.min, targetDisplay))}
+                           min={climateRange.min} max={climateRange.max} step={0.5} keyStep={1}
+                           tint={climateTint}
+                           onInput={onTarget} format={(v) => `${fmtTemp(v)} °C`} />
+                <div class="ld-scale-ends"><span>{fmtTemp(climateRange.min)}°</span><span>{fmtTemp(climateRange.max)}°</span></div>
+              {/if}
             </section>
             <section class="ld-section">
               <span class="caps-label">{m.dev_mode()}</span>
@@ -952,6 +994,17 @@
                 </div>
               </section>
             {/if}
+          {/if}
+          {#if bulbChoice}
+            <section class="ld-section ld-switch-row">
+              <span id="device-counts-light-label">{m.dev_counts_as_light()}</span>
+              <button class="re-toggle pressable" type="button" role="switch"
+                      aria-checked={counts} class:is-on={counts}
+                      aria-labelledby="device-counts-light-label"
+                      onclick={() => setCountsAsLight(entityId, !counts)}>
+                <span class="re-toggle-knob"></span>
+              </button>
+            </section>
           {/if}
         </div>
       {/key}

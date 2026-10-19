@@ -49,6 +49,11 @@ export interface Light {
   deviceClass?: string | null;
   icon?: string;
   showName?: boolean;
+  /** Glühbirne der Raumübersicht: `true`/`false` setzt die Wahl, ohne Angabe
+      zählen nur Lampen (siehe `countsForBulb` in device-config.ts). */
+  countsAsLight?: boolean;
+  /** Rollo-Kachel: alte Ansicht oder kompakt; ohne Angabe groß mit Tasten. */
+  coverTile?: 'plain' | 'compact';
 }
 
 export interface Room {
@@ -177,6 +182,10 @@ export interface EnergySensors {
   consumedToday: EnergySensorRef;
   fedInToday: EnergySensorRef;
   drawnToday: EnergySensorRef;
+  /** Ladestand des Hausakkus (%). */
+  batteryLevel: EnergySensorRef;
+  /** Akkuleistung wie im HA-Energie-Dashboard: positiv entlädt, negativ lädt. */
+  batteryPower: EnergySensorRef;
 }
 
 export function energyRefIds(ref: EnergySensorRef | readonly LoadSource[]): string[] {
@@ -208,6 +217,8 @@ export const ENERGY_SENSORS: EnergySensors = {
   consumedToday: 'sensor.hmi_erfasste_last_taeglich',
   fedInToday: null,
   drawnToday: null,
+  batteryLevel: null,
+  batteryPower: null,
 };
 
 export const VACATION_MODE_ENTITY = 'switch.urlaubsmodus';

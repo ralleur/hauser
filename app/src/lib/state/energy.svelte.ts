@@ -12,7 +12,7 @@
 import { simulation } from './simulation.svelte.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { ENERGY_SENSORS, energyRefIds, type EnergySensorRef, type LoadSource } from './app.svelte.ts';
-import { computeLoadBreakdown, type LoadBreakdown } from './energy-load.ts';
+import { computeLoadBreakdown, energyLoadLabel, type LoadBreakdown } from './energy-load.ts';
 import { createSnapshotStore } from '../data/query-cache.ts';
 import type { SensorValue } from '../adapter/types.ts';
 
@@ -67,12 +67,36 @@ export interface EnergyView {
   load: number | null;
   /** Netz: >0 Einspeisung, <0 Bezug. Abgeleitet aus (PV − Last). null = unbekannt. */
   grid: number | null;
+  /** Hausakku, sobald ein Ladestand zugeordnet ist; sonst null. */
+  battery: EnergyBattery | null;
   today: {
     produced: number | null;
     consumed: number | null;
     fedIn: number | null;
     drawn: number | null;
   };
+}
+
+export interface EnergyBattery {
+  /** Ladestand 0…100 %, null wenn der Sensor gerade nichts liefert. */
+  level: number | null;
+  /** kW wie im HA-Energie-Dashboard: positiv entlädt, negativ lädt; null = nicht zugeordnet oder unbekannt. */
+  power: number | null;
+}
+
+/* Ladestand: nur eine endliche Zahl zählt, gekappt auf 0…100 — manche Akkus
+   melden kurz 101 % oder −1 %, „unavailable“ kommt schon als null. */
+function batteryLevel(eid: string | null): number | null {
+  const s = readSensor(eid);
+  if (!s || s.value === null || !Number.isFinite(s.value)) return null;
+  return Math.min(100, Math.max(0, s.value));
+}
+
+/* Netz aus der Bilanz am Hausanschluss: was PV und Akku liefern, minus Last.
+   Ohne Akkuleistung bleibt es (PV − Last) wie bisher. */
+export function gridFlow(pv: number | null, load: number | null, batteryPower: number | null): number | null {
+  if (pv === null || load === null) return null;
+  return pv + (batteryPower ?? 0) - load;
 }
 
 /* ── Snapshot der Kurven (Paket 5, docs/20) ──
@@ -138,7 +162,7 @@ function simulatedEnergyView(sim: NonNullable<typeof simulation.energy>): Energy
   const round = (value: number) => Math.round(value * 10) / 10;
   if (!sim.configured) {
     return {
-      configured: false, hasGeneration: false, pv: null, load: null, grid: null,
+      configured: false, hasGeneration: false, pv: null, load: null, grid: null, battery: null,
       today: { produced: null, consumed: null, fedIn: null, drawn: null },
     };
   }
@@ -150,6 +174,7 @@ function simulatedEnergyView(sim: NonNullable<typeof simulation.energy>): Energy
     pv,
     load,
     grid: pv !== null ? round(pv - load) : null,
+    battery: null,
     today: {
       produced: pv !== null ? round(pv * 5.2) : null,
       consumed: round(load * 6.1),
@@ -163,9 +188,15 @@ export function energyView(): EnergyView {
   if (simulation.energy) return simulatedEnergyView(simulation.energy);
   const pv = sumRefs(ENERGY_SENSORS.pv, kw);
   const load = sumRefs(ENERGY_SENSORS.load, kw);
-  // Netz-Fluss aus (PV − Last): >0 Überschuss/Einspeisung, <0 Bezug. Nur wenn
-  // beide Werte echte Sensoren haben; sonst bleibt Netz unbekannt statt geraten.
-  const grid = pv !== null && load !== null ? pv - load : null;
+  const levelId = energyRefIds(ENERGY_SENSORS.batteryLevel)[0] ?? null;
+  const powerId = energyRefIds(ENERGY_SENSORS.batteryPower)[0] ?? null;
+  const batteryPower = powerId ? kw(powerId) : null;
+  const battery: EnergyBattery | null = levelId
+    ? { level: batteryLevel(levelId), power: batteryPower !== null && Number.isFinite(batteryPower) ? batteryPower : null }
+    : null;
+  // Netz-Fluss aus (PV + Akku − Last): >0 Überschuss/Einspeisung, <0 Bezug. Nur
+  // wenn PV und Last echte Sensoren haben; sonst bleibt Netz unbekannt statt geraten.
+  const grid = gridFlow(pv, load, battery?.power ?? null);
   const hasConfig = configured(ENERGY_SENSORS.pv) || configured(ENERGY_SENSORS.load);
   const hasGeneration = [
     ENERGY_SENSORS.pv, ENERGY_SENSORS.producedToday, ENERGY_SENSORS.fedInToday,
@@ -185,6 +216,7 @@ export function energyView(): EnergyView {
   return {
     configured: hasConfig,
     hasGeneration,
+    battery,
     ...(hasConfig ? fillFromSnapshot(readings) : readings),
   };
 }
@@ -193,9 +225,9 @@ export function energyView(): EnergyView {
    `ENERGY_SENSORS.load`-Quelle über denselben kW-Seam wie energyView().load und
    delegiert die Segment-/Prozent-/„Sonstige"-Mathematik an die reine Utility.
    Reaktiv via runtime.merged — im Overlay in einem $derived aufrufen. */
-export function loadBreakdown(): LoadBreakdown {
+export function loadBreakdown(friendlyName: (entityId: string) => string | null = () => null): LoadBreakdown {
   const inputs = ENERGY_SENSORS.load.map((source) => ({
-    label: source.label,
+    label: energyLoadLabel(source.label, source.entityId, friendlyName(source.entityId)),
     value: kw(source.entityId),
     group: source.group,
   }));

@@ -224,3 +224,95 @@
     padding: var(--space-4);
   }
 }
+
+/* ── Ein Konfigurationsmodus (Owner 2026-10-19) ──
+   Ansicht oben in der Mitte (wo sonst das h steht), Raster unter den Räumen,
+   eine Pille zum Ziehen der Breite rechts neben der Spalte. */
+.room-edit.is-panel-mirror .re-view-toggle {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--bar-top) / 2 + var(--space-1));
+  left: 50%;
+  translate: -50% -50%;
+  pointer-events: auto;
+  background: var(--re-mirror-face);
+  border: 1px solid var(--overlay-border);
+  box-shadow: var(--elevation-card-shadow);
+}
+.room-edit.is-panel-mirror .re-layout-settings {
+  flex: none;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.room-edit.is-panel-mirror .re-layout-setting {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.room-edit.is-panel-mirror .re-width-grip {
+  position: relative;
+  flex: none;
+  width: 0;
+  margin-inline: calc(var(--space-4) / -2);
+  align-self: center;
+}
+.room-edit.is-panel-mirror .re-width-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 64px;
+  padding: 0;
+  translate: -50% -50%;
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+  box-shadow: var(--elevation-card-shadow);
+  cursor: ew-resize;
+  touch-action: none;
+  transition: background var(--duration-fast) var(--ease-out), scale var(--duration-fast) var(--ease-out);
+}
+/* Fingergroß zu greifen, auch wenn die Pille schmal aussieht. */
+.room-edit.is-panel-mirror .re-width-pill::before {
+  content: '';
+  position: absolute;
+  inset: -8px calc((var(--touch-min) - 10px) / -2);
+}
+.room-edit.is-panel-mirror .re-width-pill.is-dragging,
+.room-edit.is-panel-mirror .re-width-pill:hover {
+  background: var(--color-accent-warm);
+  scale: 1.1;
+}
+.room-edit.is-panel-mirror .re-view-section {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+.room-edit.is-panel-mirror .re-view-section .re-layout-setting { padding: 0 var(--space-4) var(--space-4); }
+.room-edit.is-panel-mirror .re-view-section .layout-room-choice { padding: 0 var(--space-4) var(--space-4); }
+.room-edit.is-panel-mirror .re-view-section .secondary-btn { width: 100%; }
+.room-edit.is-panel-mirror .re-layout-reset { justify-self: start; }
+/* Kompakt unter den Räumen: Leiter und Wert in einer Zeile, flacher als im
+   alten Dialog, damit die Kacheln darunter nicht weit wandern. */
+.room-edit.is-panel-mirror .re-layout-setting .tickscale.is-horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+.room-edit.is-panel-mirror .re-layout-setting .tickscale-track {
+  flex: 1;
+  height: 28px;
+}
+.room-edit.is-panel-mirror .re-layout-setting .tickscale-value {
+  align-self: center;
+  min-width: 2.5ch;
+  text-align: end;
+}
+.room-edit.is-panel-mirror .re-view-toggle .choice-seg {
+  flex: none;
+  padding: 0 var(--space-4);
+  white-space: nowrap;
+}

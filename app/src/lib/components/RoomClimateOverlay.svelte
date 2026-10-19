@@ -5,10 +5,11 @@
      Detail (Scrim, modal-enter, Escape, Tap daneben). */
   import Icon from './Icon.svelte';
   import ClimateCard from './ClimateCard.svelte';
+  import ClimateControlToggle from './ClimateControlToggle.svelte';
   import { appState } from '../state/app.svelte.ts';
   import { roomClimate, closeRoomClimate, finishRoomClimateClose } from '../state/overlay.svelte.ts';
   import {
-    CLIMATE_STEPS, climateInline, climateStep, climateTileShows,
+    CLIMATE_STEPS, climateControl, climateInline, climateStep, climateTileShows,
     setClimateInline, setClimateStep, setClimateTileShows, type ClimateTileShows,
   } from '../state/room-display-config.svelte.ts';
   import { fmtTemp } from '../format.ts';
@@ -62,6 +63,7 @@
       <header class="ld-header">
         <span class="ld-symbol" aria-hidden="true"><Icon name="i-thermometer" /></span>
         <span class="ld-title">{settings ? m.climate_settings_title() : room.name}</span>
+        {#if !settings}<ClimateControlToggle roomId={room.id} />{/if}
         <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                 onclick={() => closeRoomClimate()}><Icon name="i-close" cls="icon icon-md" /></button>
       </header>
@@ -98,7 +100,7 @@
         </section>
       {:else}
         <div class="climate-section room-climate-card">
-          <ClimateCard {room} stacked />
+          <ClimateCard {room} stacked control={climateControl(room.id)} />
         </div>
         {#if onPhone}
           <section class="ld-section ld-switch-row">

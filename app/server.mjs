@@ -1,3 +1,4 @@
+import { createHauserUpdateWatch } from './server/hauser-update.mjs';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { dirname, join, resolve } from 'node:path';
@@ -852,6 +853,7 @@ export function createHmiServer(
   /* Fehlerbuch (R58): Server, Oberfläche und App tragen ein; die Werkstatt
      schickt es von selbst ins Postfach, alle anderen nur mit dem Fragezeichen. */
   const errorBook = createErrorBook({ path: errorBookPath, version: buildInfo.version ?? '' });
+  const hauserUpdate = createHauserUpdateWatch({ connectionMode: haConnectionMode, supervisorClientFactory: haSupervisorClientFactory });
   const feedback = createFeedbackService({ buildInfo, haConnectionMode, errorBook });
   const stopErrorReports = startErrorReports(errorBook, { send: (errors) => feedback.sendErrors(errors) });
   const moments = momentsService ?? createMomentsService({
@@ -988,6 +990,8 @@ export function createHmiServer(
       serveHmiHealth(req, res, readinessOptions);
     } else if ((req.url || '') === '/api/build-info') {
       serveBuildInfo(req, res, buildInfo);
+    } else if ((req.url || '') === '/api/hauser-update' && req.method === 'GET') {
+      void hauserUpdate.status().then((body) => jsonResponse(res, 200, body, { 'cache-control': 'no-store' }));
     } else if ((req.url || '') === '/api/room-images/maintenance' && req.method === 'GET') {
       jsonResponse(res, 200, currentRoomImageMaintenance() ?? { status: 'idle' });
     } else if ((req.url || '') === '/api/ha/connection'

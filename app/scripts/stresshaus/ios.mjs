@@ -128,9 +128,25 @@ async function pair(apiOrigin, lanOrigin = apiOrigin) {
   return Buffer.from(JSON.stringify(pairing)).toString('base64');
 }
 
-function runDevice({ udid, label, xctestrun, env, record, setStep, coverage }) {
+/* Kennung der gebauten App aus ihrer Info.plist — so steht sie nicht im Code. */
+function appBundleId() {
+  const products = join(DERIVED, 'Build/Products');
+  const dir = readdirSync(products).find((f) => f.endsWith('-iphonesimulator'));
+  if (!dir) return null;
+  const app = readdirSync(join(products, dir)).find((f) => f.endsWith('.app') && !/Runner|Stresshaus/i.test(f));
+  if (!app) return null;
+  try {
+    return execFileSync('plutil', ['-extract', 'CFBundleIdentifier', 'raw', join(products, dir, app, 'Info.plist')], { encoding: 'utf8' }).trim() || null;
+  } catch { return null; }
+}
+
+function runDevice({ udid, label, xctestrun, env, record, setStep, coverage, bundleId }) {
   return new Promise((resolve) => {
     try { simctl(['boot', udid]); } catch { /* läuft schon */ }
+    /* Jeder Lauf mit frisch installierter App: der Simulator bleibt stehen, und mit ihm Fehlerbuch,
+       Ansicht und umgelegte Schalter des letzten Laufs — alte Serverfehler kamen so als neue Befunde
+       zurück (#41), und der Start fand das Panel in einer fremden Ansicht (#25). */
+    try { simctl(['bootstatus', udid, '-b']); if (bundleId) simctl(['uninstall', udid, bundleId]); } catch { /* nicht installiert */ }
     const logStream = spawn('xcrun', ['simctl', 'spawn', udid, 'log', 'stream', '--style', 'compact', '--predicate', 'process == "hauser"'], { stdio: ['ignore', 'pipe', 'ignore'] });
     let current = `${label}: Start`;
     logStream.stdout.on('data', (chunk) => {
@@ -178,6 +194,7 @@ export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit
     return;
   }
   const xctestrun = buildForTesting(log);
+  const bundleId = appBundleId();
   let current = 'iOS: Start';
   const proxy = await startProxy(apiOrigin, (line) => { setStep(current); record('iOS-Server', line); });
   const pairing = await pair(apiOrigin, proxy.origin);
@@ -199,7 +216,7 @@ export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit
   ];
   for (const device of devices) {
     log(`iOS: ${device.label} …`);
-    await runDevice({ ...device, xctestrun, env, record, setStep: (value) => { current = value; setStep(value); }, coverage });
+    await runDevice({ ...device, xctestrun, env, record, setStep: (value) => { current = value; setStep(value); }, coverage, bundleId });
   }
   proxy.close();
 }
