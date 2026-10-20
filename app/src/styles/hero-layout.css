@@ -398,6 +398,14 @@
   scroll-snap-stop: always;
 }
 .room-selector.has-pages .room-page { padding-bottom: var(--space-3); }
+/* Seiten behalten ihre eigene Höhe; der Rahmen folgt der sichtbaren Seite. */
+.room-selector.has-pages .room-page-viewport {
+  align-items: flex-start;
+  transition: height var(--duration-enter) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-selector.has-pages .room-page-viewport { transition: none; }
+}
 .room-page-nav {
   display: grid;
   grid-template-columns: var(--touch-preferred) 1fr var(--touch-preferred);

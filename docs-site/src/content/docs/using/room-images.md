@@ -120,12 +120,22 @@ Finished sets stay in the library under **Rooms & devices**. Assign a set to a
 room, switch between sets or delete an old one. Assigning a set updates that
 room’s picture.
 
-## Lamp placement
+## Devices in the picture
 
-In the room editor, you can place lamps in the picture. Their light cones
-follow their state. When the last lamp goes out, the room moves to its
-lights-off variant. These effects use the prepared images; they do not
-regenerate the room for each command.
+In the room configuration, **Assign devices** gives every device of the room a
+spot in its picture. A lamp gets a light zone: drag the corners to stretch it
+into an ellipse and the handle on top to turn it, so it can follow a lampshade
+or the table it lights. Every other device gets a point.
+
+Tapping a placed device in the picture does what tapping its tile does, holding
+it opens the detail, and a soft ring confirms the tap. A camera brings its
+image to the front. In the **Image control** view of the
+[home screen](/hauser/docs/using/home-screen/#three-views), the picture is the
+only control.
+
+The light zones also shape the night glow. When the last lamp goes out, the
+room moves to its lights-off variant. These effects use the prepared images;
+they do not regenerate the room for each command.
 
 ## In the native iOS app
 

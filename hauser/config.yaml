@@ -1,6 +1,6 @@
 {
   "name": "Hauser",
-  "version": "0.46.0",
+  "version": "0.46.1",
   "slug": "hauser",
   "description": "A calm, visual Home Assistant frontend for the people who live in the home",
   "url": "https://github.com/ralleur/hauser/tree/main/hauser",
@@ -8,7 +8,6 @@
     "aarch64",
     "amd64"
   ],
-  "stage": "experimental",
   "init": false,
   "legacy": true,
   "backup": "cold",

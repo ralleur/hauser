@@ -6,7 +6,14 @@ export interface SceneCheck {
   command: Command;
   optimistic: unknown;
   run: symbol;
+  /** Bisherige Wiederholungen; nach MAX_SCENE_RETRIES gibt die Szene das Gerät frei. */
+  retries?: number;
 }
+
+/* Ein Gerät, das den Zielwert nie meldet (Funksteckdose ohne Rückkanal, Lampe
+   ohne Dimmer), darf nicht endlos nachgeschaltet werden: sonst überstimmt Hauser
+   jede Fernbedienung im Haus (simon42, Cpt.Hardy, 2026-10-19). */
+export const MAX_SCENE_RETRIES = 2;
 
 /** HA rundet Helligkeit und Lampen rastern Farben/Temperaturen. */
 export function sceneValueMatches(target: unknown, value: unknown): boolean {
@@ -52,8 +59,10 @@ export async function checkSceneTargets(
   for (const [id, check] of active) {
     if (pending.get(id) !== check || values[id] === undefined) continue;
     if (!sceneValueMatches(check.optimistic, values[id])) {
+      const retries = (check.retries ?? 0) + 1;
+      if (retries > MAX_SCENE_RETRIES) { pending.delete(id); continue; }
       retry(check);
-      pending.set(id, check);
+      pending.set(id, { ...check, retries });
     }
   }
 }

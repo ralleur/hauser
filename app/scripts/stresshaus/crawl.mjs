@@ -758,6 +758,15 @@ async function main() {
        nicht aufbauen, hat die Runde oben schon gesehen. */
     step = 'Fehlerbuch';
     await sleep(6000);
+    /* Nach sechs Sekunden Ruhe sind alle Szenen-Nachprüfungen vorbei. Geht danach
+       noch ein Befehl an die Funklampe ohne Rückkanal, schaltet Hauser gegen die
+       Fernbedienung an (simon42, Cpt.Hardy, 2026-10-19). */
+    step = 'Funklampe';
+    const funkBefore = ha.seen.get('call_service:light.wohnzimmer_funk') ?? 0;
+    await sleep(5000);
+    const funkLate = (ha.seen.get('call_service:light.wohnzimmer_funk') ?? 0) - funkBefore;
+    if (funkLate > 0) record('Last', `Funklampe ohne Rückmeldung ${funkLate}× in 5 s ohne Bedienung nachgeschaltet — Hauser überstimmt die Fernbedienung`);
+    step = 'Fehlerbuch';
     const book = await fetch(`${hauser.apiOrigin}/api/errors`).then((r) => r.json()).catch(() => ({ entries: [] }));
     for (const entry of book.entries ?? []) {
       if (entry.source === 'web' && entry.where === 'screen') continue;

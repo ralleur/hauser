@@ -112,6 +112,16 @@ describe('Szenen bleiben bis zur tatsächlichen Umsetzung überwacht', () => {
     expect(readStates).toHaveBeenCalledTimes(2);
   });
 
+  it('gibt ein Gerät frei, das den Zielwert nie meldet, statt die Fernbedienung zu überstimmen', async () => {
+    const { runtime, calls, readStates, command } = harness();
+    // Funksteckdose als Template-Licht: kennt keine Helligkeit, die Fernbedienung schaltet aus.
+    readStates.mockResolvedValue({ 'light.funk': { on: false, brightness: 0 } });
+    dispatchScene(runtime, command('light.funk', true), { on: true, brightness: 40 });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(calls).toEqual(['light.funk:turn_on', 'light.funk:turn_on', 'light.funk:turn_on']);
+    expect(readStates).toHaveBeenCalledTimes(3);
+  });
+
   it('akzeptiert Rundung und prüft Helligkeit, Temperatur und Farbe', () => {
     expect(sceneValueMatches({ on: true, brightness: 50, colorTemp: 2700, color: null },
       { on: true, brightness: 51, colorTemp: 2740, color: '#ffccaa' })).toBe(true);

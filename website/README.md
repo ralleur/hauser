@@ -29,6 +29,7 @@ demo action. The original outlined logo is copied byte for byte from
 | Current product status | `app/package.json`, public release notes and `ROADMAP.md` | Public beta. No fixed version or language count in marketing copy. Historical roadmap snapshots are not current release evidence. |
 | Room pictures | `app/server/room-images.mjs`, `app/server/room-image-cloudflare-provider.mjs`, [room-image guide](https://ralleur.github.io/hauser/docs/using/room-images/) | Uploads, OpenAI and Cloudflare exist. The old website's OpenAI-only description was stale. Provider access, external photo processing and costs/limits are stated next to the example. Local generation is not presented as a shipped general feature. |
 | State comparison | Existing public capture assets, [rooms guide](https://ralleur.github.io/hauser/docs/using/rooms/), room-picture state handling in the app | Three prepared images, labelled as a preview. No claim that this page or the image switch operates a lamp. |
+| Image control | Public 0.46.0 release notes, `HeroDeviceTargets.svelte`, [home-screen guide](https://ralleur.github.io/hauser/docs/using/home-screen/#three-views); native iPad panel follows (R68/R69) | Shown as its own moment after the state preview, which keeps its “does not control lamps” note. Claimed for the wall panel and the iPad app, not the iPhone. |
 | Native app | [app guide](https://ralleur.github.io/hauser/docs/integrations/companion-app/); native project's `HomeKitSource.swift`, README and iOS deployment target | Apple Home works directly; Home Assistant uses Hauser server pairing. iOS 17+, TestFlight beta. Do not imply feature parity between backends or label the app as a mandatory Home Assistant accessory. |
 | Personal story | Public README, `ROADMAP.md`, photograph provenance in `ASSETS-LICENSE.md` | Built for the author's own household. No invented quote, user count or testimonial. |
 | Accounts, cloud and cost | Server architecture, optional-provider paths, native connection modes | Free Hauser software, no Hauser subscription/account for everyday control. Removed the blanket “no cloud” promise. Optional services and TestFlight have their own terms and data flows. |
@@ -60,6 +61,12 @@ All images have intrinsic dimensions. The hero is preloaded per breakpoint;
 images below it are lazy-loaded. Focus is visible, the preview supports native
 arrow-key operation, and reduced motion removes its short crossfade. There are
 no timers, scrolling effects or content-reveal dependencies.
+
+`media/picture-control.webp` (2026-10-20) is the web demo in the image-control
+view after a double tap. The demo ships no device spots, so the capture script
+places the living-room lamps and blinds on their drawn positions before
+loading; nothing in the picture is retouched. `media/phone-energy.webp` is the
+phone web demo's energy screen at a late-afternoon time, as captured.
 
 `media/social-preview.jpg` is a 1280 × 640 browser capture of the new hero,
 composed for sharing with its navigation/actions hidden and more compact type

@@ -205,6 +205,12 @@ export function hostileHome(now: Date = new Date()): HostileHome {
     friendly_name: 'LED-Streifen', brightness: 255, color_mode: 'xy', supported_color_modes: ['xy'],
     xy_color: [0.3, 0.3], effect_list: ['Regenbogen', 'Regenbogen', 'Kerze'], effect: 'Kerze', supported_features: 4,
   }, { area_id: 'wohnzimmer' });
+  /* 433-MHz-Funksteckdose als Template-Licht (simon42, Cpt.Hardy, 2026-10-19): die
+     Brücke sendet nur, der Zustand folgt dem Befehl nie. Eine Szene darf sie danach
+     nicht endlos nachschalten, sonst überstimmt Hauser die Fernbedienung. */
+  add('light.wohnzimmer_funk', 'off', {
+    friendly_name: 'Funkstehlampe', color_mode: 'onoff', supported_color_modes: ['onoff'], assumed_state: true,
+  }, { area_id: 'wohnzimmer' });
   // HA-Lichtgruppe mit einem Mitglied, das es nicht gibt.
   add('light.wohnzimmer_gruppe', 'on', {
     friendly_name: 'Alle Lichter', brightness: 200, color_mode: 'brightness', supported_color_modes: ['brightness'],

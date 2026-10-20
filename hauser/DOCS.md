@@ -5,7 +5,7 @@ phones. This App is a thin packaging layer around the regular multi-architecture
 Hauser image; the guided setup wizard is the same one the Docker/Compose
 installation uses.
 
-> **Experimental beta.** The manifest declares `stage: experimental`. Install,
+> **Beta.** Install,
 > start, credential-free setup discovery, activation, the internal Home
 > Assistant connection, the App update path over an existing install with data
 > kept, and opening the displayed address from a real phone have been exercised
@@ -156,7 +156,7 @@ runtime user and only then serves.
 ## Versions and updates
 
 The App carries the same version as the Hauser release it packages — this
-documentation describes `0.46.0`. The Supervisor resolves the image as
+documentation describes `0.46.1`. The Supervisor resolves the image as
 `ghcr.io/ralleur/hauser:<version>` from the manifest, and the release gate
 refuses a manifest version without a matching published image. Updates arrive
 through Home Assistant's normal App update flow; the changelog shipped with the

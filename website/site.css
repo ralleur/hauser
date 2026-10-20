@@ -131,6 +131,10 @@ figcaption a { flex: none; padding-block: var(--space-3); }
 #preview-evening:checked ~ .preview-stage .state-evening,
 #preview-off:checked ~ .preview-stage .state-off { opacity: 1; visibility: visible; }
 .preview-note { margin-top: var(--space-4); max-width: 85ch; }
+/* The picture as the switch: the wall moment's layout on the night ground. */
+.picture-moment { margin-top: var(--space-8); padding-top: var(--space-8); border-top: var(--rule-width) solid var(--night-line); }
+.picture-moment h3 { font-size: var(--heading-size); }
+.light-story .moment-copy p, .light-story figcaption { color: var(--night-secondary); }
 
 /* D: a wide wall view, then a readable phone screen. */
 .wall-moment { display: grid; grid-template-columns: .43fr 1fr; gap: var(--layout-gap); align-items: center; margin-top: var(--space-7); }
@@ -142,6 +146,10 @@ figcaption a { flex: none; padding-block: var(--space-3); }
 .phone-figure { justify-self: center; width: min(100%, 304px); }
 .phone-figure img { border-radius: var(--radius-lg); }
 .phone-figure figcaption { justify-content: center; }
+.phone-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); justify-self: center; width: min(100%, 560px); }
+.phone-pair .phone-figure { width: 100%; }
+.phone-pair .phone-figure img { border: var(--rule-width) solid var(--line); }
+.phone-pair .phone-figure + .phone-figure { margin-top: var(--space-8); }
 .hand-moment h3 { font-size: var(--heading-size); margin-top: var(--space-4); }
 .hand-moment .moment-copy { max-width: 43ch; }
 
@@ -212,6 +220,8 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
   .wall-moment .moment-copy { display: block; }
   .wall-moment .moment-copy p { margin-top: var(--space-4); }
   .wall-moment { margin-top: var(--space-6); gap: var(--space-5); }
+  .picture-moment { margin-top: var(--space-7); padding-top: var(--space-7); }
+  .picture-moment h3 { font-size: 36px; }
   .hand-moment { gap: var(--space-5); }
   .hand-moment .moment-copy { font-size: 18px; }
   .hand-moment h3 { font-size: 36px; }
@@ -245,6 +255,9 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
   .hand-moment h3 { font-size: var(--heading-size); }
   .hand-moment .moment-copy > .small { margin-top: 0; }
   .phone-figure { width: min(100%, 304px); }
+  .phone-pair { gap: var(--space-4); }
+  .phone-pair .phone-figure + .phone-figure { margin-top: var(--space-7); }
+  .picture-moment h3 { font-size: var(--heading-size); }
   .ha-paths { grid-template-columns: 1fr; }
   .setup-path .actions { align-items: start; flex-direction: column; gap: var(--space-2); }
   .footer-links { gap: var(--space-1) var(--space-5); }

@@ -123,7 +123,10 @@ export function startFakeHa({ port = 0, host = '127.0.0.1', home = hostileHome()
       return { result: { context: { id: 'ctx-todo' }, response } };
     }
     for (const id of ids) {
+      note(`call_service:${id}`);
       const state = states.get(id)?.state;
+      // Funkbrücke ohne Rückkanal: der Befehl geht raus, der Zustand bleibt.
+      if (states.get(id)?.attributes?.assumed_state === true) continue;
       if (service === 'turn_on') setState(id, { state: 'on', attributes: 'brightness' in data ? { brightness: data.brightness } : {} });
       else if (service === 'turn_off') setState(id, { state: 'off' });
       else if (service === 'toggle') setState(id, { state: state === 'on' ? 'off' : 'on' });

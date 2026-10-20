@@ -3,6 +3,21 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.46.1] - 2026-10-21
+
+- Gate: Home Assistant no longer marks the Hauser app as experimental in its
+  app store, and it no longer needs advanced mode to show up. The beta note
+  stays in the app's documentation.
+- Room: the project page shows the room picture as the switch. A new moment
+  after the day-evening-off preview shows image control in the evening, with
+  the lamps and blinds marked where they stand, and links to how it works.
+- Energy on the phone: the project page shows the new energy screen next to
+  the iOS living room, with the house at the top and solar, battery and grid
+  below.
+- The guide describes the three home-screen views, the room configuration
+  that now holds the layout settings, and devices in the picture (light zones,
+  points, tap and hold).
+
 ## [0.46.0] - 2026-10-19
 
 - A glance: the lightbulb on a room only lights up for lamps. Smart plugs,

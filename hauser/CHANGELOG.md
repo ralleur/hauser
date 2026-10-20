@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.1 - 2026-10-21
+
+- Gate: Home Assistant no longer marks the Hauser app as experimental, and it
+  no longer needs advanced mode to show up. The beta note stays in the
+  documentation.
+- The project page and the guide show image control and the new energy
+  screen on the phone.
+- Remote control wins again: after a scene, Hauser re-sends to a lamp that
+  has not reached its target at most twice. Radio sockets without feedback
+  were switched back on endlessly whenever their own remote turned them off.
+- The room picker keeps the same tile height on a half-full last page, and
+  the controls below get the freed space.
+- Five taps on the clock open the simulator even with relaxed mouse clicks;
+  the developer overlay at the bottom left no longer appears along the way.
+
 ## 0.46.0 - 2026-10-19
 
 - A glance: the room lightbulb only counts lamps; doors and windows are told

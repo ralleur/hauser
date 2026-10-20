@@ -38,6 +38,10 @@
   const pages = $derived(panelRoomPages(rooms, maxPerPage));
   const roomsPerRow = $derived(panelRoomColumns(rooms.length, maxPerPage));
   const multiPage = $derived(pages.length > 1);
+  /* Jede Seite so hoch wie ihre Kacheln: eine halbvolle letzte Seite zieht die
+     Kacheln nicht lang, der Platz darunter gehört der Steuerung (simon42, Cpt.Hardy). */
+  let pageHeights = $state<number[]>([]);
+  const viewportHeight = $derived(multiPage && pageHeights[currentPage] ? `${pageHeights[currentPage]}px` : undefined);
 
   function scrollToPage(page: number, behavior: ScrollBehavior = 'smooth'): void {
     currentPage = clampPanelRoomPage(page, rooms.length, maxPerPage);
@@ -74,10 +78,11 @@
     class="room-page-viewport"
     bind:this={viewport}
     onscroll={handleScroll}
+    style:height={viewportHeight}
     aria-label={m.home_room_pages()}
   >
     {#each pages as pageRooms, pageIndex (pageIndex)}
-      <div class="room-page" aria-hidden={multiPage && pageIndex !== currentPage} inert={multiPage && pageIndex !== currentPage}>
+      <div class="room-page" bind:offsetHeight={pageHeights[pageIndex]} aria-hidden={multiPage && pageIndex !== currentPage} inert={multiPage && pageIndex !== currentPage}>
         {#each pageRooms as room (room.id)}
           {@const climate = mergedClimate(room.id)}
           {@const temp = showsMetric(room.id, 'temperature') ? roomTemperature(room.id) : null}
