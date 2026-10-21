@@ -28,7 +28,7 @@ export default defineConfig({
       editLink: { baseUrl: 'https://github.com/ralleur/hauser/edit/main/docs-site/' },
       plugins: [starlightLinksValidator()],
       sidebar: [
-        { label: 'Guide home', link: '/docs/' },
+        { label: 'Guide home', link: '/' },
         { label: 'Getting started', items: [
           { slug: 'getting-started/agent-guided-setup' },
           { slug: 'getting-started/requirements' },
