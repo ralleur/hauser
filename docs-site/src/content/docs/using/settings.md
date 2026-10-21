@@ -20,6 +20,6 @@ The System screen lists the settings on one page. The search finds every entry. 
 | Connections | **Services** | Home Assistant status and token, one block per module with its switch and service setup: Home, Energy, Calendar, Notes, Media, Library, Documents. Also the pairing card and remote access. |
 | System | **Status & Updates** | Connection health, service health, available Home Assistant updates, license and source |
 | System | **Maintenance & Diagnostics** (hidden) | Clear caches, demo mode, reload |
-| Experimental | **Hotel mode**, **Guest releases** | See [Hotel mode](/hauser/docs/using/hotel-mode/) |
+| Experimental | **Hotel mode**, **Guest releases** | See [Hotel mode](/docs/using/hotel-mode/) |
 
 Without a Hauser server (for example in the static demo) the settings show only what works.

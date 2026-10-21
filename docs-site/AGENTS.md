@@ -1,7 +1,7 @@
 # Maintaining the Hauser wiki
 
 This folder is the Hauser wiki: an [Astro Starlight](https://starlight.astro.build/)
-site published at <https://ralleur.github.io/hauser/docs/>. It is the user and
+site published at <https://hauserhome.app/docs/>. It is the user and
 developer documentation of the project and is often maintained by AI coding
 agents. Follow these rules.
 
@@ -26,10 +26,10 @@ Run the build before every commit that touches `docs-site/`.
 3. **Keep the sidebar tidy.** Pages live in one of six folders: `overview`,
    `getting-started`, `using`, `integrations`, `reference`, `developers`.
    Order inside a folder comes from `sidebar.order` in the frontmatter.
-4. **Links.** Internal links start with `/hauser/docs/` and end with a slash,
-   for example `/hauser/docs/using/rooms/`. Astro does not add the base path to
+4. **Links.** Internal links start with `/docs/` and end with a slash,
+   for example `/docs/using/rooms/`. Astro does not add the base path to
    Markdown links, and the build validates every link. Screenshots are
-   referenced from the website as `/hauser/media/<file>.webp`; do not copy
+   referenced from the website as `/media/<file>.webp`; do not copy
    large images into this folder.
 5. **Style.** Plain words, short paragraphs, one idea per sentence. No
    marketing. Tables for references, `:::note` / `:::tip` / `:::caution`

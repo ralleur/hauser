@@ -16,4 +16,4 @@ The interface speaks **German, English, French, Italian, Portuguese, Polish, Dut
 
 German and English are first-hand. French, Italian, Portuguese and Polish were written carefully but not reviewed by native speakers. Dutch was contributed by [@pservais](https://github.com/pservais); texts added after that contribution have not been reviewed yet. Corrections are welcome, see the [open translation issues](https://github.com/ralleur/hauser/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation).
 
-Adding a language means adding one JSON file. See [Translations](/hauser/docs/developers/translations/).
+Adding a language means adding one JSON file. See [Translations](/docs/developers/translations/).

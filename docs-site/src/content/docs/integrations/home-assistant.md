@@ -91,4 +91,4 @@ If a token was accidentally shared, revoke it first and create a replacement
 only if needed. Deleting a chat message alone does not revoke access.
 
 For the complete beginner workflow, use
-[Set up with your AI agent](/hauser/docs/getting-started/agent-guided-setup/).
+[Set up with your AI agent](/docs/getting-started/agent-guided-setup/).

@@ -33,7 +33,7 @@ mode has no Music Assistant server connection.
 
 ## Library (Jellyfin)
 
-The Library screen shows continue watching, latest, series and movies from your Jellyfin server, with detail pages and playback in the browser. Progress is reported back, so you can resume on another device. See [Jellyfin](/hauser/docs/integrations/jellyfin/).
+The Library screen shows continue watching, latest, series and movies from your Jellyfin server, with detail pages and playback in the browser. Progress is reported back, so you can resume on another device. See [Jellyfin](/docs/integrations/jellyfin/).
 
 **Library mode** under **Settings → Content → Media & Music** is *Automatic* (follows the backend, so demo mode shows the demo library), *Live* or *Demo*. It takes effect after a reload. Media remembers on the phone whether you last opened room audio or the library.
 

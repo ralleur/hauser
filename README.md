@@ -10,7 +10,7 @@
 The everyday face of your smart home.<br>
 For Home Assistant — and for Apple Home with the native iPhone and iPad app.
 
-[**Open the demo →**](https://ralleur.github.io/hauser/demo/) · [Get Hauser](#installation) · [Read the guide](https://ralleur.github.io/hauser/docs/) · [Website](https://ralleur.github.io/hauser/)
+[**Open the demo →**](https://hauserhome.app/demo/) · [Get Hauser](#installation) · [Read the guide](https://hauserhome.app/docs/) · [Website](https://hauserhome.app/)
 
 **Free. Open source. Public beta.**
 
@@ -21,7 +21,7 @@ For Home Assistant — and for Apple Home with the native iPhone and iPad app.
   <img src="website/media/hero-home-1100.webp" alt="Hauser’s real web interface: the living room fills the screen, with rooms, scenes, lights and heating together on the left." width="1100">
 </picture>
 
-*The web demo, with simulated devices. [Explore it in your browser](https://ralleur.github.io/hauser/demo/) — nothing connects to your home.*
+*The web demo, with simulated devices. [Explore it in your browser](https://hauserhome.app/demo/) — nothing connects to your home.*
 
 <a id="why-it-exists"></a>
 
@@ -35,7 +35,7 @@ controls together.
 
 - **Your rooms, in their own light.** Keep the bundled illustrations, upload
   your own pictures, or turn a photo into an illustration with the optional
-  [room-image wizard](https://ralleur.github.io/hauser/docs/using/room-images/).
+  [room-image wizard](https://hauserhome.app/docs/using/room-images/).
   Prepared day, evening and lights-off pictures follow the room’s state.
 - **A useful wall panel at rest.** Standby brings the clock, week, notes and
   shopping list into view. A tap takes you back into the household.
@@ -45,7 +45,7 @@ controls together.
 
 Image providers process your selected photo outside your home and may require
 paid access or have usage limits. Uploading existing pictures does not require
-an image-generation account. [Compare the options](https://ralleur.github.io/hauser/docs/using/room-images/).
+an image-generation account. [Compare the options](https://hauserhome.app/docs/using/room-images/).
 
 <a id="screenshots"></a>
 
@@ -58,7 +58,7 @@ an image-generation account. [Compare the options](https://ralleur.github.io/hau
 
 <img src="website/media/ios-room.webp" width="280" height="609" alt="The native iOS living-room screen: Cozy, Bright and Off scenes above the room’s individual light controls.">
 
-*The native iOS demo. [App guide and requirements](https://ralleur.github.io/hauser/docs/integrations/companion-app/).*
+*The native iOS demo. [App guide and requirements](https://hauserhome.app/docs/integrations/companion-app/).*
 
 </details>
 
@@ -71,7 +71,7 @@ an image-generation account. [Compare the options](https://ralleur.github.io/hau
 Install TestFlight, accept the invitation, open Hauser and choose **Apple Home**.
 Allow access to your home. No Home Assistant or Hauser server is required.
 The native app needs iOS 17 or newer; TestFlight builds expire and need updating.
-[Read the app guide](https://ralleur.github.io/hauser/docs/integrations/companion-app/).
+[Read the app guide](https://hauserhome.app/docs/integrations/companion-app/).
 
 <a id="as-a-home-assistant-app"></a>
 <a id="with-docker-compose"></a>
@@ -83,15 +83,15 @@ your areas and devices and lets you arrange the rooms.
 
 | Your installation | Start here |
 | --- | --- |
-| **Home Assistant OS or Supervised** | [Add the Hauser repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser), install Hauser, then choose **Open Web UI**. [Step-by-step guide](https://ralleur.github.io/hauser/docs/getting-started/home-assistant-app/). |
-| **Home Assistant Container, NAS or Docker host** | Use the versioned image and persistent volumes in the [Docker Compose guide](https://ralleur.github.io/hauser/docs/getting-started/docker-compose/). |
+| **Home Assistant OS or Supervised** | [Add the Hauser repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser), install Hauser, then choose **Open Web UI**. [Step-by-step guide](https://hauserhome.app/docs/getting-started/home-assistant-app/). |
+| **Home Assistant Container, NAS or Docker host** | Use the versioned image and persistent volumes in the [Docker Compose guide](https://hauserhome.app/docs/getting-started/docker-compose/). |
 
 On iPhone or iPad, the native app can pair with this installation by QR code.
 Home Assistant continues to manage your integrations, devices and automations.
 
 **Keep the server on a trusted network.** Its web port has no separate login.
-Do not forward it to the internet. See [remote access](https://ralleur.github.io/hauser/docs/integrations/remote-access/)
-and [updates and backups](https://ralleur.github.io/hauser/docs/getting-started/updates-and-backups/).
+Do not forward it to the internet. See [remote access](https://hauserhome.app/docs/integrations/remote-access/)
+and [updates and backups](https://hauserhome.app/docs/getting-started/updates-and-backups/).
 
 <a id="beta-status"></a>
 
@@ -105,29 +105,29 @@ public beta. There is no subscription or Hauser account for everyday control.
 Optional external services have their own accounts, data flows and terms.
 Compatibility is growing; support has no guaranteed response time.
 
-[Release notes](CHANGELOG.md) · [Feature status](https://ralleur.github.io/hauser/docs/overview/features/)
+[Release notes](CHANGELOG.md) · [Feature status](https://hauserhome.app/docs/overview/features/)
 · [Roadmap](ROADMAP.md) · [Report a problem](https://github.com/ralleur/hauser/issues)
 
 ## Documentation
 
-The [**Hauser guide**](https://ralleur.github.io/hauser/docs/) is organised around
+The [**Hauser guide**](https://hauserhome.app/docs/) is organised around
 what you want to do:
 
-- **Get started:** [requirements](https://ralleur.github.io/hauser/docs/getting-started/requirements/),
-  [first setup](https://ralleur.github.io/hauser/docs/getting-started/first-setup/)
-  and [phones and panels](https://ralleur.github.io/hauser/docs/getting-started/phones-and-panels/).
-- **Make it yours:** [rooms](https://ralleur.github.io/hauser/docs/using/rooms/),
-  [room pictures](https://ralleur.github.io/hauser/docs/using/room-images/)
-  and [standby](https://ralleur.github.io/hauser/docs/using/standby/).
-- **Find an answer:** [FAQ](https://ralleur.github.io/hauser/docs/reference/faq/)
-  and [troubleshooting](https://ralleur.github.io/hauser/docs/reference/troubleshooting/).
+- **Get started:** [requirements](https://hauserhome.app/docs/getting-started/requirements/),
+  [first setup](https://hauserhome.app/docs/getting-started/first-setup/)
+  and [phones and panels](https://hauserhome.app/docs/getting-started/phones-and-panels/).
+- **Make it yours:** [rooms](https://hauserhome.app/docs/using/rooms/),
+  [room pictures](https://hauserhome.app/docs/using/room-images/)
+  and [standby](https://hauserhome.app/docs/using/standby/).
+- **Find an answer:** [FAQ](https://hauserhome.app/docs/reference/faq/)
+  and [troubleshooting](https://hauserhome.app/docs/reference/troubleshooting/).
 
 <a id="architecture"></a>
 <a id="integration-status"></a>
 <a id="advanced-configuration"></a>
 
-For the implementation, see [architecture](https://ralleur.github.io/hauser/docs/developers/architecture/),
-[configuration](https://ralleur.github.io/hauser/docs/reference/configuration/)
+For the implementation, see [architecture](https://hauserhome.app/docs/developers/architecture/),
+[configuration](https://hauserhome.app/docs/reference/configuration/)
 and the [technical documents](docs/). This repository contains the web app,
 server, documentation and shared design tokens. The native SwiftUI app is
 maintained separately.
@@ -146,8 +146,8 @@ Assistant setup, use the [development pilot](docs/09-dev-pilot.md).
 
 <a id="building-the-demo"></a>
 
-The web app uses Svelte 5, Vite and TypeScript. [Developer setup](https://ralleur.github.io/hauser/docs/developers/setup/)
-covers the static demo build; [tests and checks](https://ralleur.github.io/hauser/docs/developers/tests-and-checks/)
+The web app uses Svelte 5, Vite and TypeScript. [Developer setup](https://hauserhome.app/docs/developers/setup/)
+covers the static demo build; [tests and checks](https://hauserhome.app/docs/developers/tests-and-checks/)
 explains validation. Contributions follow [CONTRIBUTING.md](CONTRIBUTING.md)
 and the [CLA](CLA.md).
 

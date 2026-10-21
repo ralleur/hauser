@@ -7,7 +7,7 @@ sidebar:
 
 The energy screen is a picture of a house. Live production, measured load and the grid sit as small paper notes in the picture, each pinned to the thing it measures. The free wall carries the day's figures.
 
-![The energy screen: a house with solar panels, three notes pinned into the picture, today's figures top left, the day's curves along the bottom.](/hauser/media/energy-1100.webp)
+![The energy screen: a house with solar panels, three notes pinned into the picture, today's figures top left, the day's curves along the bottom.](/media/energy-1100.webp)
 
 ## What it needs
 
@@ -19,7 +19,7 @@ saving. **Take all** is not a check that the selection measures the whole house
 without overlap.
 
 Starting from scratch with an agent? Use the
-[beginner setup guide](/hauser/docs/getting-started/agent-guided-setup/).
+[beginner setup guide](/docs/getting-started/agent-guided-setup/).
 
 ## What it shows
 
@@ -197,7 +197,7 @@ For an agent configuring explicit daily values, the household's `energy.kpis`
 uses `producedToday`, `consumedToday`, `fedInToday` and `drawnToday`. Each must
 reference an actual daily energy sensor, not a lifetime counter or power
 sensor. Follow the [configuration contract](https://github.com/ralleur/hauser/blob/main/docs/07-configuration.md)
-and [household configuration reference](/hauser/docs/reference/household-config/).
+and [household configuration reference](/docs/reference/household-config/).
 An agent with authorized local Hauser API access can read
 `GET /api/household-config`, retain its ETag and the existing live selection,
 then submit `PUT /api/household-energy` with `If-Match`, the existing
@@ -236,7 +236,7 @@ HA version and device integration documentation when screens or sensors differ.
 
 ## Your own house
 
-The [room-image wizard](/hauser/docs/using/room-images/) and the library offer **Outside (energy)** as a target. An image set assigned there becomes the stage of the energy screen, day and night. The wizard knows solar modules, so the generation note hangs on the real panels.
+The [room-image wizard](/docs/using/room-images/) and the library offer **Outside (energy)** as a target. An image set assigned there becomes the stage of the energy screen, day and night. The wizard knows solar modules, so the generation note hangs on the real panels.
 
 ## The picture's menu
 
@@ -244,4 +244,4 @@ In edit mode, press and hold the background: create your own house with the wiza
 
 ## On the phone
 
-The [phone](/hauser/docs/using/phone/) tells the story behind the numbers: power now, the period with a load curve and a comparison with yesterday, and a **Top consumers** list. The house picture lies pale behind the figures; the notes pinned into it stay on the wall panel.
+The [phone](/docs/using/phone/) tells the story behind the numbers: power now, the period with a load curve and a comparison with yesterday, and a **Top consumers** list. The house picture lies pale behind the figures; the notes pinned into it stay on the wall panel.

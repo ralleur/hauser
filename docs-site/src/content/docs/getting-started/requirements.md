@@ -17,13 +17,13 @@ and access to the Hauser beta through **TestFlight**. Grant Hauser permission
 to read and control your home. Home Assistant and a Hauser server are not
 required.
 
-[Open the iOS setup guide](/hauser/docs/integrations/companion-app/#apple-home).
+[Open the iOS setup guide](/docs/integrations/companion-app/#apple-home).
 Apple Intelligence features have additional device and OS requirements; they
 are optional and are not needed to operate your rooms.
 
 ## Home Assistant
 
-No Home Assistant yet? [Start with your AI agent](/hauser/docs/getting-started/agent-guided-setup/)
+No Home Assistant yet? [Start with your AI agent](/docs/getting-started/agent-guided-setup/)
 to choose hardware and work through installation together.
 
 You need a working Home Assistant installation, somewhere to run Hauser, and
@@ -31,16 +31,16 @@ a current browser on a device that can reach it.
 
 | Where Home Assistant runs | Install Hauser with |
 | --- | --- |
-| Home Assistant OS or Supervised | [The Home Assistant App](/hauser/docs/getting-started/home-assistant-app/) — the connection is automatic, with no token to create. |
-| Home Assistant Container, a NAS or another Docker host | [Docker Compose](/hauser/docs/getting-started/docker-compose/) — the wizard asks for your Home Assistant URL and a long-lived access token. |
+| Home Assistant OS or Supervised | [The Home Assistant App](/docs/getting-started/home-assistant-app/) — the connection is automatic, with no token to create. |
+| Home Assistant Container, a NAS or another Docker host | [Docker Compose](/docs/getting-started/docker-compose/) — the wizard asks for your Home Assistant URL and a long-lived access token. |
 
 Both server packages support `amd64` and `aarch64`. After installation, the
-[setup wizard](/hauser/docs/getting-started/first-setup/) discovers your devices.
+[setup wizard](/docs/getting-started/first-setup/) discovers your devices.
 **Assigning them to Home Assistant Areas first** gives the clearest starting
 point. You can review and arrange the proposed rooms before activating them.
 
 For the native iOS app, install the server first and then
-[pair by QR code](/hauser/docs/integrations/companion-app/#pairing-with-a-qr-code).
+[pair by QR code](/docs/integrations/companion-app/#pairing-with-a-qr-code).
 
 ## Optional services
 
@@ -49,11 +49,11 @@ services you want to use; their availability also depends on your platform.
 
 | Service | What it adds | What to know |
 | --- | --- | --- |
-| [Jellyfin](/hauser/docs/integrations/jellyfin/) | Film and series library | A reachable Jellyfin server and your login. |
-| [Paperless-ngx](/hauser/docs/integrations/paperless/) | Private documents | Optional bridge with extra host requirements; see its guide before installing. |
-| [Notion](/hauser/docs/integrations/notion/) | Alternative shopping-list source | An external cloud service with its own account and integration token. |
-| [Room-image providers](/hauser/docs/using/room-images/) | Illustrations from your photos | Your own provider access; selected photos are processed externally. Costs and limits depend on the provider. |
-| [Weather](/hauser/docs/integrations/open-meteo/) and [street map](/hauser/docs/integrations/openstreetmap/) | Weather information and an optional standby map | Requests to external public-data services, without a Hauser account. |
+| [Jellyfin](/docs/integrations/jellyfin/) | Film and series library | A reachable Jellyfin server and your login. |
+| [Paperless-ngx](/docs/integrations/paperless/) | Private documents | Optional bridge with extra host requirements; see its guide before installing. |
+| [Notion](/docs/integrations/notion/) | Alternative shopping-list source | An external cloud service with its own account and integration token. |
+| [Room-image providers](/docs/using/room-images/) | Illustrations from your photos | Your own provider access; selected photos are processed externally. Costs and limits depend on the provider. |
+| [Weather](/docs/integrations/open-meteo/) and [street map](/docs/integrations/openstreetmap/) | Weather information and an optional standby map | Requests to external public-data services, without a Hauser account. |
 
 You can keep the supplied illustrations or upload existing pictures without
 connecting an image provider.
@@ -63,11 +63,11 @@ connecting an image provider.
 The Hauser server is designed for a **trusted home network**. Its web port has
 no separate login: devices that can reach it can operate the home. Do not
 forward the port through your router. Read the
-[remote-access guide](/hauser/docs/integrations/remote-access/) for the separate,
+[remote-access guide](/docs/integrations/remote-access/) for the separate,
 paired-device path.
 
 ## Before you begin
 
 Hauser is in public beta. Read the [release notes](https://github.com/ralleur/hauser/releases)
-for your server version and the [TestFlight notes](/hauser/docs/integrations/companion-app/)
+for your server version and the [TestFlight notes](/docs/integrations/companion-app/)
 for the native app. Keep a backup before updating an existing installation.

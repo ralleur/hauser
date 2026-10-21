@@ -22,9 +22,9 @@ import re
 root = Path('.pages/demo')
 html = (root / 'index.html').read_text()
 refs = re.findall(r'(?:src|href)="([^"]+)"', html)
-outside_base = [ref for ref in refs if ref.startswith('/') and not ref.startswith('/hauser/demo/')]
+outside_base = [ref for ref in refs if ref.startswith('/') and not ref.startswith('/demo/')]
 if outside_base:
-    raise SystemExit(f'Demo HTML contains root-relative references outside /hauser/demo/: {outside_base}')
+    raise SystemExit(f'Demo HTML contains root-relative references outside /demo/: {outside_base}')
 
 manifest = json.loads((root / 'manifest.webmanifest').read_text())
 for field in ('id', 'start_url', 'scope'):
@@ -36,18 +36,19 @@ if not icon_sources or any(not isinstance(src, str) or src.startswith('/') for s
 
 print('pages_base_path_contract=PASS')
 
-# The wiki is built with base /hauser/docs; every root-relative reference in
-# its HTML must stay below the Pages project root (/hauser/).
+# The wiki is built with base /docs. Since the site moved to its own domain it
+# is served from the domain root, so no reference may still carry the old
+# /hauser prefix.
 docs_root = Path('.pages/docs')
 if not (docs_root / 'index.html').is_file():
     raise SystemExit('Wiki build missing: .pages/docs/index.html')
 bad = []
 for page in docs_root.rglob('*.html'):
     for ref in re.findall(r'(?:src|href)="([^"]+)"', page.read_text()):
-        if ref.startswith('/') and not ref.startswith('/hauser/'):
+        if ref.startswith('/hauser'):
             bad.append((str(page.relative_to(docs_root)), ref))
 if bad:
-    raise SystemExit(f'Wiki HTML contains root-relative references outside /hauser/: {bad[:10]}')
+    raise SystemExit(f'Wiki HTML still references the old /hauser prefix: {bad[:10]}')
 print('wiki_base_path_contract=PASS')
 PY
 

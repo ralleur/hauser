@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-This page covers the **web interface** on a Hauser server. On iPhone or iPad, you can also use the [native app](/hauser/docs/integrations/companion-app/) — directly with Apple Home or paired to that server.
+This page covers the **web interface** on a Hauser server. On iPhone or iPad, you can also use the [native app](/docs/integrations/companion-app/) — directly with Apple Home or paired to that server.
 
 The wizard ends by showing the address Hauser was opened through. The same address is always available under **Settings → Services**, with a copy button and a QR code.
 
@@ -14,14 +14,14 @@ The wizard ends by showing the address Hauser was opened through. The same addre
 1. Open the address in the tablet's browser.
 2. Put the browser into full-screen or kiosk mode. On iPadOS, *Guided Access* keeps the panel on Hauser. Android kiosk browsers work too.
 3. Hauser draws its own header, so the system status bar can stay hidden.
-4. Consider [use mode](/hauser/docs/using/edit-and-use-mode/) so nobody changes the configuration by accident.
+4. Consider [use mode](/docs/using/edit-and-use-mode/) so nobody changes the configuration by accident.
 
 Landscape is the panel layout. Portrait works as well: the room tiles take the upper band, the controls the full width below.
 
 ## Phone
 
 1. Open the address in the phone's browser.
-2. Add Hauser to the home screen. It then runs standalone as a web app, with the [phone layout](/hauser/docs/using/phone/).
+2. Add Hauser to the home screen. It then runs standalone as a web app, with the [phone layout](/docs/using/phone/).
 3. Someone who opened Hauser on the phone cannot scan the QR code on the same screen. The pairing card offers **Open in the app on this device** instead.
 
 ## Several devices

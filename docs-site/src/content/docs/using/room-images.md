@@ -71,8 +71,8 @@ The example below is the existing source photo and the illustration used for
 the demo living room. Generated results need your review.
 
 <div class="guide-comparison">
-  <figure><a href="https://ralleur.github.io/hauser/media/wizard-input-raw-1100.webp"><img src="/hauser/media/wizard-input-raw-1100.webp" width="1100" height="825" loading="lazy" decoding="async" alt="The original living-room photo, with a sofa, dining table, balcony door and toys." /></a><figcaption>Source photo · the maker’s living room.</figcaption></figure>
-  <figure><a href="https://ralleur.github.io/hauser/media/room-light-1100.webp"><img src="/hauser/media/room-light-1100.webp" width="1100" height="778" loading="lazy" decoding="async" alt="The same living room as Hauser’s bundled illustration, retaining the sofa, table and balcony door." /></a><figcaption>The illustration used in Hauser. Select either image to enlarge.</figcaption></figure>
+  <figure><a href="https://hauserhome.app/media/wizard-input-raw-1100.webp"><img src="/media/wizard-input-raw-1100.webp" width="1100" height="825" loading="lazy" decoding="async" alt="The original living-room photo, with a sofa, dining table, balcony door and toys." /></a><figcaption>Source photo · the maker’s living room.</figcaption></figure>
+  <figure><a href="https://hauserhome.app/media/room-light-1100.webp"><img src="/media/room-light-1100.webp" width="1100" height="778" loading="lazy" decoding="async" alt="The same living room as Hauser’s bundled illustration, retaining the sofa, table and balcony door." /></a><figcaption>The illustration used in Hauser. Select either image to enlarge.</figcaption></figure>
 </div>
 
 1. Open **Settings → Home → Rooms & devices → Create room images**, or the
@@ -88,14 +88,14 @@ the demo living room. Generated results need your review.
 
 An overcast variant can support rainy-day scenes. **Outside (energy)** is
 also a target: a house picture becomes the stage of the
-[energy screen](/hauser/docs/using/energy/).
+[energy screen](/docs/using/energy/).
 
 :::caution[Before sending a photo]
 With OpenAI or Cloudflare, the photo you select leaves your home. Provider
 credentials are stored on the Hauser server. The wizard explains the upload;
 OpenAI steps also show confirmations and a provider-call count, which is not
 a bill estimate. Check your provider’s access and usage terms before starting.
-See [OpenAI access](/hauser/docs/integrations/openai/) for that connection.
+See [OpenAI access](/docs/integrations/openai/) for that connection.
 :::
 
 ## 4. Draw it yourself
@@ -130,7 +130,7 @@ or the table it lights. Every other device gets a point.
 Tapping a placed device in the picture does what tapping its tile does, holding
 it opens the detail, and a soft ring confirms the tap. A camera brings its
 image to the front. In the **Image control** view of the
-[home screen](/hauser/docs/using/home-screen/#three-views), the picture is the
+[home screen](/docs/using/home-screen/#three-views), the picture is the
 only control.
 
 The light zones also shape the night glow. When the last lamp goes out, the
@@ -139,7 +139,7 @@ they do not regenerate the room for each command.
 
 ## In the native iOS app
 
-The [native app](/hauser/docs/integrations/companion-app/) has its own image
+The [native app](/docs/integrations/companion-app/) has its own image
 workflow and provider availability. Apple Intelligence image generation is
 experimental and depends on the OS, hardware and beta build; do not rely on it
 as part of the standard setup. Local model support for the web server remains

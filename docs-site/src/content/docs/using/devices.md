@@ -13,7 +13,7 @@ A device is a Home Assistant entity in a room. A tap does the obvious thing. A l
 |---|---|---|
 | Light | On or off | Brightness, colour temperature or colour where supported. The symbol carries the brightness in its colour. |
 | Switch, plug | On or off | Details |
-| Climate | Opens the thermostat sheet | Current, setpoint with minus and plus, every mode the device reports, fan, preset and swing. See [Climate](/hauser/docs/using/climate/). |
+| Climate | Opens the thermostat sheet | Current, setpoint with minus and plus, every mode the device reports, fan, preset and swing. See [Climate](/docs/using/climate/). |
 | Fan | On or off | Speed as a tick scale, presets (breeze, sleep, turbo, ...), oscillation, direction. The symbol turns while the fan runs. |
 | Cover (blind, shutter, awning, valve) | Opens the sheet | Open, stop, close, position ladder, tilt |
 | Vacuum | Start or pause | Return to dock, suction level |
@@ -23,10 +23,10 @@ A device is a Home Assistant entity in a room. A tap does the obvious thing. A l
 | Alarm panel | Arm or disarm | Asks for a code only when the device needs one |
 | Number, select, button | Set, choose, press | |
 | Sensor | Shows the value | Details. A sensor without a symbol picks one from its device class, unit or name. |
-| Binary sensor (window, door, motion) | Feeds the [windows and motion](/hauser/docs/using/windows-and-motion/) strip | |
-| Camera | Shows the live picture | Movable pop-out. See [Cameras](/hauser/docs/using/cameras/). |
-| Media player | Room audio. See [Media](/hauser/docs/using/media/). | |
-| Scene, script | Runs it | See [Scenes](/hauser/docs/using/scenes/). |
+| Binary sensor (window, door, motion) | Feeds the [windows and motion](/docs/using/windows-and-motion/) strip | |
+| Camera | Shows the live picture | Movable pop-out. See [Cameras](/docs/using/cameras/). |
+| Media player | Room audio. See [Media](/docs/using/media/). | |
+| Scene, script | Runs it | See [Scenes](/docs/using/scenes/). |
 
 ## Instant feedback
 

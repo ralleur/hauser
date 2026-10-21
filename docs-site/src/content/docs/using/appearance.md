@@ -7,7 +7,7 @@ sidebar:
 
 Nobody in the household should reach for a theme setting. By default the interface and the room pictures follow the sun, using `sun.sun` from Home Assistant. Around sunrise and sunset the picture and the interface tones cross-fade over the sun's elevation instead of switching.
 
-![The same room by day and after dark.](/hauser/media/home-dark-1100.webp)
+![The same room by day and after dark.](/media/home-dark-1100.webp)
 
 ## Five states
 
@@ -36,4 +36,4 @@ Screens and sheets share one motion system. Pages slide in from the side of thei
 
 ## Interface language
 
-**Interface language** switches between the six languages without a reload. See [Languages](/hauser/docs/using/languages/).
+**Interface language** switches between the six languages without a reload. See [Languages](/docs/using/languages/).

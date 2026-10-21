@@ -50,7 +50,7 @@ user input → local intent → visible update → command → authoritative sta
 
 ## Persistence
 
-External, versioned JSON. The household file is validated before the server listens and before the app mounts. Migrations back up the original. See [Household configuration](/hauser/docs/reference/household-config/).
+External, versioned JSON. The household file is validated before the server listens and before the app mounts. Migrations back up the original. See [Household configuration](/docs/reference/household-config/).
 
 ## Security boundaries
 

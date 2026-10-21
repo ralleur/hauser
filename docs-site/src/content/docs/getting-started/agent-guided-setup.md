@@ -18,7 +18,7 @@ physical connections and phone permissions still need your participation.
 
 ```text
 Set up Hauser with me using this guide:
-https://ralleur.github.io/hauser/docs/getting-started/agent-guided-setup/
+https://hauserhome.app/docs/getting-started/agent-guided-setup/
 Start from what I already have. Follow the guide's agent instructions,
 explain unfamiliar words, and take me through one step at a time.
 ```
@@ -27,7 +27,7 @@ You can ask in your own language. For example:
 
 ```text
 Führe mit mir die Hauser-Einrichtung nach dieser Anleitung durch:
-https://ralleur.github.io/hauser/docs/getting-started/agent-guided-setup/
+https://hauserhome.app/docs/getting-started/agent-guided-setup/
 Ich fange bei null an. Leite mich Schritt für Schritt in Deutsch an.
 ```
 
@@ -76,7 +76,7 @@ The default route for a new Home Assistant household is **Home Assistant OS →
 Hauser App → one working room → energy devices and mapping → phone → optional private Tailscale access →
 backup and handover**. Existing Container installations use the Compose branch.
 If the user only wants Apple Home on iPhone or iPad, follow the
-[native app guide](/hauser/docs/integrations/companion-app/#apple-home) instead;
+[native app guide](/docs/integrations/companion-app/#apple-home) instead;
 there is no reason to install Home Assistant for that path.
 
 ## Stage 1 — Find a home for Home Assistant
@@ -133,7 +133,7 @@ choose an available method:
 | Agent capability | How to proceed |
 | --- | --- |
 | Browser control on the user's network | The user signs in privately; continue in that browser. A separate API token is optional. |
-| Home Assistant API tool with secure credential input and network access | Follow [agent access and tokens](/hauser/docs/integrations/home-assistant/#agent-access-and-tokens), then verify the connection. |
+| Home Assistant API tool with secure credential input and network access | Follow [agent access and tokens](/docs/integrations/home-assistant/#agent-access-and-tokens), then verify the connection. |
 | Chat only, or no secure credential input | Give individual UI instructions and wait for the user's result. No agent token is needed. |
 
 A Home Assistant Core token does not by itself supply a tool, network access,
@@ -169,19 +169,19 @@ record this stage as pending; do not claim successful home control.
 
 **Start with:** Home Assistant and the rooms prepared above.
 
-On Home Assistant OS, follow [Install as a Home Assistant App](/hauser/docs/getting-started/home-assistant-app/):
+On Home Assistant OS, follow [Install as a Home Assistant App](/docs/getting-started/home-assistant-app/):
 add `https://github.com/ralleur/hauser` under **Settings → Apps → App Store →
 Repositories**, install Hauser, start it and open its Web UI. Older Home
 Assistant versions may still call Apps “add-ons”. This route connects
 automatically and needs no manually created HA token.
 
 On an existing Container or Docker host, follow
-[Docker Compose](/hauser/docs/getting-started/docker-compose/) together. Use
+[Docker Compose](/docs/getting-started/docker-compose/) together. Use
 the user's actual server address, not `localhost` on a different computer.
 Enter the separate Hauser connection token privately in its wizard. Check the
 bind address and allowed browser origins before using another device.
 
-Run [First setup](/hauser/docs/getting-started/first-setup/) in the browser:
+Run [First setup](/docs/getting-started/first-setup/) in the browser:
 language, connection, discovery, room review and activation. Skip optional
 services for the first working room unless the user wants them. Check omitted
 devices for missing Area assignments before rescanning.
@@ -189,7 +189,7 @@ devices for missing Area assignments before rescanning.
 **Done when:** a real room appears and the device from Stage 4 responds through
 Hauser. Read-only sensors must show the expected current reading. A successful
 server health response alone does not complete this stage. If HA control works
-but Hauser does not, use [troubleshooting](/hauser/docs/reference/troubleshooting/)
+but Hauser does not, use [troubleshooting](/docs/reference/troubleshooting/)
 and keep the working HA installation intact.
 
 ## Stage 6 — Bring all energy devices and readings together
@@ -200,7 +200,7 @@ solar), home batteries, the electricity meter, and consumers such as a heat
 pump, EV charger and metered appliances or plugs. “Nothing discovered” does
 not mean the household owns none.
 
-Follow [Guided energy setup](/hauser/docs/using/energy/#guided-energy-setup)
+Follow [Guided energy setup](/docs/using/energy/#guided-energy-setup)
 yourself. Compare the user's equipment with the HA integrations and entities,
 and ask whether anything is missing. For every gap, help install or repair the
 matching integration and verify its readings. Then configure the HA Energy
@@ -226,11 +226,11 @@ choice explicitly. Recheck energy in the chosen phone client during Stage 7.
 an iPhone, iPad, Android phone or a wall panel.
 
 For a browser, open the verified Hauser LAN address on that device. Use the
-[phone and panel guide](/hauser/docs/getting-started/phones-and-panels/)
+[phone and panel guide](/docs/getting-started/phones-and-panels/)
 for its home-screen or kiosk setup.
 
 For the native iPhone/iPad app, walk through
-[TestFlight installation and pairing](/hauser/docs/integrations/companion-app/).
+[TestFlight installation and pairing](/docs/integrations/companion-app/).
 Choose Home Assistant, grant local network/camera access when needed, and
 generate a fresh pairing code in Hauser. Use the same-device link if scanning
 the code on a second screen is not possible. Explain the beta's update and
@@ -250,7 +250,7 @@ mark remote access as skipped and continue. If yes, explain that Tailscale
 creates a private connection between the home server and the phone, with an
 external account and an app on each participating device.
 
-Follow [Private access with Tailscale](/hauser/docs/integrations/remote-access/#private-access-with-tailscale)
+Follow [Private access with Tailscale](/docs/integrations/remote-access/#private-access-with-tailscale)
 one step at a time, including account creation, the HA App, phone setup and the
 mobile-data test. Keep an existing working VPN if it already meets the user's
 goal. Do not enable Funnel, router port forwarding or a whole-home subnet route
@@ -264,7 +264,7 @@ unresolved native connection separately instead of declaring it complete.
 
 ## Stage 9 — Back up and hand over
 
-Follow [Updates and backups](/hauser/docs/getting-started/updates-and-backups/).
+Follow [Updates and backups](/docs/getting-started/updates-and-backups/).
 For Home Assistant OS, create a backup including Hauser and keep a copy off
 the HA device. Have the user save any backup recovery material privately.
 For Compose, use its backup procedure. Record where the backup is kept,

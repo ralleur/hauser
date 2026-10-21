@@ -7,7 +7,7 @@ sidebar:
 
 ### Do I need Home Assistant?
 
-For the web interface, yes. The native iPhone and iPad app also works directly with **Apple Home**, without Home Assistant or a Hauser server. See [Choose your setup](/hauser/docs/getting-started/requirements/).
+For the web interface, yes. The native iPhone and iPad app also works directly with **Apple Home**, without Home Assistant or a Hauser server. See [Choose your setup](/docs/getting-started/requirements/).
 
 ### Does Hauser replace Home Assistant?
 
@@ -15,11 +15,11 @@ Hauser provides the everyday controls. With Home Assistant, integrations and aut
 
 ### Can I run it as a Home Assistant Container user?
 
-Yes, with [Docker Compose](/hauser/docs/getting-started/docker-compose/). Container has no app store.
+Yes, with [Docker Compose](/docs/getting-started/docker-compose/). Container has no app store.
 
 ### Can I use it on an iPad or an Android tablet?
 
-Yes. Open the address in the browser and use full-screen or kiosk mode. See [Phones and panels](/hauser/docs/getting-started/phones-and-panels/).
+Yes. Open the address in the browser and use full-screen or kiosk mode. See [Phones and panels](/docs/getting-started/phones-and-panels/).
 
 ### Can I install it as a PWA?
 
@@ -27,19 +27,19 @@ Yes. Add it to the home screen. It starts standalone and caches for offline star
 
 ### Where is the configuration stored?
 
-In the volumes, as JSON. See [Configuration reference](/hauser/docs/reference/configuration/). Some choices such as the appearance state are per device and stay in the browser.
+In the volumes, as JSON. See [Configuration reference](/docs/reference/configuration/). Some choices such as the appearance state are per device and stay in the browser.
 
 ### Does Hauser need cloud services?
 
-Everyday room control needs no Hauser cloud account. Optional features can contact external services: weather and maps request public data, Notion is a cloud service, and image providers receive the photo you choose. Those services have their own accounts, costs and limits. See [requirements](/hauser/docs/getting-started/requirements/) and [room pictures](/hauser/docs/using/room-images/).
+Everyday room control needs no Hauser cloud account. Optional features can contact external services: weather and maps request public data, Notion is a cloud service, and image providers receive the photo you choose. Those services have their own accounts, costs and limits. See [requirements](/docs/getting-started/requirements/) and [room pictures](/docs/using/room-images/).
 
 ### How are room pictures made?
 
-Four ways: keep the defaults, upload your own, let the wizard draw one from a photo (with your ChatGPT plan or a free Cloudflare account), or draw it yourself with the wizard's wording in any image service and mark the windows by hand. See [Room pictures](/hauser/docs/using/room-images/).
+Four ways: keep the defaults, upload your own, let the wizard draw one from a photo (with your ChatGPT plan or a free Cloudflare account), or draw it yourself with the wizard's wording in any image service and mark the windows by hand. See [Room pictures](/docs/using/room-images/).
 
 ### Will the room-image wizard become free?
 
-Hauser does not charge for the wizard. You can keep the bundled pictures or upload your own without an image provider. Cloudflare offers an allowance under its own terms; OpenAI needs your own access, and any external service you use manually sets its own costs. Experimental Apple Intelligence generation is separate from the normal setup. See [Room pictures](/hauser/docs/using/room-images/).
+Hauser does not charge for the wizard. You can keep the bundled pictures or upload your own without an image provider. Cloudflare offers an allowance under its own terms; OpenAI needs your own access, and any external service you use manually sets its own costs. Experimental Apple Intelligence generation is separate from the normal setup. See [Room pictures](/docs/using/room-images/).
 
 ### What happens when Home Assistant is unreachable?
 
@@ -51,15 +51,15 @@ Yes. Every device shows the same household. There are no user accounts. Resident
 
 ### Is there a login?
 
-The Hauser server’s web port has no separate login and belongs on a trusted home network. Native Apple Home access uses iOS permissions instead. For access to a Hauser server from outside, use [Remote access](/hauser/docs/integrations/remote-access/), which only lets paired devices through.
+The Hauser server’s web port has no separate login and belongs on a trusted home network. Native Apple Home access uses iOS permissions instead. For access to a Hauser server from outside, use [Remote access](/docs/integrations/remote-access/), which only lets paired devices through.
 
 ### How do I update?
 
-Through the Home Assistant app update, or `docker compose pull` and `up -d`. See [Updates and backups](/hauser/docs/getting-started/updates-and-backups/).
+Through the Home Assistant app update, or `docker compose pull` and `up -d`. See [Updates and backups](/docs/getting-started/updates-and-backups/).
 
 ### Does the demo talk to my home?
 
-No. The [demo](https://ralleur.github.io/hauser/demo/) runs against simulated devices and never connects to a Home Assistant.
+No. The [demo](https://hauserhome.app/demo/) runs against simulated devices and never connects to a Home Assistant.
 
 ### How do I report a problem or make a suggestion?
 

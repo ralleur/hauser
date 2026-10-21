@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-These terms describe the Home Assistant web interface unless noted otherwise. The [native iOS app](/hauser/docs/integrations/companion-app/) can also use Apple Home directly.
+These terms describe the Home Assistant web interface unless noted otherwise. The [native iOS app](/docs/integrations/companion-app/) can also use Apple Home directly.
 
 | Word | Meaning |
 |---|---|
@@ -16,7 +16,7 @@ These terms describe the Home Assistant web interface unless noted otherwise. Th
 | **Room picture** | The illustration of a room. Hauser ships default pictures. You can upload your own or let the room-image wizard draw one from a photo. |
 | **Standby** | The resting screen: clock, date, the week, notes and the shopping list. A tap opens the home screen. |
 | **Edit mode / Use mode** | Edit mode allows configuration through long presses. Use mode locks configuration away but keeps every control working. |
-| **Household configuration** | The JSON file Hauser writes during setup. It holds rooms, devices, modules and sensors. See [Household configuration](/hauser/docs/reference/household-config/). |
+| **Household configuration** | The JSON file Hauser writes during setup. It holds rooms, devices, modules and sensors. See [Household configuration](/docs/reference/household-config/). |
 | **Module** | A part of the interface you can switch on or off: Home, Energy, Calendar, Notes, Media, Library, Documents. |
 | **Hauser server** | The small Node.js server that serves the app, keeps the configuration and talks to services on your behalf. |
 | **Home Assistant App** | Hauser packaged as a Home Assistant add-on. It talks to Home Assistant through the Supervisor. |
@@ -29,4 +29,4 @@ There are two modes. Hauser picks one per installation, you never choose it by h
 - **Supervisor mode** (Home Assistant App): only the Hauser server talks to Home Assistant. The browser never sees a token.
 - **Direct mode** (Docker Compose): the browser connects to the Home Assistant address you typed in the wizard, with a long-lived access token.
 
-Details are in [Home Assistant integration](/hauser/docs/integrations/home-assistant/).
+Details are in [Home Assistant integration](/docs/integrations/home-assistant/).

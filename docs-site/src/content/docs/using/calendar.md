@@ -7,7 +7,7 @@ sidebar:
 
 The calendar is a sheet of paper, not a table. Hairlines instead of a grid, a serif month, small-caps weekdays. The current week sits at the top in full size, the coming weeks follow a step quieter, and a week without appointments folds down to its numbers.
 
-![The calendar screen.](/hauser/media/calendar-1100.webp)
+![The calendar screen.](/media/calendar-1100.webp)
 
 ## Where the events come from
 
@@ -22,4 +22,4 @@ Every calendar gets its own paper colour. A resident's own calendar wears the re
 
 ## Refresh
 
-The sheet refreshes on its own and reloads the moment the Home Assistant connection is established. The week strip on the [standby screen](/hauser/docs/using/standby/) uses the same data.
+The sheet refreshes on its own and reloads the moment the Home Assistant connection is established. The week strip on the [standby screen](/docs/using/standby/) uses the same data.

@@ -21,5 +21,5 @@ Window and door contacts and motion or presence detectors found during setup. **
 
 ## Related
 
-- The same detectors can wake the panel from [standby](/hauser/docs/using/standby/).
-- Rules for open windows or motion can become [notifications](/hauser/docs/using/notifications/).
+- The same detectors can wake the panel from [standby](/docs/using/standby/).
+- Rules for open windows or motion can become [notifications](/docs/using/notifications/).

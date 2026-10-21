@@ -5,14 +5,14 @@ sidebar:
   order: 3
 ---
 
-OpenAI is one optional provider for the [room-image wizard](/hauser/docs/using/room-images/).
+OpenAI is one optional provider for the [room-image wizard](/docs/using/room-images/).
 It is not needed for everyday control. Hauser only uses it after you connect
 your own access and choose that provider. Your access plan, costs and usage
 limits are set by OpenAI; Hauser’s call count is not a billing estimate.
 
 The wizard can also use Cloudflare, accept pictures made in another service,
 or keep your uploaded and bundled images. Compare these paths in the
-[room-picture guide](/hauser/docs/using/room-images/).
+[room-picture guide](/docs/using/room-images/).
 
 ## Access
 

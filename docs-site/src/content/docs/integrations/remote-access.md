@@ -11,7 +11,7 @@ paired devices. Choose one route deliberately; both use Tailscale, but they
 have different access boundaries.
 
 For guided setup, give your agent the
-[beginner setup guide](/hauser/docs/getting-started/agent-guided-setup/).
+[beginner setup guide](/docs/getting-started/agent-guided-setup/).
 
 ## Choose a route
 
@@ -141,7 +141,7 @@ privately with the user.
 Install Tailscale on that host using the
 [official instructions](https://tailscale.com/docs/how-to/quickstart), not only
 on the Home Assistant host. Follow Hauser's
-[Compose network settings](/hauser/docs/getting-started/docker-compose/),
+[Compose network settings](/docs/getting-started/docker-compose/),
 using the exact addresses and origins required by the clients. In Compose's
 direct connection mode the browser must also reach Home Assistant over the
 VPN. Verify both hosts and their relevant ports before testing controls. Do
@@ -157,7 +157,7 @@ when the user has chosen a public endpoint protected by Hauser's device tokens.
 ### How it works
 
 - The image ships a small sidecar (`hauser-tunnel`). It joins your tailnet as a userspace node and publishes Hauser as `https://<hostname>.<tailnet>.ts.net`.
-- Every forwarded request is marked as remote. The Hauser server then requires a device token from [pairing](/hauser/docs/integrations/companion-app/). Without a token only health and build info answer.
+- Every forwarded request is marked as remote. The Hauser server then requires a device token from [pairing](/docs/integrations/companion-app/). Without a token only health and build info answer.
 - The panel and the LAN keep working as before if the sidecar is missing.
 
 ### Setup

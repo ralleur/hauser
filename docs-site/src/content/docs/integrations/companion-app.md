@@ -33,8 +33,8 @@ the app is connected to Apple Home.
 
 ## Home Assistant
 
-First install Hauser as a [Home Assistant App](/hauser/docs/getting-started/home-assistant-app/)
-or with [Docker Compose](/hauser/docs/getting-started/docker-compose/) and complete
+First install Hauser as a [Home Assistant App](/docs/getting-started/home-assistant-app/)
+or with [Docker Compose](/docs/getting-started/docker-compose/) and complete
 its setup. Then choose Home Assistant in the native app and pair it with that
 installation. Rooms, devices and the supported household data come from your
 Hauser server.
@@ -50,12 +50,12 @@ If the web interface is already open on the phone you are pairing, use
 **Open in the app on this device** instead of trying to scan the same screen.
 
 Only a hash of the device token is stored on the server. Pairing is also
-required for the separate [remote-access path](/hauser/docs/integrations/remote-access/).
+required for the separate [remote-access path](/docs/integrations/remote-access/).
 
 ## A room in your hand
 
 <figure class="guide-phone">
-  <a href="https://ralleur.github.io/hauser/media/ios-room.webp"><img src="/hauser/media/ios-room.webp" width="804" height="1748" loading="lazy" decoding="async" alt="The actual native iOS demo: the living-room picture, Cozy, Bright and Off scenes, and individual light controls." /></a>
+  <a href="https://hauserhome.app/media/ios-room.webp"><img src="/media/ios-room.webp" width="804" height="1748" loading="lazy" decoding="async" alt="The actual native iOS demo: the living-room picture, Cozy, Bright and Off scenes, and individual light controls." /></a>
   <figcaption>Native iOS demo. Choose a scene or operate one light in the room.</figcaption>
 </figure>
 
@@ -71,8 +71,8 @@ is not the web page inside an app wrapper.
 | iOS features | Widgets, Siri shortcuts, shopping-list sharing and device calendars. Availability depends on the feature and permissions. |
 | Appearance | Native glass surfaces on iOS 26; the app also supports earlier iOS versions. |
 | Apple Intelligence | Optional features require compatible hardware and OS support. They are not needed for everyday room control. |
-| Notifications | Local hints such as open windows, laundry and due reminders are available. Home Assistant’s persistent notifications are not yet forwarded into the native app; see [notifications](/hauser/docs/using/notifications/). |
-| Room pictures | Provider choices and experimental native generation are described in [Room pictures](/hauser/docs/using/room-images/). |
+| Notifications | Local hints such as open windows, laundry and due reminders are available. Home Assistant’s persistent notifications are not yet forwarded into the native app; see [notifications](/docs/using/notifications/). |
+| Room pictures | Provider choices and experimental native generation are described in [Room pictures](/docs/using/room-images/). |
 
 For the browser-based phone interface, see
-[Phones and panels](/hauser/docs/getting-started/phones-and-panels/).
+[Phones and panels](/docs/getting-started/phones-and-panels/).

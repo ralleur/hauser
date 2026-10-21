@@ -5,7 +5,7 @@ sidebar:
   order: 7
 ---
 
-Optional. The Hauser server bridges Paperless-ngx for the [Documents](/hauser/docs/using/documents/) screen.
+Optional. The Hauser server bridges Paperless-ngx for the [Documents](/docs/using/documents/) screen.
 
 ## Setup
 

@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-This guide is for the **Hauser server connected to Home Assistant**. For Apple Home, use the [native iOS setup](/hauser/docs/integrations/companion-app/#apple-home).
+This guide is for the **Hauser server connected to Home Assistant**. For Apple Home, use the [native iOS setup](/docs/integrations/companion-app/#apple-home).
 
 On first start Hauser opens a guided wizard. It ends with a validated household configuration. Nothing is written until you confirm the last step.
 
@@ -34,4 +34,4 @@ Everything from the wizard can be changed under **Settings → Home → Rooms & 
 
 ## Where the result lives
 
-The wizard writes `household.json` into the config volume (`/config` on Compose, `/data` in the App). Credentials go into a separate `config.json` and never into the household file. See [Household configuration](/hauser/docs/reference/household-config/).
+The wizard writes `household.json` into the config volume (`/config` on Compose, `/data` in the App). Credentials go into a separate `config.json` and never into the household file. See [Household configuration](/docs/reference/household-config/).

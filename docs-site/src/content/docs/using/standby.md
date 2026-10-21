@@ -7,7 +7,7 @@ sidebar:
 
 A wall panel spends most of the day doing nothing. Standby is that resting state. It should be readable from across the room and quiet until touched.
 
-![The standby screen: a large clock and date, temperatures below, the week along the bottom, reminders on the right, the shopping list on the left, over a faint street map.](/hauser/media/lockscreen-1100.webp)
+![The standby screen: a large clock and date, temperatures below, the week along the bottom, reminders on the right, the shopping list on the left, over a faint street map.](/media/lockscreen-1100.webp)
 
 ## What it shows
 
@@ -16,8 +16,8 @@ A wall panel spends most of the day doing nothing. Standby is that resting state
 - The **week strip** with upcoming appointments. It can be switched off under **Appearance → Ambient & standby → Calendar in standby**.
 - **Reminders** as coloured notes and the **shopping list**.
 - **Weather** passing behind the clock: rain, snow, cloud. Switch **Weather in standby** under Ambient & standby.
-- An optional **street map** of your own town. See [OpenStreetMap](/hauser/docs/integrations/openstreetmap/).
-- One line for **moments**: a birthday, the first snow. See [Presence and moments](/hauser/docs/using/presence-and-moments/).
+- An optional **street map** of your own town. See [OpenStreetMap](/docs/integrations/openstreetmap/).
+- One line for **moments**: a birthday, the first snow. See [Presence and moments](/docs/using/presence-and-moments/).
 
 Touching the calendar or the notes opens that screen. Touching anything else opens the home screen. The opening is a soft ring from your finger, not a cut.
 
@@ -34,7 +34,7 @@ Between 22:00 and 06:00 the screen dims to an eye-friendly deep night. The map d
 
 ## Presence
 
-A motion detector can wake the panel from standby. When every resident is away, standby stays black. The first person home is greeted. All three are off by default. See [Presence and moments](/hauser/docs/using/presence-and-moments/).
+A motion detector can wake the panel from standby. When every resident is away, standby stays black. The first person home is greeted. All three are off by default. See [Presence and moments](/docs/using/presence-and-moments/).
 
 ## Ambient light
 

@@ -9,7 +9,7 @@ Rooms are the backbone of Hauser. Everything hangs on a room: its picture, its d
 
 ## Where rooms come from
 
-The [setup wizard](/hauser/docs/getting-started/first-setup/) turns Home Assistant Areas into rooms. Hauser only reads Areas. It never renames or deletes them.
+The [setup wizard](/docs/getting-started/first-setup/) turns Home Assistant Areas into rooms. Hauser only reads Areas. It never renames or deletes them.
 
 ## Editing rooms
 
@@ -21,8 +21,8 @@ Open **Settings → Home → Rooms & devices**. Every room shows its picture, it
 | Add a device | Tap **Add device** in a room, or use the empty-room hint. Tap into the search field for type pills (Light, Switch, Climate, Sensor, Media, ...) or type a name. |
 | Hide or rename a device, change its icon | Long-press the device tile, then open its settings. |
 | Choose what lights the room's bulb | Open the device's settings and use **Counts for the room light indicator**. See [The lightbulb indicator](#the-lightbulb-indicator). |
-| Change the room picture | Tap the picture. See [Room pictures](/hauser/docs/using/room-images/). |
-| Edit scenes | See [Scenes](/hauser/docs/using/scenes/). |
+| Change the room picture | Tap the picture. See [Room pictures](/docs/using/room-images/). |
+| Edit scenes | See [Scenes](/docs/using/scenes/). |
 | Place lamps in the picture | The lamp-placement editor shows your own room picture. Placed lamps light their cone when they are on. |
 
 Unfinished room edits survive leaving the section. A restored draft is marked and can be discarded on purpose.
@@ -44,7 +44,7 @@ The setting does not hide or disable the device. It only decides whether the dev
 
 ## Room pictures follow the room
 
-A room has three lighting states: day, evening and lights-off. When the last lamp goes out, the picture dims into its unlit version. Rain and snow show in the windows when the picture set has an overcast variant. See [Room pictures](/hauser/docs/using/room-images/).
+A room has three lighting states: day, evening and lights-off. When the last lamp goes out, the picture dims into its unlit version. Rain and snow show in the windows when the picture set has an overcast variant. See [Room pictures](/docs/using/room-images/).
 
 ## Advanced room settings
 

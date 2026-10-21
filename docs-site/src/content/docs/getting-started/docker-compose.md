@@ -25,7 +25,7 @@ docker compose ps
 docker compose exec hauser node container/healthcheck.mjs
 ```
 
-Open `http://localhost:4173` and run the [setup wizard](/hauser/docs/getting-started/first-setup/).
+Open `http://localhost:4173` and run the [setup wizard](/docs/getting-started/first-setup/).
 
 :::tip[Make it reachable in your LAN]
 The default bind is loopback only. To open it for panels and phones, set exact values in `.env`, then run `docker compose up -d` again:
@@ -63,8 +63,8 @@ docker compose -f compose.yaml -f compose.build.yaml up -d --build
 curl -fsS http://localhost:4173/api/health
 ```
 
-A fresh install answers `"status": "setup_required"`. After the wizard it answers `"status": "ready"`. See [API and health](/hauser/docs/reference/api/).
+A fresh install answers `"status": "setup_required"`. After the wizard it answers `"status": "ready"`. See [API and health](/docs/reference/api/).
 
 ## Update, backup, rollback
 
-See [Updates and backups](/hauser/docs/getting-started/updates-and-backups/). The complete operations contract is in [`docs/08-installation.md`](https://github.com/ralleur/hauser/blob/main/docs/08-installation.md).
+See [Updates and backups](/docs/getting-started/updates-and-backups/). The complete operations contract is in [`docs/08-installation.md`](https://github.com/ralleur/hauser/blob/main/docs/08-installation.md).

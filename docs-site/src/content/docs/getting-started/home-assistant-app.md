@@ -8,7 +8,7 @@ sidebar:
 This is the recommended way. The App talks to Home Assistant by itself, so there is no URL to type and no token to create.
 
 :::note
-Apps (add-ons) need Home Assistant OS or a Supervised installation. Home Assistant Container has no app store. Use [Docker Compose](/hauser/docs/getting-started/docker-compose/) there.
+Apps (add-ons) need Home Assistant OS or a Supervised installation. Home Assistant Container has no app store. Use [Docker Compose](/docs/getting-started/docker-compose/) there.
 :::
 
 ## Steps
@@ -17,9 +17,9 @@ Apps (add-ons) need Home Assistant OS or a Supervised installation. Home Assista
    ```text
    https://github.com/ralleur/hauser
    ```
-   Or use the button on the [project website](https://ralleur.github.io/hauser/#install).
+   Or use the button on the [project website](https://hauserhome.app/#install).
 2. Select **Hauser**, choose **Install**, then **Start**.
-3. Choose **Open Web UI** and run the [setup wizard](/hauser/docs/getting-started/first-setup/).
+3. Choose **Open Web UI** and run the [setup wizard](/docs/getting-started/first-setup/).
 4. At the end the wizard shows the address for phones and tablets, with a QR code.
 
 ## What the App does

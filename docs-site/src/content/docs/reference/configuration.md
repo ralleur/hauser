@@ -46,7 +46,7 @@ Set by the Compose file or the App manifest. You rarely change them.
 | `HMI_PAPERLESS_HOST`, `HMI_PAPERLESS_PORT` | `127.0.0.1`, `8000` | Fallback Paperless address; the settings override it |
 | `HMI_REQUIRED_WRITABLE_DIRS` | | Directories the entrypoint creates and hands to the runtime user |
 | `HMI_REVISION`, `HMI_SOURCE_URL` | baked into the image | Commit and source link shown under License and source |
-| `HMI_TUNNEL_BIN`, `HMI_TUNNEL_STATE`, `HMI_REMOTE_URL` | | See [Remote access](/hauser/docs/integrations/remote-access/) |
+| `HMI_TUNNEL_BIN`, `HMI_TUNNEL_STATE`, `HMI_REMOTE_URL` | | See [Remote access](/docs/integrations/remote-access/) |
 | `HMI_AI_CUSTOMIZING_ENABLED` | `0` in every public deployment | The author's private code-modifying agent. Not part of the product. |
 
 ## Files in the volumes

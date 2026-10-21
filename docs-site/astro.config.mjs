@@ -3,12 +3,12 @@ import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
 
 // The wiki is published below the project website:
-// https://ralleur.github.io/hauser/docs/
-// Internal links in Markdown must therefore start with /hauser/docs/
+// https://hauserhome.app/docs/
+// Internal links in Markdown must therefore start with /docs/
 // (Astro does not add the base path to links written in Markdown).
 export default defineConfig({
-  site: 'https://ralleur.github.io',
-  base: '/hauser/docs',
+  site: 'https://hauserhome.app',
+  base: '/docs',
   trailingSlash: 'always',
   integrations: [
     starlight({
@@ -28,7 +28,7 @@ export default defineConfig({
       editLink: { baseUrl: 'https://github.com/ralleur/hauser/edit/main/docs-site/' },
       plugins: [starlightLinksValidator()],
       sidebar: [
-        { label: 'Guide home', link: '/hauser/docs/' },
+        { label: 'Guide home', link: '/docs/' },
         { label: 'Getting started', items: [
           { slug: 'getting-started/agent-guided-setup' },
           { slug: 'getting-started/requirements' },
@@ -53,8 +53,8 @@ export default defineConfig({
         ] },
         { label: 'Reference & help', collapsed: true, items: [{ autogenerate: { directory: 'reference' } }] },
         { label: 'For developers', collapsed: true, items: [{ autogenerate: { directory: 'developers' } }] },
-        { label: 'Hauser website ↗', link: 'https://ralleur.github.io/hauser/' },
-        { label: 'Live demo ↗', link: 'https://ralleur.github.io/hauser/demo/' },
+        { label: 'Hauser website ↗', link: 'https://hauserhome.app/' },
+        { label: 'Live demo ↗', link: 'https://hauserhome.app/demo/' },
       ],
     }),
   ],
