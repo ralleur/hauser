@@ -43,6 +43,9 @@ jobs:
         working-directory: app
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Verify public URLs
+        run: python3 scripts/verify-public-urls.py
+
       - name: Verify release metadata
         run: ./scripts/verify-release-metadata.sh
 
