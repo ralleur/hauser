@@ -1,4 +1,8 @@
 <script lang="ts">
+  import RoomImageEditorDialog from '../settings/RoomImageEditorDialog.svelte';
+  import { editMode } from '../../state/edit-mode.svelte.ts';
+  import { energyImageUi } from '../../state/energy-marks.svelte.ts';
+  import { bodyPortal } from '../../actions/body-portal.ts';
   import { m } from '../../../paraglide/messages.js';
   import { ENERGY_SENSORS, appState } from '../../state/app.svelte.ts';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
@@ -19,6 +23,11 @@
   import { intlLocale } from '../../state/locale.svelte.ts';
   import { projectPhoneEnergy } from '../../state/phone-energy.ts';
   import { deviceManager } from '../../state/device-manager.svelte.ts';
+
+  let imageEditorOpen = $state(false);
+  let arrangeOpen = $state(false);
+  function openArrangeDialog(node: HTMLDialogElement) { node.showModal(); }
+  $effect(() => { if (energyImageUi.arrangeRequested) { energyImageUi.arrangeRequested = false; arrangeOpen = true; } });
 
   let { titleAnchor = $bindable() }: { titleAnchor?: HTMLHeadingElement } = $props();
 
@@ -120,6 +129,8 @@
       <p class="phone-energy-status" role="status">{model.status.text}</p>
     {/if}
   </header>
+
+  {#if editMode.active}<button class="secondary-btn phone-image-edit pressable" type="button" onclick={() => imageEditorOpen = true}>{m.img_edit()}</button>{/if}
 
   <!-- Das Haus vorn, der Wert jetzt im Himmel des Bildes. -->
   <div class="phone-energy-hero" class:has-tiles={model.tiles.length > 0}>
@@ -231,3 +242,18 @@
     </section>
   {/if}
 </main>
+
+{#if imageEditorOpen}<RoomImageEditorDialog roomId={EXTERIOR_HERO_ID} name={m.img_exterior()} onclose={() => imageEditorOpen = false} onarrange={() => { imageEditorOpen = false; arrangeOpen = true; }} />{/if}
+{#if arrangeOpen}
+  <dialog use:bodyPortal use:openArrangeDialog class="phone-energy-arranger" aria-label={m.energy_menu_arrange()} oncancel={(event) => { event.preventDefault(); arrangeOpen = false; }}>
+    {#await import('../../screens/EnergyScreen.svelte') then loaded}<loaded.default arrangeOnOpen onArrangeDone={() => arrangeOpen = false} />{/await}
+    <button class="secondary-btn phone-arrange-close pressable" type="button" onclick={() => arrangeOpen = false}>{m.rimg_objects_cancel()}</button>
+  </dialog>
+{/if}
+<style>
+  .phone-image-edit { align-self: flex-start; margin-block-end: var(--space-3); }
+  .phone-energy-arranger { position: fixed; inset: 0; z-index: 220; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; background: var(--color-surface-0); }
+  .phone-energy-arranger :global(.energy-wall), .phone-energy-arranger :global(.energy-daycurve) { display: none; }
+  .phone-arrange-close { position: absolute; inset-block-start: var(--space-3); inset-inline-end: var(--space-3); z-index: 3; }
+  .phone-energy-arranger :global(.energy-arrange-bar) { left: var(--space-3); right: var(--space-3); bottom: var(--space-3); transform: none; flex-wrap: wrap; }
+</style>

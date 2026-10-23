@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { bodyPortal } from '../../actions/body-portal.ts';
+  import ImageWorkspaceBackground from './ImageWorkspaceBackground.svelte';
+  import { tick, onDestroy } from 'svelte';
   import '../../../styles/room-images.css';
   import { m } from '../../../paraglide/messages.js';
   import { appState } from '../../state/app.svelte.ts';
@@ -32,6 +34,8 @@
   let roomChoice = $state<Record<string, string>>({});
   let dialog = $state<HTMLElement>();
   let wasOpen = false;
+  let previousFocus: HTMLElement | null = null;
+  onDestroy(() => previousFocus?.focus());
 
   const rooms = $derived([
     ...appState.rooms.map((room) => ({ id: room.id, name: room.name })),
@@ -41,6 +45,7 @@
 
   $effect(() => {
     if (open && !wasOpen) {
+      previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       error = null;
       notice = null;
       confirmDelete = null;
@@ -124,19 +129,20 @@
   }
 
   function onKeydown(event: KeyboardEvent) {
-    if (open && event.key === 'Escape') onclose();
+    if (open && event.key === 'Escape') { event.stopImmediatePropagation(); event.preventDefault(); onclose(); }
   }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 {#if open}
-  <div class="room-image-wizard-layer" role="presentation" onclick={closeOnScrim}>
+  <div use:bodyPortal class="room-image-wizard-layer image-workspace-layer on-image" role="presentation" onclick={closeOnScrim}>
+    <ImageWorkspaceBackground roomId={targetRoomId} />
     <div class="room-image-wizard" role="dialog" aria-modal="true" aria-labelledby="room-image-library-title"
          tabindex="-1" bind:this={dialog}>
       <header class="room-image-wizard-head">
         <div>
-          <span class="caps-label">{m.rimg_eyebrow()}</span>
+          <span class="caps-label">{m.img_overview()}</span>
           <h2 id="room-image-library-title">
             {targetRoomId ? m.rimg_lib_pick_for({ room: targetRoomName }) : m.rimg_lib_title()}
           </h2>
@@ -163,16 +169,15 @@
         <div class="room-image-library-grid">
           {#each library.assets as asset (asset.assetId)}
             <article class="room-image-library-card">
-              <img src={asset.variants.light} alt={m.rimg_lib_alt({ id: asset.assetId })} loading="lazy" />
+              <img src={asset.variants.light} alt={m.img_saved_on({ date: new Date(asset.createdAt).toLocaleDateString(intlLocale()) })} loading="lazy" />
               <div class="room-image-library-meta">
-                <strong>{roomNames(asset.assignedRoomIds)}</strong>
-                <small>{m.rimg_lib_meta({ size: formatRoomImageBytes(asset.byteLength), date: new Date(asset.createdAt).toLocaleDateString(intlLocale()) })}</small>
+                <strong>{asset.assignedRoomIds.length ? roomNames(asset.assignedRoomIds) : m.img_saved_on({ date: new Date(asset.createdAt).toLocaleDateString(intlLocale()) })}</strong>
               </div>
               <div class="room-image-library-actions">
                 {#if targetRoomId}
                   <button class="primary-btn pressable" type="button" disabled={busy}
                           onclick={() => assign(asset, targetRoomId)}>
-                    {asset.assignedRoomIds.includes(targetRoomId) ? m.rimg_lib_assign_again() : m.rimg_lib_assign_here()}
+                    {m.img_use_this()}
                   </button>
                 {:else}
                   <label>
@@ -188,6 +193,8 @@
                           disabled={busy || !roomChoice[asset.assetId]}
                           onclick={() => assign(asset, roomChoice[asset.assetId])}>{m.rimg_lib_assign()}</button>
                 {/if}
+                <details class="image-library-details"><summary>{m.img_library_details()}</summary>
+                  <p>{m.rimg_lib_meta({ size: formatRoomImageBytes(asset.byteLength), date: new Date(asset.createdAt).toLocaleDateString(intlLocale()) })}</p>
                 {#each asset.assignedRoomIds as roomId (roomId)}
                   <button class="secondary-btn pressable" type="button" disabled={busy}
                           onclick={() => unassign(roomId)}>{m.rimg_lib_unassign_from({ room: roomNames([roomId]) })}</button>
@@ -196,6 +203,7 @@
                         onclick={() => remove(asset)}>
                   {confirmDelete === asset.assetId ? m.rimg_lib_delete_confirm() : m.rimg_lib_delete()}
                 </button>
+                </details>
               </div>
             </article>
           {/each}
@@ -208,3 +216,5 @@
     </div>
   </div>
 {/if}
+
+<style>.image-library-details { width: 100%; color: var(--color-text-secondary); } summary { min-height: var(--touch-min); padding-block: var(--space-3); cursor: pointer; } .image-library-details p { font-size: var(--text-sm); } .image-library-details button { margin-block: var(--space-1); }</style>

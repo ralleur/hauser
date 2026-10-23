@@ -216,34 +216,37 @@ export function toggleLight(roomId: string, lightId: string): void {
   );
 }
 
-export function toggleDevice(roomId: string, device: Light): void {
-  if (device.domain === 'light' || !device.domain) return toggleLight(roomId, device.id);
-  const domain = device.domain;
+export function toggleDevice(device: Light): void {
+  const domain = device.domain || 'light';
+  const entityId = device.entityId;
+  /* Die Kachel trägt ihr HA-Ziel bereits. Unter Unruhe kann ihre alte
+     Raumzuordnung noch ausblenden, während das Gerät schon umgezogen ist
+     (Stresshaus #44/#45). Wie bei Schaltern das konkrete Ziel verwenden. */
   // Domänen mit eigenem Service-Satz (R28): der Tap auf die Kachel ist die
   // Hauptaktion, die Detail-Ebene kennt den Rest.
   if (domain === 'cover' || domain === 'valve') {
-    const cur = runtime.merged(device.entityId) as CoverValue | undefined;
+    const cur = runtime.merged(entityId) as CoverValue | undefined;
     // Fährt er gerade, hält ein Tipp ihn an — wie der Taster an der Wand.
-    if (cur?.moving && cur.supportsStop) return coverCommand(device.entityId, domain, 'stop');
-    return coverCommand(device.entityId, domain, cur?.on ? 'close' : 'open');
+    if (cur?.moving && cur.supportsStop) return coverCommand(entityId, domain, 'stop');
+    return coverCommand(entityId, domain, cur?.on ? 'close' : 'open');
   }
   if (domain === 'vacuum') {
-    const cur = runtime.merged(device.entityId) as VacuumValue | undefined;
-    return vacuumCommand(device.entityId, cur?.on ? 'return_to_base' : 'start');
+    const cur = runtime.merged(entityId) as VacuumValue | undefined;
+    return vacuumCommand(entityId, cur?.on ? 'return_to_base' : 'start');
   }
   if (domain === 'lawn_mower') {
-    const cur = runtime.merged(device.entityId) as { on?: boolean } | undefined;
-    return mowerCommand(device.entityId, cur?.on ? 'dock' : 'start_mowing');
+    const cur = runtime.merged(entityId) as { on?: boolean } | undefined;
+    return mowerCommand(entityId, cur?.on ? 'dock' : 'start_mowing');
   }
   if (domain === 'lock') {
-    const cur = runtime.merged(device.entityId) as LockValue | undefined;
-    return lockCommand(device.entityId, cur?.locked ? 'unlock' : 'lock');
+    const cur = runtime.merged(entityId) as LockValue | undefined;
+    return lockCommand(entityId, cur?.locked ? 'unlock' : 'lock');
   }
-  if (domain === 'button' || domain === 'input_button') return pressButton(device.entityId, domain);
-  const cur = runtime.merged(device.entityId) as SwitchValue | undefined;
+  if (domain === 'button' || domain === 'input_button') return pressButton(entityId, domain);
+  const cur = runtime.merged(entityId) as SwitchValue | undefined;
   const next: SwitchValue = { on: !cur?.on };
   runtime.dispatch(
-    { entityId: device.entityId, domain, service: next.on ? 'turn_on' : 'turn_off', data: {}, queuedAt: Date.now() },
+    { entityId, domain, service: next.on ? 'turn_on' : 'turn_off', data: {}, queuedAt: Date.now() },
     next,
   );
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.47.0 - 2026-10-23
+
+- Room and exterior pictures have clear “Change image” and “Set up image”
+  entries, one editor for devices, light zones, windows, weather and surfaces,
+  and a guided manual workflow for preparing and uploading the four variants.
+- A consistent dark workspace, readable confirmation buttons and simpler
+  navigation make image editing easier on different screen sizes.
+- Light tiles still switch the correct Home Assistant entity while room
+  assignments are changing.
+
 ## 0.46.1 - 2026-10-21
 
 - Gate: Home Assistant no longer marks the Hauser app as experimental, and it

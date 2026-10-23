@@ -11,6 +11,7 @@
    Regen an der falschen Stelle. */
 
 import { normalizeHeroRoom, PROJECT_OVERCAST_ROOMS } from '../components/room-hero-assets.ts';
+import { EXTERIOR_HERO_ID } from '../config/household-config.ts';
 import { defaultRoomObjects } from './room-display-config.svelte.ts';
 import { roomHeroConfig } from './room-hero-config.svelte.ts';
 import type { RoomImageRegion, RoomImageRegionKind } from './room-image-library-client.ts';
@@ -35,7 +36,7 @@ export function roomRegions(
   const assetId = roomHeroConfig(roomId)?.assetId;
   const regions = assetId
     ? regionsByAsset.map[assetId] ?? []
-    : defaultRoomObjects(roomId ?? "", "project:" + normalizeHeroRoom(roomId)) ?? projectRegions.map[normalizeHeroRoom(roomId)] ?? [];
+    : defaultRoomObjects(roomId ?? "", "project:" + (roomId === EXTERIOR_HERO_ID ? "exterior" : normalizeHeroRoom(roomId))) ?? (roomId === EXTERIOR_HERO_ID ? [] : projectRegions.map[normalizeHeroRoom(roomId)] ?? []);
   return kind ? regions.filter((region) => region.kind === kind) : regions;
 }
 

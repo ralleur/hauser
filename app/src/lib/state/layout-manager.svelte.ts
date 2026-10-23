@@ -18,6 +18,22 @@ import {
   type LayoutSlotId,
   type WidthPresetId,
 } from './layout-config.ts';
+import { appState } from './app.svelte.ts';
+import { roomLightPlacements } from './immersion-light.svelte.ts';
+import { roomImageDevices } from './room-image-devices.ts';
+
+/** Counts missing positions for the optional configuration notice. */
+export function imageControlStatus() {
+  const rooms = appState.rooms.map(room => {
+    const placements = roomLightPlacements(room.id);
+    const devices = roomImageDevices(room);
+    const missing = devices.filter(device => !placements[device.entityId]);
+    return { id: room.id, name: room.name, total: devices.length, placed: devices.length - missing.length, missing };
+  });
+  const total = rooms.reduce((sum, room) => sum + room.total, 0);
+  const missing = rooms.reduce((sum, room) => sum + room.missing.length, 0);
+  return { rooms, total, missing, ready: total > 0 && missing === 0 };
+}
 
 /* Owner-Entscheidung 2026-09-11: Es gibt keinen Entwurf mehr — jede
    Einstellung im Layout-Dialog gilt sofort und wird sofort gespeichert. Der

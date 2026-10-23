@@ -1,3 +1,4 @@
+import { IS_DEMO } from '../demo/demo-mode.ts';
 import { m } from '../../paraglide/messages.js';
 import type { RoomHeroConfig } from '../config/household-config.ts';
 import { setRoomHeroConfig } from './room-hero-config.svelte.ts';
@@ -43,6 +44,8 @@ async function mutate(roomId: string, method: 'POST' | 'DELETE', file?: File, va
   if (file && (!MIME_TYPES.has(file.type) || file.size === 0 || file.size > 12_582_912)) {
     throw new Error(m.rimg_err_file_type());
   }
+
+  if (IS_DEMO) return (await import('../demo/demo-room-images.ts')).demoMutateBackground(roomId, method, file, variant, origin);
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const etag = await householdEtag();

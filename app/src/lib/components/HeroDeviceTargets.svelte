@@ -17,10 +17,11 @@
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { isLamp, tapDevice } from '../state/device-tap.ts';
-  import { openDeviceDetail } from '../state/overlay.svelte.ts';
+  import { openDeviceDetail, openRoomClimate } from '../state/overlay.svelte.ts';
+  import { climateEntityId } from '../state/entities.ts';
+  import { roomImageDevices } from '../state/room-image-devices.ts';
   import { longpress } from '../actions/longpress.ts';
   import type { Light } from '../state/app.svelte.ts';
-  import { m } from '../../paraglide/messages.js';
 
   /* Bildsteuerung: ein Doppeltipp auf eine freie Stelle zeigt für einen
      Moment Zonen, Punkte und Namen (HomeScreen hält die Dauer). */
@@ -29,7 +30,7 @@
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
   const placements = $derived(roomLightPlacements(room?.id));
-  const targets = $derived((room?.lights ?? [])
+  const targets = $derived(roomImageDevices(room)
     .filter((device) => placements[device.entityId])
     .map((device) => ({ device, placement: placements[device.entityId], lamp: isLamp(device) })));
 
@@ -37,14 +38,18 @@
 
   function tap(device: Light): void {
     if (!room) return;
-    tapDevice(room.id, device);
+    if (device.entityId === climateEntityId(room.id)) openRoomClimate(room.id);
+    else tapDevice(room.id, device);
     flash = { id: device.entityId, seq: (flash?.seq ?? 0) + 1 };
+  }
+  function hold(device: Light): void {
+    if (!room) return;
+    if (device.entityId === climateEntityId(room.id)) openRoomClimate(room.id, 'settings');
+    else openDeviceDetail(room.id, device.id);
   }
 </script>
 
-{#if room && targets.length === 0}
-  <p class="hero-device-empty" class:is-revealed={reveal} aria-live="polite">{m.home_image_no_devices()}</p>
-{:else if room}
+{#if room && targets.length > 0}
   <div class="room-hero-targets" class:is-revealed={reveal} style:--hero-parallax={`${heroParallax.offsetPx}px`}>
     <div class="hero-image-space"
          style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
@@ -56,7 +61,7 @@
                 style:width={target.lamp ? `${target.placement.radius * 200}%` : undefined}
                 style:aspect-ratio={target.lamp ? `${target.placement.radius} / ${placementRy(target.placement)}` : undefined}
                 style:rotate={target.lamp ? `${placementRotation(target.placement)}deg` : undefined}
-                use:longpress={{ onLongPress: () => openDeviceDetail(room.id, target.device.id) }}
+                use:longpress={{ onLongPress: () => hold(target.device) }}
                 onclick={() => tap(target.device)}>
           {#if flash?.id === target.device.entityId}
             {#key flash.seq}<span class="hero-device-flash" aria-hidden="true"></span>{/key}

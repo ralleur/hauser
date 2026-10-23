@@ -14,9 +14,8 @@
     type RoomImageChatGptLogin,
   } from '../../state/room-image-access.ts';
 
-  /* Eine Frage nach der anderen (R55), damit niemand vor vier Optionen steht:
-     ChatGPT-Abo? Cloudflare-Konto? Sonst selbst zeichnen lassen. `onmanual`
-     meldet dem Assistenten den letzten Weg — der braucht keinen Zugang. */
+  /* A compact provider selection keeps every creation path visible. Login
+     and credentials appear only for the selected provider. */
   let { onchange, onmanual, onclose, chooseOnOpen = false }: { onchange?: (status: RoomImageAccessStatus) => void; onmanual?: () => void; onclose?: () => void; chooseOnOpen?: boolean } = $props();
   let access = $state<RoomImageAccessStatus>({ configured: false, mode: null, source: null, valid: null });
   /* Ein grüner Punkt, der stimmt (R15, docs/23): Eine abgelaufene Anmeldung
@@ -25,12 +24,7 @@
      statt sie hinter „Zugang ändern" zu verstecken. */
   const expired = $derived(access.configured && access.valid === false);
   type Question = 'chatgpt' | 'cloudflare' | 'manual';
-  let question = $state<Question>('chatgpt');
   let connecting = $state<Question | null>(null);
-  /* Mit stehendem Zugang bleiben die Fragen hinter „Weg ändern" — wer ChatGPT
-     hat, sieht sonst nie, dass es Cloudflare und Selbstzeichnen gibt. Die
-     Fragen laufen dann ohne Trennen: ChatGPT behalten, wechseln oder selbst
-     zeichnen. */
   let choosing = $state(false);
   const connected = $derived(access.configured && !expired);
   let apiKey = $state('');
@@ -84,25 +78,11 @@
   function keep() {
     choosing = false;
     connecting = null;
-    question = 'chatgpt';
     onclose?.();
   }
 
   async function load() {
     try { update(await getRoomImageAccess()); if (chooseOnOpen) choosing = true; } catch { error = m.rimg_access_err_load(); }
-  }
-
-  function next(from: Question) {
-    connecting = null;
-    error = null;
-    question = from === 'chatgpt' ? 'cloudflare' : 'manual';
-  }
-
-  function back() {
-    error = null;
-    /* Mitten im Verbinden führt Zurück erst zur Frage, nicht gleich eine Frage weiter zurück. */
-    if (connecting) { connecting = null; return; }
-    question = question === 'manual' ? 'cloudflare' : 'chatgpt';
   }
 
   async function saveKey() {
@@ -159,7 +139,7 @@
 
   async function disconnect() {
     busy = true; error = null;
-    try { update(await clearRoomImageAccess()); login = null; question = 'chatgpt'; connecting = null; choosing = false; }
+    try { update(await clearRoomImageAccess()); login = null; connecting = null; choosing = false; }
     catch { error = m.rimg_access_err_clear(); }
     finally { busy = false; }
   }
@@ -173,107 +153,31 @@
 </script>
 
 <section class="room-image-access" class:is-choosing={!connected || choosing} aria-labelledby="room-image-access-title">
-  <div>
-    <span class="caps-label">{m.rimg_way_label()}</span>
-    <h3 id="room-image-access-title">
-      {expired ? m.rimg_access_expired() : access.configured ? m.rimg_access_connected() : m.rimg_way_title()}
-    </h3>
-    <p>{expired ? m.rimg_access_expired_hint() : modeLabel(access.mode)}</p>
-  </div>
-
+  <div><span class="caps-label">{m.img_provider()}</span><h3 id="room-image-access-title">{expired ? m.rimg_access_expired() : connected && !choosing ? m.rimg_access_connected() : m.img_provider_choose()}</h3><p>{expired ? m.rimg_access_expired_hint() : modeLabel(access.mode)}</p></div>
   {#if connected && !choosing}
     <div class="room-image-way-actions">
-      <button class="primary-btn pressable" type="button" disabled={busy} onclick={() => { choosing = true; question = 'chatgpt'; connecting = null; }}>{m.rimg_way_change()}</button>
+      <button class="primary-btn pressable" type="button" disabled={busy} onclick={() => { choosing = true; connecting = null; }}>{m.img_provider_change()}</button>
       <button class="secondary-btn pressable" type="button" disabled={busy} onclick={disconnect}>{m.rimg_way_disconnect()}</button>
     </div>
   {:else}
-    <div class="room-image-way" role="group" aria-label={m.rimg_way_title()}>
-      {#if question === 'chatgpt'}
-        <h4>{m.rimg_way_q_chatgpt()}</h4>
-        <p>{m.rimg_way_q_chatgpt_hint()}</p>
-        {#if connected && connecting !== 'chatgpt'}
-          <div class="room-image-way-actions">
-            <button class="primary-btn pressable" type="button" onclick={keep}>{m.rimg_way_keep()}</button>
-            <button class="secondary-btn pressable" type="button" onclick={() => next('chatgpt')}>{m.rimg_way_no()}</button>
-          </div>
-        {:else if connecting === 'chatgpt'}
-          <div class="room-image-access-options">
-            <article>
-              <h4>{m.rimg_access_signin()}</h4>
-              <p>{m.rimg_access_signin_hint()}</p>
-              <button class="primary-btn pressable" type="button" disabled={busy || Boolean(login)} onclick={startLogin}>{m.rimg_access_open_chatgpt()}</button>
-              {#if login}
-                <div class="room-image-device-code" aria-live="polite">
-                  <span>{m.rimg_access_code_hint()}</span>
-                  <button class="room-image-device-code-copy pressable" type="button"
-                          aria-label={m.rimg_access_copy_label({ code: login.userCode })}
-                          onclick={() => copyCode(login!.userCode)}>
-                    <strong>{login.userCode}</strong>
-                    <span aria-hidden="true">{codeCopied ? m.rimg_access_copied() : m.rimg_access_copy()}</span>
-                  </button>
-                  <a href={login.verificationUrl} target="_blank" rel="noreferrer">{m.rimg_access_open_page()}</a>
-                  <small>{m.rimg_access_waiting()}</small>
-                </div>
-              {/if}
-            </article>
-            <article>
-              <h4>{m.rimg_access_api_key()}</h4>
-              <p>{m.rimg_access_key_hint()}</p>
-              <label>
-                <span>{m.rimg_access_key_label()}</span>
-                <input type="password" autocomplete="off" spellcheck="false" bind:value={apiKey} placeholder="sk-…" />
-              </label>
-              <button class="secondary-btn pressable" type="button" disabled={busy || !apiKey.trim()} onclick={saveKey}>{m.rimg_access_key_save()}</button>
-            </article>
-          </div>
-        {:else}
-          <div class="room-image-way-actions">
-            <button class="primary-btn pressable" type="button" onclick={() => { connecting = 'chatgpt'; error = null; }}>{m.rimg_way_yes_connect()}</button>
-            <button class="secondary-btn pressable" type="button" onclick={() => next('chatgpt')}>{m.rimg_way_no()}</button>
-          </div>
-        {/if}
-      {:else if question === 'cloudflare'}
-        <h4>{m.rimg_way_q_cloudflare()}</h4>
-        <p>{m.rimg_way_q_cloudflare_hint()}</p>
-        {#if connecting === 'cloudflare'}
-          <div class="room-image-access-options">
-            <article class="is-wide">
-              <p>{m.rimg_way_cloudflare_help()}</p>
-              <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer">{m.rimg_way_cloudflare_token_link()}</a>
-              <label>
-                <span>{m.rimg_way_cloudflare_account()}</span>
-                <input type="text" autocomplete="off" spellcheck="false" autocapitalize="off" bind:value={cloudflareAccount} placeholder="0123456789abcdef0123456789abcdef" />
-              </label>
-              {#if cloudflareAccount && !validCloudflareAccountId(cloudflareAccount)}
-                <small class="room-image-way-error">{m.rimg_way_cloudflare_account_err()}</small>
-              {/if}
-              <label>
-                <span>{m.rimg_way_cloudflare_token()}</span>
-                <input type="password" autocomplete="off" spellcheck="false" bind:value={cloudflareToken} />
-              </label>
-              <button class="primary-btn pressable" type="button" disabled={busy || !cloudflareReady} onclick={saveCloudflare}>{m.rimg_way_connect()}</button>
-            </article>
-          </div>
-        {:else}
-          <div class="room-image-way-actions">
-            <button class="primary-btn pressable" type="button" onclick={() => { connecting = 'cloudflare'; error = null; }}>{m.rimg_way_yes_connect()}</button>
-            <button class="secondary-btn pressable" type="button" onclick={() => next('cloudflare')}>{m.rimg_way_no()}</button>
-          </div>
-          <a class="room-image-way-link" href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">{m.rimg_way_cloudflare_signup()}</a>
-        {/if}
-      {:else}
-        <h4>{m.rimg_way_manual_title()}</h4>
-        <p>{m.rimg_way_manual_hint()}</p>
-        <div class="room-image-way-actions">
-          <button class="primary-btn pressable" type="button" onclick={() => onmanual?.()}>{m.rimg_way_manual_go()}</button>
-        </div>
-      {/if}
-      {#if question !== 'chatgpt' || connecting}
-        <button class="room-image-way-back pressable" type="button" onclick={back}>{m.rimg_way_back()}</button>
-      {:else if connected}
-        <button class="room-image-way-back pressable" type="button" onclick={keep}>{m.rimg_way_back()}</button>
-      {/if}
+    <div class="provider-options" role="group" aria-label={m.img_provider_choose()}>
+      <button class="secondary-btn pressable" type="button" aria-pressed={connecting === 'chatgpt'} onclick={() => { connecting = 'chatgpt'; error = null; }}>ChatGPT / OpenAI</button>
+      <button class="secondary-btn pressable" type="button" aria-pressed={connecting === 'cloudflare'} onclick={() => { connecting = 'cloudflare'; error = null; }}>Cloudflare</button>
+      <button class="secondary-btn pressable" type="button" onclick={() => onmanual?.()}>{m.img_external()}</button>
     </div>
+    {#if connecting === 'chatgpt'}
+      <div class="room-image-access-options">
+        <article><h4>{m.rimg_access_signin()}</h4><p>{m.rimg_access_signin_hint()}</p>
+          <button class="primary-btn pressable" type="button" disabled={busy || Boolean(login)} onclick={startLogin}>{m.rimg_access_open_chatgpt()}</button>
+          {#if login}<div class="room-image-device-code" aria-live="polite"><span>{m.rimg_access_code_hint()}</span><button class="room-image-device-code-copy pressable" type="button" aria-label={m.rimg_access_copy_label({ code: login.userCode })} onclick={() => copyCode(login!.userCode)}><strong>{login.userCode}</strong><span>{codeCopied ? m.rimg_access_copied() : m.rimg_access_copy()}</span></button><a href={login.verificationUrl} target="_blank" rel="noreferrer">{m.rimg_access_open_page()}</a><small>{m.rimg_access_waiting()}</small></div>{/if}
+        </article>
+        <article><h4>{m.rimg_access_api_key()}</h4><p>{m.rimg_access_key_hint()}</p><label><span>{m.rimg_access_key_label()}</span><input type="password" autocomplete="off" spellcheck="false" bind:value={apiKey} placeholder="sk-…" /></label><button class="secondary-btn pressable" type="button" disabled={busy || !apiKey.trim()} onclick={saveKey}>{m.rimg_access_key_save()}</button></article>
+      </div>
+    {:else if connecting === 'cloudflare'}
+      <div class="room-image-access-options"><article class="is-wide"><h4>Cloudflare Workers AI</h4><p>{m.rimg_way_cloudflare_help()}</p><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer">{m.rimg_way_cloudflare_token_link()}</a><label><span>{m.rimg_way_cloudflare_account()}</span><input type="text" autocomplete="off" spellcheck="false" autocapitalize="off" bind:value={cloudflareAccount} /></label>{#if cloudflareAccount && !validCloudflareAccountId(cloudflareAccount)}<small class="room-image-way-error">{m.rimg_way_cloudflare_account_err()}</small>{/if}<label><span>{m.rimg_way_cloudflare_token()}</span><input type="password" autocomplete="off" spellcheck="false" bind:value={cloudflareToken} /></label><button class="primary-btn pressable" type="button" disabled={busy || !cloudflareReady} onclick={saveCloudflare}>{m.rimg_way_connect()}</button><a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">{m.rimg_way_cloudflare_signup()}</a></article></div>
+    {/if}
+    {#if connected}<button class="secondary-btn pressable" type="button" onclick={keep}>{m.rimg_way_keep()}</button>{/if}
   {/if}
   {#if error}<p class="room-image-alert is-error" role="alert">{error}</p>{/if}
 </section>
+<style>.provider-options { display: flex; flex-wrap: wrap; gap: var(--space-3); } .provider-options [aria-pressed='true'] { border-color: var(--color-accent-warm); }</style>

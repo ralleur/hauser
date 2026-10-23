@@ -1,6 +1,9 @@
 import { pressRemoteKey, remoteEntityFor } from './remote-keys.ts';
 import { describe, expect, it, vi } from 'vitest';
 import { runtime } from '../adapter/runtime.svelte.ts';
+import { mergePatch } from '../adapter/overlay.ts';
+import type { Light } from './app.svelte.ts';
+import { HOSTILE_LIGHT_TAPS } from '../stresshaus/hostile-home.ts';
 import {
   mergedLight,
   setColor,
@@ -9,7 +12,24 @@ import {
   shouldConfirmHomeOff,
   toggleVacationMode,
   vacationModeActive,
+  toggleDevice,
 } from './commands.ts';
+
+describe('Stresshaus #44/#45: Lampenkachel während einer neuen Raumzuordnung', () => {
+  it.each(HOSTILE_LIGHT_TAPS)('$roomId: schaltet das HA-Ziel der noch sichtbaren Kachel', ({ id, entityId }) => {
+    const before = { on: false, brightness: 63, colorTemp: 3000, color: null };
+    const merged = vi.spyOn(runtime, 'merged').mockReturnValue(before);
+    const dispatch = vi.spyOn(runtime, 'dispatch').mockImplementation(() => {});
+    try {
+      toggleDevice({ id, entityId, domain: 'light' } as Light);
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ entityId, domain: 'light', service: 'turn_on' }),
+        expect.objectContaining({ on: true }),
+      );
+      expect(mergePatch(before, dispatch.mock.calls[0][1])).toEqual({ ...before, on: true });
+    } finally { dispatch.mockRestore(); merged.mockRestore(); }
+  });
+});
 
 describe('Light detail commands', () => {
   it('hexToRgb wandelt #rrggbb in HA rgb_color um', () => {

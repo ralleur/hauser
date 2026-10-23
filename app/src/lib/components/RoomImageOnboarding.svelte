@@ -26,13 +26,7 @@
   /* Zwei Lader statt einem: Beide Dialoge haben eigene Eigenschaften, und ein
      gemeinsamer Lader zwingt sie in einen Typ — dann verliert der eine, was
      der andere braucht. */
-  const wizardLoader = createRetryableLazyLoader({
-    wizard: () => import('./settings/RoomImageWizard.svelte'),
-  });
-  const libraryLoader = createRetryableLazyLoader({
-    library: () => import('./settings/RoomImageLibrary.svelte'),
-  });
-
+  const editorLoader = createRetryableLazyLoader({ editor: () => import('./settings/RoomImageEditorDialog.svelte') });
   /* Der Stand beim Betreten der Ansicht. Die Karte merkt sich selbst, dass sie
      dran war — ohne diese Kopie würde sie im selben Atemzug verschwinden. */
   const seenBefore = settingsValues.roomOnboardHidden;
@@ -115,18 +109,8 @@
   </aside>
 {/if}
 
-{#if wizardOpen}
-  {#await wizardLoader.load('wizard') then loaded}
-    {@const RoomImageWizard = loaded.default}
-    <RoomImageWizard open={wizardOpen} {roomId} onclose={() => wizardOpen = false} />
-  {/await}
-{/if}
-
-{#if libraryOpen && roomId}
-  {#await libraryLoader.load('library') then loaded}
-    {@const RoomImageLibrary = loaded.default}
-    <RoomImageLibrary open={libraryOpen} targetRoomId={roomId}
-                      onclose={() => libraryOpen = false}
-                      onassigned={dismiss} />
+{#if (wizardOpen || libraryOpen) && roomId}
+  {#await editorLoader.load('editor') then loaded}
+    <loaded.default {roomId} name={appState.rooms.find(room => room.id === roomId)?.name ?? roomId} initialAction={libraryOpen ? 'library' : 'generate'} onclose={() => { wizardOpen = false; libraryOpen = false; }} />
   {/await}
 {/if}

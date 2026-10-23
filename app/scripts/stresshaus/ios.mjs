@@ -87,7 +87,7 @@ const EXPECTED_REFUSALS = [
   [502, /^\/api\/camera_proxy/],
 ];
 
-function startProxy(apiOrigin, onRefusal) {
+export function startProxy(apiOrigin, onRefusal, unrest = false) {
   const target = new URL(apiOrigin);
   const server = createServer((req, res) => {
     const upstream = httpRequest({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
@@ -96,7 +96,14 @@ function startProxy(apiOrigin, onRefusal) {
         const chunks = [];
         answer.on('data', (c) => chunks.push(c));
         answer.on('end', () => {
-          const body = Buffer.concat(chunks).toString('utf8').slice(0, 160).replace(/\s+/g, ' ');
+          const raw = Buffer.concat(chunks).toString('utf8');
+          /* Unruhe erzeugt absichtlich HA-Ausfälle. Seit P17 heißen sie
+             503 HA_UNAVAILABLE statt 502 HA_ERROR (Stresshaus #42).
+             Andere 503 und jeder Ausfall ohne Unruhe bleiben Befunde. */
+          if (unrest && answer.statusCode === 503 && path.startsWith('/api/app/')) {
+            try { if (JSON.parse(raw).code === 'HA_UNAVAILABLE') return; } catch { /* keine bekannte Antwort */ }
+          }
+          const body = raw.slice(0, 160).replace(/\s+/g, ' ');
           /* Gerätekennungen zusammenfassen: dieselbe Ablehnung für zwanzig Kameras ist ein Befund. */
           const shape = path.replace(/\/[a-z_]+\.[a-z0-9_]+/g, '/<entity>').replace(/\/[0-9a-f-]{16,}/g, '/<id>');
           onRefusal(`${answer.statusCode} ${req.method} ${shape} — ${body}`);
@@ -188,7 +195,7 @@ function runDevice({ udid, label, xctestrun, env, record, setStep, coverage, bun
   });
 }
 
-export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit, seed = null, operate = false, log = console.log }) {
+export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit, seed = null, operate = false, unrest = false, log = console.log }) {
   if (!existsSync(join(SWIFT_REPO, 'project.yml'))) {
     record('iOS', `Swift-Repo fehlt unter ${SWIFT_REPO}`);
     return;
@@ -196,7 +203,7 @@ export async function crawlIos({ apiOrigin, record, setStep, coverage, tileLimit
   const xctestrun = buildForTesting(log);
   const bundleId = appBundleId();
   let current = 'iOS: Start';
-  const proxy = await startProxy(apiOrigin, (line) => { setStep(current); record('iOS-Server', line); });
+  const proxy = await startProxy(apiOrigin, (line) => { setStep(current); record('iOS-Server', line); }, unrest);
   const pairing = await pair(apiOrigin, proxy.origin);
   const household = await (await fetch(`${apiOrigin}/api/household-config`, { headers: { Origin: apiOrigin } })).json();
   const rooms = (household.rooms ?? []).map((room) => room.id).join(',');

@@ -15,6 +15,15 @@
   --color-surface-3: #28313c;
   --color-surface-inverse: #e6eef6;
 
+  /* Dark image-editing workspace, independent of the page theme. */
+  --image-workspace-background: #12203e;
+  --image-workspace-panel: rgba(20, 32, 50, 0.88);
+  --image-workspace-control: rgba(255, 255, 255, 0.12);
+  --image-workspace-foreground: #f5f8fc;
+  --image-workspace-secondary: rgba(245, 248, 252, 0.78);
+  --image-workspace-border: rgba(245, 248, 252, 0.24);
+  --image-workspace-selected: #101822;
+
   /* ── Accent Colors ──
      Warmer Akzent, auf #F5B03C abgestimmt
      Kühler Akzent, auf #4E9CD0 abgestimmt */

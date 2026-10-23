@@ -1,3 +1,4 @@
+import { roomImageAssetUrl } from './room-hero-assets.ts';
 import type { SunValue } from '../adapter/types.ts';
 import type { UiTheme } from './room-hero-assets.ts';
 
@@ -116,14 +117,14 @@ export interface RegionLike {
 export const EXTERIOR_HERO_RATIO = 1536 / 1024;
 
 export function exteriorAssetUrl(assetId: string, variant: EnergyVariant): string {
-  return `/assets/room-images/${assetId}/${variant === 'day' ? 'light' : 'dark'}.avif`;
+  return roomImageAssetUrl(assetId, `${variant === 'day' ? 'light' : 'dark'}.avif`);
 }
 
 /* Die trübe Fassung des Hauses (wie die iOS-App): der Assistent zeichnet das
    eigene Haus auch bewölkt, der Platzhalter bringt seine mit. Fehlt sie beim
    eigenen Haus, lädt das Bild nicht und das Tagbild bleibt sichtbar. */
 export function energyOvercastUrl(baseUrl: string, assetId: string | null): string {
-  if (assetId) return `/assets/room-images/${assetId}/overcast.avif`;
+  if (assetId) return roomImageAssetUrl(assetId, 'overcast.avif');
   return `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}energy/overcast.avif`;
 }
 

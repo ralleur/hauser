@@ -267,7 +267,7 @@
     if (!device) return;
     if (category === 'media') toggleMediaEntity(entityId);
     else if (category === 'water_heater') setWaterHeaterOn(entityId, !heater?.on);
-    else toggleDevice(roomId, device);
+    else toggleDevice(device);
   }
 
   /* Konfidenz (Paket 6): eine Sekunde ohne State-Echo → ein einzelner Puls. */

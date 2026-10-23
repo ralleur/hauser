@@ -728,6 +728,13 @@ export function hostileHomeWith(options: HostileOptions = {}, now: Date = new Da
   return home;
 }
 
+/* #44/#45: Die alte Kachel ist während eines Raum-/Katalogwechsels noch
+   sichtbar. Ihr HA-Ziel bleibt gültig, obwohl ihre Raumzuordnung es nicht ist. */
+export const HOSTILE_LIGHT_TAPS = [
+  { roomId: 'kuche_esszimmer', id: 'kuche_unterbau', entityId: 'light.kuche_unterbau' },
+  { roomId: 'wohnen_essen', id: 'lichterkette_wintergarten', entityId: 'light.lichterkette_wintergarten' },
+];
+
 /* Fehlertexte, wie sie draußen entstehen (R58): das Fehlerbuch muss sie
    haushaltsfrei machen, bevor sie das Haus verlassen können. `keep` bleibt
    lesbar (Code), `drop` darf nicht im Buch stehen. Dieselben Fälle prüft die

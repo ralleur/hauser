@@ -10,7 +10,7 @@
   import { mergedClimate } from '../state/commands.ts';
   import { resolvePhoneHero } from '../state/phone-home.ts';
   import { roomBlueprint } from './room-blueprint.ts';
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { SHEET_SWIPE_IGNORE, swipedown } from '../actions/swipedown.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
   import { appState } from '../state/app.svelte.ts';
@@ -38,10 +38,12 @@
     LIGHT_ZONE_MAX, LIGHT_ZONE_MIN, placementRotation, placementRy, type ImmersionLightPlacement,
   } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
-  import { removeRoomBackground, uploadRoomBackground } from '../state/room-background-client.ts';
-  import RoomImageLibrary from './settings/RoomImageLibrary.svelte';
-  import RoomImageWizard from './settings/RoomImageWizard.svelte';
-  import RoomImageManual from './settings/RoomImageManual.svelte';
+  import { normalizeHeroRoom, roomImageAssetUrl } from './room-hero-assets.ts';
+  import RoomImageEditor from './settings/RoomImageEditor.svelte';
+  import RoomImageSetup from './settings/RoomImageSetup.svelte';
+  import ImageEditorHelp from './settings/ImageEditorHelp.svelte';
+  import ImageControlNotice from './ImageControlNotice.svelte';
+  import { roomImageDevices } from '../state/room-image-devices.ts';
   import {
     autoSensorId,
     cameraSplit,
@@ -94,18 +96,11 @@
   let searchOpen = $state(false);
   let categoryFilter = $state<DeviceCategory | null>(null);
   let view = $state<'devices' | 'immersion' | 'background'>('devices');
-  let wizardOpen = $state(false);
-  let changeImageWay = $state(false);
   let selectedLightId = $state('');
-  let backgroundInput = $state<HTMLInputElement>();
-  let backgroundBusy = $state(false);
-  let objectsOpen = $state(false);
-  let backgroundMessage = $state<string | null>(null);
-  let backgroundError = $state(false);
-  let libraryOpen = $state(false);
+  let imagePage = $state<'overview' | 'change' | 'setup'>('overview');
   /* Geräte im Bild (Owner 2026-10-19): jedes Gerät des Raums bekommt eine
      Stelle im Raumbild — Lampen eine Lichtzone, alle anderen einen Punkt. */
-  const placeableDevices = $derived(room?.lights ?? []);
+  const placeableDevices = $derived(roomImageDevices(room));
   const lampIds = $derived(new Set(placeableDevices.filter(isLamp).map((device) => device.entityId)));
   const selectedIsLamp = $derived(lampIds.has(selectedLightId));
   const placements = $derived(roomLightPlacements(room?.id));
@@ -119,16 +114,13 @@
     entityId, entityId === selectedLightId && zoneDraft ? zoneDraft : placement,
   ] as const));
   const background = $derived(roomHeroConfig(room?.id));
-  const backgroundUrl = $derived(background
-    ? `/assets/room-images/${background.assetId}/light.avif`
-    : `${import.meta.env.BASE_URL}hero/${room?.id}-light.avif`);
   /* Die Lampen werden auf dem unbeleuchteten Nachtbild platziert — dort sieht
      man, wo Licht fehlt. Es muss dasselbe Bildset sein wie auf der Bühne, sonst
      zeigt der Editor die Projektfassung und die gesetzten Punkte passen nicht
      zum eigenen Bild. */
   const immersionUrl = $derived(background
-    ? `/assets/room-images/${background.assetId}/dark-off.avif`
-    : `${import.meta.env.BASE_URL}hero/${room?.id}-dark-off.avif`);
+    ? roomImageAssetUrl(background.assetId, 'dark-off.avif')
+    : `${import.meta.env.BASE_URL}hero/${normalizeHeroRoom(room?.id)}-dark-off.avif`);
 
   // Vorschläge erst ab Eingabe: bestes Präfix-Match zuerst, dann Name-Substring,
   // dann entity_id/Domain. Geräte, die schon im Raum liegen, tauchen nicht auf.
@@ -265,9 +257,10 @@
     adding = false;
     releaseSearchLift();
     view = requestedView;
-    selectedLightId = '';
-    backgroundMessage = null;
-    backgroundError = false;
+    imagePage = 'overview';
+    selectedLightId = untrack(() => requestedView === 'immersion'
+      ? (roomImageDevices(room).find(device => !roomLightPlacements(room?.id)[device.entityId]) ?? roomImageDevices(room)[0])?.entityId ?? ''
+      : '');
   });
 
   /* Szenen-Editor ist ein eigenes Overlay (gleicher Modal-Tier): das Raum-
@@ -287,45 +280,11 @@
 
   function openBackgroundEditor() {
     view = 'background';
+    imagePage = 'overview';
     selectedLightId = '';
-    backgroundMessage = null;
-    backgroundError = false;
   }
 
-  async function chooseBackground(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!room || !file || backgroundBusy) return;
-    backgroundBusy = true;
-    backgroundMessage = null;
-    backgroundError = false;
-    try {
-      await uploadRoomBackground(room.id, file);
-      backgroundMessage = m.room_background_saved();
-    } catch (error) {
-      backgroundError = true;
-      backgroundMessage = error instanceof Error ? error.message : m.room_background_failed();
-    } finally {
-      backgroundBusy = false;
-    }
-  }
 
-  async function restoreBackground() {
-    if (!room || !background || backgroundBusy) return;
-    backgroundBusy = true;
-    backgroundMessage = null;
-    backgroundError = false;
-    try {
-      await removeRoomBackground(room.id);
-      backgroundMessage = m.room_background_restored();
-    } catch (error) {
-      backgroundError = true;
-      backgroundMessage = error instanceof Error ? error.message : m.room_background_failed();
-    } finally {
-      backgroundBusy = false;
-    }
-  }
 
   function placeSelected(event: MouseEvent) {
     if (!room || !selectedLightId) return;
@@ -336,14 +295,6 @@
       x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
       y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
     });
-  }
-
-  /* Der Regler vergrößert die Zone als Ganzes; eine Ellipse behält ihr Verhältnis. */
-  function setSelectedRadius(event: Event) {
-    if (!room || !selectedLightId || !selectedPlacement) return;
-    const radius = Number((event.currentTarget as HTMLInputElement).value);
-    const ry = clampZone(placementRy(selectedPlacement) * radius / selectedPlacement.radius);
-    setLightPlacement(room.id, selectedLightId, { ...selectedPlacement, radius, ry });
   }
 
   function clampZone(value: number): number {
@@ -408,7 +359,8 @@
   });
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && !objectsOpen && roomEdit.mode === 'open') closeRoomEdit();
+    if (e.key === 'Escape' && document.querySelector('.image-help-popover:popover-open')) return;
+    if (e.key === 'Escape' && !(e.target instanceof Element && e.target.closest('.room-image-wizard-layer, dialog')) && roomEdit.mode === 'open') closeRoomEdit();
   }
 
   /* Die Wischgeste gehört dem Telefon: am Wandpanel steht die Konfiguration
@@ -737,6 +689,7 @@
         <button class="choice-seg pressable" type="button" role="radio" aria-checked={homeView === option.id}
                 onclick={() => layoutManager.setHomeView(option.id)}>{option.label()}</button>
       {/each}
+      <ImageControlNotice floating />
     </div>
   {/if}
   <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'}
@@ -780,8 +733,8 @@
         {#snippet editHeader()}
           <header class="ld-header">
             {#if view !== 'devices'}
-              <button class="re-btn pressable" type="button" aria-label={m.room_back_to_devices()}
-                      onclick={() => { view = 'devices'; selectedLightId = ''; }}>
+              <button class="re-btn pressable" type="button" aria-label={view === 'immersion' || imagePage !== 'overview' ? m.room_background() : m.room_back_to_devices()}
+                      onclick={() => { if (view === 'background' && imagePage !== 'overview') imagePage = 'overview'; else view = view === 'immersion' ? 'background' : 'devices'; selectedLightId = ''; }}>
                 <Icon name="i-chevron-left" cls="icon icon-md" />
               </button>
             {:else if adding}
@@ -797,7 +750,7 @@
               {:else}
                 <button class="re-rename pressable" type="button" aria-label={m.room_rename()} onclick={startRename}>{room.name}<Icon name="i-pencil" cls="icon icon-sm" /></button>
               {/if}
-              <span class="re-subtitle">{view === 'immersion' ? m.room_immersion_light() : view === 'background' ? m.room_background() : m.room_devices()}</span></h2>
+              <span class="re-subtitle">{view === 'immersion' ? m.img_setup() : view === 'background' ? m.room_background() : m.room_devices()}</span></h2>
             <button class="ld-close pressable" type="button" aria-label={m.common_close()}
                     onclick={() => closeRoomEdit()}>×</button>
           </header>
@@ -945,14 +898,7 @@
               </span>
               <Icon name="i-chevron-right" cls="icon icon-md" />
             </button>
-            <button class="re-quick-entry pressable" type="button" onclick={openImmersionEditor}>
-              <span class="re-icon" aria-hidden="true"><Icon name="i-cursor-default-click" /></span>
-              <span class="re-label">
-                <span class="re-name">{m.room_assign_lamps()}</span>
-                <small class="re-meta">{m.room_set_light_positions()}</small>
-              </span>
-              <Icon name="i-chevron-right" cls="icon icon-md" />
-            </button>
+
           </div>
         </section>
         {/snippet}
@@ -1307,9 +1253,11 @@
           {@render addSection()}
           {/if}
           {:else if view === 'immersion'}
+            <RoomImageSetup roomId={room.id}>
+              {#snippet devices()}
             <div class="re-immersion-editor">
               <aside class="re-immersion-lights" aria-label={m.room_pick_lamps()}>
-                <p class="re-empty">{m.room_pick_lamp_hint()}</p>
+                <ImageEditorHelp text={m.room_pick_lamp_hint()} />
                 {#if placeableDevices.length === 0}
                   <p class="re-empty">{m.room_no_lamps()}</p>
                 {:else}
@@ -1330,21 +1278,8 @@
                     {/each}
                   </ul>
                 {/if}
-                {#if selectedPlacement && selectedIsLamp}
-                  <label class="re-radius">
-                    <span>{m.room_light_radius()}</span>
-                    <input type="range" min="0.06" max="0.32" step="0.01"
-                           value={selectedPlacement.radius} oninput={setSelectedRadius} />
-                  </label>
-                  <button class="re-unassign pressable" type="button"
-                          onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>
-                    {m.room_unassign_light()}
-                  </button>
-                {:else if selectedPlacement}
-                  <button class="re-unassign pressable" type="button"
-                          onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>
-                    {m.room_unassign_light()}
-                  </button>
+                {#if selectedPlacement}
+                  <button class="re-unassign pressable" type="button" onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>{m.room_unassign_light()}</button>
                 {/if}
               </aside>
               <div class="re-immersion-stage" bind:this={immersionStage}>
@@ -1393,41 +1328,11 @@
                 </div>
               </div>
             </div>
+              {/snippet}
+            </RoomImageSetup>
           {:else}
             <section class="re-background-editor">
-              <button class="secondary-btn pressable" type="button" onclick={() => objectsOpen = true}>{m.rimg_objects_title()}</button>
-              {#if background && room}
-                {#key room.id}
-                  <RoomImageManual roomId={room.id} managing refreshKey={wizardOpen || libraryOpen}
-                    onchangeway={() => { changeImageWay = true; wizardOpen = true; }} />
-                {/key}
-              {:else}
-              <div class="re-background-preview" style:background-image={`url("${backgroundUrl}")`}
-                   aria-label={m.room_background_preview()}></div>
-              {/if}
-              <div class="re-background-actions" class:has-image={!!background}>
-                <h3>{background ? m.rimg_manage_replace() : m.rimg_manage_setup()}</h3>
-                <p class="re-empty">{background ? m.rimg_manage_replace_hint() : m.room_background_hint()}</p>
-                <input bind:this={backgroundInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif"
-                       onchange={chooseBackground} />
-                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
-                        onclick={() => backgroundInput?.click()}>
-                  {backgroundBusy ? m.room_background_saving() : background ? m.room_background_replace() : m.room_background_choose()}
-                </button>
-                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
-                        onclick={() => libraryOpen = true}>{m.rimg_lib_from_library()}</button>
-                <button class="secondary-btn pressable" type="button" disabled={backgroundBusy}
-                        onclick={() => { changeImageWay = true; wizardOpen = true; }}>{m.rimg_wizard_entry()}</button>
-                {#if background}
-                  <button class="re-unassign pressable" type="button" disabled={backgroundBusy}
-                          onclick={restoreBackground}>{m.room_background_restore()}</button>
-                {/if}
-                {#if backgroundBusy}
-                  <p class="re-background-message" role="status">{m.room_background_saving_hint()}</p>
-                {:else if backgroundMessage}
-                  <p class="re-background-message" class:is-error={backgroundError} role="status">{backgroundMessage}</p>
-                {/if}
-              </div>
+              <RoomImageEditor roomId={room.id} nested bind:page={imagePage} ondevices={openImmersionEditor} />
             </section>
           {/if}
         </div>
@@ -1438,15 +1343,6 @@
   </div>
 </div>
 
-{#if room}
-  <RoomImageLibrary open={libraryOpen} targetRoomId={room.id}
-                    onclose={() => libraryOpen = false}
-                    onassigned={() => { backgroundError = false; backgroundMessage = m.room_background_saved(); }} />
-  <RoomImageWizard open={wizardOpen} chooseOnOpen={changeImageWay} roomId={room?.id ?? null} onclose={() => wizardOpen = false} />
-{/if}
-
-{#if objectsOpen && room}
-  {#await import('./settings/RoomObjectEditor.svelte') then loaded}
-    <loaded.default roomId={room.id} title={m.rimg_objects_title()} imageAlt={m.room_background_preview()} savingText={m.room_background_saving()} onclose={() => objectsOpen = false} />
-  {/await}
-{/if}
+<style>
+  .re-immersion-preview { background-size: cover; background-position: center; background-repeat: no-repeat; }
+</style>

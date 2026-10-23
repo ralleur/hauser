@@ -850,3 +850,66 @@
   border-radius: var(--radius-full);
   background: var(--color-surface-0);
 }
+
+/* The image editor keeps the same dark workspace in every source flow. */
+:root body .image-workspace-layer.on-image {
+  --color-text-primary: var(--image-workspace-foreground);
+  --color-text-secondary: var(--image-workspace-secondary);
+  --color-text-tertiary: var(--image-workspace-secondary);
+  --color-surface-0: var(--image-workspace-background);
+  --color-surface-1: var(--image-workspace-panel);
+  --color-surface-2: var(--image-workspace-control);
+  --color-surface-3: var(--image-workspace-control);
+  --color-surface-inverse: var(--image-workspace-selected);
+  --color-text-on-inverse: var(--image-workspace-foreground);
+  --color-text-on-accent: var(--image-workspace-selected);
+  --color-border: var(--image-workspace-border);
+  --overlay-border: var(--image-workspace-border);
+  --overlay-panel-background: var(--image-workspace-panel);
+  --overlay-control-background: var(--image-workspace-control);
+  isolation: isolate;
+  background: var(--image-workspace-background);
+  color: var(--image-workspace-foreground);
+  padding: var(--space-6);
+}
+.image-workspace-layer .room-image-wizard {
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - var(--space-8));
+  background: var(--image-workspace-panel);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+.image-workspace-layer :is(.primary-btn,.secondary-btn,a.secondary-btn) {
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--image-workspace-border);
+  border-radius: var(--radius-md);
+  color: var(--image-workspace-foreground);
+  background: var(--image-workspace-control);
+  font: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.image-workspace-layer .primary-btn { background: var(--image-workspace-selected); border-color: var(--color-accent-warm); }
+.image-workspace-layer .text-btn { color: var(--image-workspace-foreground); min-height: var(--touch-min); }
+.image-workspace-layer :is(button,a)[aria-pressed='true'] { background: var(--image-workspace-selected); color: var(--image-workspace-foreground); border-color: var(--color-accent-warm); }
+.image-workspace-layer :is(button:disabled,input:disabled) { opacity: .45; cursor: default; }
+@media (max-width:760px) {
+  :root body .image-workspace-layer.on-image { padding: 0; }
+  .image-workspace-layer .room-image-wizard { height: 100dvh; max-height: 100dvh; border-radius: var(--radius-none); padding: var(--space-4); }
+}
+
+.image-workspace-layer .room-image-wizard-head.is-manual { margin-bottom: var(--space-4); }
+.image-workspace-layer .room-image-wizard-head.is-manual > div:first-child { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-3); }
+.image-workspace-layer .room-image-wizard-head.is-manual h2 { margin:0; font-size:var(--text-md); }
+/* Keep the demo badge clear of the image workspace's apply controls. */
+:root:has(.image-workspace-layer) .demo-badge { top: var(--space-2); bottom: auto; }
+@media (max-width:760px) {
+  .image-workspace-layer .variant-card > header { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:var(--space-7) var(--touch-min); height:calc(var(--space-7) + var(--touch-min)); gap:0; }
+  .image-workspace-layer .variant-card > header h3 { grid-column:1 / -1; line-height:1.3; align-self:center; }
+  .image-workspace-layer .variant-card .variant-menu { margin:0; }
+}

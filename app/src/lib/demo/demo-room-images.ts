@@ -1,3 +1,6 @@
+import { registerDemoPicture } from './demo-picture-urls.ts';
+import { roomHeroConfig, setRoomHeroConfig } from '../state/room-hero-config.svelte.ts';
+import type { RoomBackgroundVariant } from '../state/room-background-client.ts';
 /* ============================================
    Demo-Raumbilder — der Assistent und die Bildset-Bibliothek mit
    vorbereiteten Daten (docs/12).
@@ -27,7 +30,7 @@ import type {
   RoomImageJobStatus,
   RoomImageUpload,
 } from '../state/room-image-client.ts';
-import type { RoomImageLibrary, RoomImageLibraryAsset } from '../state/room-image-library-client.ts';
+import type { RoomImageLibrary, RoomImageLibraryAsset, RoomImageRegions } from '../state/room-image-library-client.ts';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -190,6 +193,45 @@ const library: RoomImageLibraryAsset[] = [
   libraryAsset('wohnzimmer', DEFAULT_FOCUS, 12),
   libraryAsset('kueche', DEFAULT_FOCUS, 5),
 ];
+
+for (const asset of library) registerDemoPicture(asset.assetId, asset.variants);
+
+/** Local preview editing uses in-memory pictures and never calls a household server. */
+export async function demoMutateBackground(roomId: string, method: 'POST' | 'DELETE', file?: File, variant?: RoomBackgroundVariant, origin?: 'upload' | 'manual') {
+  const active = library.find(asset => asset.assetId === roomHeroConfig(roomId)?.assetId);
+  if (method === 'DELETE' && !variant) {
+    demoAssignRoomImage(roomId, null); setRoomHeroConfig(roomId, null);
+    return { roomId, hero: null, etag: '"demo"' };
+  }
+  async function derived(source: string, kind: string): Promise<string> {
+    const image = new Image(); image.src = source; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d')!;
+    context.filter = kind === 'overcast' ? 'saturate(0.55) brightness(0.82)' : kind === 'dark-off' ? 'brightness(0.18)' : 'brightness(0.4)';
+    context.drawImage(image, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+  let asset = active;
+  if (file && (!variant || variant === 'light')) {
+    const light = URL.createObjectURL(file);
+    const [dark, darkOff, overcast] = await Promise.all(['dark', 'dark-off', 'overcast'].map(kind => derived(light, kind)));
+    asset = { assetId: `manual_demo_${Date.now()}`, variants: { light, dark, darkOff, overcast }, focus: DEFAULT_FOCUS,
+      createdAt: iso(), byteLength: file.size, assignedRoomIds: [], origin: origin ?? 'upload', manual: { own: ['light'] } };
+    library.push(asset); registerDemoPicture(asset.assetId, asset.variants);
+  } else if (asset && variant && variant !== 'light') {
+    const key = variant === 'dark-off' ? 'darkOff' : variant;
+    asset.variants[key] = file ? URL.createObjectURL(file) : await derived(asset.variants.light, variant);
+    asset.manual ??= { own: ['light'] };
+    asset.manual.own = asset.manual.own.filter(value => value !== key);
+    if (file) asset.manual.own.push(key);
+  }
+  if (!asset) throw new Error('No day picture');
+  registerDemoPicture(asset.assetId, asset.variants);
+  demoAssignRoomImage(roomId, asset.assetId);
+  const hero = { assetId: asset.assetId, focus: asset.focus };
+  setRoomHeroConfig(roomId, hero);
+  return { roomId, hero, etag: '"demo"', manual: asset.manual };
+}
 
 function snapshot(): RoomImageLibrary {
   return {
@@ -362,4 +404,9 @@ export function createDemoRoomImageApi(): RoomImageApi {
       return asset;
     },
   };
+}
+
+export function demoSetPictureRegions(assetId: string, regions: RoomImageRegions): void {
+  const asset = library.find(asset => asset.assetId === assetId);
+  if (asset) asset.regions = regions;
 }

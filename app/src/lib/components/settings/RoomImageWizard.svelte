@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { bodyPortal } from '../../actions/body-portal.ts';
+  import ImageWorkspaceBackground from './ImageWorkspaceBackground.svelte';
   import { nativeBridge } from '../../native/bridge.ts';
   import { onDestroy, tick } from 'svelte';
   import '../../../styles/room-images.css';
@@ -24,8 +26,8 @@
 
   /* `roomId` kommt aus dem Raum-Overlay: Wer den Assistenten dort öffnet, hat
      den Raum längst gewählt — dann steht er hier schon in der Auswahl. */
-  let { open, roomId = null, chooseOnOpen = false, onclose }:
-    { open: boolean; roomId?: string | null; chooseOnOpen?: boolean; onclose: () => void } = $props();
+  let { open, roomId = null, chooseOnOpen = false, initialWay = null, onclose }:
+    { open: boolean; roomId?: string | null; chooseOnOpen?: boolean; initialWay?: 'auto' | 'manual' | null; onclose: () => void } = $props();
 
   const controller = createRoomImageWizardController({ api: createRoomImageClient() });
   let wizardState = $state<RoomImageWizardState>(controller.state());
@@ -123,7 +125,7 @@
       else localStorage.removeItem(WAY_KEY);
     } catch { /* best-effort */ }
   }
-  const manualWay = $derived(!IS_DEMO && way === 'manual');
+  const manualWay = $derived(way === 'manual');
   /* „Konfiguriert" heißt nicht „gültig" (R15, docs/23): Eine abgelaufene
      Anmeldung liegt als Datei vor wie eine frische. Zählte sie hier weiter,
      verschwände der Zugang hinter dem Chip und der nächste Lauf liefe in
@@ -147,7 +149,8 @@
     if (open && !wasOpen) {
       previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       resetLocalDraft();
-      if (chooseOnOpen) { way = 'auto'; accessOpen = true; }
+      if (initialWay) way = initialWay;
+      if (chooseOnOpen && !IS_DEMO && initialWay !== 'manual') { way = 'auto'; accessOpen = true; }
       void Promise.all([controller.loadCapability(), controller.loadCapabilityDetails()]);
       if (!IS_DEMO) void loadAccess();
       void controller.resume();
@@ -164,6 +167,7 @@
     unsubscribe();
     controller.close();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
+    previouslyFocused?.focus();
   });
 
   async function loadAccess() {
@@ -209,6 +213,8 @@
   function onKeydown(event: KeyboardEvent) {
     if (!open) return;
     if (event.key === 'Escape') {
+      event.stopImmediatePropagation();
+      event.preventDefault();
       if (fullscreenUrl) fullscreenUrl = null;
       else requestClose();
       return;
@@ -401,31 +407,27 @@
 <svelte:window onkeydown={onKeydown} />
 
 {#if open}
-  <div class="room-image-wizard-layer" role="presentation" onclick={closeOnScrim}>
+  <div use:bodyPortal class="room-image-wizard-layer image-workspace-layer on-image" role="presentation" onclick={closeOnScrim}>
+    <ImageWorkspaceBackground roomId={roomId ?? assignRoomId} />
     <div class="room-image-wizard" role="dialog" aria-modal="true" aria-labelledby="room-image-wizard-title" tabindex="-1" bind:this={dialog}>
-      <header class="room-image-wizard-head">
+      <header class="room-image-wizard-head" class:is-manual={manualWay}>
         <div>
-          <span class="caps-label">{m.rimg_eyebrow()}</span>
-          <h2 id="room-image-wizard-title">{m.rimg_title()}</h2>
-          <p>{m.rimg_subtitle()}</p>
+          <span class="caps-label">{manualWay ? m.img_use_photo() : m.rimg_eyebrow()}</span>
+          <h2 id="room-image-wizard-title">{manualWay ? (roomOptions.find(option => option.id === assignRoomId)?.name ?? m.img_manual_title()) : m.rimg_title()}</h2>
+          {#if !manualWay}<p>{m.rimg_subtitle()}</p>{/if}
         </div>
         <div class="room-image-head-actions">
-          {#if manualWay}
-            <button class="room-image-access-chip pressable" type="button" onclick={() => chooseWay('auto')}>
-              <span aria-hidden="true"></span>
-              {m.rimg_way_chip_manual()} · {m.rimg_way_change()}
-            </button>
-          {:else if !IS_DEMO && accessConfigured}
+          {#if !manualWay && !IS_DEMO && accessConfigured}
             <button class="room-image-access-chip pressable" type="button" aria-expanded={accessOpen} onclick={() => accessOpen = !accessOpen}>
               <span aria-hidden="true"></span>
-              {accessStatus?.mode === 'api_key' ? m.rimg_access_api_key() : accessStatus?.mode === 'cloudflare' ? m.rimg_access_cloudflare() : m.rimg_access_chatgpt_plan()}
+              {accessStatus?.mode === 'api_key' ? m.rimg_access_api_key() : accessStatus?.mode === 'cloudflare' ? m.rimg_access_cloudflare() : m.rimg_access_chatgpt_plan()} · {m.img_provider_change()}
             </button>
           {/if}
           <button class="dialog-close pressable" type="button" aria-label={m.rimg_close_dialog()} onclick={requestClose}>×</button>
         </div>
       </header>
 
-      {#if IS_DEMO}
+      {#if IS_DEMO && !manualWay}
         <p class="room-image-alert" role="status">{m.demo_rimg_notice()}</p>
       {:else if !manualWay && showAccess}
         <RoomImageAccess chooseOnOpen={chooseOnOpen} onmanual={() => chooseWay('manual')} onclose={() => accessOpen = false} onchange={(status) => {
@@ -442,19 +444,19 @@
         }} />
       {/if}
 
-      {#if wizardState.capability.error}
+      {#if !manualWay && wizardState.capability.error}
         <p class="room-image-alert is-error" role="alert">{wizardState.capability.error.message}</p>
-      {:else if wizardState.capability.public?.imageCapability === 'disabled'}
+      {:else if !manualWay && wizardState.capability.public?.imageCapability === 'disabled'}
         <p class="room-image-alert" role="status">{m.rimg_cap_disabled()}</p>
       {/if}
 
-      {#if wizardState.lifecycle === 'error' && wizardState.error && view !== 'upload'}
+      {#if !manualWay && wizardState.lifecycle === 'error' && wizardState.error && view !== 'upload'}
         <p class="room-image-alert is-error" role="alert">{wizardState.error.message}</p>
       {/if}
 
       {#if manualWay}
         {#if assignRoomId}
-          <RoomImageManual roomId={assignRoomId} />
+          <RoomImageManual roomId={assignRoomId} onapplied={requestClose} />
         {:else}
           <div class="room-image-final-confirm">
             <label>{m.rimg_room()}
@@ -540,6 +542,7 @@
             <!-- Der Raum wird vorne gewählt, nicht am Ende: Danach läuft alles
                  durch, das fertige Set hängt sofort im Raum. Ohne Auswahl
                  landet es nur in der Bibliothek. -->
+            {#if !roomId}
             <label class="room-image-target">
               <span>{m.rimg_assign_title()}</span>
               <select bind:value={assignRoomId}>
@@ -549,6 +552,7 @@
                 {/each}
               </select>
             </label>
+            {:else}<p class="room-image-target"><strong>{roomOptions.find(room => room.id === roomId)?.name}</strong></p>{/if}
             <div class="room-image-consent">
               <label class="room-image-check"><input type="checkbox" bind:checked={consentConfirmed} />
                 <span>{m.rimg_consent_confirm()}</span>

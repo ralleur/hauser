@@ -1,3 +1,5 @@
+import { IS_DEMO } from '../demo/demo-mode.ts';
+import { demoPictureUrl } from '../demo/demo-picture-urls.ts';
 import type { SunValue } from '../adapter/types.ts';
 import type { RoomHeroConfig, RoomHeroFocus } from '../config/household-config.ts';
 import { roomImagePhoneVariantFile } from '../room-images/room-image-phone-variants.ts';
@@ -209,7 +211,7 @@ function userCandidate(
     : `${variant}.avif`;
   return {
     source: 'user',
-    url: `/assets/room-images/${config.assetId}/${file}`,
+    url: roomImageAssetUrl(config.assetId, file),
     position: focusPosition(focus),
   };
 }
@@ -262,4 +264,9 @@ export async function loadRoomHero(
     }
   }
   return null;
+}
+
+/** Resolves the same assigned picture in the stage, editor and local demo. */
+export function roomImageAssetUrl(assetId: string, file: string): string {
+  return (IS_DEMO ? demoPictureUrl(assetId, file) : undefined) ?? `/assets/room-images/${assetId}/${file}`;
 }

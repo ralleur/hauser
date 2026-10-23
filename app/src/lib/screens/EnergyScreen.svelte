@@ -25,14 +25,13 @@
   } from '../components/energy-hero-assets.ts';
   import { EXTERIOR_HERO_ID } from '../config/household-config.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
-  import { uploadRoomBackground } from '../state/room-background-client.ts';
+  import RoomImageEditorDialog from '../components/settings/RoomImageEditorDialog.svelte';
   import { loadRoomRegionsOnce, roomRegions } from '../state/room-regions.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
-  import { whenEditable } from '../state/edit-mode.svelte.ts';
-  import { createRetryableLazyLoader } from '../state/lazy-loader.ts';
+  import { editMode, whenEditable } from '../state/edit-mode.svelte.ts';
   import { showScreen } from '../state/nav.svelte.ts';
   import { jumpToSetting } from '../state/settings.svelte.ts';
-  import { energyMarks, saveEnergyMarks } from '../state/energy-marks.svelte.ts';
+  import { energyMarks, saveEnergyMarks, energyImageUi } from '../state/energy-marks.svelte.ts';
   import Icon from '../components/Icon.svelte';
   import { ENERGY_PERIODS, energyPanelData, type EnergyPeriod } from '../state/energy-periods.ts';
   import type { SunValue } from '../adapter/types.ts';
@@ -47,6 +46,8 @@
   import { outdoor, refreshWeather } from '../state/weather.svelte.ts';
   import { heroWeatherLayer, resolvedWeatherCondition } from '../state/hero-weather.ts';
   import { prefersReducedMotion } from '../motion/index.ts';
+  let { arrangeOnOpen = false, onArrangeDone }: { arrangeOnOpen?: boolean; onArrangeDone?: () => void } = $props();
+  let arrangeStarted = false;
   let period = $state<EnergyPeriod>('today');
 
   /* Live-Sicht aus realen HA-Sensoren (ADR-018); null = nicht konfiguriert
@@ -203,38 +204,8 @@
      der Druck als Versuch, wie beim Raumlayout. Assistent und Bibliothek
      werden erst beim Öffnen nachgeladen. */
   let menuOpen = $state(false);
-  let wizardOpen = $state(false);
-  let libraryOpen = $state(false);
-  const wizardLoader = createRetryableLazyLoader({
-    wizard: () => import('../components/settings/RoomImageWizard.svelte'),
-  });
-  const libraryLoader = createRetryableLazyLoader({
-    library: () => import('../components/settings/RoomImageLibrary.svelte'),
-  });
-  function openWizard(): void { menuOpen = false; wizardOpen = true; }
-  /* Eigenes Foto ohne Assistent, wie beim Raum: landet in der Bibliothek und
-     wird gleich das Außenbild. Das Menü bleibt bis zum Ergebnis offen, damit
-     ein Fehler (z. B. fehlende Bildbibliothek) sichtbar wird. */
-  let uploadInput = $state<HTMLInputElement>();
-  let uploadBusy = $state(false);
-  let uploadError = $state<string | null>(null);
-  async function chooseUpload(event: Event): Promise<void> {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || uploadBusy) return;
-    uploadBusy = true;
-    uploadError = null;
-    try {
-      await uploadRoomBackground(EXTERIOR_HERO_ID, file);
-      menuOpen = false;
-    } catch (error) {
-      uploadError = error instanceof Error ? error.message : m.room_background_failed();
-    } finally {
-      uploadBusy = false;
-    }
-  }
-  function openLibrary(): void { menuOpen = false; libraryOpen = true; }
+  let imageEditorOpen = $state(false);
+  function openImageEditor(): void { menuOpen = false; imageEditorOpen = true; }
   function openSensors(): void {
     menuOpen = false;
     /* Der System-Screen wird beim Wechsel aufgebaut und verbraucht den Sprung
@@ -320,6 +291,13 @@
     arrangeError = null;
     arrange = true;
   }
+  $effect(() => {
+    if (frame && (energyImageUi.arrangeRequested || (arrangeOnOpen && !arrangeStarted))) {
+      arrangeStarted = true;
+      energyImageUi.arrangeRequested = false;
+      startArrange();
+    }
+  });
   const clampPct = (value: number) => Math.min(99, Math.max(1, Math.round(value * 10) / 10));
   function startDrag(event: PointerEvent, key: 'sun' | 'house' | 'grid', part: 'note' | 'point'): void {
     if (!arrange || !draft || !frameEl || event.button !== 0) return;
@@ -350,6 +328,7 @@
       await saveEnergyMarks({ assetId: exteriorAssetId, sun: draft.sun, house: draft.house, grid: draft.grid });
       arrange = false;
       draft = null;
+      onArrangeDone?.();
     } catch {
       arrangeError = m.energy_arrange_failed();
     } finally {
@@ -364,6 +343,7 @@
       await saveEnergyMarks(null);
       arrange = false;
       draft = null;
+      onArrangeDone?.();
     } catch {
       arrangeError = m.energy_arrange_failed();
     } finally {
@@ -379,6 +359,7 @@
      keine dritte Stimme. Was nicht gemessen wird, bekommt keine Marke. ── -->
 <div class="energy-stage" class:is-night={isNight || arrange} class:is-arranging={arrange}
      style={`--hero-ratio:${heroRatio.toFixed(4)}`} bind:this={stageEl}>
+  {#if editMode.active && !arrange}<button class="secondary-btn energy-image-edit pressable" type="button" onclick={openImageEditor}><Icon name="i-image" cls="icon icon-sm" />{m.img_edit()}</button>{/if}
   <div class="energy-hero" aria-hidden="true">
     <div class="energy-hero-img" style:background-image={`url("${energyHeroUrl}")`}></div>
     {#if overcastUrl}
@@ -402,7 +383,7 @@
   <!-- Freie Trefferfläche unter Zetteln, Chips und Linie: nur der lange Druck
        auf den Hintergrund öffnet das Menü; alles darüber bleibt bedienbar. -->
   <div class="energy-config-hitarea" aria-label={m.energy_menu_hint()}
-       use:longpress={{ onLongPress: whenEditable(() => { uploadError = null; menuOpen = true; }), enabled: !arrange }}></div>
+       use:longpress={{ onLongPress: whenEditable(() => { menuOpen = true; }), enabled: !arrange }}></div>
 
   <!-- Cover-Rechteck des Motivs: Zettel, Linien und Punkte rechnen in Bildprozent. -->
   {#if shown}
@@ -548,17 +529,8 @@
                 onclick={() => (menuOpen = false)}>×</button>
       </header>
       <div class="energy-menu-actions">
-        <button class="re-row pressable" type="button" onclick={openWizard}>
-          <Icon name="i-auto-fix" cls="icon icon-md" /><span>{m.energy_menu_wizard()}</span>
-        </button>
-        <input bind:this={uploadInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif"
-               onchange={chooseUpload} />
-        <button class="re-row pressable" type="button" disabled={uploadBusy} onclick={() => uploadInput?.click()}>
-          <Icon name="i-cloud-upload-outline" cls="icon icon-md" />
-          <span>{uploadBusy ? m.room_background_saving() : m.room_background_choose()}</span>
-        </button>
-        <button class="re-row pressable" type="button" onclick={openLibrary}>
-          <Icon name="i-image" cls="icon icon-md" /><span>{m.energy_menu_library()}</span>
+        <button class="re-row pressable" type="button" onclick={openImageEditor}>
+          <Icon name="i-image" cls="icon icon-md" /><span>{m.img_edit()}</span>
         </button>
         <button class="re-row pressable" type="button" onclick={startArrange} disabled={!frame}>
           <Icon name="i-cursor-move" cls="icon icon-md" /><span>{m.energy_menu_arrange()}</span>
@@ -567,27 +539,12 @@
           <Icon name="i-flash" cls="icon icon-md" /><span>{m.energy_menu_sensors()}</span>
         </button>
       </div>
-      {#if uploadBusy}
-        <p class="re-background-message" role="status">{m.room_background_saving_hint()}</p>
-      {:else if uploadError}
-        <p class="re-background-message is-error" role="alert">{uploadError}</p>
-      {/if}
     </div>
   </div>
 {/if}
 
-{#if wizardOpen}
-  {#await wizardLoader.load('wizard') then loaded}
-    {@const RoomImageWizard = loaded.default}
-    <RoomImageWizard open={wizardOpen} roomId={EXTERIOR_HERO_ID} onclose={() => (wizardOpen = false)} />
-  {/await}
-{/if}
-
-{#if libraryOpen}
-  {#await libraryLoader.load('library') then loaded}
-    {@const RoomImageLibrary = loaded.default}
-    <RoomImageLibrary open={libraryOpen} targetRoomId={EXTERIOR_HERO_ID} onclose={() => (libraryOpen = false)} />
-  {/await}
+{#if imageEditorOpen}
+  <RoomImageEditorDialog roomId={EXTERIOR_HERO_ID} name={m.img_exterior()} onclose={() => imageEditorOpen = false} onarrange={() => { imageEditorOpen = false; startArrange(); }} />
 {/if}
 
 <EnergyLoadOverlay mode={loadOverlay} {breakdown}
@@ -598,3 +555,5 @@
                         onRequestClose={() => { if (balanceOverlay === 'open') balanceOverlay = 'closing'; }}
                         onClosed={() => (balanceOverlay = 'hidden')} />
 {/if}
+
+<style>.energy-image-edit { position: absolute; inset-block-start: calc(var(--bar-top, var(--touch-preferred)) + var(--space-3)); inset-inline-end: var(--space-3); z-index: 2; display: inline-flex; align-items: center; gap: var(--space-2); }</style>

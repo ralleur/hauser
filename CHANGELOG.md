@@ -3,6 +3,19 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.47.0] - 2026-10-23
+
+- Room and exterior pictures: clear “Change image” and “Set up image” entries,
+  with devices and light zones, windows and weather, and surfaces together in
+  one editor. A missing device position is an optional configuration hint.
+- The manual image workflow guides photo preparation, uploading the four
+  variants and reviewing them before applying the set. The workspace keeps
+  a dark, responsive surface with readable controls and simpler navigation.
+- Reliability: a light tile uses its own Home Assistant entity when switching,
+  even while its previous room assignment is being replaced.
+- Maintenance: Stresshaus distinguishes intentional HA outages from failures
+  and avoids stale iPad button queries and system keyboard controls.
+
 ## [0.46.1] - 2026-10-21
 
 - Gate: Home Assistant no longer marks the Hauser app as experimental in its

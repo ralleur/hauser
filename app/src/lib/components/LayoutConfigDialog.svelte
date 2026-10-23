@@ -8,6 +8,7 @@
   import { PANEL_ROOMS_PER_PAGE_MAX, PANEL_ROOMS_PER_PAGE_MIN } from '../state/panel-room-pages.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
   import { prefersReducedMotion } from '../motion/index.ts';
+  import ImageControlNotice from './ImageControlNotice.svelte';
   import TickScale from './TickScale.svelte';
   import { tick } from 'svelte';
 
@@ -110,6 +111,7 @@
                       aria-checked={config.homeView === 'rooms'}
                       onclick={() => layoutManager.setHomeView('rooms')}>{m.layout_home_view_rooms()}</button>
             </div>
+            <ImageControlNotice />
           </div>
 
           <div class="layout-slider-setting">

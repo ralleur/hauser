@@ -1,3 +1,4 @@
+import { IS_DEMO } from '../demo/demo-mode.ts';
 /* ── Von Hand gesetzte Zettelplätze des Energie-Screens (R19, docs/23) ──
    Die Vorlage sagt, wo Zettel und Punkte sitzen; wer sie verschiebt, legt
    das im Haushalt ab — je Motiv, damit ein Bildwechsel keine fremden Plätze
@@ -26,6 +27,7 @@ export function setEnergyMarks(marks: EnergyMarksConfig | null): void {
 
 /** Schreibt die Plätze ETag-gesichert in den Haushalt; null nimmt sie zurück. */
 export async function saveEnergyMarks(marks: EnergyMarksConfig | null): Promise<void> {
+  if (IS_DEMO) { setEnergyMarks(marks); return; }
   const current = await fetch('/api/household-config', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -43,3 +45,6 @@ export async function saveEnergyMarks(marks: EnergyMarksConfig | null): Promise<
   if (!response.ok) throw new Error('ENERGY_MARKS_WRITE_FAILED');
   setEnergyMarks(marks);
 }
+
+/* The shared picture editor can open placement from the settings overview. */
+export const energyImageUi = $state({ arrangeRequested: false });

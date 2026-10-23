@@ -163,6 +163,11 @@ export function formatRoomImageBytes(bytes: number): string {
    zurück, damit die Ansicht sofort zeichnen kann. */
 /* Fenster von Hand (R55): Rechtecke als Vierecke, der Server prüft den Vertrag. */
 export async function setRoomImageRegions(assetId: string, regions: RoomImageRegion[]): Promise<RoomImageRegions> {
+  if (IS_DEMO) {
+    const stored: RoomImageRegions = { detectedAt: new Date().toISOString(), source: 'manual', regions: regions.map(region => ({ kind: region.kind, points: region.points.map(point => ({ x: point.x, y: point.y })) })) };
+    (await import('../demo/demo-room-images.ts')).demoSetPictureRegions(assetId, stored);
+    return stored;
+  }
   const response = await fetch(`/api/room-image-assets/${encodeURIComponent(assetId)}/regions`, {
     method: 'PUT',
     credentials: 'same-origin',

@@ -237,6 +237,8 @@ const requiredPreMountMetadataPlugin: Plugin = {
 // Dev-Server auf 5173 lassen — 8123 bleibt der Phase-2-Referenz (prototype/)
 // vorbehalten, damit beide für den Pixel-Vergleich parallel laufen können.
 export default defineConfig({
+  // Worktrees may share node_modules; their dependency caches must stay local.
+  cacheDir: '.vite',
   plugins: [
     svelte(),
     requiredPreMountMetadataPlugin,

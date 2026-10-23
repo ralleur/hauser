@@ -741,14 +741,8 @@ async function main() {
 
     /* ── iOS-App: dieselbe Runde im Simulator ── */
     if (IOS) {
-      /* Unruhe lässt jeden zehnten Dienstaufruf mit 503 scheitern; dass der
-         Server das als 502 HA_ERROR an die App weitergibt, ist richtig und
-         kein Befund (Stresshaus #15). Ein 500 aus Home Assistant bleibt einer. */
-      const iosRecord = UNREST
-        ? (kind, detail) => { if (!(kind === 'iOS-Server' && /HA_ERROR.*antwortet mit 503/.test(String(detail)))) record(kind, detail); }
-        : record;
       await crawlIos({
-        apiOrigin: hauser.apiOrigin, record: iosRecord, coverage, tileLimit: TILE_LIMIT, seed: SEED, operate: OPERATE,
+        apiOrigin: hauser.apiOrigin, record, coverage, tileLimit: TILE_LIMIT, seed: SEED, operate: OPERATE, unrest: UNREST,
         setStep: (value) => { step = value; },
       });
     }

@@ -42,6 +42,6 @@ export function tapDevice(roomId: string, device: Light): void {
     openDeviceDetail(roomId, device.id);
     return;
   }
-  if (tapToggles(device)) toggleDevice(roomId, device);
+  if (tapToggles(device)) toggleDevice(device);
   else openDeviceDetail(roomId, device.id);
 }

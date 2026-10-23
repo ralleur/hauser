@@ -1,437 +1,247 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
-  /* Selbst zeichnen lassen — der Konfig-Screen dazu (R55, Gegenstück zur
-     iOS-App). Je Fassung (Tag, Abend mit Licht, Nacht ohne Licht, trüb;
-     draußen ohne Nacht-aus) steht, ob ein Bild da ist, nur abgeleitet oder
-     fehlt, und darunter die drei Schritte: welches Eingabebild, welcher
-     Wortlaut, das fertige Bild hochladen. Erst das Tagbild — die anderen
-     entstehen daraus; ohne eigenes Abend- und Nachtbild bleibt das
-     abgedunkelte Tagbild. Dazu die Fenster von Hand. */
-  import '../../../styles/room-images.css';
-  import { moveCorner } from '../../room-images/window-polygon.ts';
+  import { onDestroy } from 'svelte';
   import { m } from '../../../paraglide/messages.js';
+  import Icon from '../Icon.svelte';
+  import RoomObjectEditor from './RoomObjectEditor.svelte';
+  import { appState } from '../../state/app.svelte.ts';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
-  import {
-    loadRoomImageLibrary,
-    setRoomImageRegions,
-    type RoomImageLibraryAsset,
-    type RoomImageRegion,
-  } from '../../state/room-image-library-client.ts';
-  import {
-    resetRoomBackgroundVariant,
-    uploadRoomBackgroundVariant,
-    type RoomBackgroundVariant,
-  } from '../../state/room-background-client.ts';
+  import { loadRoomImageLibrary, setRoomImageRegions, type RoomImageLibraryAsset, type RoomImageRegion } from '../../state/room-image-library-client.ts';
+  import { resetRoomBackgroundVariant, uploadRoomBackgroundVariant, type RoomBackgroundVariant as Variant } from '../../state/room-background-client.ts';
   import { reloadRoomRegions } from '../../state/room-regions.svelte.ts';
   import { buildRoomImagePrompt } from '../../room-images/room-image-prompt-policy-v1.ts';
 
-  let { roomId, managing = false, refreshKey = false, onchangeway }: { roomId: string; managing?: boolean; refreshKey?: boolean; onchangeway?: () => void } = $props();
-
+  let { roomId, onapplied }: { roomId: string; onapplied?: () => void } = $props();
+  type Draft = { file: File; url: string };
+  const keys = { light: 'light', dark: 'dark', 'dark-off': 'darkOff', overcast: 'overcast' } as const;
+  const providers = [
+    { name: 'ChatGPT', url: 'https://chatgpt.com/' },
+    { name: 'Gemini', url: 'https://gemini.google.com/app' },
+    { name: 'Bing', url: 'https://www.bing.com/images/create' },
+  ];
   const exterior = $derived(roomId === EXTERIOR_HERO_ID);
-  const variants = $derived<RoomBackgroundVariant[]>(exterior ? ['light', 'dark', 'overcast'] : ['light', 'dark', 'dark-off', 'overcast']);
-  const OWN_KEY: Record<RoomBackgroundVariant, string> = { light: 'light', dark: 'dark', 'dark-off': 'darkOff', overcast: 'overcast' };
-
+  const roomName = $derived(exterior ? m.img_exterior() : appState.rooms.find(room => room.id === roomId)?.name ?? roomId);
+  const variants = $derived<Variant[]>(exterior ? ['light', 'dark', 'overcast'] : ['light', 'dark', 'dark-off', 'overcast']);
   let assets = $state<RoomImageLibraryAsset[]>([]);
-  let loadError = $state<string | null>(null);
-  const asset = $derived.by(() => {
-    const assetId = roomHeroConfig(roomId)?.assetId;
-    return assetId ? assets.find((entry) => entry.assetId === assetId) ?? null : null;
-  });
+  let loaded = $state(false);
+  let error = $state<string | null>(null);
+  let busy = $state(false);
+  let checking = $state(false);
+  let staged = $state<Partial<Record<Variant, Draft>>>({});
+  let resets = $state<Variant[]>([]);
+  let prepare = $state<Variant | null>(null);
+  let provider = $state(0);
+  let copied = $state(false);
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  let uploadFor = $state<Variant>('light');
+  let input = $state<HTMLInputElement>();
+  let sourceInput = $state<HTMLInputElement>();
+  let source = $state<Draft | null>(null);
+  let objectsOpen = $state(false);
+  let draftRegions = $state<RoomImageRegion[] | null>(null);
+  const config = $derived(roomHeroConfig(roomId));
+  const asset = $derived(assets.find(entry => entry.assetId === config?.assetId) ?? null);
   const manualSet = $derived(asset?.assetId.startsWith('manual_') ?? false);
-  const hasLight = $derived(asset !== null);
-  const showWording = $derived(!managing || asset?.origin === 'manual' || (manualSet && !asset?.origin));
-  const originLabel = $derived(asset?.origin === 'manual' ? m.rimg_way_chip_manual()
-    : asset?.origin === 'upload' ? m.room_background_custom()
-    : asset?.origin === 'apple' ? 'Apple'
-    : asset?.origin === 'cloudflare' ? 'Cloudflare'
-    : asset?.origin === 'chatgpt' ? 'ChatGPT'
-    : asset?.origin === 'openai' ? 'OpenAI'
-    : manualSet ? m.rimg_manage_origin_legacy() : m.rimg_wizard_entry());
+  const readyCount = $derived(variants.filter(ready).length);
+  const changed = $derived(Object.keys(staged).length > 0 || resets.length > 0 || draftRegions !== null);
+  const dayUrl = $derived(staged.light?.url ?? asset?.variants.light ?? null);
 
-  type Status = 'present' | 'derived' | 'missing' | 'wizard';
-  function status(variant: RoomBackgroundVariant): Status {
-    if (!asset) return 'missing';
-    const key = OWN_KEY[variant];
-    const url = (asset.variants as Record<string, string | undefined>)[key];
-    if (!url) return 'missing';
-    if (!manualSet) return 'wizard';
-    if (variant === 'light' || asset.manual?.own.includes(key)) return 'present';
-    return 'derived';
-  }
-  function variantUrl(variant: RoomBackgroundVariant): string | null {
-    if (!asset) return null;
-    return (asset.variants as Record<string, string | undefined>)[OWN_KEY[variant]] ?? null;
-  }
-  function name(variant: RoomBackgroundVariant): string {
-    if (variant === 'light') return m.rimg_manual_v_light();
-    if (variant === 'dark') return exterior ? m.rimg_manual_v_night() : m.rimg_manual_v_dark();
-    if (variant === 'dark-off') return m.rimg_manual_v_dark_off();
-    return m.rimg_manual_v_overcast();
-  }
-  function statusLine(variant: RoomBackgroundVariant): { text: string; tone: string } {
-    const current = status(variant);
-    if (current === 'present') return { text: m.rimg_manual_s_present(), tone: 'is-present' };
-    if (current === 'wizard') return { text: m.rimg_manual_s_wizard(), tone: 'is-present' };
-    if (current === 'derived') return { text: variant === 'overcast' ? m.rimg_manual_s_overcast_derived() : m.rimg_manual_s_derived(), tone: 'is-derived' };
-    if (variant === 'light') return { text: m.rimg_manual_s_missing_light(), tone: 'is-missing' };
-    if (variant === 'overcast') return { text: m.rimg_manual_s_missing_overcast(), tone: 'is-missing' };
-    return { text: m.rimg_manual_s_missing(), tone: 'is-missing' };
-  }
-
-  /* Aufgeklappt ist zuerst, was fehlt oder nur abgeleitet ist. */
-  let open = $state<RoomBackgroundVariant | null>(null);
-  let touched = $state(false);
-  const firstOpen = $derived(variants.find((variant) => !['present', 'wizard'].includes(status(variant))) ?? 'light');
-  function isOpen(variant: RoomBackgroundVariant): boolean { return !touched && !managing ? variant === firstOpen : open === variant; }
-  function toggle(variant: RoomBackgroundVariant) {
-    const next = isOpen(variant) ? null : variant;
-    touched = true;
-    open = next;
-  }
-
-  let busy = $state<RoomBackgroundVariant | null>(null);
-  let message = $state<{ variant: RoomBackgroundVariant; text: string; error: boolean } | null>(null);
-  let copied = $state<RoomBackgroundVariant | null>(null);
-  let copiedTimer: ReturnType<typeof setTimeout> | null = null;
-  let fileInput = $state<HTMLInputElement>();
-  let uploadFor = $state<RoomBackgroundVariant>('light');
-
-  $effect(() => { void roomHeroConfig(roomId)?.assetId; void refreshKey; void load(); });
+  $effect(() => { void roomId; void load(); });
   async function load() {
-    try {
-      assets = (await loadRoomImageLibrary()).assets;
-      loadError = null;
-    } catch (failure) {
-      loadError = failure instanceof Error ? failure.message : m.rimg_err_library_response();
-    }
+    try { assets = (await loadRoomImageLibrary()).assets; error = null; }
+    catch (failure) { error = failure instanceof Error ? failure.message : m.rimg_lib_err_load(); }
+    finally { loaded = true; }
   }
-
-  /* Der Wortlaut je Fassung: der des Assistenten — Tag aus Komposition und
-     Stil, die anderen lassen alles stehen und ändern nur das Licht. */
-  function wording(variant: RoomBackgroundVariant): string {
-    const spec = {
-      stylePreset: exterior ? 'hauser-exterior-v1' as const : 'hauser-room-v1' as const,
-      declutter: 'light' as const,
-      tone: 'neutral' as const,
-      preserveFeatures: ['windows' as const, 'doors' as const, 'built_ins' as const],
-    };
-    if (variant === 'light') return `${buildRoomImagePrompt('composition', spec)} ${buildRoomImagePrompt('style-light', spec)}`;
-    return buildRoomImagePrompt(variant, spec);
+  function name(variant: Variant): string {
+    return variant === 'light' ? m.rimg_manual_v_light() : variant === 'dark' ? (exterior ? m.rimg_manual_v_night() : m.rimg_manual_v_dark()) : variant === 'dark-off' ? m.rimg_manual_v_dark_off() : m.rimg_manual_v_overcast();
   }
-
-  async function copy(variant: RoomBackgroundVariant) {
-    const text = wording(variant);
+  function ready(variant: Variant): boolean {
+    return !!staged[variant] || resets.includes(variant) || !!asset?.variants[keys[variant]] && (!manualSet || variant === 'light' || !!asset?.manual?.own.includes(keys[variant]));
+  }
+  function url(variant: Variant): string | null { return staged[variant]?.url ?? (ready(variant) ? asset?.variants[keys[variant]] ?? null : null); }
+  function pick(variant: Variant) { uploadFor = variant; input?.click(); }
+  function valid(file: File): boolean { return ['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type) && file.size > 0 && file.size <= 12_582_912; }
+  async function stage(variant: Variant, file: File) {
+    if (busy || checking) return;
+    error = null;
+    if (!valid(file)) { error = m.rimg_err_file_type(); return; }
+    checking = true;
+    const preview = URL.createObjectURL(file);
     try {
+      const image = new Image(); image.src = preview; await image.decode();
+      if (staged[variant]) URL.revokeObjectURL(staged[variant]!.url);
+      staged[variant] = { file, url: preview };
+      resets = resets.filter(item => item !== variant);
+      prepare = null;
+    } catch { URL.revokeObjectURL(preview); error = m.rimg_err_file_type(); }
+    finally { checking = false; }
+  }
+  function chosen(event: Event) { const field = event.currentTarget as HTMLInputElement; const file = field.files?.[0]; field.value = ''; if (file) void stage(uploadFor, file); }
+  function drop(variant: Variant, event: DragEvent) { event.preventDefault(); const file = event.dataTransfer?.files[0]; if (file) void stage(variant, file); }
+  function derive(variant: Variant) {
+    if (staged[variant]) { URL.revokeObjectURL(staged[variant]!.url); delete staged[variant]; }
+    if (!resets.includes(variant)) resets = [...resets, variant];
+  }
+  function removeDraft(variant: Variant) {
+    if (staged[variant]) URL.revokeObjectURL(staged[variant]!.url);
+    delete staged[variant]; resets = resets.filter(item => item !== variant);
+  }
+  function chooseSource(event: Event) {
+    const field = event.currentTarget as HTMLInputElement; const file = field.files?.[0]; field.value = '';
+    if (!file) return;
+    if (!valid(file)) { error = m.rimg_err_file_type(); return; }
+    if (source) URL.revokeObjectURL(source.url);
+    source = { file, url: URL.createObjectURL(file) };
+  }
+  function wording(variant: Variant): string {
+    const spec = { stylePreset: exterior ? 'hauser-exterior-v1' as const : 'hauser-room-v1' as const, declutter: 'light' as const, tone: 'neutral' as const, preserveFeatures: ['windows' as const, 'doors' as const, 'built_ins' as const] };
+    return variant === 'light' ? `${buildRoomImagePrompt('composition', spec)} ${buildRoomImagePrompt('style-light', spec)}` : buildRoomImagePrompt(variant, spec);
+  }
+  async function copy(variant: Variant) {
+    try {
+      const text = wording(variant);
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
       else {
-        const field = document.createElement('textarea');
-        field.value = text;
-        field.setAttribute('readonly', '');
-        field.style.position = 'fixed';
-        field.style.opacity = '0';
-        document.body.append(field);
-        field.select();
-        const done = document.execCommand('copy');
-        field.remove();
-        if (!done) throw new Error('copy rejected');
+        const field = document.createElement('textarea'); field.value = text; field.setAttribute('readonly', ''); field.style.position = 'fixed'; field.style.opacity = '0'; document.body.append(field); field.select();
+        const done = document.execCommand('copy'); field.remove(); if (!done) throw new Error('copy rejected');
       }
-      copied = variant;
-      if (copiedTimer) clearTimeout(copiedTimer);
-      copiedTimer = setTimeout(() => { copied = null; }, 2_500);
-    } catch {
-      message = { variant, text: m.rimg_access_err_copy(), error: true };
+      copied = true; clearTimeout(copyTimer); copyTimer = setTimeout(() => copied = false, 2500);
     }
+    catch { error = m.rimg_access_err_copy(); }
   }
-
-  function pick(variant: RoomBackgroundVariant) {
-    uploadFor = variant;
-    fileInput?.click();
-  }
-
-  async function chosen(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    const variant = uploadFor;
-    if (!file || busy) return;
-    busy = variant;
-    message = null;
+  async function apply() {
+    if (busy || checking || !changed || readyCount !== variants.length || !dayUrl) return;
+    busy = true; error = null;
+    let writes = 0;
+    const previousRegions = draftRegions ?? asset?.regions?.regions;
     try {
-      await uploadRoomBackgroundVariant(roomId, variant, file, showWording ? 'manual' : 'upload');
-      await load();
+      const createSet = !!staged.light || !manualSet;
+      // Read every retained version before a new day image replaces the old set.
+      if (createSet) {
+        for (const variant of variants) {
+          if (staged[variant] || resets.includes(variant)) continue;
+          const existing = asset?.variants[keys[variant]];
+          if (!existing) throw new Error(m.rimg_manual_light_first());
+          const response = await fetch(existing); if (!response.ok) throw new Error(m.rimg_lib_err_load());
+          const file = new File([await response.blob()], `hauser-${variant}.avif`, { type: 'image/avif' });
+          staged[variant] = { file, url: URL.createObjectURL(file) };
+        }
+      }
+      for (const variant of variants) {
+        const draft = staged[variant];
+        if (draft) { await uploadRoomBackgroundVariant(roomId, variant, draft.file, 'manual'); writes++; }
+        else if (resets.includes(variant) && !createSet) { await resetRoomBackgroundVariant(roomId, variant as Exclude<Variant, 'light'>); writes++; }
+      }
+      const current = roomHeroConfig(roomId);
+      if (current && previousRegions) await setRoomImageRegions(current.assetId, previousRegions);
       await reloadRoomRegions();
-      message = { variant, text: m.rimg_manual_saved(), error: false };
-      /* Das Tagbild führt weiter zur nächsten Fassung; jede andere bleibt offen, damit „Gespeichert“ zu sehen ist. */
-      touched = true;
-      open = variant === 'light' ? (variants.find((entry) => entry !== 'light') ?? null) : variant;
+      for (const draft of Object.values(staged)) if (draft) URL.revokeObjectURL(draft.url);
+      staged = {}; resets = []; draftRegions = null;
+      await load(); onapplied?.();
     } catch (failure) {
-      message = { variant, text: failure instanceof Error ? failure.message : m.room_background_failed(), error: true };
-    } finally {
-      busy = null;
-    }
+      error = `${writes > 0 ? m.img_manual_partial() + ' ' : ''}${failure instanceof Error ? failure.message : m.room_background_failed()}`;
+    } finally { busy = false; }
   }
-
-  async function reset(variant: Exclude<RoomBackgroundVariant, 'light'>) {
-    if (busy) return;
-    busy = variant;
-    message = null;
-    try {
-      await resetRoomBackgroundVariant(roomId, variant);
-      await load();
-      await reloadRoomRegions();
-      touched = true;
-      open = variant;
-    } catch (failure) {
-      message = { variant, text: failure instanceof Error ? failure.message : m.room_background_failed(), error: true };
-    } finally {
-      busy = null;
-    }
-  }
-
-  // ── Fenster von Hand ──
-  type Rect = { x: number; y: number; w: number; h: number };
-  let marking = $state(false);
-  let windows = $state<RoomImageRegion[]>([]);
-  let cornerDrag: { window: number; point: number } | null = null;
-  let stage = $state<HTMLDivElement>();
-  let drawing = $state<Rect | null>(null);
-  let dragStart: { x: number; y: number } | null = null;
-  let windowsBusy = $state(false);
-  let windowsMessage = $state<string | null>(null);
-  const windowCount = $derived(asset?.regions?.regions.filter((region) => region.kind === 'window').length ?? 0);
-  /* Kleiner als drei Promille der Fläche ist ein verrutschter Klick, kein Fenster. */
-  const MIN_AREA = 0.003;
-
-  function startMarking() {
-    windows = (asset?.regions?.regions ?? []).filter((region) => region.kind === 'window')
-      .map((region) => ({ ...region, points: region.points.map((point) => ({ ...point })) }));
-    windowsMessage = null;
-    marking = true;
-  }
-  function unit(event: PointerEvent): { x: number; y: number } {
-    const box = stage!.getBoundingClientRect();
-    return {
-      x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
-      y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)),
-    };
-  }
-  function normalized(a: { x: number; y: number }, b: { x: number; y: number }): Rect {
-    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
-  }
-  function pointerDown(event: PointerEvent) {
-    if (event.button !== 0) return;
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    dragStart = unit(event);
-    drawing = null;
-  }
-  function pointerMove(event: PointerEvent) {
-    if (cornerDrag) {
-      const { window, point } = cornerDrag;
-      windows[window] = { ...windows[window], points: moveCorner(windows[window].points, point, unit(event)) };
-      return;
-    }
-    if (!dragStart) return;
-    drawing = normalized(dragStart, unit(event));
-  }
-  function pointerUp(event: PointerEvent) {
-    if (cornerDrag) { pointerMove(event); cornerDrag = null; return; }
-    if (!dragStart) return;
-    const rect = normalized(dragStart, unit(event));
-    dragStart = null;
-    drawing = null;
-    if (rect.w * rect.h >= MIN_AREA) windows = [...windows, region(rect)];
-  }
-  function removeRect(index: number) {
-    windows = windows.filter((_, position) => position !== index);
-  }
-  function region(rect: Rect): RoomImageRegion {
-    const round = (value: number) => Math.round(value * 1000) / 1000;
-    return {
-      kind: 'window',
-      points: [
-        { x: round(rect.x), y: round(rect.y) }, { x: round(rect.x + rect.w), y: round(rect.y) },
-        { x: round(rect.x + rect.w), y: round(rect.y + rect.h) }, { x: round(rect.x), y: round(rect.y + rect.h) },
-      ],
-    };
-  }
-  async function saveWindows() {
-    if (!asset || windowsBusy) return;
-    windowsBusy = true;
-    windowsMessage = null;
-    try {
-      const others = (asset.regions?.regions ?? []).filter((entry) => entry.kind !== 'window');
-      await setRoomImageRegions(asset.assetId, [...others, ...windows]);
-      await load();
-      await reloadRoomRegions();
-      marking = false;
-      windowsMessage = m.rimg_manual_windows_saved();
-    } catch (failure) {
-      windowsMessage = failure instanceof Error ? failure.message : m.rimg_regions_failed();
-    } finally {
-      windowsBusy = false;
-    }
-  }
+  onDestroy(() => { for (const draft of Object.values(staged)) if (draft) URL.revokeObjectURL(draft.url); if (source) URL.revokeObjectURL(source.url); clearTimeout(copyTimer); });
 </script>
 
-<input bind:this={fileInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif" onchange={chosen} />
-
-<section class="room-image-manual" class:is-managing={managing} aria-label={managing ? m.rimg_manage_current() : m.rimg_manual_title()}>
-  {#if managing}
-    <div class="room-image-current-head">
-      {#if asset}<img class="room-image-current-thumb" src={asset.variants.light} alt={m.room_background_preview()} />{/if}
-      <div class="room-image-manual-text">
-        <h3>{m.rimg_manage_current()}</h3>
-        <small>{m.rimg_manage_origin()}</small>
-        <strong>{asset ? originLabel : m.rimg_lib_loading()}</strong>
-      </div>
-      <button class="secondary-btn pressable" type="button" onclick={onchangeway}>{m.rimg_way_change()}</button>
-    </div>
-  {:else}
-  <div class="room-image-manual-head">
-    <h3 id="room-image-manual-title">{m.rimg_manual_title()}</h3>
-    <p>{m.rimg_manual_intro()}</p>
-    <div class="room-image-way-actions">
-      <a class="secondary-btn pressable" href="https://gemini.google.com/app" target="_blank" rel="noreferrer">{m.rimg_manual_gemini()}</a>
-      <a class="secondary-btn pressable" href="https://chatgpt.com/" target="_blank" rel="noreferrer">{m.rimg_manual_chatgpt()}</a>
-      <a class="secondary-btn pressable" href="https://www.bing.com/images/create" target="_blank" rel="noreferrer">{m.rimg_manual_bing()}</a>
-    </div>
-  </div>
-  {/if}
-  {#if loadError}<p class="room-image-alert is-error" role="alert">{loadError}</p>{/if}
-
-  {#if marking && asset}
-    <section class="room-image-windows-editor">
-      <p>{m.rimg_manual_windows_hint()}</p>
-      <div bind:this={stage} class="room-image-windows-stage" role="application" aria-label={m.rimg_manual_windows_mark()}
-           style:background-image={`url("${asset.variants.light}")`}
-           onpointerdown={pointerDown} onpointermove={pointerMove} onpointerup={pointerUp} onpointercancel={() => { dragStart = null; drawing = null; cornerDrag = null; }}>
-        <svg class="room-image-window-polygons" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {#each windows as window}
-            <polygon points={window.points.map((p) => `${p.x * 100},${p.y * 100}`).join(' ')} />
-          {/each}
-        </svg>
-        {#each windows as window, index (index)}
-          <button class="room-image-window-hit" type="button" aria-label={m.rimg_manual_remove()}
-                  style:clip-path={`polygon(${window.points.map((p) => `${p.x * 100}% ${p.y * 100}%`).join(',')})`}
-                  onpointerdown={(event) => event.stopPropagation()} onclick={() => removeRect(index)}></button>
-          {#each window.points as point, pointIndex}
-            <button class="room-image-window-corner" type="button" aria-label={m.rimg_manual_window_corner({ window: index + 1, corner: pointIndex + 1 })}
-                    style:left={`${point.x * 100}%`} style:top={`${point.y * 100}%`}
-                    onpointerdown={(event) => { if (event.button !== 0) return; event.stopPropagation(); cornerDrag = { window: index, point: pointIndex }; stage!.setPointerCapture(event.pointerId); }}
-                    onkeydown={(event) => {
-                      const delta = ({ ArrowLeft: [-0.01, 0], ArrowRight: [0.01, 0], ArrowUp: [0, -0.01], ArrowDown: [0, 0.01] } as Record<string, number[]>)[event.key];
-                      if (!delta) return;
-                      event.preventDefault();
-                      windows[index] = { ...window, points: moveCorner(window.points, pointIndex, { x: point.x + delta[0], y: point.y + delta[1] }) };
-                    }}></button>
-          {/each}
-        {/each}
-        {#if drawing}
-          <span class="room-image-window-rect is-drawing" aria-hidden="true"
-                style:left={`${drawing.x * 100}%`} style:top={`${drawing.y * 100}%`} style:width={`${drawing.w * 100}%`} style:height={`${drawing.h * 100}%`}></span>
-        {/if}
-      </div>
-      <p class="room-image-manual-status is-present">{m.rimg_manual_windows_count({ count: windows.length })}</p>
-      <footer class="room-image-wizard-actions">
-        <button class="secondary-btn pressable" type="button" disabled={windowsBusy} onclick={() => { marking = false; }}>{m.rimg_way_back()}</button>
-        <button class="secondary-btn pressable" type="button" disabled={windowsBusy || windows.length === 0} onclick={() => { windows = []; }}>{m.rimg_manual_windows_clear()}</button>
-        <button class="primary-btn pressable" type="button" disabled={windowsBusy} onclick={saveWindows}>{m.rimg_manual_windows_save()}</button>
-      </footer>
-      {#if windowsMessage}<p class="room-image-alert is-error" role="alert">{windowsMessage}</p>{/if}
-    </section>
-  {:else}
-    {#if !exterior}
-      <article class="room-image-manual-card room-image-manual-windows">
-        <div class="room-image-manual-row">
-          <span class="room-image-manual-thumb is-icon" aria-hidden="true">▭</span>
-          <span class="room-image-manual-text">
-            <strong>{m.rimg_manual_windows()}</strong>
-            <small class={`room-image-manual-status ${windowCount ? 'is-present' : 'is-missing'}`}>
-              {windowCount ? m.rimg_manual_windows_count({ count: windowCount }) : m.rimg_manual_windows_none()}
-            </small>
-          </span>
-          <button class="secondary-btn pressable" type="button" disabled={!hasLight} onclick={startMarking}>
-            {windowCount ? m.rimg_manual_windows_change() : m.rimg_manual_windows_mark()}
-          </button>
-        </div>
-        {#if windowsMessage}<p class="room-image-alert" role="status">{windowsMessage}</p>{/if}
-      </article>
-    {/if}
-    {#if managing}<h3 class="room-image-versions-title">{m.rimg_manage_versions()}</h3>{/if}
-    {#each variants as variant (variant)}
-      {@const line = statusLine(variant)}
-      {@const url = variantUrl(variant)}
-      <article class="room-image-manual-card" class:is-open={isOpen(variant)}>
-        <button class="room-image-manual-row pressable" type="button" aria-expanded={isOpen(variant)} onclick={() => toggle(variant)}>
-          <span class="room-image-manual-thumb" style:background-image={url && status(variant) !== 'missing' ? `url("${url}")` : undefined}></span>
-          <span class="room-image-manual-text">
-            <strong>{name(variant)}</strong>
-            <small class={`room-image-manual-status ${line.tone}`}>{line.text}</small>
-          </span>
-          <span class="room-image-manual-chevron" aria-hidden="true">›</span>
-        </button>
-        {#if isOpen(variant)}
-          <div class="room-image-manual-steps">
-            {#if showWording}
-            <div class="room-image-manual-step">
-              <span class="room-image-step" aria-hidden="true">1</span>
-              <div>
-                <strong>{m.rimg_manual_step_input()}</strong>
-                {#if variant === 'light'}
-                  <p>{exterior ? m.rimg_manual_input_light_exterior() : m.rimg_manual_input_light()}</p>
-                {:else}
-                  <p>{m.rimg_manual_input_other()}</p>
-                  {#if hasLight && asset}
-                    <a class="secondary-btn pressable" href={asset.variants.light} download={`hauser-${roomId}-light.avif`}>{m.rimg_manual_download_light()}</a>
-                  {:else}
-                    <small class="room-image-manual-status is-derived">{m.rimg_manual_light_first()}</small>
-                  {/if}
-                {/if}
-              </div>
-            </div>
-            <div class="room-image-manual-step">
-              <span class="room-image-step" aria-hidden="true">2</span>
-              <div>
-                <strong>{m.rimg_manual_step_wording()}</strong>
-                <p>{variant === 'light' ? m.rimg_manual_wording_light() : m.rimg_manual_wording_other()}</p>
-                <button class="primary-btn pressable" type="button" onclick={() => copy(variant)}>{copied === variant ? m.rimg_manual_copied() : m.rimg_manual_copy()}</button>
-              </div>
-            </div>
-            {/if}
-            {#if manualSet || !managing}
-            <div class="room-image-manual-step">
-              {#if showWording}<span class="room-image-step" aria-hidden="true">3</span>{/if}
-              <div>
-                <strong>{m.rimg_manual_step_result()}</strong>
-                <p>{m.rimg_manual_result_hint()}</p>
-                <div class="room-image-way-actions">
-                  <button class="primary-btn pressable" type="button" disabled={busy !== null || (variant !== 'light' && !manualSet)} onclick={() => pick(variant)}>
-                    {busy === variant ? m.room_background_saving() : status(variant) === 'present' ? m.rimg_manual_replace() : m.rimg_manual_upload()}
-                  </button>
-                  {#if variant !== 'light' && hasLight}
-                    <button class="secondary-btn pressable" type="button" disabled={busy !== null} onclick={() => reset(variant)}>
-                      {m.rimg_manual_derive_again()}
-                    </button>
-                  {/if}
-                </div>
-                {#if variant !== 'light' && !manualSet && hasLight}
-                  <small class="room-image-manual-status is-derived">{m.rimg_manual_wizard_note()}</small>
-                {/if}
-                {#if message && message.variant === variant}
-                  <p class="room-image-alert" class:is-error={message.error} role="status">{message.text}</p>
-                {/if}
-              </div>
-            </div>
-            {:else}
-              {#if url}<img class="room-image-version-preview" src={url} alt={name(variant)} />{/if}
-              <p>{m.rimg_manage_assistant_hint()}</p>
-              <button class="secondary-btn pressable" type="button" onclick={onchangeway}>{m.rimg_way_change()}</button>
-            {/if}
+<input bind:this={input} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif" onchange={chosen} />
+<input bind:this={sourceInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/avif" onchange={chooseSource} />
+<section class="manual-workspace" aria-label={m.img_manual_title()}>
+  {#if prepare === null}
+    <header class="manual-heading"><div><h2>{m.img_manual_title()}</h2><p>{m.img_manual_intro()}</p></div><strong>{m.img_manual_ready_count({ ready: readyCount, total: variants.length })}</strong></header>
+    <progress max={variants.length} value={readyCount} aria-label={m.img_manual_ready_count({ ready: readyCount, total: variants.length })}></progress>
+    <div class="manual-grid">
+      {#each variants as variant}
+        {@const preview = url(variant)}
+        <article class="variant-card">
+          <header><h3>{name(variant)}</h3><span class="variant-status" class:is-ready={ready(variant)}>{ready(variant) ? '✓' : '○'} {resets.includes(variant) ? m.img_automatic() : ready(variant) ? m.img_manual_ready() : m.img_manual_missing()}</span>
+            <details class="variant-menu"><summary aria-label={m.img_manual_actions({ variant: name(variant) })}>•••</summary><div>
+              {#if preview}<a href={preview} download={`hauser-${roomId}-${variant}.avif`}>{m.img_manual_download()}</a>{/if}
+              {#if variant !== 'light'}<button type="button" disabled={!dayUrl || busy} onclick={() => derive(variant)}>{m.rimg_manual_derive_again()}</button>{/if}
+              {#if staged[variant] || resets.includes(variant)}<button type="button" disabled={busy} onclick={() => removeDraft(variant)}>{m.img_manual_discard()}</button>{/if}
+            </div></details>
+          </header>
+          <div class="variant-picture" role="group" aria-label={m.img_manual_upload_for({ variant: name(variant) })} ondragover={event => event.preventDefault()} ondrop={event => drop(variant, event)}>
+            {#if preview}<button type="button" class="picture-button" disabled={busy || checking || !loaded} onclick={() => pick(variant)} aria-label={m.img_manual_upload_for({ variant: name(variant) })}><img src={preview} alt={name(variant)} /></button>
+            {:else}<div class="upload-placeholder"><Icon name="i-image" cls="icon icon-xl" /><button class="primary-btn" type="button" disabled={busy || checking || !loaded} onclick={() => pick(variant)}>{m.rimg_manual_upload()}</button><small>{m.img_manual_drop()}</small></div>{/if}
           </div>
-        {/if}
-      </article>
-    {/each}
-
-
+          <footer>{#if preview}<button class="text-btn" type="button" disabled={busy || checking} onclick={() => pick(variant)}>{m.rimg_manual_replace()}</button>{/if}<button class="text-btn" type="button" disabled={busy || checking} onclick={() => { prepare = variant; copied = false; }}>{m.img_manual_prepare()} ↗</button></footer>
+        </article>
+      {/each}
+    </div>
+    <p class="format-hint">{m.rimg_manual_result_hint()}</p>
+    <footer class="manual-apply"><div>{readyCount === variants.length ? m.img_manual_review() : m.img_manual_remaining({ count: variants.length - readyCount })}</div><button class="primary-btn" type="button" disabled={busy || checking || !changed || readyCount !== variants.length} onclick={apply}>{busy ? m.room_background_saving() : m.img_manual_apply({ room: roomName })}</button></footer>
+  {:else}
+    {@const reference = prepare === 'light' ? source?.url ?? dayUrl : dayUrl}
+    <button class="text-btn manual-back" type="button" disabled={busy} onclick={() => prepare = null}>← {m.img_manual_all()}</button>
+    <header class="manual-heading"><div><span class="caps-label">{roomName}</span><h2>{m.img_manual_prepare_variant({ variant: name(prepare) })}</h2><p>{m.img_manual_same_room()}</p></div></header>
+    <div class="prepare-grid">
+      <section class="prepare-source">
+        <h3><span class="step-number">1</span>{m.img_manual_template()}</h3>
+        {#if reference}<img class="reference-picture" src={reference} alt={prepare === 'light' ? m.rimg_manual_step_input() : m.rimg_manual_v_light()} /><a class="secondary-btn" href={reference} download={prepare === 'light' && source ? source.file.name : `hauser-${roomId}-template.avif`}>{m.img_manual_download()}</a>{:else}<div class="upload-placeholder"><Icon name="i-image" cls="icon icon-xl" /><p>{prepare === 'light' ? m.rimg_manual_input_light() : m.rimg_manual_light_first()}</p></div>{/if}
+        {#if prepare === 'light'}<button class="secondary-btn" type="button" onclick={() => sourceInput?.click()}>{m.img_manual_choose_photo()}</button>{/if}
+        {#if !exterior}<button class="text-btn" type="button" disabled={!dayUrl} onclick={() => objectsOpen = true}>▦ {m.img_manual_windows_optional()}</button>{/if}
+      </section>
+      <div class="prepare-result">
+        <section><h3><span class="step-number">2</span>{m.img_manual_at_provider()}</h3>
+          <div class="provider-choice" role="group" aria-label={m.img_manual_at_provider()}>{#each providers as option,index}<button class="secondary-btn" type="button" aria-pressed={provider === index} onclick={() => provider = index}>{option.name}</button>{/each}</div>
+          <p>{prepare === 'light' ? m.rimg_manual_wording_light() : m.rimg_manual_wording_other()}</p>
+          <details class="prompt-preview"><summary>{m.img_manual_show_prompt()}</summary><pre>{wording(prepare)}</pre></details>
+          <div class="prompt-actions"><button class="primary-btn" type="button" onclick={() => prepare && copy(prepare)}>{copied ? m.rimg_manual_copied() : m.img_manual_copy_prompt()}</button><a class="secondary-btn" href={providers[provider].url} target="_blank" rel="noreferrer">{m.img_manual_open_provider({ provider: providers[provider].name })} ↗</a></div>
+          <small>{m.img_manual_external_note()}</small>
+        </section>
+        <section><h3><span class="step-number">3</span>{m.img_manual_upload_result()}</h3><div class="upload-placeholder result-drop" role="group" aria-label={m.img_manual_upload_result()} ondragover={event => event.preventDefault()} ondrop={event => prepare && drop(prepare,event)}><Icon name="i-image" cls="icon icon-xl" /><button class="primary-btn" type="button" disabled={checking} onclick={() => prepare && pick(prepare)}>{m.img_manual_upload_finished()}</button><small>{m.img_manual_drop()}</small></div><p>{m.img_manual_review()}</p></section>
+      </div>
+    </div>
   {/if}
+  {#if error}<p role="alert" class="manual-error">{error}</p>{:else if checking}<p role="status">{m.img_manual_checking()}</p>{/if}
 </section>
+{#if objectsOpen && dayUrl}<RoomObjectEditor {roomId} imageUrl={dayUrl} initialRegions={draftRegions ?? asset?.regions?.regions ?? []} onsave={regions => draftRegions = regions} initialKind="window" windowOnly title={m.img_windows()} imageAlt={m.room_background_preview()} savingText={m.room_background_saving()} onclose={() => objectsOpen = false} />{/if}
+
+<style>
+  .manual-workspace { display: grid; gap: var(--space-4); min-width: 0; }
+  .manual-heading,.manual-apply,.variant-card > header,.variant-card > footer { display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); }
+  .manual-heading { align-items:flex-start; }
+  .manual-heading h2 { font-size:var(--text-xl); margin:0 0 var(--space-2); }
+  .manual-heading p { margin:0; color:var(--color-text-secondary); }
+  progress { width:100%; height:var(--space-2); accent-color:var(--color-accent-warm); }
+  .manual-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-4); }
+  .variant-card { min-width:0; padding:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface-1); }
+  .variant-card > header { margin-bottom:var(--space-3); }
+  .variant-card h3 { margin:0; flex:1; font-size:var(--text-lg); }
+  .variant-status { font-size:var(--text-sm); color:var(--color-text-secondary); }
+  .variant-status.is-ready { color:var(--color-accent-warm); }
+  .variant-picture { height:clamp(calc(var(--space-8) * 2), calc((100dvh - var(--space-8) * 8) / 2), calc(var(--space-8) * 4)); overflow:hidden; border-radius:var(--radius-md); }
+  .picture-button { display:block; width:100%; height:100%; border:0; padding:0; background:none; cursor:pointer; }
+  .picture-button img { width:100%; height:100%; object-fit:cover; }
+  .upload-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3); width:100%; height:100%; padding:var(--space-4); border:1px dashed var(--color-border); border-radius:var(--radius-md); text-align:center; }
+  .variant-card > footer { flex-wrap:wrap; margin-top:var(--space-2); }
+  .variant-card > footer .text-btn:last-child { margin-inline-start:auto; }
+  .variant-menu { position:relative; }
+  .variant-menu summary { min-width:var(--touch-min); min-height:var(--touch-min); display:grid; place-items:center; cursor:pointer; list-style:none; }
+  .variant-menu > div { position:absolute; inset-inline-end:0; top:100%; z-index:3; min-width:calc(var(--space-8) * 4); display:grid; padding:var(--space-2); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--image-workspace-background); }
+  .variant-menu :is(button,a) { text-align:start; padding:var(--space-3); min-height:var(--touch-min); color:inherit; border:0; background:none; font:inherit; }
+  .manual-apply { position:sticky; bottom:calc(var(--space-6) * -1); padding:var(--space-4) 0; border-top:1px solid var(--color-border); background:var(--image-workspace-panel); }
+  small,.format-hint { color:var(--color-text-secondary); }
+  .format-hint { font-size:var(--text-sm); text-align:center; margin:0; }
+  .prepare-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-6); }
+  .prepare-source,.prepare-result,.prepare-result > section { display:grid; align-content:start; gap:var(--space-4); min-width:0; }
+  .prepare-result { padding-inline-start:var(--space-5); border-inline-start:1px solid var(--color-border); }
+  .prepare-result > section + section { border-top:1px solid var(--color-border); padding-top:var(--space-5); }
+  .reference-picture { width:100%; max-height:45dvh; object-fit:contain; border-radius:var(--radius-lg); }
+  .prepare-grid h3 { display:flex; align-items:center; gap:var(--space-3); margin:0; }
+  .step-number { display:grid; place-items:center; flex:none; width:var(--touch-min); height:var(--touch-min); border-radius:var(--radius-full); background:var(--color-accent-warm); color:var(--color-text-on-accent); }
+  .provider-choice,.prompt-actions { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+  .provider-choice button { flex:1; }
+  .provider-choice button[aria-pressed='true'] { border-color:var(--color-accent-warm); background:var(--color-surface-inverse); color:var(--color-text-on-inverse); }
+  .prompt-actions > * { flex:1; }
+  .prompt-preview { padding:var(--space-3); background:var(--color-surface-2); border-radius:var(--radius-md); }
+  .prompt-preview summary { min-height:var(--touch-min); cursor:pointer; }
+  pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:var(--text-sm); max-height:25dvh; overflow:auto; }
+  .result-drop { min-height:calc(var(--space-8) * 3); }
+  .manual-back { justify-self:start; }
+  .manual-error { color:var(--color-error); }
+  @media (max-width:760px) { .manual-heading { flex-wrap:wrap; } .manual-heading h2 { font-size:var(--text-2xl); } .manual-grid { gap:var(--space-2); } .variant-card h3 { font-size:var(--text-sm); min-height:0; } .variant-card { padding:var(--space-2); } .variant-card > header { flex-wrap:wrap; } .variant-menu { margin-inline-start:auto; } .variant-picture { height:auto; aspect-ratio:1; } .variant-picture .primary-btn { font-size:var(--text-sm); padding:var(--space-2); } .variant-card > footer .text-btn { font-size:var(--text-sm); } .prepare-grid { grid-template-columns:1fr; } .prepare-result { padding:0; border:0; } .manual-apply { flex-direction:column; align-items:stretch; bottom:calc(var(--space-4) * -1); } }
+</style>

@@ -141,7 +141,7 @@ describe('phone energy shell, source and accessibility boundaries', () => {
     expect(phoneShell).toContain('m.phone_view_preparing()');
   });
 
-  it('binds only the shared read-only energy projections and keeps the period with the history, not the live value', () => {
+  it('uses shared energy projections and loads the configuration view only on demand', () => {
     expect(phoneEnergy).toMatch(/energyView\(\)/);
     expect(phoneEnergy).toMatch(/energyPanelData\(e,\s*period,\s*'flow',\s*sums\)/);
     expect(phoneEnergy).toMatch(/loadBreakdown\(\(id\) => catalogNames\.get\(id\)/);
@@ -161,8 +161,10 @@ describe('phone energy shell, source and accessibility boundaries', () => {
     // Dazu die trübe Fassung bei Wolken (wie die iOS-App).
     expect(phoneEnergy).toMatch(/import \{ energyAssetUrl, energyOvercastUrl, exteriorAssetUrl \} from '\.\.\/energy-hero-assets\.ts'/);
 
+    // Der Bild-Einstieg darf den Panel-Editor erst beim Anordnen nachladen.
+    expect(phoneEnergy).not.toMatch(/^\s*import\s+.*from\s+['"].*EnergyScreen/m);
     for (const forbidden of [
-      'EnergyScreen', 'PanelAppShell', 'EnergyLoadOverlay', 'loadEnergyHeroFrame', 'placeFrame', 'energy-marks',
+      'PanelAppShell', 'EnergyLoadOverlay', 'loadEnergyHeroFrame', 'placeFrame', 'class="energy-marks"',
       'ENERGY_CURVE', 'hls.js', 'IconPicker', 'icon-recents', 'runtime', 'entity_id',
     ]) {
       expect(phoneEnergy).not.toContain(forbidden);
