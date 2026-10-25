@@ -7,6 +7,8 @@ import {
   saveImmersionLightConfig,
 } from './immersion-light.ts';
 import { immersionLight, rehydrateImmersionLight } from './immersion-light.svelte.ts';
+import { HOSTILE_LIGHT_ZONES } from '../stresshaus/hostile-home.ts';
+import { LIGHT_ZONE_MAX, LIGHT_ZONE_MIN } from './immersion-light.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -92,5 +94,16 @@ describe('immersion light config', () => {
     expect(rooms['light.schirm']).toEqual({ x: 0.5, y: 0.25, radius: 0.12, ry: 0.06, rotation: 30 });
     expect(rooms['light.dreh'].rotation).toBe(-180);
     expect(rooms['light.kaputt']).toEqual({ x: 0.5, y: 0.25, radius: 0.12 });
+  });
+
+  it.each(HOSTILE_LIGHT_ZONES)('Stresshaus „$name“: jede Zone liegt im Bild und in den Grenzen des Editors', ({ raw }) => {
+    expect(() => parseImmersionLightConfig(raw)).not.toThrow();
+    for (const placements of Object.values(parseImmersionLightConfig(raw).rooms)) {
+      for (const zone of Object.values(placements)) {
+        for (const unit of [zone.x, zone.y]) expect(unit >= 0 && unit <= 1).toBe(true);
+        for (const axis of [zone.radius, zone.ry ?? zone.radius]) expect(axis >= LIGHT_ZONE_MIN && axis <= LIGHT_ZONE_MAX).toBe(true);
+        expect(Math.abs(zone.rotation ?? 0)).toBeLessThanOrEqual(180);
+      }
+    }
   });
 });

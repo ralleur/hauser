@@ -133,8 +133,10 @@ image to the front. In the **Image control** view of the
 [home screen](/docs/using/home-screen/#three-views), the picture is the
 only control.
 
-The light zones also shape the night glow. When the last lamp goes out, the
-room moves to its lights-off variant. These effects use the prepared images;
+The light zones also shape the night glow. On the wall panel, a lamp that is
+off goes pale inside its zone, and its warm colour fades back as soon as it is
+switched on. When the last lamp goes out, the room moves to its lights-off
+variant. These effects use the prepared images;
 they do not regenerate the room for each command.
 
 ## In the native iOS app

@@ -269,10 +269,30 @@ export function isSceneActive(roomId: string, sceneId: SceneId): boolean {
    Verlassen des Overlays stellt restoreScenePreview() ihn wieder her. */
 const previewSnapshot = new Map<string, unknown>();
 
+/* Eine Lichtgruppe aus Home Assistant steht oft neben ihren Lampen im Raum.
+   Ihr Sammelwert heißt „an“, sobald eine brennt — zurückgestellt schaltete sie
+   beim Verlassen auch die Lampen wieder an, die vorher aus waren (simon42,
+   Cpt.Hardy, 0.47.0). Deshalb werden ihre Lampen einzeln gemerkt. */
+function lightGroupMembers(entityId: string): readonly string[] {
+  return deviceManager.catalog.find((i) => i.entityId === entityId)?.capabilities?.members ?? [];
+}
+
 function rememberPreview(entityId: string): void {
-  if (previewSnapshot.has(entityId)) return;
-  const value = runtime.merged(entityId);
-  if (value !== undefined) previewSnapshot.set(entityId, value);
+  for (const id of [entityId, ...lightGroupMembers(entityId)]) {
+    if (previewSnapshot.has(id)) continue;
+    const value = runtime.merged(id);
+    if (value !== undefined) previewSnapshot.set(id, value);
+  }
+}
+
+/* Die Gruppe selbst bleibt unberührt, wenn jede ihrer Lampen sich selbst
+   zurückstellt; Mitglieder, die HA gar nicht kennt, zählen nicht. Kennt die
+   Vorschau eine Lampe nicht (anderer Raum, nicht abonniert), stellt weiter die
+   Gruppe zurück. */
+function restoredByMembers(entityId: string): boolean {
+  const members = lightGroupMembers(entityId)
+    .filter((id) => deviceManager.catalog.some((i) => i.entityId === id));
+  return members.length > 0 && members.every((id) => previewSnapshot.has(id));
 }
 
 /** Ein einzelnes Mitglied auf seinen Szenen-Zielzustand fahren. */
@@ -349,6 +369,7 @@ export async function importHaScene(roomId: string, scene: HaScene): Promise<Sce
 /** Zustand von vor dem Öffnen des Editors wiederherstellen. */
 export function restoreScenePreview(): void {
   for (const [entityId, value] of previewSnapshot) {
+    if (restoredByMembers(entityId)) continue;
     const restore = buildRestoreCommand(entityId, value);
     if (restore) runtime.dispatch(restore.command, restore.optimistic);
   }

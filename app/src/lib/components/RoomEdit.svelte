@@ -98,6 +98,9 @@
   let view = $state<'devices' | 'immersion' | 'background'>('devices');
   let selectedLightId = $state('');
   let imagePage = $state<'overview' | 'change' | 'setup'>('overview');
+  /* „Geräte zuweisen“ steht wieder in den Raumeinstellungen (simon42,
+     Cpt.Hardy, 0.47.0) — der Pfeil führt dorthin zurück, woher man kam. */
+  let immersionBack = $state<'devices' | 'background'>('background');
   /* Geräte im Bild (Owner 2026-10-19): jedes Gerät des Raums bekommt eine
      Stelle im Raumbild — Lampen eine Lichtzone, alle anderen einen Punkt. */
   const placeableDevices = $derived(roomImageDevices(room));
@@ -258,6 +261,7 @@
     releaseSearchLift();
     view = requestedView;
     imagePage = 'overview';
+    immersionBack = 'background';
     selectedLightId = untrack(() => requestedView === 'immersion'
       ? (roomImageDevices(room).find(device => !roomLightPlacements(room?.id)[device.entityId]) ?? roomImageDevices(room)[0])?.entityId ?? ''
       : '');
@@ -273,7 +277,8 @@
     openSceneEdit(roomId, scenes(roomId)[0]?.id ?? 'gemuetlich');
   }
 
-  function openImmersionEditor() {
+  function openImmersionEditor(back: 'devices' | 'background' = 'background') {
+    immersionBack = back;
     view = 'immersion';
     selectedLightId = placeableDevices[0]?.entityId ?? '';
   }
@@ -733,8 +738,8 @@
         {#snippet editHeader()}
           <header class="ld-header">
             {#if view !== 'devices'}
-              <button class="re-btn pressable" type="button" aria-label={view === 'immersion' || imagePage !== 'overview' ? m.room_background() : m.room_back_to_devices()}
-                      onclick={() => { if (view === 'background' && imagePage !== 'overview') imagePage = 'overview'; else view = view === 'immersion' ? 'background' : 'devices'; selectedLightId = ''; }}>
+              <button class="re-btn pressable" type="button" aria-label={(view === 'immersion' && immersionBack === 'background') || imagePage !== 'overview' ? m.room_background() : m.room_back_to_devices()}
+                      onclick={() => { if (view === 'background' && imagePage !== 'overview') imagePage = 'overview'; else view = view === 'immersion' ? immersionBack : 'devices'; selectedLightId = ''; }}>
                 <Icon name="i-chevron-left" cls="icon icon-md" />
               </button>
             {:else if adding}
@@ -898,7 +903,14 @@
               </span>
               <Icon name="i-chevron-right" cls="icon icon-md" />
             </button>
-
+            <button class="re-quick-entry pressable" type="button" onclick={() => openImmersionEditor('devices')}>
+              <span class="re-icon" aria-hidden="true"><Icon name="i-cursor-default-click" /></span>
+              <span class="re-label">
+                <span class="re-name">{m.room_assign_lamps()}</span>
+                <small class="re-meta">{m.room_set_light_positions()}</small>
+              </span>
+              <Icon name="i-chevron-right" cls="icon icon-md" />
+            </button>
           </div>
         </section>
         {/snippet}

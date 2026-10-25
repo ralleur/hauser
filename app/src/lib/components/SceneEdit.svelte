@@ -220,13 +220,15 @@
 
   /* Die gewählte Szene wird als Vorschau gefahren (Öffnen + Tab-Wechsel).
      untrack: die Vorschau liest die Config — ohne das liefe der Effect nach
-     jeder Zustandsänderung erneut. */
+     jeder Zustandsänderung erneut und schaltete beim Einstellen einer Lampe
+     den ganzen Raum noch einmal durch. */
   $effect(() => {
     if (sceneEdit.mode !== 'open') return;
     const roomId = sceneEdit.roomId;
     const sceneId = sceneEdit.sceneId;
-    if (!sceneOptions.some((option) => option.id === sceneId)) return;
-    untrack(() => previewScene(roomId, sceneId));
+    untrack(() => {
+      if (scenes(roomId).some((option) => option.id === sceneId)) previewScene(roomId, sceneId);
+    });
   });
 
   // animationend-Fallback (deckt prefers-reduced-motion: 0ms ab)

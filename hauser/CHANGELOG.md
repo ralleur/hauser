@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.48.1 - 2026-10-24
+
+- Leaving the scene editor puts every lamp back the way it was, also next to a
+  Home Assistant light group; adjusting one lamp no longer reruns the scene.
+- “Assign devices” is back in the room settings.
+
+## 0.48.0 - 2026-10-24
+
+- A lamp that is off goes pale inside its light zone in the room picture on
+  the wall panel; its warm colour fades back when it is switched on.
+- The live demo places its lamps on the drawn lamps, and the project page
+  shows the effect in moment 02.
+
 ## 0.47.0 - 2026-10-23
 
 - Room and exterior pictures have clear “Change image” and “Set up image”

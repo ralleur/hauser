@@ -119,7 +119,7 @@
   transition: opacity var(--duration-enter) var(--ease-out);
 }
 
-/* ── Lampe im Bild aus (Werkstatt-Versuch, RoomHero.svelte) ──
+/* ── Lampe im Bild aus (R67, RoomHero.svelte) ──
    Eine Zone um die Lampe (Kreis oder gedrehte Ellipse), die das Bild entsättigt
    und aufhellt: die Lampe wirkt blass und aus. Ausgehen sinkt so ruhig wie
    das Nachdimmen, Angehen nimmt den Schleier weich, aber zügig weg. Bis kurz

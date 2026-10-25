@@ -134,6 +134,21 @@ figcaption a { flex: none; padding-block: var(--space-3); }
 /* The picture as the switch: the wall moment's layout on the night ground. */
 .picture-moment { margin-top: var(--space-8); padding-top: var(--space-8); border-top: var(--rule-width) solid var(--night-line); }
 .picture-moment h3 { font-size: var(--heading-size); }
+/* Lampe im Bild an und aus (R67): drei Aufnahmen übereinander, die oberen
+   blenden nacheinander ein, ein Ring zeigt den Fingertipp auf der Lampe. Nur
+   Deckkraft und Transform; ohne Bewegung steht das mittlere Bild still. */
+a.lamp-sequence { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-sm); }
+.lamp-sequence img { grid-area: 1 / 1; width: 100%; height: auto; }
+.lamp-frame-1, .lamp-frame-2 { opacity: 0; animation: 9s var(--ease-out) infinite; }
+.lamp-frame-1 { animation-name: lamp-frame-1; }
+.lamp-frame-2 { animation-name: lamp-frame-2; }
+.lamp-tap { position: absolute; width: 7%; aspect-ratio: 1; translate: -50% -50%; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 50%; opacity: 0; pointer-events: none; animation: 9s ease-out infinite; }
+.lamp-tap-1 { left: 79.7%; top: 38.7%; animation-name: lamp-tap-1; }
+.lamp-tap-2 { left: 48%; top: 18.5%; animation-name: lamp-tap-2; }
+@keyframes lamp-frame-1 { 0%, 27% { opacity: 0; } 34%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lamp-frame-2 { 0%, 58% { opacity: 0; } 65%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lamp-tap-1 { 0%, 22% { opacity: 0; transform: scale(0.4); } 25% { opacity: 1; } 33%, 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes lamp-tap-2 { 0%, 53% { opacity: 0; transform: scale(0.4); } 56% { opacity: 1; } 64%, 100% { opacity: 0; transform: scale(1.3); } }
 .light-story .moment-copy p, .light-story figcaption { color: var(--night-secondary); }
 
 /* D: a wide wall view, then a readable phone screen. */
@@ -264,6 +279,8 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; scroll-behavior: auto !important; }
+  .lamp-frame-1, .lamp-frame-2, .lamp-tap { animation: none; }
+  .lamp-frame-1 { opacity: 1; }
 }
 @media (forced-colors: active) {
   .preview-radio:checked + label { outline: var(--focus-width) solid Highlight; }

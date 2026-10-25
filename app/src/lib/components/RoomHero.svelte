@@ -78,15 +78,14 @@
   });
   const allAssignedLightsOff = $derived(simulation.lightsOff ?? roomLightsOff);
   const showImmersion = $derived(appState.heroSun?.day === false && !allAssignedLightsOff);
-  /* Werkstatt-Versuch „Lampe im Bild aus“ (Owner 2026-10-19): Das Raumbild
-     zeigt die Lampen tagsüber immer und nachts brennend, sobald eine im Raum
-     an ist. Eine ausgeschaltete Lampe mit Position bekommt deshalb einen
-     entsättigten, blassen Kreis; geht sie an, blendet er weich weg. Nur im
-     Dev-Bau (Werkstatt), bis Sam entscheidet. Zeigt die Bühne nachts ohnehin
-     die unbeleuchtete Fassung, wäre der Kreis doppelt — dann keiner. */
-  const LAMP_OFF_TRIAL = import.meta.env.DEV;
+  /* „Lampe im Bild aus“ (R67, Owner 2026-10-19, abgenommen 2026-10-24): Das
+     Raumbild zeigt die Lampen tagsüber immer und nachts brennend, sobald eine
+     im Raum an ist. Eine ausgeschaltete Lampe mit Position bekommt deshalb
+     eine entsättigte, blasse Zone; geht sie an, blendet sie weich weg. Zeigt
+     die Bühne nachts ohnehin die unbeleuchtete Fassung, wäre die Zone doppelt
+     — dann keine. */
   const nightImage = $derived(appState.heroSun ? !appState.heroSun.day : appState.theme === 'dark');
-  const lampShades = $derived(LAMP_OFF_TRIAL && !(nightImage && allAssignedLightsOff)
+  const lampShades = $derived(!(nightImage && allAssignedLightsOff)
     ? renderedLights.map((light) => ({ ...light, off: simulation.lightsOff ?? light.value?.on !== true }))
     : []);
   /* Trübes Wetter (Paket 13): Hat das Bildset eine trübe Fassung, zeigt die

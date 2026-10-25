@@ -79,6 +79,17 @@ function listsOf(value: unknown, path = ''): [string, unknown[]][] {
   return Object.entries(value).flatMap(([key, inner]) => listsOf(inner, path ? `${path}.${key}` : key));
 }
 
+describe('Stresshaus: Lichtgruppe neben ihren Lampen (simon42, Cpt.Hardy, 0.47.0)', () => {
+  it('kennt die Lampen der Gruppe, Kennungen ohne Text fallen weg', () => {
+    const home = hostileHomeWith({}, NOW);
+    const group = home.states.find((s) => s.entity_id === 'light.wohnzimmer_lesegruppe');
+    expect(catalogItemFromHaState(group as never)?.capabilities?.members)
+      .toEqual(['light.wohnzimmer_decke', 'light.wohnzimmer', 'light.wohnzimmer_decke', 'switch.wohnzimmer']);
+    const plain = home.states.find((s) => s.entity_id === 'light.wohnzimmer_decke');
+    expect(catalogItemFromHaState(plain as never)?.capabilities?.members).toBeUndefined();
+  });
+});
+
 describe('Stresshaus', () => {
   it.each(SEEDS)('Startzahl %i: die Einrichtung macht daraus einen gültigen Haushalt', (seed) => {
     const suggestion = buildSetupHouseholdSuggestion(snapshotOf(hostileHomeWith({ seed }, NOW)));

@@ -33,6 +33,8 @@ export function lightCapabilitiesFromHaAttributes(attributes: Record<string, unk
   };
   if (typeof attributes.min_color_temp_kelvin === 'number') capabilities.colorTempMin = attributes.min_color_temp_kelvin;
   if (typeof attributes.max_color_temp_kelvin === 'number') capabilities.colorTempMax = attributes.max_color_temp_kelvin;
+  // Lichtgruppe: die Szenen-Vorschau stellt ihre Lampen einzeln zurück.
+  if (Array.isArray(attributes.entity_id)) capabilities.members = attributes.entity_id.filter((id): id is string => typeof id === 'string');
   return capabilities;
 }
 

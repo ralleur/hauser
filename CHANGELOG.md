@@ -3,6 +3,27 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.48.1] - 2026-10-24
+
+- Scenes: leaving the scene editor puts every lamp back the way it was, also
+  when a Home Assistant light group sits next to its lamps in the room —
+  before, the group switched a lamp back on that had been off. Adjusting one
+  lamp no longer runs the whole scene again.
+- Room: “Assign devices” is back in the room settings, next to the room image
+  and the scenes; it is still also reachable under “Set up image”.
+
+## [0.48.0] - 2026-10-24
+
+- Room: on the wall panel, a lamp that is off now goes pale inside its light
+  zone in the room picture, and its warm colour fades back as soon as it is
+  switched on, from its tile or by tapping it in the picture.
+- The live demo places its lamps on the lamps drawn in its room pictures, so
+  the effect can be tried in the evening living room, bedroom, bathroom and
+  kitchen.
+- The project page shows it in moment 02 as a short, calm sequence of the
+  living room lamps coming on; the guide mentions it under devices in the
+  picture.
+
 ## [0.47.0] - 2026-10-23
 
 - Room and exterior pictures: clear “Change image” and “Set up image” entries,

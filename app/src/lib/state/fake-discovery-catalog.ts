@@ -29,6 +29,8 @@ export interface EntityCatalogItem {
     color: boolean;
     colorTempMin: number;
     colorTempMax: number;
+    /** Lichtgruppe aus Home Assistant: ihre Lampen (Attribut `entity_id`). */
+    members: string[];
   }>;
 }
 

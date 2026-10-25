@@ -59,13 +59,18 @@ Existing full-size screenshot links remain available for closer inspection.
 
 All images have intrinsic dimensions. The hero is preloaded per breakpoint;
 images below it are lazy-loaded. Focus is visible, the preview supports native
-arrow-key operation, and reduced motion removes its short crossfade. There are
-no timers, scrolling effects or content-reveal dependencies.
+arrow-key operation, and reduced motion removes its short crossfade. Apart from
+the lamp loop in moment 02 there are no timers, scrolling effects or
+content-reveal dependencies.
 
-`media/picture-control.webp` (2026-10-20) is the web demo in the image-control
-view after a double tap. The demo ships no device spots, so the capture script
-places the living-room lamps and blinds on their drawn positions before
-loading; nothing in the picture is retouched. `media/phone-energy.webp` is the
+`media/picture-control.webp` (2026-10-24) is the web demo in the image-control
+view after a double tap. Since 2026-10-24 the demo ships its own device spots
+on the drawn lamps and blinds; nothing in the picture is retouched.
+`media/picture-lamps-0…2.webp` are the same evening view, cropped around the
+window, sofa and floor lamp at double density: the floor lamp and the globe
+lamp start off and pale, then come on one after the other. The page stacks
+them in a CSS-only loop (opacity and transform, with a tap ring on each lamp);
+reduced motion holds the middle frame still. `media/phone-energy.webp` is the
 phone web demo's energy screen at a late-afternoon time, as captured.
 
 `media/social-preview.jpg` is a 1280 × 640 browser capture of the new hero,

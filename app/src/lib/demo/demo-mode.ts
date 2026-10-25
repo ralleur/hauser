@@ -431,9 +431,38 @@ const DEMO_COVER_ENTITY = 'cover.demo_rollo_wohnzimmer';
    Gerätemanager samt Katalog in den Startpfad, den der Cutover-Test klein
    hält. Der Test in demo-mode.test.ts hält beide Fassungen zusammen. */
 export const DEMO_DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
+/* Die Lampen der Demo sitzen auf den gezeichneten Lampen ihrer Raumbilder
+   (Owner 2026-10-24): Eine ausgeschaltete Lampe liegt blass im Bild, ein Tipp
+   auf sie bringt Licht und Farbe zurück. Koordinaten relativ zum Bild, Zonen
+   wie im Editor „Geräte zuweisen“; das Rollo ist ein Punkt auf der Balkontür.
+   Auch hier als Text, damit der Startpfad klein bleibt (Test hält es zusammen). */
+export const DEMO_LIGHT_PLACEMENT_KEY = 'hmi:immersion-light:v1';
+const DEMO_LIGHT_PLACEMENTS = {
+  wohnzimmer: {
+    'light.wohnzimmer_kugellampen': { x: 0.457, y: 0.199, radius: 0.03 },
+    'light.wohnzimmer_esstisch': { x: 0.889, y: 0.14, radius: 0.062, ry: 0.052 },
+    'light.wohnzimmer_fensterlampe': { x: 0.653, y: 0.298, radius: 0.032, ry: 0.022, rotation: -18 },
+    'light.wohnzimmer_tv': { x: 0.479, y: 0.398, radius: 0.024 },
+    [DEMO_COVER_ENTITY]: { x: 0.36, y: 0.3, radius: 0.16 },
+  },
+  schlafzimmer: {
+    'light.schlafzimmer_bett': { x: 0.658, y: 0.475, radius: 0.034, ry: 0.04 },
+  },
+  bad: {
+    'light.bad_spiegel': { x: 0.058, y: 0.062, radius: 0.058, ry: 0.05 },
+  },
+  kueche: {
+    'light.kueche_ledleiste': { x: 0.9, y: 0.328, radius: 0.105, ry: 0.03 },
+  },
+};
 
 export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
   if (!IS_DEMO || !storage) return;
+  try {
+    if (storage.getItem(DEMO_LIGHT_PLACEMENT_KEY) === null) {
+      storage.setItem(DEMO_LIGHT_PLACEMENT_KEY, JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS }));
+    }
+  } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }
   try {
     if (storage.getItem(DEMO_DEVICE_CONFIG_KEY) !== null) return;
     storage.setItem(DEMO_DEVICE_CONFIG_KEY, JSON.stringify({

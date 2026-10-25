@@ -216,6 +216,14 @@ export function hostileHome(now: Date = new Date()): HostileHome {
     friendly_name: 'Alle Lichter', brightness: 200, color_mode: 'brightness', supported_color_modes: ['brightness'],
     entity_id: ['light.wohnzimmer_decke', 'light.wohnzimmer_stehlampe', 'light.gibt_es_nicht'],
   }, { area_id: 'wohnzimmer' });
+  /* Lichtgruppe neben ihren Lampen, eine davon aus (simon42, Cpt.Hardy, 0.47.0):
+     der Sammelwert heißt „an“. Die Szenen-Vorschau darf beim Zurückstellen
+     nicht über die Gruppe die ausgeschaltete Lampe wieder anschalten. Mitglieder
+     doppelt, mit Fremd-Domain und ohne Text, wie YAML-Gruppen sie tragen. */
+  add('light.wohnzimmer_lesegruppe', 'on', {
+    friendly_name: 'Leselicht', brightness: 128, color_mode: 'brightness', supported_color_modes: ['brightness'],
+    entity_id: ['light.wohnzimmer_decke', 'light.wohnzimmer', 'light.wohnzimmer_decke', 'switch.wohnzimmer', 42],
+  }, { area_id: 'wohnzimmer' });
   // Gleicher Objektname in drei Domains, alle sichtbar im selben Raum.
   add('light.wohnzimmer', 'off', { friendly_name: 'Wohnzimmer', supported_color_modes: ['brightness'], brightness: null }, { area_id: 'wohnzimmer' });
   add('switch.wohnzimmer', 'on', { friendly_name: 'Wohnzimmer' }, { area_id: 'wohnzimmer' });
@@ -782,4 +790,19 @@ export const HOSTILE_STANDBY_LAYOUTS: HostileStandbyLayout[] = [
   { name: 'Alles winzig auf einem Punkt', raw: '{"version":1,"elements":{"clock":{"x":50,"y":50,"size":1},"weather":{"x":50,"y":50,"size":1},"week":{"x":50,"y":50,"size":1},"shopping":{"x":50,"y":50,"size":1},"postits":{"x":50,"y":50,"size":1}}}' },
   { name: 'Fremde Elemente und Bruchteile', raw: '{"version":1,"elements":{"uhr":{"x":50,"y":50},"clock":{"x":33.333333,"y":66.666666,"size":2.5,"rotation":45},"__proto__":{"x":1,"y":1}}}' },
   { name: 'Tausend Elemente', raw: JSON.stringify({ version: 1, elements: Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`el${i}`, { x: i, y: i, size: 3 }])) }) },
+];
+
+/* Gespeicherte Lichtzonen (R67, seit 2026-10-24 im Produktionsbau): Wer
+   Zonen nur als Tippfläche gezogen hat, sieht sie jetzt als blassen Schleier,
+   sobald die Lampe aus ist. Der Parser muss jeden Stand zu Zonen im Bild und
+   in den Grenzen des Editors machen; die iOS-App liest denselben Schlüssel. */
+export interface HostileLightZones { name: string; raw: string }
+
+export const HOSTILE_LIGHT_ZONES: HostileLightZones[] = [
+  { name: 'Alter Kreis ohne Ellipse', raw: '{"version":1,"rooms":{"wohnzimmer":{"light.stehlampe":{"x":0.65,"y":0.3,"radius":0.03}}}}' },
+  { name: 'Riesenzone über dem ganzen Bild', raw: '{"version":1,"rooms":{"dach":{"light.decke":{"x":0.5,"y":0.1,"radius":5,"ry":3,"rotation":0}}}}' },
+  { name: 'Texte, null und Unendlich', raw: '{"version":1,"rooms":{"bad":{"light.spiegel":{"x":"0.2","y":null,"radius":1e999},"light.decke":{"x":0.5,"y":0.5,"radius":0.1,"ry":"flach","rotation":"schief"}}}}' },
+  { name: 'Am Rand und gedreht', raw: '{"version":1,"rooms":{"flur":{"light.flur":{"x":0,"y":1,"radius":0.4,"ry":0.008,"rotation":-725}}}}' },
+  { name: 'Raum als Liste, fremde Version', raw: '{"version":2,"rooms":[]}' },
+  { name: 'Tausend Lampen', raw: JSON.stringify({ version: 1, rooms: { gross: Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`light.l${i}`, { x: (i % 100) / 100, y: 0.5, radius: 0.02 }])) } }) },
 ];

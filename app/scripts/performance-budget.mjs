@@ -17,11 +17,12 @@ import { ImportType, init, parse } from 'es-module-lexer';
    Thermostat als Raumklima), ADR-037 auf 120 KiB (neuer HA-Bereich wird ein
    Raum), ADR-038 auf 121 KiB (Meldungsliste, mit erneuter Startmessung),
    ADR-039 auf 123 KiB (0.46.0 bündelt acht Pakete, Startmessung ohne
-   spürbaren Unterschied). */
+   spürbaren Unterschied), ADR-040 auf 124 KiB (Lichtgruppen beim Einlesen
+   erkennen, Startmessung im Rauschen). */
 export const DEFAULT_BUDGETS = Object.freeze({
   initialJsGzipBytes: 80 * 1024,
   initialCssGzipBytes: 20 * 1024,
-  combinedPhoneStartupJsGzipBytes: 123 * 1024,
+  combinedPhoneStartupJsGzipBytes: 124 * 1024,
 });
 
 function emptyReport(budgets) {
