@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.48.2 - 2026-10-25
+
+- The pale veil of a lamp that is off stays on the lamp in the demo rooms.
+- The lamp picture on the project page opens the demo in image control.
+
 ## 0.48.1 - 2026-10-24
 
 - Leaving the scene editor puts every lamp back the way it was, also next to a

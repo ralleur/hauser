@@ -3,6 +3,17 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.48.2] - 2026-10-25
+
+- Room: the pale veil of a lamp that is off now stays on the lamp in the demo
+  rooms. Its zone had reached well past the globe, the shade or the bedside
+  lamp; demo visitors who still carry the old zones get the close ones once,
+  places they set themselves stay.
+- Room: tapping the lamp picture on the project page opens the demo straight
+  in image control in the living room, where the lamps can really be tapped.
+  `demo/#image` leads there; opening the demo normally afterwards starts with
+  the usual view again.
+
 ## [0.48.1] - 2026-10-24
 
 - Scenes: leaving the scene editor puts every lamp back the way it was, also

@@ -143,8 +143,8 @@ a.lamp-sequence { position: relative; display: grid; grid-template-columns: minm
 .lamp-frame-1 { animation-name: lamp-frame-1; }
 .lamp-frame-2 { animation-name: lamp-frame-2; }
 .lamp-tap { position: absolute; width: 7%; aspect-ratio: 1; translate: -50% -50%; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 50%; opacity: 0; pointer-events: none; animation: 9s ease-out infinite; }
-.lamp-tap-1 { left: 79.7%; top: 38.7%; animation-name: lamp-tap-1; }
-.lamp-tap-2 { left: 48%; top: 18.5%; animation-name: lamp-tap-2; }
+.lamp-tap-1 { left: 78.9%; top: 37.6%; animation-name: lamp-tap-1; }
+.lamp-tap-2 { left: 48.1%; top: 18.5%; animation-name: lamp-tap-2; }
 @keyframes lamp-frame-1 { 0%, 27% { opacity: 0; } 34%, 90% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes lamp-frame-2 { 0%, 58% { opacity: 0; } 65%, 90% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes lamp-tap-1 { 0%, 22% { opacity: 0; transform: scale(0.4); } 25% { opacity: 1; } 33%, 100% { opacity: 0; transform: scale(1.3); } }

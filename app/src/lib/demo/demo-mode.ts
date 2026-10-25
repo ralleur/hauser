@@ -439,6 +439,67 @@ export const DEMO_DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
 export const DEMO_LIGHT_PLACEMENT_KEY = 'hmi:immersion-light:v1';
 const DEMO_LIGHT_PLACEMENTS = {
   wohnzimmer: {
+    'light.wohnzimmer_kugellampen': { x: 0.4575, y: 0.199, radius: 0.022 },
+    'light.wohnzimmer_esstisch': { x: 0.894, y: 0.119, radius: 0.058, ry: 0.034 },
+    'light.wohnzimmer_fensterlampe': { x: 0.648, y: 0.293, radius: 0.025, ry: 0.016, rotation: -18 },
+    'light.wohnzimmer_tv': { x: 0.476, y: 0.398, radius: 0.013 },
+    [DEMO_COVER_ENTITY]: { x: 0.36, y: 0.3, radius: 0.16 },
+  },
+  schlafzimmer: {
+    'light.schlafzimmer_bett': { x: 0.658, y: 0.475, radius: 0.018, ry: 0.017 },
+  },
+  bad: {
+    'light.bad_spiegel': { x: 0.059, y: 0.067, radius: 0.045, ry: 0.051 },
+  },
+  kueche: {
+    'light.kueche_ledleiste': { x: 0.9, y: 0.314, radius: 0.105, ry: 0.012 },
+  },
+};
+
+/* Die Projektseite zeigt die Bildsteuerung und verlinkt das Bild auf
+   `demo/#image` (Owner 2026-10-25): Dort öffnet die Demo gleich im Wohnzimmer in
+   der Bildsteuerung, ohne Begrüßung im Standby — wer auf die Lampe im Bild
+   tippen wollte, tippt jetzt auf die echte. Die bisherige Anordnung wird
+   gemerkt und beim nächsten Aufruf ohne Sprungmarke zurückgelegt, damit
+   „Open the demo“ wieder wie gewohnt beginnt. Text statt layout-config.ts,
+   damit der Startpfad klein bleibt. */
+const DEMO_LAYOUT_KEY = 'hmi:home-layout:v1';
+const DEMO_LAYOUT_BEFORE_IMAGE_KEY = 'hmi:demo-layout-before-image';
+export const DEMO_IMAGE_HASH = 'image';
+
+export function applyDemoImageLink(
+  hash: string,
+  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>,
+  session: Pick<Storage, 'setItem'> | null,
+): void {
+  const before = storage.getItem(DEMO_LAYOUT_BEFORE_IMAGE_KEY);
+  if (hash.replace(/^#/, '').trim().toLowerCase() !== DEMO_IMAGE_HASH) {
+    if (before === null) return;
+    if (before === '') storage.removeItem(DEMO_LAYOUT_KEY);
+    else storage.setItem(DEMO_LAYOUT_KEY, before);
+    storage.removeItem(DEMO_LAYOUT_BEFORE_IMAGE_KEY);
+    return;
+  }
+  const current = storage.getItem(DEMO_LAYOUT_KEY);
+  if (before === null) storage.setItem(DEMO_LAYOUT_BEFORE_IMAGE_KEY, current ?? '');
+  let layout: Record<string, unknown> = {};
+  try { layout = JSON.parse(current ?? '{}') ?? {}; } catch { /* kaputt: neu anlegen */ }
+  if (typeof layout !== 'object' || Array.isArray(layout)) layout = {};
+  /* Eine Fläche genügt: Die Bildsteuerung zeigt keine Kontrollfläche. */
+  storage.setItem(DEMO_LAYOUT_KEY, JSON.stringify({
+    widthPreset: 'compact', ...layout, version: 1, homeView: 'image',
+    slots: [{ id: 'slot-1', roomId: 'wohnzimmer' }],
+  }));
+  try { session?.setItem('hmi:demo-greeted', '1'); } catch { /* dann eben mit Begrüßung */ }
+}
+
+/* Bis 0.48.1 reichten die Zonen weit über die gezeichneten Lampen hinaus; der
+   Schleier einer ausgeschalteten Lampe lag dann als grauer Fleck daneben
+   (Owner 2026-10-25). Wer die Demo damals geöffnet hat, trägt diese
+   Vorbelegung noch im Speicher. Liegt sie dort unverändert, wird sie durch die
+   engen Zonen ersetzt; selbst gesetzte Stellen bleiben. */
+const DEMO_LIGHT_PLACEMENTS_0_48 = {
+  wohnzimmer: {
     'light.wohnzimmer_kugellampen': { x: 0.457, y: 0.199, radius: 0.03 },
     'light.wohnzimmer_esstisch': { x: 0.889, y: 0.14, radius: 0.062, ry: 0.052 },
     'light.wohnzimmer_fensterlampe': { x: 0.653, y: 0.298, radius: 0.032, ry: 0.022, rotation: -18 },
@@ -459,7 +520,8 @@ const DEMO_LIGHT_PLACEMENTS = {
 export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
   if (!IS_DEMO || !storage) return;
   try {
-    if (storage.getItem(DEMO_LIGHT_PLACEMENT_KEY) === null) {
+    const stored = storage.getItem(DEMO_LIGHT_PLACEMENT_KEY);
+    if (stored === null || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_48 })) {
       storage.setItem(DEMO_LIGHT_PLACEMENT_KEY, JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS }));
     }
   } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }
@@ -479,6 +541,9 @@ export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'>
 export function installDemoApi(): void {
   if (!IS_DEMO || typeof globalThis.fetch !== 'function') return;
   installDemoDevices();
+  try {
+    applyDemoImageLink(location.hash, localStorage, sessionStorage);
+  } catch { /* ohne Speicher startet die Demo wie immer */ }
 
   const original = globalThis.fetch.bind(globalThis);
 
