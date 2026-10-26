@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+python3 scripts/verify-public-urls.py
+
 npm run build:pages-demo --prefix app
 npm run build --prefix docs-site
 
@@ -45,10 +47,10 @@ if not (docs_root / 'index.html').is_file():
 bad = []
 for page in docs_root.rglob('*.html'):
     for ref in re.findall(r'(?:src|href)="([^"]+)"', page.read_text()):
-        if ref.startswith('/hauser'):
+        if ref.startswith('/hauser') or ref.startswith('/docs/docs/'):
             bad.append((str(page.relative_to(docs_root)), ref))
 if bad:
-    raise SystemExit(f'Wiki HTML still references the old /hauser prefix: {bad[:10]}')
+    raise SystemExit(f'Wiki HTML contains an obsolete or doubled base path: {bad[:10]}')
 print('wiki_base_path_contract=PASS')
 PY
 

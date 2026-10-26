@@ -21,7 +21,7 @@ installation uses.
 3. Select **Hauser**, choose **Install**, then **Start**.
 4. Choose **Open Web UI**.
 
-The [Hauser Wiki](https://ralleur.github.io/hauser/docs/) explains every
+The [Hauser Wiki](https://hauserhome.app/docs/) explains every
 feature and the first setup step by step.
 
 Apps require Home Assistant OS or a Supervised installation. Home Assistant
