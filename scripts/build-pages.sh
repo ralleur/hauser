@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+python3 scripts/build-website.py
+
 npm run build:pages-demo --prefix app
 npm run build --prefix docs-site
 
