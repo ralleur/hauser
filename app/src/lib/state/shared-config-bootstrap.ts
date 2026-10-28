@@ -24,6 +24,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:home-layout:v1',
   'hmi:light-icon-overrides:v1',
   'hmi:immersion-light:v1',
+  'hmi:media-presets:v1',
   'hmi:calendar-selected',
   'hmi:reminders-selected',
   'hmi:moment-holidays:v1',

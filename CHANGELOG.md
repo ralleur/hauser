@@ -3,6 +3,25 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.49.1] - 2026-10-29
+
+- Installation: the baseline x86-64 image installs its native build tools without running unrelated dependency hooks.
+- Media: player inputs can be selected from Home Assistant's source list. Saved radio streams and playlists use real media IDs and the correct playback parameters; demo presets no longer appear in live households. Presets and their music/playlist type are shared with the native app.
+- Laundry setup: when translated state names do not match a sensor, the error shows the source's internal state values. The native app now applies an existing sensor through the current validate-and-confirm flow.
+- Room: the stage view selector uses light text on its dark surface in the light theme, so “Full screen” and “All rooms” remain clearly readable and look selectable next to “Image control”.
+- Room: “Fade lamps when switched off” can be disabled per room under Room image → Set up image → Devices & light zones. It is on by default; switching it off keeps the light glow and device controls intact. The native app shares the same setting.
+
+- Image control on the wall panel: whoever lands there no longer gets stuck
+  without the controls. A tap on an empty spot of the picture shows the placed
+  devices together with the way back, a swipe in from the left edge brings the
+  controls in, and the room still changes with a swipe anywhere else. In the
+  locked mode, pressing and holding the picture explains right away how to
+  unlock it ([#42](https://github.com/ralleur/hauser/issues/42)).
+
+- Room on phones: hiding the controls now lets you operate devices directly
+  where they are placed in the picture. Tap to control, press and hold for
+  details, or double-tap an empty spot to show their zones and names briefly.
+
 ## [0.48.2] - 2026-10-25
 
 - Room: the pale veil of a lamp that is off now stays on the lamp in the demo

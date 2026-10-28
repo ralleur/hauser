@@ -4,12 +4,15 @@
   import { appState } from '../state/app.svelte.ts';
   import {
     mergedMedia, mediaStateLabel, mediaPending, mediaReconcile, mediaPosition,
-    toggleMedia, setVolume, playPreset, skipTrack, type Preset,
+    toggleMedia, setVolume, playPreset, selectMediaSource, skipTrack, type Preset,
   } from '../state/media.svelte.ts';
   import { slider } from '../actions/slider.ts';
   import { pulse } from '../actions/pulse.ts';
   import { fmtTime } from '../format.ts';
   import type { MediaValue } from '../adapter/types.ts';
+  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { settingsValues } from '../state/settings.svelte.ts';
+  import { loadMediaPresets, saveMediaPresets } from '../state/media-presets.ts';
 
   import { m } from '../../paraglide/messages.js';
   let { phone = false, titleAnchor = $bindable() }: { phone?: boolean; titleAnchor?: HTMLHeadingElement } = $props();
@@ -18,6 +21,19 @@
   const position = $derived(mediaPosition(current));      // lokale Simulation
   const pending = $derived(mediaPending(current));        // 5-s-Timeout → Dot
   const idle = $derived(player.available && !player.track);
+  let presets = $state(loadMediaPresets());
+  const demo = $derived(IS_DEMO || settingsValues.demoMode || import.meta.env.VITE_BACKEND === 'fake');
+  const shownPresets = $derived(presets.length > 0 ? presets : demo ? appState.media.presets : []);
+  let presetName = $state('');
+  let presetId = $state('');
+  let presetType = $state<'music' | 'playlist'>('music');
+
+  function addPreset(): void {
+    if (!presetName.trim() || !presetId.trim()) return;
+    presets = [...presets, { label: presetName.trim(), value: presetId.trim(), contentType: presetType }];
+    saveMediaPresets(presets);
+    presetName = ''; presetId = '';
+  }
 
   /* Widerspruch (docs/02): Play/Pause → Wobble, Volume → 300-ms-Korrektur.
      Ein media_player-Entity, also aus dem optimistisch/Server-Diff ableiten,
@@ -129,10 +145,16 @@
         </div>
 
         <!-- Unbekannte Quelle wird nicht behauptet: die Zeile entfällt (R3, docs/23). -->
-        {#if player.available && player.source}
+        {#if player.available && (player.source || player.sources?.length)}
           <div class="player-source">
             <span class="caps-label">{m.media_source()}</span>
-            <span class="source-value">{player.source}</span>
+            {#if player.sources?.length}
+              <select class="settings-input" aria-label={m.media_source()} value={player.source ?? ''}
+                      onchange={(event) => selectMediaSource(current, event.currentTarget.value)}>
+                {#if !player.sources.includes(player.source ?? '')}<option value={player.source ?? ''} disabled>{player.source ?? m.media_source()}</option>{/if}
+                {#each player.sources as source}<option value={source}>{source}</option>{/each}
+              </select>
+            {:else}<span class="source-value">{player.source}</span>{/if}
           </div>
         {/if}
       </div>
@@ -142,14 +164,31 @@
     <section class="detail-section">
       <span class="caps-label">{m.media_presets()}</span>
       <div class="preset-grid">
-        {#each appState.media.presets as pr, i (i)}
+        {#each shownPresets as pr, i (i)}
+          <div>
           <button class="ghost-card pressable" type="button" data-preset={i} disabled={!player.available}
                   onclick={() => playPresetOn(pr)}>
             <span class="ghost-card-label">{pr.label}</span>
             <span class="ghost-card-value">{pr.value}</span>
           </button>
+          {#if presets.length > 0}<button class="secondary-btn pressable" type="button" aria-label={`${m.media_remove_preset()}: ${pr.label}`}
+            onclick={() => { presets = presets.filter((_, index) => index !== i); saveMediaPresets(presets); }}>{m.media_remove_preset()}</button>{/if}
+          </div>
         {/each}
       </div>
+      <p class="settings-note">{m.media_preset_id_hint()}</p>
+      <form class="media-preset-form" onsubmit={(event) => { event.preventDefault(); addPreset(); }}>
+        <input class="settings-input" aria-label={m.media_preset_name()} placeholder={m.media_preset_name()} bind:value={presetName} required />
+        <input class="settings-input" aria-label={m.media_preset_id()} placeholder={m.media_preset_id()} bind:value={presetId} required />
+        <select class="settings-input" aria-label={m.media_preset_type()} bind:value={presetType}>
+          <option value="music">{m.media_preset_music()}</option><option value="playlist">{m.media_preset_playlist()}</option>
+        </select>
+        <button class="secondary-btn pressable" type="submit" disabled={!presetName.trim() || !presetId.trim()}>{m.media_add_preset()}</button>
+      </form>
     </section>
   </div>
 </div>
+
+<style>
+  .media-preset-form { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+</style>

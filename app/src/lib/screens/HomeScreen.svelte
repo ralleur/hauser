@@ -2,7 +2,7 @@
   import RoomHero from '../components/RoomHero.svelte';
   import HeroDeviceTargets from '../components/HeroDeviceTargets.svelte';
   import RoomControls from '../components/RoomControls.svelte';
-  import { whenEditable } from '../state/edit-mode.svelte.ts';
+  import { editMode, noteBlockedConfigAttempt } from '../state/edit-mode.svelte.ts';
   import PanelRoomSelector from '../components/PanelRoomSelector.svelte';
   import RoomImageOnboarding from '../components/RoomImageOnboarding.svelte';
   import CameraPopout from '../components/CameraPopout.svelte';
@@ -93,11 +93,14 @@
   /* Ein Konfigurationsmodus (Owner 2026-10-19): langer Druck auf den
      Hintergrund und der Wisch nach links öffnen den Raum-Konfigurationsmodus
      des gezeigten Raums. Dort stehen auch Breite, Ansicht und Raster, die
-     früher in der Leiste von rechts lagen. */
-  const openConfig = whenEditable(() => {
+     früher in der Leiste von rechts lagen. Im Bedienen-Modus zählt es als
+     Versuch; in der Bildsteuerung erklärt schon der erste den Weg übers h,
+     weil der Hinweis im Bild genau dorthin schickt. */
+  function openConfig(): void {
+    if (!editMode.active) { noteBlockedConfigAttempt(imageView); return; }
     const roomId = appState.currentRoom ?? appState.rooms[0]?.id;
     if (roomId) openRoomEdit(roomId);
-  });
+  }
 
   function stepRoom(delta: 1 | -1): void {
     const rooms = appState.rooms;
@@ -106,23 +109,22 @@
     selectRoom(layoutManager.applied.slots[0].id, rooms[(index + delta + rooms.length) % rooms.length].id);
   }
 
-  /* Bildsteuerung: zweimal kurz hintereinander auf eine Stelle ohne Gerät
-     getippt, zeigt das Bild für einen Moment, was wo liegt. */
+  /* Bildsteuerung: ein kurzer Tipp auf eine Stelle ohne Gerät zeigt für
+     einen Moment, was wo liegt, und den Weg zurück zur Leiste
+     (ralleur/hauser#42: ohne Geräte im Bild fand man nicht mehr heraus).
+     Langer Druck und Wisch zählen nicht als Tipp. */
   let revealDevices = $state(false);
   let revealTimer: ReturnType<typeof setTimeout> | undefined;
-  let lastTap = { at: 0, x: 0, y: 0 };
+  let freeDown = { at: 0, x: 0, y: 0 };
+  function onFreeDown(event: PointerEvent): void {
+    freeDown = { at: event.timeStamp, x: event.clientX, y: event.clientY };
+  }
   function onFreeTap(event: PointerEvent): void {
     if (!imageView) return;
-    const now = event.timeStamp;
-    const near = Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) < 40;
-    if (now - lastTap.at < 450 && near) {
-      lastTap = { at: 0, x: 0, y: 0 };
-      revealDevices = true;
-      clearTimeout(revealTimer);
-      revealTimer = setTimeout(() => { revealDevices = false; }, 2600);
-      return;
-    }
-    lastTap = { at: now, x: event.clientX, y: event.clientY };
+    if (event.timeStamp - freeDown.at > 350 || Math.hypot(event.clientX - freeDown.x, event.clientY - freeDown.y) > 12) return;
+    revealDevices = true;
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => { revealDevices = false; }, 4000);
   }
   $effect(() => () => clearTimeout(revealTimer));
 
@@ -191,8 +193,8 @@
      ihre eigene Geste. -->
 <div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2}
      class:is-rooms-view={roomsView} style={layoutStyle}
-     use:swipeleft={{ onSwipe: () => (imageView ? stepRoom(1) : openConfig()), move: false, ignore: '.home-panels', threshold: 120, angle: 60 }}
-     use:swipeleft={{ onSwipe: () => stepRoom(-1), move: false, direction: 'right', threshold: 120, angle: 60, enabled: imageView }}>
+     use:swipeleft={{ onSwipe: () => (imageView ? stepRoom(1) : openConfig()), move: false, ignore: '.home-panels, .image-edge-pull', threshold: 120, angle: 60 }}
+     use:swipeleft={{ onSwipe: () => stepRoom(-1), move: false, direction: 'right', ignore: '.image-edge-pull', threshold: 120, angle: 60, enabled: imageView }}>
   {#if !roomsView}
     <RoomHero />
   {/if}
@@ -203,10 +205,21 @@
   <!-- svelte-ignore a11y_no_static_element_interactions — der Doppeltipp
        der Bildsteuerung ist eine Zusatzgeste; die Geräte im Bild sind Knöpfe. -->
   <div class="hero-config-hitarea" aria-label={m.home_free_hero_area()}
-       use:longpress={{ onLongPress: openConfig }} onpointerup={onFreeTap}></div>
+       use:longpress={{ onLongPress: openConfig }} onpointerdown={onFreeDown} onpointerup={onFreeTap}></div>
 
   {#if !roomsView}
     <HeroDeviceTargets reveal={revealDevices} />
+  {/if}
+
+  {#if imageView}
+    <p class="image-control-hint" class:is-revealed={revealDevices} aria-hidden={!revealDevices}>{m.img_control_way_back()}</p>
+    <!-- Vom linken Rand ins Bild gewischt, kommt die Leiste herein — dorthin,
+         wohin sie beim Wisch nach links verschwindet. Der Rest der Bühne
+         wechselt beim Wisch weiter den Raum. -->
+    {#if panelsHidden}
+      <div class="image-edge-pull" aria-hidden="true"
+           use:swipeleft={{ onSwipe: () => { panelsHidden = false; }, move: false, direction: 'right', threshold: 60, angle: 60 }}></div>
+    {/if}
   {/if}
 
   <div class="camera-popout-layer">

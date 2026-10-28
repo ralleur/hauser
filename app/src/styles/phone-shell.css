@@ -702,7 +702,21 @@
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
-.room-sheet-head.is-controls-hidden { margin-bottom: 0; }
+.room-sheet-head.is-controls-hidden { margin-bottom: 0; justify-content: flex-end; }
+/* Bei ausgeblendeten Karten gehört das Bild den Geräten; nur der Augenknopf
+   fängt weiterhin Berührungen über dieser Ebene ab. */
+.room-sheet.is-controls-hidden .room-sheet-scroll { pointer-events: none; }
+.room-sheet.is-controls-hidden .room-sheet-more { pointer-events: auto; }
+.room-sheet .room-sheet-scroll { z-index: 2; }
+.room-sheet-image-area {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  touch-action: pan-y pinch-zoom;
+}
 .room-sheet-head-actions {
   display: flex;
   flex: 0 0 auto;

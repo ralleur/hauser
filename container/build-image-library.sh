@@ -26,7 +26,9 @@ cp /tmp/vips-8.18.7/LICENSE /opt/hauser-vips/share/licenses/libvips/LICENSE
 
 cd /build/app
 npm ci --omit=dev
-npm install --omit=dev --no-save --package-lock=false node-addon-api@8.9.2 node-gyp@12.4.0
+# Only install the build tools here. Sharp is built explicitly below; lifecycle
+# hooks of unrelated application dependencies are not needed in this stage.
+npm install --ignore-scripts --omit=dev --no-save --package-lock=false node-addon-api@8.9.2 node-gyp@12.4.0
 export PKG_CONFIG_PATH=/opt/hauser-vips/lib/pkgconfig
 export LD_LIBRARY_PATH=/opt/hauser-vips/lib
 export SHARP_FORCE_GLOBAL_LIBVIPS=1

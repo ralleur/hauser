@@ -21,7 +21,7 @@
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
-  import { weatherWholeImage } from '../state/room-display-config.svelte.ts';
+  import { fadeOffLamps, weatherWholeImage } from '../state/room-display-config.svelte.ts';
   import { inDuskBand } from '../state/dusk.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { simulation } from '../state/simulation.svelte.ts';
@@ -85,7 +85,7 @@
      die Bühne nachts ohnehin die unbeleuchtete Fassung, wäre die Zone doppelt
      — dann keine. */
   const nightImage = $derived(appState.heroSun ? !appState.heroSun.day : appState.theme === 'dark');
-  const lampShades = $derived(!(nightImage && allAssignedLightsOff)
+  const lampShades = $derived(room && fadeOffLamps(room.id) && !(nightImage && allAssignedLightsOff)
     ? renderedLights.map((light) => ({ ...light, off: simulation.lightsOff ?? light.value?.on !== true }))
     : []);
   /* Trübes Wetter (Paket 13): Hat das Bildset eine trübe Fassung, zeigt die

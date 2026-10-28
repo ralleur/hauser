@@ -37,7 +37,7 @@ export interface LaundryRemaining {
 export type LaundryUserError =
   | { kind: 'invalid'; field?: 'entityId' | 'statesRequired' | 'statesOverlap' | 'statesInvalid' | 'powerSensorEntityId' | 'thresholdNumber' | 'thresholdOrder' | 'holdRange' }
   | { kind: 'sourceChanged' }
-  | { kind: 'sourceIncompatible' }
+  | { kind: 'sourceIncompatible'; availableStates?: string[] }
   | { kind: 'configChanged' }
   | { kind: 'haNotConfigured' }
   | { kind: 'haAuth' }
@@ -282,7 +282,12 @@ export function sanitizeLaundryError(value: unknown): LaundryUserError {
     'LAUNDRY_REQUEST_TOO_LARGE', 'METHOD_NOT_ALLOWED'].includes(code)) return { kind: 'invalid' };
   if (code === 'LAUNDRY_SOURCE_CHANGED') return { kind: 'sourceChanged' };
   if (['LAUNDRY_SOURCE_MISSING', 'LAUNDRY_SOURCE_UNAVAILABLE', 'LAUNDRY_SOURCE_INCOMPATIBLE',
-    'LAUNDRY_POWER_SOURCE_INCOMPATIBLE'].includes(code)) return { kind: 'sourceIncompatible' };
+    'LAUNDRY_POWER_SOURCE_INCOMPATIBLE'].includes(code)) {
+    const availableStates = Array.isArray(payload?.availableStates)
+      ? payload.availableStates.filter((state): state is string => typeof state === 'string' && state.length > 0 && state.length <= 128).slice(0, 64)
+      : [];
+    return { kind: 'sourceIncompatible', ...(availableStates.length ? { availableStates } : {}) };
+  }
   if (code === 'LAUNDRY_CONFIG_CHANGED') return { kind: 'configChanged' };
   if (code === 'LAUNDRY_HOME_ASSISTANT_NOT_CONFIGURED') return { kind: 'haNotConfigured' };
   if (code === 'LAUNDRY_HOME_ASSISTANT_AUTH_FAILED') return { kind: 'haAuth' };

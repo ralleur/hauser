@@ -90,17 +90,24 @@ export function setVolume(playerId: string, pct: number): void {
   );
 }
 
-export interface Preset { label: string; value: string }
+export interface Preset { label: string; value: string; contentType?: 'music' | 'playlist' }
+
+export function selectMediaSource(playerId: string, source: string): void {
+  if (!mergedMedia(playerId).sources?.includes(source)) return;
+  runtime.dispatch(
+    { entityId: mediaEntityId(playerId), domain: 'media_player', service: 'select_source', data: { source }, queuedAt: Date.now() },
+    { source },
+  );
+}
 
 export function playPreset(playerId: string, preset: Preset): void {
   const entityId = mediaEntityId(playerId);
   resetPosition(playerId);
-  // Optimistisch nur playing + source; track/artist/duration löst der „Server"
-  // (FakeBackend) aus media_id auf — sie erscheinen mit dem Echo (docs/02).
+  // Content-ID und Typ entsprechen dem HA-Vertrag; die Quelle meldet der Player.
   runtime.dispatch(
     { entityId, domain: 'media_player', service: 'play_media',
-      data: { media_id: preset.value, label: preset.label }, queuedAt: Date.now() },
-    { playing: true, source: preset.label === 'Radio' ? 'Radio' : 'Spotify' },
+      data: { media_content_id: preset.value, media_content_type: preset.contentType ?? (preset.label === 'Playlist' ? 'playlist' : 'music') }, queuedAt: Date.now() },
+    { playing: true },
   );
 }
 

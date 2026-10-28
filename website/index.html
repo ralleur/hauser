@@ -3,18 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — Visual dashboard for Home Assistant and Apple Home</title>
-<meta name="description" content="Hauser is a free, open-source smart-home dashboard for Home Assistant and Apple Home. Control rooms, lights and scenes on wall tablets, iPhone and iPad. Public beta.">
+<title>Hauser — Less interface. More home.</title>
+<meta name="description" content="Your smart home, in familiar rooms. Hauser is the everyday interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://hauserhome.app/">
-<link rel="alternate" hreflang="en" href="https://hauserhome.app/">
-<link rel="alternate" hreflang="de" href="https://hauserhome.app/de/">
-<link rel="alternate" hreflang="x-default" href="https://hauserhome.app/">
-<meta property="og:locale" content="en_US">
-<meta property="og:locale:alternate" content="de_DE">
-<script src="/language.js"></script>
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hauser — Visual dashboard for Home Assistant and Apple Home">
+<meta property="og:title" content="Hauser — Less interface. More home.">
 <meta property="og:description" content="Familiar rooms. Light you can see. An everyday interface for Home Assistant and, on iPhone and iPad, Apple Home. Try the demo.">
 <meta property="og:url" content="https://hauserhome.app/">
 <meta property="og:image" content="https://hauserhome.app/media/social-preview.jpg">
@@ -27,19 +21,16 @@
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/AlegreyaSans-Regular-subset.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="media/hero-home-1100.webp" as="image" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
+<link rel="preload" href="media/hero-home-1100.webp" as="image" media="(min-width: 600px)" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
+<link rel="preload" href="media/hero-rooms-detail.webp" as="image" media="(max-width: 599px)">
 <link rel="stylesheet" href="site.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Hauser",
-  "description": "A free, open-source smart-home dashboard for Home Assistant and Apple Home, with room pictures, lights and scenes. Public beta.",
-  "applicationCategory": "LifestyleApplication",
-  "isAccessibleForFree": true,
-  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
-  "inLanguage": "en",
-  "author": {"@type": "Organization", "name": "ralleur", "url": "https://ralleur.com/"},
+  "description": "An everyday smart-home interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.",
+  "applicationCategory": "Home automation",
   "operatingSystem": "Home Assistant OS, Docker, iOS",
   "url": "https://hauserhome.app/",
   "sameAs": "https://github.com/ralleur/hauser",
@@ -55,18 +46,17 @@
     <a class="nav-docs" href="docs/">Guide</a>
     <a href="#install">Get Hauser</a>
     <a href="demo/">Demo <span aria-hidden="true">↗</span></a>
-    <a class="language-switch" href="/de/" hreflang="de" lang="de" data-language-switch="de" aria-label="Website auf Deutsch anzeigen" title="Deutsch">DE</a>
   </nav>
 </header>
 
 <main id="main">
-  <!-- A: Three real panel views, with a shorter clean image-control moment. -->
+  <!-- A: Real panel capture; an explicitly labelled iOS detail on phones. -->
   <section class="hero wrap" aria-labelledby="hero-title">
     <div class="hero-intro">
       <h1 id="hero-title">Less interface.<br><span class="telling">More home.</span></h1>
       <div class="hero-copy" id="what">
         <p class="lead">The everyday face of your smart home. Recognise a room, turn on the lights, get on with your day.</p>
-        <p>A visual dashboard for Home Assistant on wall tablets and in your browser. And for Apple Home with the native iPhone and iPad app.</p>
+        <p>For Home Assistant. And for Apple Home with the native iPhone and iPad app.</p>
         <div class="actions">
           <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
           <a class="text-link" href="#install">Set up <span aria-hidden="true">→</span></a>
@@ -75,32 +65,19 @@
       </div>
     </div>
     <figure class="hero-product">
-      <input class="hero-pause" type="checkbox" id="hero-pause" aria-label="Pause slideshow">
-      <div class="hero-stage">
-        <img class="hero-frame hero-frame-full" src="media/hero-home-1100.webp"
+      <picture>
+        <source media="(max-width: 599px)" srcset="media/hero-rooms-detail.webp" width="740" height="808">
+        <img src="media/hero-home-1100.webp"
              srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
              sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
              width="1696" height="960" fetchpriority="high"
-             alt="Hauser’s three views: full screen, all rooms, and image control with and without device overlays.">
-        <img class="hero-frame hero-frame-rooms" src="media/home-rooms-1100.webp"
-             srcset="media/home-rooms-700.webp 700w, media/home-rooms-1100.webp 1100w, media/home-rooms.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-        <img class="hero-frame hero-frame-clean" src="media/hero-image-clean-1100.webp"
-             srcset="media/hero-image-clean-700.webp 700w, media/hero-image-clean-1100.webp 1100w, media/hero-image-clean.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-        <img class="hero-frame hero-frame-devices" src="media/hero-image-devices-1100.webp"
-             srcset="media/hero-image-devices-700.webp 700w, media/hero-image-devices-1100.webp 1100w, media/hero-image-devices.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-      </div>
+             alt="Hauser shows familiar room illustrations alongside the state of their lights.">
+      </picture>
       <figcaption>
-        <span>Full screen · All rooms · Image control. <span class="caption-meta">Web demo.</span></span>
-        <label class="hero-pause-label" for="hero-pause"><span class="hero-pause-text">Pause</span><span class="hero-resume-text">Play</span></label>
+        <span class="desktop-only">A living room, with its lights at hand. <span class="caption-meta">Web demo.</span></span>
+        <span class="mobile-only">Your rooms, at a glance. <span class="caption-meta">iOS demo · detail.</span></span>
+        <a class="desktop-only" href="media/hero-home.webp">View full size <span aria-hidden="true">↗</span></a>
+        <a class="mobile-only" href="media/ios-home.webp">Full screen <span aria-hidden="true">↗</span></a>
       </figcaption>
     </figure>
   </section>
@@ -291,10 +268,6 @@
         </div>
       </div>
     </div>
-    <nav class="setup-topics" aria-label="Find the right smart-home dashboard">
-      <a class="text-link" href="/home-assistant-dashboard/">Home Assistant dashboard for the household <span aria-hidden="true">→</span></a>
-      <a class="text-link" href="/apple-home/">Apple Home on iPhone and iPad <span aria-hidden="true">→</span></a>
-    </nav>
     <div class="practical-notes">
       <details>
         <summary>What should I check before installing?</summary>

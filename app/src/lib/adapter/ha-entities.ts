@@ -419,6 +419,7 @@ export function haToMedia(raw: RawEntity, prevVolume?: number): MediaValue {
     playing: raw.state === 'playing',
     volume: typeof vol === 'number' ? Math.round(vol * 100) : (prevVolume ?? 0),
     source: typeof src === 'string' ? src : null,
+    ...(Array.isArray(raw.attributes.source_list) ? { sources: [...new Set(raw.attributes.source_list.filter((source): source is string => typeof source === 'string' && source.length > 0))] } : {}),
     available: raw.state !== 'unavailable',
     track: typeof title === 'string' ? title : null,
     artist: typeof artist === 'string' ? artist : null,

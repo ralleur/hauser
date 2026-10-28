@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.49.1 - 2026-10-29
+
+- Installation: corrected the baseline x86-64 image build.
+- Room: image control is available on phones; on wall panels, a tap explains the way back and a left-edge swipe restores the controls.
+- Room: all three stage view options stay readable on the dark surface, including in the light theme.
+- Room image setup: fading lamps that are off can be disabled per room; the light glow and device controls stay intact.
+- Media: Home Assistant source selection, saved stream and playlist IDs, correct playback parameters and shared presets with the native app. Demo presets stay in demo households.
+- Laundry: mismatched state names show the source's internal values; native setup uses the current validate-and-confirm flow.
+
 ## 0.48.2 - 2026-10-25
 
 - The pale veil of a lamp that is off stays on the lamp in the demo rooms.

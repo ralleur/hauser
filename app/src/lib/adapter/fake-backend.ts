@@ -449,15 +449,16 @@ export class FakeBackend implements Backend {
       if (service === 'media_play_pause') v.playing = !v.playing;
       else if (service === 'media_play') v.playing = true;
       else if (service === 'media_pause') v.playing = false;
+      else if (service === 'select_source' && typeof data.source === 'string') v.source = data.source;
       else if (service === 'volume_set' && typeof data.volume_level === 'number') {
         v.volume = Math.round(data.volume_level * 100);
       } else if (service === 'play_media') {
-        // Der „Server" löst media_id auf die Metadaten auf (docs/04): der Client
+        // Der „Server" löst media_content_id auf die Metadaten auf (docs/04): der Client
         // rät nur die optimistischen Felder (playing/source), Titel kommt von hier.
-        const isRadio = data.label === 'Radio';
+        const isRadio = data.media_content_type !== 'playlist';
         v.playing = true;
         v.source = isRadio ? 'Radio' : 'Spotify';
-        v.track = String(data.media_id ?? '');
+        v.track = String(data.media_content_id ?? '');
         v.artist = isRadio ? 'Internetradio' : 'Playlist';
         v.duration = isRadio ? 0 : 2760; // Radio: Live-Stream ohne Fortschritt
       }

@@ -82,6 +82,12 @@ class StrictHa {
         attributes: { friendly_name: 'Fixture enum', device_class: 'enum', options: ['idle', 'running', 'done'] },
       };
     }
+    if (entityId === 'sensor.fixture_washdata') {
+      return { entity_id: entityId, state: 'paused', attributes: {
+        friendly_name: 'WashData', device_class: 'enum',
+        options: ['off', 'starting', 'running', 'paused', 'user_paused', 'ending', 'finished'],
+      } };
+    }
     if (entityId === 'select.fixture_laundry' || entityId === 'input_select.yaml_laundry') {
       return {
         entity_id: entityId,
@@ -554,6 +560,23 @@ describe('portable laundry server boundary', () => {
     expect(JSON.stringify(stored)).not.toContain('fixture-token');
     const replay = await post(app.base, '/api/laundry/existing/apply', { validationId: validated.validationId, confirmed: true });
     expect(replay.status).toBe(409);
+  });
+
+  it('explains translated WashData labels and accepts the raw state keys', async () => {
+    const ha = new StrictHa();
+    const app = await start(ha);
+    const body = { ...existingBody, entityId: 'sensor.fixture_washdata', runningStates: ['läuft'], doneStates: ['fertig'] };
+    const rejected = await post(app.base, '/api/laundry/existing/validate', body);
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({ code: 'LAUNDRY_SOURCE_INCOMPATIBLE', availableStates: expect.arrayContaining(['running', 'finished']) });
+    const accepted = await post(app.base, '/api/laundry/existing/validate', {
+      ...body, runningStates: ['starting', 'running', 'paused', 'user_paused', 'ending'], doneStates: ['finished'],
+    });
+    expect(accepted.status).toBe(200);
+    const validation = await accepted.json();
+    const applied = await post(app.base, '/api/laundry/existing/apply', { validationId: validation.validationId, confirmed: true });
+    expect(applied.status).toBe(200);
+    expect(ha.writes).toEqual([]);
   });
 
   it('releases the global coordinator during slow Existing HA I/O, reserves the target and rejects final commit after Shared drift', async () => {

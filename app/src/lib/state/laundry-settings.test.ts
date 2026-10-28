@@ -16,6 +16,11 @@ const washerAdapter: LaundryAdapterConfig = {
   doneOnInitial: false,
 };
 
+it('shows the source state keys when translated laundry labels do not match', () => {
+  expect(sanitizeLaundryError({ code: 'LAUNDRY_SOURCE_INCOMPATIBLE', availableStates: ['running', 'finished', null] }))
+    .toEqual({ kind: 'sourceIncompatible', availableStates: ['running', 'finished'] });
+});
+
 const markedWasherAdapter: LaundryAdapterConfig = {
   ...washerAdapter,
   entityId: 'select.washer_cycle',
