@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Geräte im Bild (HeroDeviceTargets.svelte): dieselbe Fläche wie das
+   Raumbild, über der freien Trefferfläche, unter den Kontrollflächen. Nur die
+   Treffer selbst nehmen Zeiger an. */
+.room-hero-targets {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  container-type: size;
+  pointer-events: none;
+}
+.hero-device-target {
+  position: absolute;
+  width: var(--touch-min);
+  aspect-ratio: 1;
+  min-width: var(--touch-min);
+  padding: 0;
+  translate: -50% -50%;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-tap-highlight-color: transparent;
+}
+.hero-device-target:focus-visible { outline: 2px solid var(--color-accent-warm); outline-offset: 2px; }
+/* Bildsteuerung: Tipp (Panel) bzw. Doppeltipp (Telefon) auf eine freie Stelle
+   zeigt kurz, was wo liegt —
+   Zonen und Punkte als helle Umrisse, darüber die Namen. Kommt und geht weich. */
+.hero-device-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px dashed color-mix(in srgb, #fff 85%, transparent);
+  background: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+  pointer-events: none;
+}
+.hero-device-label {
+  position: absolute;
+  translate: -50% calc(var(--touch-min) * 0.5 + var(--space-1));
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface-1) 82%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  box-shadow: var(--elevation-card-shadow);
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+  pointer-events: none;
+}
+.hero-device-label.is-lamp { translate: -50% -50%; }
+.room-hero-targets.is-revealed .hero-device-target::after,
+.room-hero-targets.is-revealed .hero-device-label {
+  opacity: 1;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+/* Bildsteuerung (ralleur/hauser#42): ein Tipp aufs Bild zeigt mit den
+   Namen auch den Weg zurück zur Leiste. */
+.image-control-hint {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  max-width: min(90%, 32rem);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface-1) 86%, transparent);
+  color: var(--color-text-primary);
+  text-align: center;
+  box-shadow: var(--elevation-card-shadow);
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+  pointer-events: none;
+}
+.image-control-hint.is-revealed { opacity: 1; transition: opacity var(--duration-enter) var(--ease-out); }
+/* Schmaler Streifen am linken Rand: von dort ins Bild gewischt, kommt die
+   Leiste herein. Waagrechte Wische gehören ihm, senkrechte dem Bild. */
+.image-edge-pull {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--touch-min);
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Bestätigung: ein weicher Ring, der aus der Stelle wächst und vergeht. */
+.hero-device-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #fff 80%, transparent), 0 0 18px color-mix(in srgb, var(--color-accent-warm) 60%, transparent);
+  animation: hero-device-flash calc(var(--duration-dusk) * 0.6) var(--ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes hero-device-flash {
+  from { opacity: 1; scale: 0.85; }
+  to { opacity: 0; scale: 1.15; }
+}
+
+/* Das mobile Raumblatt zeigt cover ohne die Überzeichnung der Panel-Bühne. */
+.room-hero-targets.is-phone .hero-image-space {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max(100cqw, calc(100cqh * 106 / 75));
+  height: max(100cqh, calc(100cqw * 75 / 106));
+  translate:
+    calc((100cqw - 100%) * var(--hero-focus-x, 0.5))
+    calc((100cqh - 100%) * var(--hero-focus-y, 0.5));
+  transform: none;
+  pointer-events: none;
+}

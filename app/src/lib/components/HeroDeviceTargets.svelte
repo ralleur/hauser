@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../../styles/hero-device-targets.css';
   /* ── Geräte im Bild bedienen (Owner 2026-10-19) ──
      Jedes Gerät mit einer Stelle im Raumbild (Raum konfigurieren → Geräte
      zuweisen) bekommt hier eine unsichtbare Trefferfläche: Lampen ihre
@@ -23,9 +24,16 @@
   import { longpress } from '../actions/longpress.ts';
   import type { Light } from '../state/app.svelte.ts';
 
-  /* Bildsteuerung: ein Doppeltipp auf eine freie Stelle zeigt für einen
-     Moment Zonen, Punkte und Namen (HomeScreen hält die Dauer). */
-  let { reveal = false }: { reveal?: boolean } = $props();
+  /* Bildsteuerung: ein Tipp (Panel) bzw. Doppeltipp (Telefon) auf eine
+     freie Stelle zeigt für einen Moment Zonen, Punkte und Namen; die Dauer
+     hält der Aufrufer. */
+  let { reveal = false, phone = false, position }: {
+    reveal?: boolean;
+    phone?: boolean;
+    /** Tatsächlich gezeigter Bildausschnitt, auch beim Projekt-Fallback. */
+    position?: string;
+  } = $props();
+  const phoneFocus = $derived((position ?? '50% 50%').split(' ').map((value) => parseFloat(value) / 100));
 
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
@@ -50,10 +58,10 @@
 </script>
 
 {#if room && targets.length > 0}
-  <div class="room-hero-targets" class:is-revealed={reveal} style:--hero-parallax={`${heroParallax.offsetPx}px`}>
+  <div class="room-hero-targets" class:is-revealed={reveal} class:is-phone={phone} style:--hero-parallax={`${heroParallax.offsetPx}px`}>
     <div class="hero-image-space"
-         style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
-         style:--hero-focus-y={heroConfig?.focus.panel.y ?? 0.5}>
+         style:--hero-focus-x={phone ? phoneFocus[0] : heroConfig?.focus.panel.x ?? 0.5}
+         style:--hero-focus-y={phone ? phoneFocus[1] : heroConfig?.focus.panel.y ?? 0.5}>
       {#each targets as target (target.device.entityId)}
         <button class="hero-device-target" class:is-lamp={target.lamp} type="button"
                 aria-label={target.device.name}

@@ -376,7 +376,7 @@ function validateExistingLaundrySource(source, adapter) {
         || adapter.runningStates.length !== 1 || adapter.runningStates[0] !== 'on'
         || adapter.doneStates.length !== 1 || adapter.doneStates[0] !== 'off'
         || adapter.doneOnInitial) {
-      throw createLaundryError('LAUNDRY_SOURCE_INCOMPATIBLE', 422, 'Binäre Quellen benötigen die explizite Zuordnung on → running und off → done.');
+      throw createLaundryError('LAUNDRY_SOURCE_INCOMPATIBLE', 422, 'Binäre Quellen benötigen die explizite Zuordnung on → running und off → done.', { availableStates: ['on', 'off'] });
     }
     return;
   }
@@ -387,7 +387,9 @@ function validateExistingLaundrySource(source, adapter) {
   if ((domain === 'sensor' && deviceClass !== 'enum') || !options || options.length === 0
       || !options.includes(source.state.state.toLowerCase())
       || allStates.some((state) => !options.includes(state))) {
-    throw createLaundryError('LAUNDRY_SOURCE_INCOMPATIBLE', 422, 'Die Enum-Quelle enthält nicht alle ausgewählten Zustände.');
+    throw createLaundryError('LAUNDRY_SOURCE_INCOMPATIBLE', 422,
+      options?.length ? `Die gewählten Zustände passen nicht. Interne Zustände dieser Quelle: ${options.join(', ')}.` : 'Die Enum-Quelle enthält nicht alle ausgewählten Zustände.',
+      options?.length ? { availableStates: options } : {});
   }
 }
 

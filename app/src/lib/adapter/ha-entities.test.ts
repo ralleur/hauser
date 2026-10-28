@@ -131,6 +131,10 @@ describe('haToClimate', () => {
 });
 
 describe('haToMedia', () => {
+  it('retains source choices for the player selector', () => {
+    expect(haToMedia({ state: 'idle', attributes: { source_list: ['HDMI', 'Radio', 'HDMI', null, ''] } }).sources)
+      .toEqual(['HDMI', 'Radio']);
+  });
   it('playing/volume/metadaten', () => {
     const v = haToMedia({
       state: 'playing',

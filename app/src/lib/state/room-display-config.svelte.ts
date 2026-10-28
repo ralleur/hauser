@@ -67,6 +67,8 @@ export interface RoomDisplayEntry {
       Garten, Terrasse und andere Bilder von draußen (simon42, Cpt.Hardy
       2026-10-01). Die iOS-App liest denselben Schalter. */
   weatherWholeImage?: boolean;
+  /** Ausgeschaltete Lampen im Raumbild verblassen lassen (Default: ja). */
+  fadeOffLamps?: boolean;
 }
 
 export type ClimateTileShows = 'target' | 'current' | 'both';
@@ -335,6 +337,17 @@ export function setWeatherWholeImage(roomId: string, value: boolean): void {
   writeEntry(roomId, next);
 }
 
+export function fadeOffLamps(roomId: string): boolean {
+  return entry(roomId).fadeOffLamps !== false;
+}
+
+export function setFadeOffLamps(roomId: string, value: boolean): void {
+  const next = { ...entry(roomId) };
+  if (value) delete next.fadeOffLamps;
+  else next.fadeOffLamps = false;
+  writeEntry(roomId, next);
+}
+
 /* ── Klima in der Kontrollfläche (Owner-Entscheidung 2026-09-11) ── */
 export function climateInline(roomId: string): boolean {
   return entry(roomId).climateInline === true;
@@ -450,6 +463,7 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
         next.imageObjects = cand.imageObjects;
       }
       if (cand.weatherWholeImage === true) next.weatherWholeImage = true;
+      if (cand.fadeOffLamps === false) next.fadeOffLamps = false;
       if (Object.keys(next).length > 0) rooms[roomId] = next;
     }
     return { version: 1, rooms };

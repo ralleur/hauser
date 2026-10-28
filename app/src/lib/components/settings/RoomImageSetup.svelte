@@ -10,6 +10,7 @@
   import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
   import { loadRoomImageLibrary, type RoomImageLibraryAsset } from '../../state/room-image-library-client.ts';
   import type { RoomBackgroundVariant } from '../../state/room-background-client.ts';
+  import { fadeOffLamps, setFadeOffLamps } from '../../state/room-display-config.svelte.ts';
 
   let { roomId, devices, onarrange }: { roomId: string; devices?: Snippet; onarrange?: () => void } = $props();
   let mode = $state<'devices' | 'windows' | 'objects'>(untrack(() => devices ? 'devices' : 'windows'));
@@ -54,7 +55,19 @@
       <button type="button" aria-pressed={mode === 'windows'} onclick={() => mode = 'windows'}>{m.img_windows()}</button>
       <button type="button" aria-pressed={mode === 'objects'} onclick={() => mode = 'objects'}>{m.img_surfaces()}</button>
     </div>
-  {#if devices}<div class="setup-host" hidden={mode !== 'devices'}>{@render devices()}</div>{/if}
+  {#if devices}
+    <div class="setup-host device-settings" hidden={mode !== 'devices'}>
+      <div class="re-row">
+        <span class="re-label"><span class="re-name">{m.img_fade_off_lamps()}</span></span>
+        <button class="re-toggle pressable" type="button" role="switch"
+                aria-label={m.img_fade_off_lamps()} aria-checked={fadeOffLamps(roomId)}
+                class:is-on={fadeOffLamps(roomId)} onclick={() => setFadeOffLamps(roomId, !fadeOffLamps(roomId))}>
+          <span class="re-toggle-knob"></span>
+        </button>
+      </div>
+      {@render devices()}
+    </div>
+  {/if}
   {#if objectsReady}
     <div class="setup-host" hidden={mode === 'devices'}>
       <RoomObjectEditor {roomId} embedded helpText={mode === 'windows' ? `${m.img_preview_hint()}\n\n${!config ? m.img_defaults_hint() : ''}` : ''} windowOnly={mode === 'windows'} {imageUrl} fallbackUrl={defaultUrl(variant)} weather={mode === 'windows' ? weather : 'off'} title={mode === 'windows' ? m.img_windows() : m.img_surfaces()} imageAlt={m.room_background_preview()} savingText={m.room_background_saving()} onclose={() => {}}>
@@ -84,12 +97,13 @@
 <style>
   .image-setup { display: grid; gap: var(--space-4); color: var(--color-text-primary); }
   .setup-host[hidden] { display: none; }
+  .device-settings { display: grid; gap: var(--space-4); }
   .image-segments { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .image-segments button { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-surface-2); color: var(--color-text-primary); font: inherit; cursor: pointer; }
   .image-segments button[aria-pressed='true'] { background: var(--color-surface-inverse); color: var(--color-text-on-inverse); border-color: var(--color-accent-warm); }
   .setup-modes { padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
   .preview-controls { display: grid; gap: var(--space-3); }
-  :global(.image-setup .re-immersion-editor) { --re-immersion-chrome: calc(var(--space-6) * 4 + var(--touch-min) * 2 + var(--space-5) * 2); height: calc(100dvh - var(--re-immersion-chrome)); }
+  :global(.image-setup .re-immersion-editor) { --re-immersion-chrome: calc(var(--space-6) * 4 + var(--touch-min) * 3 + var(--space-5) * 2 + var(--space-4)); height: calc(100dvh - var(--re-immersion-chrome)); }
   @media (max-width: 760px) {
     :global(.image-setup .re-immersion-editor) { height: auto; }
     :global(.image-setup .re-immersion-stage) { grid-row: 1; }

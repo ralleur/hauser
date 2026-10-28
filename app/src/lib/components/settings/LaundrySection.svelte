@@ -58,7 +58,9 @@
     }
     switch (error.kind) {
       case 'sourceChanged': return m.settings_laundry_error_source_changed();
-      case 'sourceIncompatible': return m.settings_laundry_error_source_incompatible();
+      case 'sourceIncompatible': return error.availableStates?.length
+        ? m.settings_laundry_raw_states({ states: error.availableStates.join(', ') })
+        : m.settings_laundry_error_source_incompatible();
       case 'configChanged': return m.settings_laundry_error_config_changed();
       case 'haNotConfigured': return m.settings_laundry_error_ha_not_configured();
       case 'haAuth': return m.settings_laundry_error_ha_auth();

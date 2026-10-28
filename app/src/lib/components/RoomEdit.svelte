@@ -689,7 +689,7 @@
   <div class="overlay-scrim" onclick={() => closeRoomEdit()}></div>
   {#if panelMirror && !adding}
     <!-- Oben in der Mitte, wo sonst das h steht: welche Ansicht die Startseite zeigt. -->
-    <div class="re-view-toggle choice-pill" role="radiogroup" aria-label={m.layout_home_view()}>
+    <div class="re-view-toggle choice-pill on-image" role="radiogroup" aria-label={m.layout_home_view()}>
       {#each HOME_VIEWS as option (option.id)}
         <button class="choice-seg pressable" type="button" role="radio" aria-checked={homeView === option.id}
                 onclick={() => layoutManager.setHomeView(option.id)}>{option.label()}</button>

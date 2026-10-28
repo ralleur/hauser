@@ -3,6 +3,7 @@
   import { m } from '../../../paraglide/messages.js';
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
+  import HeroDeviceTargets from '../HeroDeviceTargets.svelte';
   import Icon from '../Icon.svelte';
   import { cubicOut } from 'svelte/easing';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
@@ -44,6 +45,29 @@
   let layerA = $state<HeroImageCandidate | null>(null);
   let layerB = $state<HeroImageCandidate | null>(null);
   let controlsHidden = $state(false);
+  let revealDevices = $state(false);
+  let revealTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastFreeTap: { at: number; x: number; y: number } | null = null;
+  function onFreeTap(event: MouseEvent): void {
+    if (lastFreeTap && event.timeStamp - lastFreeTap.at < 450
+      && Math.hypot(event.clientX - lastFreeTap.x, event.clientY - lastFreeTap.y) < 40) {
+      lastFreeTap = null;
+      revealDevices = true;
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(() => { revealDevices = false; }, 2600);
+    } else {
+      lastFreeTap = { at: event.timeStamp, x: event.clientX, y: event.clientY };
+    }
+  }
+  $effect(() => {
+    // Keine Tipps oder Hilfen in den nächsten Raum bzw. Bedienmodus übernehmen.
+    room.id;
+    controlsHidden;
+    lastFreeTap = null;
+    revealDevices = false;
+    clearTimeout(revealTimer);
+    return () => clearTimeout(revealTimer);
+  });
   let front = $state<'a' | 'b'>('a');
   const shownHero = $derived(front === 'a' ? layerA : layerB);
   let heroRequest = 0;
@@ -322,7 +346,7 @@
        seiner Höhe — dieselbe Geste wie zum Öffnen, nur zurück. Sie gilt auf der
        ganzen Fläche, nicht nur am Kopf: solange die Liste oben steht, gehört
        die Abwärtsbewegung dem Sheet, danach wieder dem Scrollen. -->
-  <div class="room-sheet on-image" class:has-hero={shownHero !== null} bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby={controlsHidden ? undefined : 'room-sheet-title'} aria-label={controlsHidden ? room.name : undefined} tabindex="-1" onkeydown={onkeydown} out:sheetExit
+  <div class="room-sheet on-image" class:has-hero={shownHero !== null} class:is-controls-hidden={controlsHidden} bind:this={dialog} role="dialog" aria-modal="true" aria-labelledby={controlsHidden ? undefined : 'room-sheet-title'} aria-label={controlsHidden ? room.name : undefined} tabindex="-1" onkeydown={onkeydown} out:sheetExit
        use:swipedown={{ onSwipe: () => onclose('close'), surface: () => dialog,
                         atTop: (t) => Boolean(t?.closest('.room-sheet-title'))
                                       || (scrollEl?.scrollTop ?? 0) <= 0,
@@ -348,6 +372,11 @@
             style:--phone-room-hero={candidate ? `url("${candidate.url}")` : undefined}
             style:--phone-room-focus={candidate?.position}></span>
     {/each}
+
+    {#if controlsHidden && shownHero && !dragging && !leaving}
+      <button class="room-sheet-image-area" type="button" aria-label={m.home_free_hero_area()} onclick={onFreeTap}></button>
+      <HeroDeviceTargets phone position={shownHero.position} reveal={revealDevices} />
+    {/if}
 
     <div class="room-sheet-scroll" class:is-following={dragging} bind:this={scrollEl}
          style:transform={dragX === 0 ? undefined : `translateX(${dragX}px)`}>

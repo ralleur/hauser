@@ -402,6 +402,7 @@ export interface MediaValue {
   playing: boolean;
   volume: number;         // 0–100
   source: string | null;
+  sources?: string[];
   /* Server-Metadaten (read-only) */
   available: boolean;
   track: string | null;

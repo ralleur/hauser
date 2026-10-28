@@ -671,6 +671,41 @@ async function main() {
     await send('Page.navigate', { url: hauser.origin });
     await waitFor(() => count('[data-nav]'), { what: 'Startseite nach dem Ruhebild', timeout: 30_000 });
 
+    /* ── Bildsteuerung ohne Weg zurück (ralleur/hauser#42): ohne Geräte im Bild war dort nichts
+       mehr zu bedienen und die Leiste nicht zu finden. Ein Tipp aufs Bild muss den Weg zeigen,
+       ein Wisch vom linken Rand die Leiste holen; danach zurück auf Vollbild. ── */
+    {
+      step = 'Panel: Bildsteuerung, Weg zurück';
+      const chooseView = async (index) => {
+        if (!await longPress('.hero-config-hitarea', 0)) return false;
+        await sleep(600);
+        if (!await click('.re-view-toggle .choice-seg', index)) return false;
+        await sleep(300);
+        await escape();
+        await sleep(500);
+        return true;
+      };
+      if (await chooseView(2)) {
+        coverage.Bildsteuerung = (coverage.Bildsteuerung ?? 0) + 1;
+        if (!await count('.home-panels.is-hidden')) record(step, 'Die Leiste bleibt in der Bildsteuerung sichtbar');
+        const free = await evaluate(`(() => { const r = document.querySelector('.hero-config-hitarea')?.getBoundingClientRect(); return r ? { x: r.left + r.width * 0.6, y: r.top + r.height * 0.4 } : null; })()`);
+        if (free) {
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: free.x, y: free.y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: free.x, y: free.y, button: 'left', clickCount: 1 });
+          await sleep(400);
+          if (!await count('.image-control-hint.is-revealed')) record(step, 'Ein Tipp aufs Bild zeigt keinen Weg zurück zur Leiste');
+          const y = Math.round(panelSize.height / 2);
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 6, y, button: 'left', clickCount: 1 });
+          for (let i = 1; i <= 8; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 6 + 30 * i, y, button: 'left', buttons: 1 }); await sleep(20); }
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 246, y, button: 'left', clickCount: 1 });
+          await sleep(600);
+          if (await count('.home-panels.is-hidden')) record(step, 'Der Wisch vom linken Rand holt die Leiste nicht herein');
+          await boundaries();
+        }
+        if (!await chooseView(0)) record(step, 'Zurück auf Vollbild gelingt nicht');
+      }
+    }
+
     /* ── Telefon ── */
     step = 'Telefon: Start';
     await send('Emulation.setDeviceMetricsOverride', { ...phoneSize, deviceScaleFactor: 3, mobile: true });
