@@ -1,10 +1,11 @@
 # Hauser project website
 
-Static English HTML and CSS, published at the site root `/`. The existing Pages build
+Static English and German HTML and CSS, published at `/` and `/de/`. The existing Pages build
 copies this directory alongside the demo at `demo/` and the documentation at
-`docs/`. There is no website framework, client JavaScript, analytics or remote
-font request. The three-state preview uses native radio inputs and CSS;
-navigation, the preview and the documentation disclosures work without JS.
+`docs/`. There is no website framework, analytics or remote font request. A small local
+`language.js` chooses the first homepage language from browser preferences and
+remembers an explicit choice in local storage. The three-state preview uses native radio inputs and CSS;
+navigation, both translations, the preview and the documentation disclosures work without JS.
 
 ## Editorial direction (2026-10-04)
 
@@ -101,3 +102,33 @@ anchors and all linked destinations. The public export's existing
 `scripts/build-pages.sh` verifies demo/wiki base paths;
 `scripts/verify-license-boundary.sh` verifies the asset classes. No deployment
 is part of these checks.
+
+## Search and languages
+
+The English homepage is the editable source. German copy, including image
+alternatives and accessible labels, lives in `translations/de.json`. Run
+`python3 scripts/build-website.py` from the public repository root (or pass
+`--website website` to the export overlay script in the development checkout).
+The Pages build runs it automatically. It fails on untranslated new copy.
+Generated German and topic HTML is checked in so local previews need no build.
+
+The browser selects German only at the unqualified homepage. Explicit `/de/`
+and topic URLs stay in their requested language. The top-bar DE/EN link stores
+the manual preference; `?lang=en` also works without browser storage. Section
+anchors survive the switch. Other browser languages fall back to English.
+
+Each language has its own canonical, reciprocal `hreflang` links, translated
+metadata and structured data. Home Assistant and Apple Home each have an
+English and German topic page. The guide remains English and German links
+identify it as `(EN)`. Existing captures remain unchanged and show English UI.
+
+`robots.txt` points to `sitemap.xml`, which indexes `sitemap-pages.xml` and
+the wiki sitemap. No training permission or external analytics is added.
+Search Console and Bing Webmaster Tools verification/submission require the
+owner’s existing accounts; no verification token is invented.
+
+The authoritative source is the development repository's `website/` directory
+and the public-export overlay's locale build scripts. Commit both before a
+public promotion. Changes made only in the public checkout are replaced by
+the next export. The generated German HTML and translations must remain in
+the exported website tree.

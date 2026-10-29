@@ -3,12 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — Less interface. More home.</title>
-<meta name="description" content="Your smart home, in familiar rooms. Hauser is the everyday interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.">
+<title>Hauser — Visual dashboard for Home Assistant and Apple Home</title>
+<meta name="description" content="Hauser is a free, open-source smart-home dashboard for Home Assistant and Apple Home. Control rooms, lights and scenes on wall tablets, iPhone and iPad. Public beta.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://hauserhome.app/">
+<link rel="alternate" hreflang="en" href="https://hauserhome.app/">
+<link rel="alternate" hreflang="de" href="https://hauserhome.app/de/">
+<link rel="alternate" hreflang="x-default" href="https://hauserhome.app/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="de_DE">
+<script src="/language.js"></script>
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hauser — Less interface. More home.">
+<meta property="og:title" content="Hauser — Visual dashboard for Home Assistant and Apple Home">
 <meta property="og:description" content="Familiar rooms. Light you can see. An everyday interface for Home Assistant and, on iPhone and iPad, Apple Home. Try the demo.">
 <meta property="og:url" content="https://hauserhome.app/">
 <meta property="og:image" content="https://hauserhome.app/media/social-preview.jpg">
@@ -28,8 +34,12 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Hauser",
-  "description": "An everyday smart-home interface for Home Assistant, with a native iPhone and iPad app that also works directly with Apple Home. Free, open source, in public beta.",
-  "applicationCategory": "Home automation",
+  "description": "A free, open-source smart-home dashboard for Home Assistant and Apple Home, with room pictures, lights and scenes. Public beta.",
+  "applicationCategory": "LifestyleApplication",
+  "isAccessibleForFree": true,
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+  "inLanguage": "en",
+  "author": {"@type": "Organization", "name": "ralleur", "url": "https://ralleur.com/"},
   "operatingSystem": "Home Assistant OS, Docker, iOS",
   "url": "https://hauserhome.app/",
   "sameAs": "https://github.com/ralleur/hauser",
@@ -45,6 +55,7 @@
     <a class="nav-docs" href="docs/">Guide</a>
     <a href="#install">Get Hauser</a>
     <a href="demo/">Demo <span aria-hidden="true">↗</span></a>
+    <a class="language-switch" href="/de/" hreflang="de" lang="de" data-language-switch="de" aria-label="Website auf Deutsch anzeigen" title="Deutsch">DE</a>
   </nav>
 </header>
 
@@ -55,7 +66,7 @@
       <h1 id="hero-title">Less interface.<br><span class="telling">More home.</span></h1>
       <div class="hero-copy" id="what">
         <p class="lead">The everyday face of your smart home. Recognise a room, turn on the lights, get on with your day.</p>
-        <p>For Home Assistant. And for Apple Home with the native iPhone and iPad app.</p>
+        <p>A visual dashboard for Home Assistant on wall tablets and in your browser. And for Apple Home with the native iPhone and iPad app.</p>
         <div class="actions">
           <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
           <a class="text-link" href="#install">Set up <span aria-hidden="true">→</span></a>
@@ -280,6 +291,10 @@
         </div>
       </div>
     </div>
+    <nav class="setup-topics" aria-label="Find the right smart-home dashboard">
+      <a class="text-link" href="/home-assistant-dashboard/">Home Assistant dashboard for the household <span aria-hidden="true">→</span></a>
+      <a class="text-link" href="/apple-home/">Apple Home on iPhone and iPad <span aria-hidden="true">→</span></a>
+    </nav>
     <div class="practical-notes">
       <details>
         <summary>What should I check before installing?</summary>

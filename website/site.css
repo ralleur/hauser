@@ -306,3 +306,30 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
   .preview-radio:checked + label { outline: var(--focus-width) solid Highlight; }
   .button { border-color: ButtonText; }
 }
+
+/* Language links stay usable without JavaScript; no external translation service. */
+.nav-links .language-switch { justify-content: center; min-width: var(--touch-size); border: var(--rule-width) solid var(--line); border-radius: var(--radius-sm); padding-inline: var(--space-2); font-size: var(--small-size); }
+.setup-topics { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); padding-block: var(--space-5); border-top: var(--rule-width) solid var(--line); }
+.topic-page .hero-intro { grid-template-columns: 1fr; max-width: 900px; }
+.topic-page .hero-copy { max-width: 65ch; }
+.topic-page .topic-content { max-width: 75ch; }
+.topic-page .topic-content h2 { margin-block: var(--space-7) var(--space-5); }
+.topic-page .topic-content p + p { margin-top: var(--space-4); }
+.topic-page .topic-content ul { padding-left: var(--space-5); }
+.topic-page .topic-content li + li { margin-top: var(--space-3); }
+@media (max-width: 599px) {
+  .site-header { flex-wrap: wrap; }
+  .nav-links { margin-left: auto; gap: var(--space-3); }
+  .nav-links a { white-space: nowrap; }
+  .nav-links .language-switch { margin-left: var(--space-1); }
+}
+
+@media (max-width: 419px) {
+  .site-header { gap: var(--space-2); }
+  .site-header .brand img { width: 96px; }
+  .site-header .nav-links { gap: var(--space-2); font-size: var(--small-size); }
+}
+
+/* German action labels can wrap on narrow phones. */
+.setup-path > * { min-width: 0; }
+.setup-path .button, .setup-path .text-link { max-width: 100%; white-space: normal; }
