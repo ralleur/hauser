@@ -21,8 +21,7 @@
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/AlegreyaSans-Regular-subset.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="media/hero-home-1100.webp" as="image" media="(min-width: 600px)" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
-<link rel="preload" href="media/hero-rooms-detail.webp" as="image" media="(max-width: 599px)">
+<link rel="preload" href="media/hero-home-1100.webp" as="image" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
 <link rel="stylesheet" href="site.css">
 <script type="application/ld+json">
 {
@@ -50,7 +49,7 @@
 </header>
 
 <main id="main">
-  <!-- A: Real panel capture; an explicitly labelled iOS detail on phones. -->
+  <!-- A: Three real panel views, with a shorter clean image-control moment. -->
   <section class="hero wrap" aria-labelledby="hero-title">
     <div class="hero-intro">
       <h1 id="hero-title">Less interface.<br><span class="telling">More home.</span></h1>
@@ -65,19 +64,32 @@
       </div>
     </div>
     <figure class="hero-product">
-      <picture>
-        <source media="(max-width: 599px)" srcset="media/hero-rooms-detail.webp" width="740" height="808">
-        <img src="media/hero-home-1100.webp"
+      <input class="hero-pause" type="checkbox" id="hero-pause" aria-label="Pause slideshow">
+      <div class="hero-stage">
+        <img class="hero-frame hero-frame-full" src="media/hero-home-1100.webp"
              srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
              sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
              width="1696" height="960" fetchpriority="high"
-             alt="Hauser shows familiar room illustrations alongside the state of their lights.">
-      </picture>
+             alt="Hauser’s three views: full screen, all rooms, and image control with and without device overlays.">
+        <img class="hero-frame hero-frame-rooms" src="media/home-rooms-1100.webp"
+             srcset="media/home-rooms-700.webp 700w, media/home-rooms-1100.webp 1100w, media/home-rooms.webp 1696w"
+             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
+             width="1696" height="960" decoding="async" aria-hidden="true"
+             alt="">
+        <img class="hero-frame hero-frame-clean" src="media/hero-image-clean-1100.webp"
+             srcset="media/hero-image-clean-700.webp 700w, media/hero-image-clean-1100.webp 1100w, media/hero-image-clean.webp 1696w"
+             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
+             width="1696" height="960" decoding="async" aria-hidden="true"
+             alt="">
+        <img class="hero-frame hero-frame-devices" src="media/hero-image-devices-1100.webp"
+             srcset="media/hero-image-devices-700.webp 700w, media/hero-image-devices-1100.webp 1100w, media/hero-image-devices.webp 1696w"
+             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
+             width="1696" height="960" decoding="async" aria-hidden="true"
+             alt="">
+      </div>
       <figcaption>
-        <span class="desktop-only">A living room, with its lights at hand. <span class="caption-meta">Web demo.</span></span>
-        <span class="mobile-only">Your rooms, at a glance. <span class="caption-meta">iOS demo · detail.</span></span>
-        <a class="desktop-only" href="media/hero-home.webp">View full size <span aria-hidden="true">↗</span></a>
-        <a class="mobile-only" href="media/ios-home.webp">Full screen <span aria-hidden="true">↗</span></a>
+        <span>Full screen · All rooms · Image control. <span class="caption-meta">Web demo.</span></span>
+        <label class="hero-pause-label" for="hero-pause"><span class="hero-pause-text">Pause</span><span class="hero-resume-text">Play</span></label>
       </figcaption>
     </figure>
   </section>

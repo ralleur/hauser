@@ -92,14 +92,32 @@ h4 { font-size: var(--body-size); }
 .nav-links a { display: inline-flex; align-items: center; min-height: var(--touch-size); gap: var(--space-2); text-decoration: none; }
 .nav-links a:hover { text-decoration: underline; }
 
-/* A: one large, unembellished product view. */
+/* A: 24-second loop: full screen 6s, rooms 6s, clean image 3s, devices 9s. */
 .hero { padding-top: var(--space-7); }
 .hero-intro { display: grid; grid-template-columns: 1.25fr 1fr; align-items: start; gap: var(--layout-gap); margin-bottom: var(--space-7); }
 .hero-copy { max-width: 43ch; padding-top: var(--space-2); }
 .hero-copy > p + p { margin-top: var(--space-4); color: var(--ink-secondary); }
 .hero-copy .actions { margin-top: var(--space-5); }
 .hero-copy .hero-note { margin-top: var(--space-4); }
-.hero-product picture { display: block; }
+.hero-product { position: relative; --hero-cycle: 24s; }
+.hero-stage { display: grid; overflow: hidden; border-radius: var(--radius-lg); }
+.hero-frame { grid-area: 1 / 1; }
+.hero-frame-rooms, .hero-frame-clean, .hero-frame-devices { opacity: 0; animation: var(--hero-cycle) ease-in-out infinite; }
+.hero-frame-rooms { animation-name: hero-rooms; }
+.hero-frame-clean { animation-name: hero-clean; }
+.hero-frame-devices { animation-name: hero-devices; }
+/* Keep the previous image opaque until the next one covers it, including
+   the final crossfade back to the always-present full-screen base. */
+@keyframes hero-rooms { 0%, 25% { opacity: 0; } 30%, 55% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes hero-clean { 0%, 50% { opacity: 0; } 55%, 68% { opacity: 1; } 73%, 100% { opacity: 0; } }
+@keyframes hero-devices { 0%, 62.5% { opacity: 0; } 67.5%, 95% { opacity: 1; } 100% { opacity: 0; } }
+.hero-pause { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.hero-pause-label { display: inline-flex; align-items: center; min-height: var(--touch-size); padding-inline: var(--space-3); cursor: pointer; flex: none; text-decoration: underline; text-underline-offset: .2em; }
+.hero-resume-text { display: none; }
+.hero-pause:checked ~ .hero-stage .hero-frame { animation-play-state: paused; }
+.hero-pause:checked ~ figcaption .hero-pause-text { display: none; }
+.hero-pause:checked ~ figcaption .hero-resume-text { display: inline; }
+.hero-pause:focus-visible ~ figcaption .hero-pause-label { outline: var(--focus-width) solid currentColor; outline-offset: var(--space-1); border-radius: var(--radius-sm); }
 .hero-product img { width: 100%; border-radius: var(--radius-lg); }
 figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-3); font-size: var(--small-size); line-height: 1.4; color: var(--ink-secondary); }
 figcaption a { flex: none; padding-block: var(--space-3); }
@@ -256,7 +274,7 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
   .hero-copy .actions { gap: var(--space-4); }
   .hero-copy > p + p { font-size: 18px; }
   .hero-copy .hero-note { font-size: var(--small-size); }
-  .hero-product img { border-radius: var(--radius-sm); }
+  .hero-stage, .hero-product img { border-radius: var(--radius-sm); }
   .desktop-only { display: none; }
   .mobile-only { display: inline; }
   figcaption { flex-wrap: wrap; gap: 0 var(--space-3); }
@@ -279,6 +297,8 @@ details > p { max-width: 75ch; margin-bottom: var(--space-5); color: var(--ink-s
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; scroll-behavior: auto !important; }
+  .hero-frame-rooms, .hero-frame-clean, .hero-frame-devices { animation: none; }
+  .hero-pause, .hero-pause-label { display: none; }
   .lamp-frame-1, .lamp-frame-2, .lamp-tap { animation: none; }
   .lamp-frame-1 { opacity: 1; }
 }

@@ -51,17 +51,23 @@ the capture workflow is documented in the project's media tooling. The photo
 and illustration are the existing, documented before/after pair. No image was
 retouched to change a control or state.
 
-`media/hero-rooms-detail.webp` is a literal crop of `media/ios-home.webp`:
-left 32, top 550, width 740, height 808 pixels, WebP quality 88. It is labelled
-as an iOS detail and links to the complete source screenshot. The mobile hero
-uses this readable room-card detail instead of shrinking the whole panel.
-Existing full-size screenshot links remain available for closer inspection.
+The hero cycles through full screen (6 seconds), all rooms (6 seconds),
+image control without device overlays (3 seconds), and with overlays (9 seconds).
+The 24-second CSS loop crossfades over 1.2 seconds, including its return to the
+first frame. It uses the same full panel captures at every breakpoint, with
+700/1100/full-width responsive sources. A keyboard-accessible checkbox pauses
+and resumes the loop without JavaScript; reduced motion holds the first frame.
 
-All images have intrinsic dimensions. The hero is preloaded per breakpoint;
-images below it are lazy-loaded. Focus is visible, the preview supports native
-arrow-key operation, and reduced motion removes its short crossfade. Apart from
-the lamp loop in moment 02 there are no timers, scrolling effects or
-content-reveal dependencies.
+`media/hero-image-clean.webp` and `media/hero-image-devices.webp` are untouched
+1696 × 960 captures of the public English web demo on 2026-10-28, fixed to the
+evening appearance. A double tap on the empty floor reveals the device overlay.
+Their 700/1100 variants are resized WebP copies. Existing
+`media/hero-rooms-detail.webp` remains the literal iOS crop used by the guide.
+
+All images have intrinsic dimensions. The first hero frame is preloaded;
+images below the hero are lazy-loaded. Focus is visible, the room-state preview
+supports native arrow-key operation, and reduced motion removes its short
+crossfade. The hero and the lamp loop in moment 02 are the only animations.
 
 `media/picture-control.webp` (2026-10-24) is the web demo in the image-control
 view after a double tap. Since 2026-10-24 the demo ships its own device spots
