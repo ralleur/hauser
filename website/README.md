@@ -52,9 +52,9 @@ the capture workflow is documented in the project's media tooling. The photo
 and illustration are the existing, documented before/after pair. No image was
 retouched to change a control or state.
 
-The hero cycles through full screen (6 seconds), all rooms (6 seconds),
+The hero cycles through full screen (3 seconds), all rooms (3 seconds),
 image control without device overlays (3 seconds), and with overlays (9 seconds).
-The 24-second CSS loop crossfades over 1.2 seconds, including its return to the
+The 18-second CSS loop crossfades over 1.2 seconds, including its return to the
 first frame. It uses the same full panel captures at every breakpoint, with
 700/1100/full-width responsive sources. A keyboard-accessible checkbox pauses
 and resumes the loop without JavaScript; reduced motion holds the first frame.

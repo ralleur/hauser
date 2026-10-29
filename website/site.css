@@ -92,14 +92,14 @@ h4 { font-size: var(--body-size); }
 .nav-links a { display: inline-flex; align-items: center; min-height: var(--touch-size); gap: var(--space-2); text-decoration: none; }
 .nav-links a:hover { text-decoration: underline; }
 
-/* A: 24-second loop: full screen 6s, rooms 6s, clean image 3s, devices 9s. */
+/* A: 18-second loop: full screen 3s, rooms 3s, clean image 3s, devices 9s. */
 .hero { padding-top: var(--space-7); }
 .hero-intro { display: grid; grid-template-columns: 1.25fr 1fr; align-items: start; gap: var(--layout-gap); margin-bottom: var(--space-7); }
 .hero-copy { max-width: 43ch; padding-top: var(--space-2); }
 .hero-copy > p + p { margin-top: var(--space-4); color: var(--ink-secondary); }
 .hero-copy .actions { margin-top: var(--space-5); }
 .hero-copy .hero-note { margin-top: var(--space-4); }
-.hero-product { position: relative; --hero-cycle: 24s; }
+.hero-product { position: relative; --hero-cycle: 18s; }
 .hero-stage { display: grid; overflow: hidden; border-radius: var(--radius-lg); }
 .hero-frame { grid-area: 1 / 1; }
 .hero-frame-rooms, .hero-frame-clean, .hero-frame-devices { opacity: 0; animation: var(--hero-cycle) ease-in-out infinite; }
@@ -108,9 +108,9 @@ h4 { font-size: var(--body-size); }
 .hero-frame-devices { animation-name: hero-devices; }
 /* Keep the previous image opaque until the next one covers it, including
    the final crossfade back to the always-present full-screen base. */
-@keyframes hero-rooms { 0%, 25% { opacity: 0; } 30%, 55% { opacity: 1; } 60%, 100% { opacity: 0; } }
-@keyframes hero-clean { 0%, 50% { opacity: 0; } 55%, 68% { opacity: 1; } 73%, 100% { opacity: 0; } }
-@keyframes hero-devices { 0%, 62.5% { opacity: 0; } 67.5%, 95% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes hero-rooms { 0%, 16.666667% { opacity: 0; } 23.333333%, 40% { opacity: 1; } 46.666667%, 100% { opacity: 0; } }
+@keyframes hero-clean { 0%, 33.333333% { opacity: 0; } 40%, 56.666667% { opacity: 1; } 63.333333%, 100% { opacity: 0; } }
+@keyframes hero-devices { 0%, 50% { opacity: 0; } 56.666667%, 93.333333% { opacity: 1; } 100% { opacity: 0; } }
 .hero-pause { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .hero-pause-label { display: inline-flex; align-items: center; min-height: var(--touch-size); padding-inline: var(--space-3); cursor: pointer; flex: none; text-decoration: underline; text-underline-offset: .2em; }
 .hero-resume-text { display: none; }
