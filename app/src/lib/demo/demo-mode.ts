@@ -82,7 +82,13 @@ function publicDemoHouseholdConfig() {
     rooms: demoHouseholdConfig.rooms.map((room) => ({
       ...room,
       name: DEMO_ROOM_NAMES[room.id]?.() ?? room.name,
-      visibleEntities: room.visibleEntities.map((entity) => ({
+      visibleEntities: [
+        ...room.visibleEntities,
+        ...(room.id === 'kinderzimmer' ? [
+          { id: 'nachtlicht', name: m.demo_device_nachtlicht(), entityId: 'light.demo_nachtlicht_kinderzimmer', role: 'light' },
+          { id: 'deckenlampe', name: m.demo_device_deckenlampe(), entityId: 'light.demo_deckenlampe_kinderzimmer', role: 'light' },
+        ] : []),
+      ].map((entity) => ({
         ...entity,
         name: (DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role])?.() ?? entity.name,
       })),

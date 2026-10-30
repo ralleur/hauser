@@ -1516,6 +1516,8 @@
   "room_background_saved": "Własne zdjęcie pomieszczenia jest aktywne.",
   "room_background_saving": "Zapisywanie obrazu …",
   "room_background_saving_hint": "Obraz jest przeliczany — na słabszym sprzęcie chwilę to potrwa.",
+  "demo_device_nachtlicht": "Lampka nocna",
+  "demo_device_deckenlampe": "Lampa sufitowa",
   "demo_device_kugellampen": "Lampy kuliste",
   "demo_device_esstisch": "Stół jadalny",
   "demo_device_kugel_tv": "Lampa kulista TV",

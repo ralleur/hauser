@@ -1516,6 +1516,8 @@
   "room_background_saved": "L’immagine personalizzata è attiva.",
   "room_background_saving": "Salvataggio dell’immagine …",
   "room_background_saving_hint": "L’immagine viene convertita — su dispositivi piccoli ci vuole un momento.",
+  "demo_device_nachtlicht": "Luce notturna",
+  "demo_device_deckenlampe": "Lampada da soffitto",
   "demo_device_kugellampen": "Lampade sferiche",
   "demo_device_esstisch": "Tavolo da pranzo",
   "demo_device_kugel_tv": "Lampada sferica TV",

@@ -1515,6 +1515,8 @@
   "rimg_manual_windows_clear": "Remove all",
   "rimg_manual_windows_save": "Done",
   "rimg_manual_windows_saved": "The windows are saved — the weather now shows there.",
+  "demo_device_nachtlicht": "Night light",
+  "demo_device_deckenlampe": "Ceiling lamp",
   "demo_device_kugellampen": "Globe lamps",
   "demo_device_esstisch": "Dining table",
   "demo_device_kugel_tv": "Globe lamp TV",
