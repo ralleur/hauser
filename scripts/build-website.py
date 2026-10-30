@@ -239,6 +239,8 @@ def experience_page(root, language, copy):
     source = source.replace('<html lang="en"', f'<html lang="{language}"')
     source = source.replace('noindex,nofollow', 'index,follow')
     source = source.replace('data-demo-src="/demo/', 'data-demo-src="/presentation/')
+    revision = subprocess.check_output(['git', '-C', str(root.parent), 'rev-parse', 'HEAD'], text=True).strip()
+    source = source.replace('presentation=1&amp;idle=', f'presentation=1&amp;build={revision}&amp;idle=')
     source = re.sub(r'<title>.*?</title>', '<title>Hauser — ' + ('Komm herein.' if de else 'Come on in.') + '</title>', source)
     source = re.sub(r'(<meta name="description" content=")[^"]*', lambda m: m[1] + escape(data['description'], quote=True), source)
     # data-copy elements contain trusted project-owned HTML, also used at runtime.

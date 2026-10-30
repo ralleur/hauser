@@ -17,7 +17,7 @@
   import { editMode } from '../state/edit-mode.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { resolveRoomHero, loadRoomHero } from '../components/room-hero-assets.ts';
-  import { mergedDevice, toggleDevice, setBrightness } from '../state/commands.ts';
+  import { runtime } from '../adapter/runtime.svelte.ts';
   import type { LightValue } from '../adapter/types.ts';
 
   let story = $state({ chapter: 'light', step: 'tap' });
@@ -40,13 +40,6 @@
     let navigation = 0;
     let disposed = false;
     let cancelRoomWait = () => {};
-    let firstLampTap = true;
-
-    // Start with the real demo lights off. The first lamp tap then switches
-    // the actual room image from the unlit evening to the illuminated evening.
-    for (const lamp of appState.rooms.find(room => room.id === 'wohnzimmer')?.lights ?? []) {
-      if ((lamp.domain ?? 'light') === 'light' && (mergedDevice('wohnzimmer', lamp) as LightValue | undefined)?.on) toggleDevice(lamp);
-    }
 
     function waitForUi(find: () => HTMLElement | undefined): Promise<HTMLElement | undefined> {
       return new Promise(resolve => {
@@ -91,6 +84,20 @@
 
     function tell(type: string, data: Record<string, unknown> = {}) {
       window.parent.postMessage({ source: 'hauser-demo', type, ...data }, location.origin);
+    }
+
+    async function turnAllLightsOff() {
+      for (const room of appState.rooms) {
+        for (const lamp of room.lights) {
+          if ((lamp.domain ?? 'light') !== 'light') continue;
+          const value = runtime.merged(lamp.entityId) as LightValue | undefined;
+          runtime.dispatch(
+            { entityId: lamp.entityId, domain: 'light', service: 'turn_off', data: {}, queuedAt: Date.now() },
+            { ...value, on: false },
+          );
+        }
+      }
+      await tick();
     }
 
     function wake() {
@@ -180,11 +187,6 @@
         const lamp = appState.rooms.find(r => r.id === 'wohnzimmer')?.lights.find(l => l.entityId === 'light.wohnzimmer_fensterlampe');
         const button = target.closest('button');
         if ((button?.getAttribute('aria-label') ?? button?.textContent?.trim()) !== lamp?.name) return;
-        if (lamp && firstLampTap) {
-          firstLampTap = false;
-          const value = mergedDevice('wohnzimmer', lamp) as LightValue | undefined;
-          if (value?.on && !value.brightness) setBrightness('wohnzimmer', lamp.id, 75);
-        }
       }
       tell('interaction', { chapter, step: activeStep });
     }
@@ -207,7 +209,7 @@
     document.addEventListener('pointerup', ambientTouch, true);
     const timer = window.setInterval(reportTarget, 500);
     tell('loading', { phase: 3 });
-    void navigate('light').then(preparePictures).then(() => { if (!disposed) tell('ready'); });
+    void navigate('light').then(preparePictures).then(turnAllLightsOff).then(() => { if (!disposed) tell('ready'); });
     return () => {
       disposed = true;
       navigation++;

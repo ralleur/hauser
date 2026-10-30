@@ -18,7 +18,7 @@ import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS, CONFIDENCE_TIME
 import { enqueue } from './command-queue.ts';
 import { LIGHT_TRANSITION_SECONDS } from '../config/light-transition.ts';
 import type {
-  Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate,
+  Backend, Command, Intent, IntentStatus, ReconcileEvent, ConnectionStatus, SunValue, SystemUpdate, LightValue,
   HaScene, NotificationHistoryEntry, PersistentNotification, PersonSource,
   StatisticsRequest,
   StatisticsResult,
@@ -501,6 +501,18 @@ export const seed = new Map<string, unknown>([
   // nur „—" (leer außerhalb der Demo).
   ...demoEnergySeed(),
 ]);
+
+// The website starts with every lamp off in the backend's initial truth,
+// before any shell or presentation component mounts.
+if (import.meta.env?.VITE_DEMO === '1' && typeof location !== 'undefined'
+  && new URLSearchParams(location.search).get('presentation') === '1') {
+  for (const [entityId, value] of seed) {
+    if (!entityId.startsWith('light.')) continue;
+    const light = value as LightValue;
+    seed.set(entityId, { ...light, on: false, brightness: light.brightness || 75 });
+  }
+  if (SUN_ENTITY) seed.set(SUN_ENTITY, { day: false } satisfies SunValue);
+}
 
 /* Basis-URL: Geräte-Override (Einstellungen → Verbindungen, localStorage) vor
    Env vor Default. Analog zu Jellyfin (jellyfin.ts) — keine Secrets hier, nur der
