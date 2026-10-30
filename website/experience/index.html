@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b0e12">
+  <meta name="description" content="Come on in. A living introduction to Hauser, the visual home interface for Home Assistant and Apple Home.">
+  <title>Hauser — Come on in.</title>
+  <link rel="icon" href="/brand/hauser-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/design-tokens/tokens.css">
+  <link rel="stylesheet" href="/experience/experience.css">
+</head>
+<body data-mode="welcome" data-chapter="light" data-step="tap" data-loading="true">
+  <a class="skip-link" href="#story" data-copy="skip">Skip to the introduction</a>
+  <div class="stage" id="stage">
+    <iframe id="home" data-demo-src="/demo/?presentation=1&amp;idle=240#image" title="Hauser — interactive demo with simulated devices" tabindex="-1" inert></iframe>
+  </div>
+  <div class="welcome-shade" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <button class="brand" id="brand" aria-label="Hauser — back to the beginning"><img src="/demo/brand/hauser-logo-dark.svg" alt="Hauser" width="139" height="48"></button>
+    <span class="header-note" data-copy="headerNote">A little closer to home.</span>
+    <nav class="header-actions" aria-label="Website">
+      <button class="text-button" id="about" data-copy="about">The idea</button>
+      <button class="language" id="language" aria-label="Auf Deutsch ansehen">DE</button>
+      <button class="get-button" id="get" data-copy="get">Get Hauser <span aria-hidden="true">↗</span></button>
+    </nav>
+  </header>
+
+  <main id="story">
+    <section class="invitation" id="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span data-copy="introKicker">THIS IS ALREADY HAUSER.</span></p>
+      <h1 id="welcome-title" data-copy="introTitle">Less dashboard.<br>More <em>home.</em></h1>
+      <p class="intro-text" data-copy="introText">The best way to understand Hauser<br>is to make yourself at home.</p>
+      <div id="loading-slot"><div class="loading-panel" id="loading">
+        <p class="loading-title" id="loading-title">Getting your home ready.</p>
+        <progress id="loading-progress" max="5" value="0" aria-labelledby="loading-title loading-phase"></progress>
+        <p class="loading-phase" id="loading-phase" role="status">Connecting to the demo…</p>
+        <div id="loading-slow" hidden><p id="loading-slow-text"></p><button class="detail-link" id="reload-demo" type="button">Load again</button></div>
+      </div></div>
+      <div class="invitation-actions">
+        <button class="primary" id="enter" disabled><span data-copy="enter">Come on in</span><span aria-hidden="true">→</span></button>
+        <button class="text-button explore-link" id="skip" disabled data-copy="explore">I’ll find my own way ↗</button>
+      </div>
+      <p class="intro-footnote" data-copy="introFootnote">The real app. A simulated home. Yours to explore.</p>
+    </section>
+
+    <div class="scene-meta" aria-hidden="true"><span class="scene-line"></span><span data-copy="sceneMeta">THE LIVING ROOM<br>One ordinary room. A different kind of interface.</span></div>
+
+    <aside class="guide" id="guide" aria-label="Guided introduction" hidden>
+      <div class="guide-top"><span class="eyebrow" id="chapter-kicker"></span><button class="icon-button" id="collapse" aria-label="Minimize explanation">−</button></div>
+      <div id="guide-content">
+        <div class="tour-progress" id="tour-progress" aria-label="Tour progress"></div>
+        <h2 id="chapter-title" tabindex="-1"></h2>
+        <p id="chapter-text"></p>
+        <div class="chapter-action" id="chapter-action"></div>
+        <p class="response" id="response" role="status" hidden></p>
+        <button class="detail-link" id="detail"></button>
+      </div>
+      <div class="journey-controls" id="journey-controls"><button class="icon-button" id="previous" aria-label="Previous moment">←</button><button class="next-button" id="next"><span data-copy="next">Next</span><span aria-hidden="true">→</span></button></div>
+    </aside>
+
+    <div class="lamp-hint" id="lamp-hint" aria-hidden="true" hidden><span class="lamp-ring"></span><span class="hint-label" data-copy="lampHint">Try this lamp</span></div>
+    <div class="explore-label" id="explore-label" hidden><span class="live-dot" aria-hidden="true"></span><span data-copy="freeExplore">Make yourself at home. Everything here is simulated.</span></div>
+  </main>
+
+  <footer class="experience-footer">
+    <div class="welcome-footer"><span data-copy="free">Free. No subscription.</span><span data-copy="for">For Home Assistant & Apple Home</span><button class="text-button" id="welcome-guide" data-copy="guide">A few moments inside <span aria-hidden="true">↗</span></button></div>
+    <div class="story-footer" hidden>
+      <button class="mode-button" id="mode"><span class="live-dot" aria-hidden="true"></span><span data-copy="exploreMode">Explore freely</span></button>
+      <nav class="chapters" id="chapters" aria-label="Moments in Hauser"></nav>
+    </div>
+  </footer>
+
+  <dialog id="sheet" aria-labelledby="sheet-title"><div class="sheet-top"><img src="/brand/hauser-logo-light.svg" width="116" height="40" alt="Hauser"><button class="icon-button" id="close-sheet" aria-label="Close">×</button></div><div id="sheet-body"></div></dialog>
+  <noscript><div class="no-script">Hauser is a free, open-source home interface for Home Assistant and Apple Home. This interactive introduction needs JavaScript. <a href="/docs/getting-started/requirements/">Read about Hauser and installation</a>, or <a href="https://github.com/ralleur/hauser">view the source</a>.</div></noscript>
+  <script type="module" src="/experience/experience.js"></script>
+</body>
+</html>

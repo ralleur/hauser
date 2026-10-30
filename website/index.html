@@ -1,327 +1,96 @@
 <!doctype html>
-<html lang="en">
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hauser — Visual dashboard for Home Assistant and Apple Home</title>
-<meta name="description" content="Hauser is a free, open-source smart-home dashboard for Home Assistant and Apple Home. Control rooms, lights and scenes on wall tablets, iPhone and iPad. Public beta.">
-<meta name="robots" content="index, follow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#0b0e12">
+  <meta name="description" content="Come on in. Explore Hauser, the free visual home interface for Home Assistant and Apple Home, through its working demo.">
+  <title>Hauser — Come on in.</title>
+  <link rel="icon" href="/brand/hauser-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/design-tokens/tokens.css">
+  <link rel="stylesheet" href="/experience/experience.css">
 <link rel="canonical" href="https://hauserhome.app/">
-<link rel="alternate" hreflang="en" href="https://hauserhome.app/">
-<link rel="alternate" hreflang="de" href="https://hauserhome.app/de/">
-<link rel="alternate" hreflang="x-default" href="https://hauserhome.app/">
-<meta property="og:locale" content="en_US">
-<meta property="og:locale:alternate" content="de_DE">
-<script src="/language.js"></script>
-<meta property="og:type" content="website">
-<meta property="og:title" content="Hauser — Visual dashboard for Home Assistant and Apple Home">
-<meta property="og:description" content="Familiar rooms. Light you can see. An everyday interface for Home Assistant and, on iPhone and iPad, Apple Home. Try the demo.">
-<meta property="og:url" content="https://hauserhome.app/">
-<meta property="og:image" content="https://hauserhome.app/media/social-preview.jpg">
-<meta property="og:image:alt" content="Hauser — Less interface. More home. The actual living-room interface beneath the original Hauser logo.">
-<meta property="og:image:width" content="1280">
-<meta property="og:image:height" content="640">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#faf8f4">
-<link rel="icon" href="brand/hauser-icon.svg" type="image/svg+xml">
-<link rel="icon" href="favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preload" href="fonts/AlegreyaSans-Regular-subset.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="media/hero-home-1100.webp" as="image" imagesrcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w" imagesizes="(min-width: 1440px) 1280px, calc(100vw - 48px)">
-<link rel="stylesheet" href="site.css?v=hero-3s">
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Hauser",
-  "description": "A free, open-source smart-home dashboard for Home Assistant and Apple Home, with room pictures, lights and scenes. Public beta.",
-  "applicationCategory": "LifestyleApplication",
-  "isAccessibleForFree": true,
-  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
-  "inLanguage": "en",
-  "author": {"@type": "Organization", "name": "ralleur", "url": "https://ralleur.com/"},
-  "operatingSystem": "Home Assistant OS, Docker, iOS",
-  "url": "https://hauserhome.app/",
-  "sameAs": "https://github.com/ralleur/hauser",
-  "license": "https://github.com/ralleur/hauser/blob/main/LICENSE"
-}
-</script>
+  <link rel="alternate" hreflang="en" href="https://hauserhome.app/">
+  <link rel="alternate" hreflang="de" href="https://hauserhome.app/de/">
+  <link rel="alternate" hreflang="x-default" href="https://hauserhome.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Hauser — Come on in.">
+  <meta property="og:description" content="Come on in. Explore Hauser, the free visual home interface for Home Assistant and Apple Home, through its working demo.">
+  <meta property="og:url" content="https://hauserhome.app/">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="de_DE">
+  <meta property="og:image" content="https://hauserhome.app/media/social-preview.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/language.js"></script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Hauser", "description": "Come on in. Explore Hauser, the free visual home interface for Home Assistant and Apple Home, through its working demo.", "applicationCategory": "LifestyleApplication", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}, "inLanguage": "en", "operatingSystem": "Home Assistant OS, Docker, iOS", "url": "https://hauserhome.app/", "license": "https://github.com/ralleur/hauser/blob/main/LICENSE"}</script>
 </head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header wrap">
-  <a class="brand" href="#main" aria-label="Hauser — home"><img src="brand/hauser-logo-light.svg" width="416" height="144" alt="Hauser"></a>
-  <nav class="nav-links" aria-label="Main navigation">
-    <a class="nav-docs" href="docs/">Guide</a>
-    <a href="#install">Get Hauser</a>
-    <a href="demo/">Demo <span aria-hidden="true">↗</span></a>
-    <a class="language-switch" href="/de/" hreflang="de" lang="de" data-language-switch="de" aria-label="Website auf Deutsch anzeigen" title="Deutsch">DE</a>
-  </nav>
-</header>
-
-<main id="main">
-  <!-- A: Three real panel views, with a shorter clean image-control moment. -->
-  <section class="hero wrap" aria-labelledby="hero-title">
-    <div class="hero-intro">
-      <h1 id="hero-title">Less interface.<br><span class="telling">More home.</span></h1>
-      <div class="hero-copy" id="what">
-        <p class="lead">The everyday face of your smart home. Recognise a room, turn on the lights, get on with your day.</p>
-        <p>A visual dashboard for Home Assistant on wall tablets and in your browser. And for Apple Home with the native iPhone and iPad app.</p>
-        <div class="actions">
-          <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href="#install">Set up <span aria-hidden="true">→</span></a>
-        </div>
-        <p class="small hero-note">Free. Open source. Public beta.</p>
-      </div>
-    </div>
-    <figure class="hero-product">
-      <input class="hero-pause" type="checkbox" id="hero-pause" aria-label="Pause slideshow">
-      <div class="hero-stage">
-        <img class="hero-frame hero-frame-full" src="media/hero-home-1100.webp"
-             srcset="media/hero-home-700.webp 700w, media/hero-home-1100.webp 1100w, media/hero-home.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" fetchpriority="high"
-             alt="Hauser’s three views: full screen, all rooms, and image control with and without device overlays.">
-        <img class="hero-frame hero-frame-rooms" src="media/home-rooms-1100.webp"
-             srcset="media/home-rooms-700.webp 700w, media/home-rooms-1100.webp 1100w, media/home-rooms.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-        <img class="hero-frame hero-frame-clean" src="media/hero-image-clean-1100.webp"
-             srcset="media/hero-image-clean-700.webp 700w, media/hero-image-clean-1100.webp 1100w, media/hero-image-clean.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-        <img class="hero-frame hero-frame-devices" src="media/hero-image-devices-1100.webp"
-             srcset="media/hero-image-devices-700.webp 700w, media/hero-image-devices-1100.webp 1100w, media/hero-image-devices.webp 1696w"
-             sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-             width="1696" height="960" decoding="async" aria-hidden="true"
-             alt="">
-      </div>
-      <figcaption>
-        <span>Full screen · All rooms · Image control. <span class="caption-meta">Web demo.</span></span>
-        <label class="hero-pause-label" for="hero-pause"><span class="hero-pause-text">Pause</span><span class="hero-resume-text">Play</span></label>
-      </figcaption>
-    </figure>
-  </section>
-
-  <!-- B: The contributed photograph and its actual illustration. -->
-  <section class="recognition section-space wrap" id="room" aria-labelledby="room-title">
-    <div class="section-intro">
-      <div><p class="section-label">01 / A familiar place</p><h2 id="room-title">Your rooms.<br>Instantly familiar.</h2></div>
-      <p class="intro-copy">The sofa by the window. The table where everything happens. Hauser puts the rooms you know at the centre of the screen, with their lights and scenes close by. Start with the included illustrations, upload a picture, or make a set from a photo of your own room.</p>
-    </div>
-    <div class="room-pair">
-      <figure class="room-before">
-        <img src="media/wizard-input-raw-700.webp"
-             srcset="media/wizard-input-raw-700.webp 700w, media/wizard-input-raw-1100.webp 1100w, media/wizard-input-raw.webp 1400w"
-             sizes="(min-width: 1440px) 420px, (min-width: 768px) 34vw, calc(100vw - 96px)"
-             width="1400" height="1050" loading="lazy" decoding="async"
-             alt="The original phone photo: a lived-in room with a grey sofa, dining table, plants and toys.">
-        <figcaption><span><b>From a phone photo.</b><br>The project’s own living room.</span></figcaption>
-      </figure>
-      <figure class="room-after">
-        <img src="media/room-light-1100.webp"
-             srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-             sizes="(min-width: 1440px) 796px, (min-width: 768px) 58vw, calc(100vw - 48px)"
-             width="1696" height="1200" loading="lazy" decoding="async"
-             alt="The actual Hauser illustration made from that photo, with the same sofa, balcony door and dining table.">
-        <figcaption><span><b>To a room you recognise.</b> The illustration used in Hauser.</span></figcaption>
-      </figure>
-    </div>
-    <aside class="image-note" aria-label="About making room pictures">
-      <p>Optional image generation sends your photo to your chosen provider: OpenAI or Cloudflare. It needs your own access; OpenAI plans or usage charges apply, and Cloudflare’s free allowance has limits. Uploading your own picture needs neither.</p>
-      <a class="text-link" href="docs/using/room-images/">Ways to make your room pictures <span aria-hidden="true">→</span></a>
-    </aside>
-  </section>
-
-  <!-- C: Native radios also work without JavaScript. -->
-  <section class="light-story section-space" id="touch" aria-labelledby="light-title">
-    <div class="wrap">
-      <div class="section-intro">
-        <div><p class="section-label">02 / The picture tells you</p><h2 id="light-title">Same room.<br>A different moment.</h2></div>
-        <p class="intro-copy">By day, a sunlit room. In the evening, a warm glow. After dark, when the last light goes out, the picture settles into darkness. Hauser moves between prepared room images with the time of day and the room’s lights. You can see the change before reading a label.</p>
-      </div>
-      <fieldset class="room-preview" aria-describedby="preview-note">
-        <legend>Room-picture preview</legend>
-        <input class="preview-radio" type="radio" name="room-light" id="preview-day">
-        <label for="preview-day">Day</label>
-        <input class="preview-radio" type="radio" name="room-light" id="preview-evening" checked>
-        <label for="preview-evening">Evening</label>
-        <input class="preview-radio" type="radio" name="room-light" id="preview-off">
-        <label for="preview-off">Lights off</label>
-        <div class="preview-stage">
-          <img class="state-day" src="media/room-light-1100.webp"
-               srcset="media/room-light-700.webp 700w, media/room-light-1100.webp 1100w, media/room-light.webp 1696w"
-               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="Day: sunlight reaches the sofa and the dining table through the balcony windows.">
-          <img class="state-evening" src="media/room-dark-1100.webp"
-               srcset="media/room-dark-700.webp 700w, media/room-dark-1100.webp 1100w, media/room-dark.webp 1696w"
-               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="Evening: the same room lit warmly by its lamps, with the night visible outside.">
-          <img class="state-off" src="media/room-dark-off-1100.webp"
-               srcset="media/room-dark-off-700.webp 700w, media/room-dark-off-1100.webp 1100w, media/room-dark-off.webp 1696w"
-               sizes="(min-width: 1440px) 1280px, calc(100vw - 48px)"
-               width="1696" height="1200" loading="lazy" decoding="async"
-               alt="Lights off: the sofa and table are dark, outlined by a faint glow from the windows.">
-        </div>
-      </fieldset>
-      <p class="preview-note small" id="preview-note">Three actual room images from Hauser. This preview changes pictures; it is not connected to a home and does not control individual lamps.</p>
-      <div class="wall-moment picture-moment">
-        <div class="moment-copy">
-          <h3>Tap the lamp<br>in the picture.</h3>
-          <p>Give each lamp its place in the room picture, and the picture becomes the switch. Tap the lamp by the sofa and it comes on; hold it for brightness. On the wall panel, a lamp that is off goes pale in the picture and gets its warm colour back the moment you tap it. In the image-control view the controls step aside completely, and a double tap shows what is where. Image control works on the wall panel and in the iPad app.</p>
-          <a class="text-link" href="docs/using/home-screen/#three-views">How image control works <span aria-hidden="true">→</span></a>
-        </div>
-        <figure>
-          <a class="image-link lamp-sequence" href="demo/#image" aria-label="Open the demo in image control and tap the lamps yourself">
-            <img src="media/picture-lamps-0-1100.webp"
-                 srcset="media/picture-lamps-0-700.webp 700w, media/picture-lamps-0-1100.webp 1100w, media/picture-lamps-0.webp 2140w"
-                 sizes="(min-width: 1440px) 850px, (min-width: 1101px) 62vw, calc(100vw - 48px)"
-                 width="2140" height="1204" loading="lazy" decoding="async"
-                 alt="The living room in the evening, up close. The TV lamp glows; the floor lamp and the globe lamp by the window are off and sit pale in the picture. A tap on each brings it on, and it takes back its warm colour.">
-            <img class="lamp-frame-1" src="media/picture-lamps-1-1100.webp"
-                 srcset="media/picture-lamps-1-700.webp 700w, media/picture-lamps-1-1100.webp 1100w, media/picture-lamps-1.webp 2140w"
-                 sizes="(min-width: 1440px) 850px, (min-width: 1101px) 62vw, calc(100vw - 48px)"
-                 width="2140" height="1204" loading="lazy" decoding="async" alt="">
-            <img class="lamp-frame-2" src="media/picture-lamps-2-1100.webp"
-                 srcset="media/picture-lamps-2-700.webp 700w, media/picture-lamps-2-1100.webp 1100w, media/picture-lamps-2.webp 2140w"
-                 sizes="(min-width: 1440px) 850px, (min-width: 1101px) 62vw, calc(100vw - 48px)"
-                 width="2140" height="1204" loading="lazy" decoding="async" alt="">
-            <span class="lamp-tap lamp-tap-1" aria-hidden="true"></span>
-            <span class="lamp-tap lamp-tap-2" aria-hidden="true"></span>
-          </a>
-          <figcaption><span>Image control · web demo. Lamps that are off sit pale in the picture.</span><a href="demo/#image">Try it in the demo <span aria-hidden="true">↗</span></a></figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- D: Two situations, with one concrete product moment each. -->
-  <section class="everyday section-space wrap" id="moments" aria-labelledby="everyday-title">
-    <p class="section-label">03 / Part of the day</p>
-    <h2 id="everyday-title">On the wall.<br>In your hand.</h2>
-    <div class="wall-moment" id="glance">
-      <div class="moment-copy">
-        <h3>On your way past.</h3>
-        <p>Before anyone touches it, the panel has a job. A clock you can read from across the room. The week ahead. A note you meant to remember. After a few idle minutes, standby brings the household’s day into view.</p>
-        <a class="text-link" href="docs/using/standby/">A closer look at standby <span aria-hidden="true">→</span></a>
-      </div>
-      <figure>
-        <a class="image-link" href="media/lockscreen.webp" aria-label="View the full-size standby screenshot">
-          <img src="media/lockscreen-1100.webp"
-               srcset="media/lockscreen-700.webp 700w, media/lockscreen-1100.webp 1100w, media/lockscreen.webp 1696w"
-               sizes="(min-width: 1440px) 850px, (min-width: 900px) 62vw, calc(100vw - 48px)"
-               width="1696" height="1060" loading="lazy" decoding="async"
-               alt="Hauser’s standby screen: a large clock, the family week, shopping list and notes over a faint neighbourhood map.">
-        </a>
-        <figcaption><span>Standby · web demo. Optional map from OpenStreetMap.</span><a href="media/lockscreen.webp">Full size <span aria-hidden="true">↗</span></a></figcaption>
-      </figure>
-    </div>
-    <div class="hand-moment">
-      <div class="phone-pair">
-        <figure class="phone-figure">
-          <img src="media/ios-room.webp" width="804" height="1748" loading="lazy" decoding="async"
-               alt="The iOS living-room screen with Cozy, Bright and Off scenes above the individual light controls.">
-          <figcaption>Living room · native iOS demo.</figcaption>
-        </figure>
-        <figure class="phone-figure">
-          <img src="media/phone-energy.webp" width="780" height="1688" loading="lazy" decoding="async"
-               alt="The energy screen on a phone: a large house with solar panels, the current power in the sky above it, and solar, battery and grid side by side below.">
-          <figcaption>Energy · phone web demo.</figcaption>
-        </figure>
-      </div>
-      <div class="moment-copy">
-        <p class="small">iPhone &amp; iPad</p>
-        <h3>Settle in.<br>Set the lights.</h3>
-        <p>Open the living room and choose a scene, or tap a lamp. The room’s controls are together, right where you expect them. No need to remember which integration a light belongs to.</p>
-        <p>Energy tells a story, too: your house stands large at the top, the power right now sits in its sky, and solar, battery and grid line up below it.</p>
-        <p>The native app works directly with <strong>Apple Home</strong>, without a Hauser server. With <strong>Home Assistant</strong>, it pairs to your Hauser installation. The web interface also adapts to a phone; available devices and features depend on the connection you choose.</p>
-        <a class="text-link" href="#app">Get the iOS beta <span aria-hidden="true">→</span></a>
-      </div>
-    </div>
-  </section>
-
-  <!-- E: The author's documented household, not an invented testimonial. -->
-  <section class="about section-space" id="beta" aria-labelledby="about-title">
-    <div class="wrap about-grid">
-      <div>
-        <p class="section-label">04 / A personal project</p>
-        <h2 class="telling" id="about-title">Made for a home.<br>Shared with yours.</h2>
-        <p class="free-line">Free. No subscription.</p>
-      </div>
-      <div class="about-copy">
-        <p class="lead">Hauser began on its maker’s wall panel, for the people living in that home. The room you’ve seen here is that living room: sofa, plants, toys and all.</p>
-        <p>The idea is simple: the person switching on a light shouldn’t have to understand the system behind it. The code is open source, so you can see how it works and make it your own.</p>
-        <p>Everyday control needs no Hauser account or subscription. Home Assistant runs on your hardware; the iOS app can use Apple Home directly. Optional image generation and other integrations have their own external services.</p>
-        <p class="beta-note"><strong>Still in public beta.</strong> Compatibility is growing, and this is a personal project without guaranteed support. The iOS app is a TestFlight beta with time-limited builds. <a href="https://github.com/ralleur/hauser/releases">Read what’s changed</a>.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- F: Entrances organised around the home people already have. -->
-  <section class="get-started section-space wrap" id="install" aria-labelledby="install-title">
-    <span class="anchor" id="setup"></span>
-    <div class="section-intro install-intro">
-      <div><p class="section-label">05 / Come on in</p><h2 id="install-title">Make yourself<br>at home.</h2></div>
-      <div class="intro-copy">
-        <p>Look around first. The live demo is the real web interface with simulated devices. Nothing connects to your home. When you’re ready, choose the way that fits your setup.</p>
-        <a class="button button-primary" href="demo/">Open the demo <span aria-hidden="true">↗</span></a>
-      </div>
-    </div>
-    <div class="setup-path" id="app">
-      <div class="path-heading"><p class="small">iPhone &amp; iPad · iOS 17+</p><h3>I use Apple Home.</h3></div>
-      <div class="path-copy">
-        <p>Install TestFlight, join the Hauser beta, then choose Apple Home. Your rooms and supported devices come from your Apple Home. No Home Assistant or Hauser server required.</p>
-        <div class="actions">
-          <a class="button button-outline" href="https://testflight.apple.com/join/WPcA1eE1">Join the iOS beta <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href="docs/integrations/companion-app/">App details &amp; requirements</a>
-        </div>
-      </div>
-    </div>
-    <div class="setup-path">
-      <div class="path-heading"><p class="small">Wall tablet, browser &amp; paired iOS app</p><h3>I use Home Assistant.</h3></div>
-      <div class="path-copy">
-        <p>Install Hauser on your own hardware. The guided setup finds your areas and devices and lets you arrange your rooms. On iPhone and iPad, the native app pairs with this installation by QR code.</p>
-        <div class="ha-paths">
-          <div><h4>Home Assistant OS</h4><p>Add the repository, install Hauser and open the web UI.</p><a class="text-link" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fralleur%2Fhauser">Add to Home Assistant <span aria-hidden="true">↗</span></a><a class="small setup-guide" href="docs/getting-started/home-assistant-app/">Step-by-step guide</a></div>
-          <div><h4>Home Assistant Container or NAS</h4><p>Run the same Hauser server with Docker Compose.</p><a class="text-link" href="docs/getting-started/docker-compose/">Docker installation guide <span aria-hidden="true">→</span></a></div>
-        </div>
-      </div>
-    </div>
-    <nav class="setup-topics" aria-label="Find the right smart-home dashboard">
-      <a class="text-link" href="/home-assistant-dashboard/">Home Assistant dashboard for the household <span aria-hidden="true">→</span></a>
-      <a class="text-link" href="/apple-home/">Apple Home on iPhone and iPad <span aria-hidden="true">→</span></a>
-    </nav>
-    <div class="practical-notes">
-      <details>
-        <summary>What should I check before installing?</summary>
-        <p>Hauser is beta software. Check the <a href="docs/getting-started/requirements/">requirements</a> and <a href="https://github.com/ralleur/hauser/releases">release notes</a> for your setup. Keep the server on a trusted network; do not expose its port to the internet. See the <a href="docs/integrations/remote-access/">remote-access guide</a> for access away from home.</p>
-      </details>
-      <details id="dignity">
-        <summary>What happens if my home is unreachable?</summary>
-        <p>The web panel keeps the room picture and dims its controls when Home Assistant is disconnected. Standby’s clock and date keep running on the panel. Device control needs the connection back. <a href="docs/reference/troubleshooting/">Connection help</a>.</p>
-      </details>
-      <details id="voices">
-        <summary>How does the rest of Hauser work?</summary>
-        <p>The <a href="docs/overview/features/">feature guide</a> covers the calendar, shopping, media and more, with their integration requirements. For the thinking behind the interface, read the <a href="https://github.com/ralleur/hauser/blob/main/docs/01-design-system.md">design system</a> and <a href="https://github.com/ralleur/hauser/blob/main/docs/02-interaction-contract.md">interaction contract</a>. The <a href="https://github.com/ralleur/hauser/blob/main/ROADMAP.md">roadmap</a> distinguishes what works today, what is experimental and what is planned.</p>
-      </details>
-    </div>
-  </section>
-</main>
-<footer class="site-footer">
-  <div class="wrap">
-    <div class="footer-top">
-      <a class="brand" href="#main" aria-label="Hauser — back to top"><img src="brand/hauser-logo-light.svg" width="416" height="144" alt="Hauser" loading="lazy"></a>
-      <nav class="footer-links" aria-label="Project links">
-        <a href="demo/">Demo</a><a href="#install">Installation</a><a href="docs/">Documentation</a><a href="https://github.com/ralleur/hauser">GitHub</a><a href="https://github.com/ralleur/hauser/blob/main/CONTRIBUTING.md">Contribute</a>
-      </nav>
-    </div>
-    <p>Code and documentation: <a href="https://github.com/ralleur/hauser/blob/main/LICENSE">AGPL-3.0-only</a>. Original illustrations and screenshots: <a href="https://github.com/ralleur/hauser/blob/main/ASSETS-LICENSE.md">CC BY 4.0</a>. <a href="https://github.com/ralleur/hauser/blob/main/TRADEMARKS.md">Hauser branding is reserved</a>. Alegreya Sans &amp; Alegreya: SIL Open Font License. Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.</p>
-    <p>Not affiliated with Home Assistant or Apple. Apple Home and TestFlight are trademarks of Apple Inc.</p>
+<body data-mode="welcome" data-chapter="light" data-step="tap" data-loading="true">
+  <a class="skip-link" href="#story" data-copy="skip">Skip to the introduction</a>
+  <div class="stage" id="stage">
+    <iframe id="home" data-demo-src="/presentation/?presentation=1&amp;idle=240#image" title="Hauser — interactive demo with simulated devices" tabindex="-1" inert></iframe>
   </div>
-</footer>
+  <div class="welcome-shade" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <button class="brand" id="brand" aria-label="Hauser — back to the beginning"><img src="/demo/brand/hauser-logo-dark.svg" alt="Hauser" width="139" height="48"></button>
+    <span class="header-note" data-copy="headerNote">A little closer to home.</span>
+    <nav class="header-actions" aria-label="Website">
+      <button class="text-button" id="about" data-copy="about">The idea</button>
+      <button class="language" id="language" aria-label="Auf Deutsch ansehen">DE</button>
+      <button class="get-button" id="get" data-copy="get">Get Hauser ↗</button>
+    </nav>
+  </header>
+
+  <main id="story">
+    <section class="invitation" id="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span data-copy="introKicker">THIS IS ALREADY HAUSER.</span></p>
+      <h1 id="welcome-title" data-copy="introTitle">Less dashboard.<br>More <em>home.</em></h1>
+      <p class="intro-text" data-copy="introText">The best way to understand Hauser<br>is to make yourself at home.</p>
+      <div id="loading-slot"><div class="loading-panel" id="loading">
+        <p class="loading-title" id="loading-title">Getting your home ready.</p>
+        <progress id="loading-progress" max="5" value="0" aria-labelledby="loading-title loading-phase"></progress>
+        <p class="loading-phase" id="loading-phase" role="status">Connecting to the demo…</p>
+        <div id="loading-slow" hidden><p id="loading-slow-text"></p><button class="detail-link" id="reload-demo" type="button">Load again</button></div>
+      </div></div>
+      <div class="invitation-actions">
+        <button class="primary" id="enter" disabled><span data-copy="enter">Come on in</span><span aria-hidden="true">→</span></button>
+        <button class="text-button explore-link" id="skip" disabled data-copy="explore">I’ll find my own way ↗</button>
+      </div>
+      <p class="intro-footnote" data-copy="introFootnote">The real app. A simulated home. Yours to explore.</p>
+    </section>
+
+    <div class="scene-meta" aria-hidden="true"><span class="scene-line"></span><span data-copy="sceneMeta">THE LIVING ROOM<br>One ordinary room. A different kind of interface.</span></div>
+
+    <aside class="guide" id="guide" aria-label="Guided introduction" hidden>
+      <div class="guide-top"><span class="eyebrow" id="chapter-kicker"></span><button class="icon-button" id="collapse" aria-label="Minimize explanation">−</button></div>
+      <div id="guide-content">
+        <div class="tour-progress" id="tour-progress" aria-label="Tour progress"></div>
+        <h2 id="chapter-title" tabindex="-1"></h2>
+        <p id="chapter-text"></p>
+        <div class="chapter-action" id="chapter-action"></div>
+        <p class="response" id="response" role="status" hidden></p>
+        <button class="detail-link" id="detail"></button>
+      </div>
+      <div class="journey-controls" id="journey-controls"><button class="icon-button" id="previous" aria-label="Previous moment">←</button><button class="next-button" id="next"><span data-copy="next">Next</span><span aria-hidden="true">→</span></button></div>
+    </aside>
+
+    <div class="lamp-hint" id="lamp-hint" aria-hidden="true" hidden><span class="lamp-ring"></span><span class="hint-label" data-copy="lampHint">Try this lamp</span></div>
+    <div class="explore-label" id="explore-label" hidden><span class="live-dot" aria-hidden="true"></span><span data-copy="freeExplore">Make yourself at home. Everything here is simulated.</span></div>
+  </main>
+
+  <footer class="experience-footer">
+    <div class="welcome-footer"><span data-copy="free">Free. No subscription.</span><span data-copy="for">For Home Assistant & Apple Home</span><button class="text-button" id="welcome-guide" data-copy="guide">A few moments inside ↗</button></div>
+    <div class="story-footer" hidden>
+      <button class="mode-button" id="mode"><span class="live-dot" aria-hidden="true"></span><span data-copy="exploreMode">Explore freely</span></button>
+      <nav class="chapters" id="chapters" aria-label="Moments in Hauser"></nav>
+    </div>
+  </footer>
+
+  <dialog id="sheet" aria-labelledby="sheet-title"><div class="sheet-top"><img src="/brand/hauser-logo-light.svg" width="116" height="40" alt="Hauser"><button class="icon-button" id="close-sheet" aria-label="Close">×</button></div><div id="sheet-body"></div></dialog>
+  <noscript><div class="no-script">Hauser is a free, open-source home interface for Home Assistant and Apple Home. This interactive introduction needs JavaScript. <a href="/docs/getting-started/requirements/">Read about Hauser and installation</a>, or <a href="https://github.com/ralleur/hauser">view the source</a>.</div></noscript>
+  <script type="module" src="/experience/experience.js"></script>
 </body>
 </html>

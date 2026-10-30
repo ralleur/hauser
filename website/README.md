@@ -1,134 +1,71 @@
 # Hauser project website
 
-Static English and German HTML and CSS, published at `/` and `/de/`. The existing Pages build
-copies this directory alongside the demo at `demo/` and the documentation at
-`docs/`. There is no website framework, analytics or remote font request. A small local
-`language.js` chooses the first homepage language from browser preferences and
-remembers an explicit choice in local storage. The three-state preview uses native radio inputs and CSS;
-navigation, both translations, the preview and the documentation disclosures work without JS.
+## Interactive product presentation (2026-10-30)
 
-## Editorial direction (2026-10-04)
+The homepage is Hauser itself: a working demo with simulated devices, presented
+through a guided tour or free exploration. `experience/index.html` is the entry
+template; `experience/copy.js` supplies the English and German copy used both
+by the static page generator and by the running tour. Generated `/` and `/de/`
+keep canonical URLs, reciprocal language links, social metadata and structured
+data. Browser language and a remembered explicit choice select the first visit.
+The existing Home Assistant and Apple Home topic pages and `/docs/` remain.
+Without JavaScript, a short product introduction links directly to installation
+and the source code. Existing installation anchors open the installation sheet.
 
-Six moments: invitation, recognition, room states, everyday use, the personal
-project, and getting started. Keep the actual room photo, its illustration,
-one large panel capture, standby and one native room screen. Merge the repeated
-room/state explanations and the separate phone/app presentations. Link detailed
-interaction mechanics, design rationale, additional features and operational
-guidance to the existing documentation instead of repeating them here.
+Desktop has five chapters: image control, rooms and customization, energy,
+household lists, and standby with a map. Chapter 01 has four guided stops:
+switching, actual lamp controls, scenes and central climate. Chapter 02 includes
+the actual room-image editor and appearance settings. Back/next controls sit
+inside the explanation card. Visitors can collapse explanations, jump chapters,
+open product details, or switch to free exploration.
 
-The page is deliberately light, using the product's current warm day surfaces,
-with one dark room-picture section. Alegreya Sans carries orientation;
-Alegreya is reserved for the invitation and personal story. Yellow marks the
-demo action. The original outlined logo is copied byte for byte from
-`app/public/brand/hauser-logo-light.svg`; never rebuild the wordmark with text.
+Mobile uses Hauser's phone shell at the actual screen width. It has four
+chapters and no standby. The explanation card is absent; chapter shortcuts,
+free exploration and back/next remain in a compact 80 px footer. The same
+guided stops open the actual app surfaces. Crossing 768 px reloads the embedded
+demo for the device class and moves navigation between footer and explanation.
+Desktop keeps a logical viewport of at least 1440 px, scaled as a whole.
 
-## Product evidence and resolved discrepancies
+The explicit `presentation=1` flag enables the same-origin demo bridge. Normal
+demo visits keep their own hints. The determinate loading bar follows document,
+app, shell, opening room image and font milestones; other room images load as
+used. A slow-load notice offers a retry. Demo residents are fictional (Mia and
+Leo), including reminders and calendar content.
 
-| Topic | Evidence used | Website decision |
-| --- | --- | --- |
-| Fonts and palette | `design-tokens/tokens.css`, `design-tokens/tokens.json`, `app/src/styles/app.css`, shipped font files | Current Alegreya Sans/Alegreya and warm day colours; old Inter/Instrument Serif references and the previous cool website palette are historical. |
-| Current product status | `app/package.json`, public release notes and `ROADMAP.md` | Public beta. No fixed version or language count in marketing copy. Historical roadmap snapshots are not current release evidence. |
-| Room pictures | `app/server/room-images.mjs`, `app/server/room-image-cloudflare-provider.mjs`, [room-image guide](https://hauserhome.app/docs/using/room-images/) | Uploads, OpenAI and Cloudflare exist. The old website's OpenAI-only description was stale. Provider access, external photo processing and costs/limits are stated next to the example. Local generation is not presented as a shipped general feature. |
-| State comparison | Existing public capture assets, [rooms guide](https://hauserhome.app/docs/using/rooms/), room-picture state handling in the app | Three prepared images, labelled as a preview. No claim that this page or the image switch operates a lamp. |
-| Image control | Public 0.46.0 release notes, `HeroDeviceTargets.svelte`, [home-screen guide](https://hauserhome.app/docs/using/home-screen/#three-views); native iPad panel follows (R68/R69) | Shown as its own moment after the state preview, which keeps its “does not control lamps” note. Claimed for the wall panel and the iPad app, not the iPhone. |
-| Native app | [app guide](https://hauserhome.app/docs/integrations/companion-app/); native project's `HomeKitSource.swift`, README and iOS deployment target | Apple Home works directly; Home Assistant uses Hauser server pairing. iOS 17+, TestFlight beta. Do not imply feature parity between backends or label the app as a mandatory Home Assistant accessory. |
-| Personal story | Public README, `ROADMAP.md`, photograph provenance in `ASSETS-LICENSE.md` | Built for the author's own household. No invented quote, user count or testimonial. |
-| Accounts, cloud and cost | Server architecture, optional-provider paths, native connection modes | Free Hauser software, no Hauser subscription/account for everyday control. Removed the blanket “no cloud” promise. Optional services and TestFlight have their own terms and data flows. |
+## Production build and publication
 
-The native-app guide previously mixed configured Home Assistant notifications
-with the app’s own local hints. The documentation refresh on 2026-10-04 checks
-`Hauser/Services/HouseholdStore.swift` in the native project: open windows,
-laundry and due reminders are local hints; Home Assistant persistent
-notifications are not forwarded into the native app yet. The guide now states
-that distinction. No notification or whole-feature-parity claim is made on the
-website. Experimental Apple Intelligence image generation and planned local
-models remain in the guide and roadmap, not in the landing page’s promise.
+The authoritative source is this development checkout plus
+`tools/public-export/files/scripts/`. In the sanitized public source tree,
+`./scripts/build-pages.sh` generates both languages, builds the direct demo,
+builds the embedded presentation and builds the wiki. It verifies shared asset
+paths and the entry pages. The presentation's HTML is served at `/presentation/`,
+outside the direct demo's service-worker scope. Both builds share `/demo/`
+assets, images and fonts, avoiding a second full public asset copy. The embedded
+build does not install a PWA or precache the application. The normal `/demo/`
+retains its PWA behavior. Design tokens are copied to `/design-tokens/`.
 
-## Image provenance and accessibility
+Publication uses the existing `ralleur/hauser` GitHub Pages workflow, `pages.yml`.
+A website publication does not create an application release tag or container
+release. Only the website, its demo presentation changes and Pages tooling are
+included; unrelated local work is retained. The owner's weekday 08:00–18:00
+public-repository window applies unless explicitly suspended for the run.
 
-All product images are the existing public demo captures/illustrations, not
-generated mockups. The panel and native screenshots were captured on 2026-09-26;
-the capture workflow is documented in the project's media tooling. The photo
-and illustration are the existing, documented before/after pair. No image was
-retouched to change a control or state.
+## Local iteration
 
-The hero cycles through full screen (3 seconds), all rooms (3 seconds),
-image control without device overlays (3 seconds), and with overlays (9 seconds).
-The 18-second CSS loop crossfades over 1.2 seconds, including its return to the
-first frame. It uses the same full panel captures at every breakpoint, with
-700/1100/full-width responsive sources. A keyboard-accessible checkbox pauses
-and resumes the loop without JavaScript; reduced motion holds the first frame.
+Build with `node tools/build-experience.mjs`, then run
+`node tools/preview-experience.mjs`. The compiled demo is in
+`app/dist-experience/`; shared assets are read directly from `app/public/`.
+The preview server supplies Brotli/gzip and validators, and retains fingerprinted
+chunks for open tabs. Website-only HTML/CSS/JS changes are read live.
 
-`media/hero-image-clean.webp` and `media/hero-image-devices.webp` are untouched
-1696 × 960 captures of the public English web demo on 2026-10-28, fixed to the
-evening appearance. A double tap on the empty floor reveals the device overlay.
-Their 700/1100 variants are resized WebP copies. Existing
-`media/hero-rooms-detail.webp` remains the literal iOS crop used by the guide.
+The local entry is `http://localhost:4190/hauser/?lang=de`. The owner can
+map this preview through an existing private tailnet service.
 
-All images have intrinsic dimensions. The first hero frame is preloaded;
-images below the hero are lazy-loaded. Focus is visible, the room-state preview
-supports native arrow-key operation, and reduced motion removes its short
-crossfade. The hero and the lamp loop in moment 02 are the only animations.
+## Assets and licences
 
-`media/picture-control.webp` (2026-10-24) is the web demo in the image-control
-view after a double tap. Since 2026-10-24 the demo ships its own device spots
-on the drawn lamps and blinds; nothing in the picture is retouched.
-`media/picture-lamps-0…2.webp` are the same evening view, cropped around the
-window, sofa and floor lamp at double density: the floor lamp and the globe
-lamp start off and pale, then come on one after the other. The page stacks
-them in a CSS-only loop (opacity and transform, with a tap ring on each lamp);
-reduced motion holds the middle frame still. `media/phone-energy.webp` is the
-phone web demo's energy screen at a late-afternoon time, as captured.
-
-`media/social-preview.jpg` is a 1280 × 640 browser capture of the new hero,
-composed for sharing with its navigation/actions hidden and more compact type
-and spacing. It uses the same original logo and untouched product screenshot.
-
-New assets remain within existing licence classes: `website/media/` is CC BY
-4.0, `website/brand/` is reserved branding, fonts retain their bundled OFL.
-Source and this documentation are AGPL-3.0-only.
-
-## Links and validation
-
-All previous section IDs remain usable: `main`, `what`, `moments`, `glance`,
-`room`, `touch`, `setup`, `voices`, `app`, `dignity`, `beta`, `install`.
-Paths stay relative to the Pages project root. TestFlight uses the existing
-public invitation; no App Store listing is implied.
-
-For website changes, serve this directory under `/`, render at 360,
-390, 768 and 1440 pixels, and check the preview by pointer and keyboard, without
-JavaScript and with reduced motion. Check console/network errors, local assets,
-anchors and all linked destinations. The public export's existing
-`scripts/build-pages.sh` verifies demo/wiki base paths;
-`scripts/verify-license-boundary.sh` verifies the asset classes. No deployment
-is part of these checks.
-
-## Search and languages
-
-The English homepage is the editable source. German copy, including image
-alternatives and accessible labels, lives in `translations/de.json`. Run
-`python3 scripts/build-website.py` from the public repository root (or pass
-`--website website` to the export overlay script in the development checkout).
-The Pages build runs it automatically. It fails on untranslated new copy.
-Generated German and topic HTML is checked in so local previews need no build.
-
-The browser selects German only at the unqualified homepage. Explicit `/de/`
-and topic URLs stay in their requested language. The top-bar DE/EN link stores
-the manual preference; `?lang=en` also works without browser storage. Section
-anchors survive the switch. Other browser languages fall back to English.
-
-Each language has its own canonical, reciprocal `hreflang` links, translated
-metadata and structured data. Home Assistant and Apple Home each have an
-English and German topic page. The guide remains English and German links
-identify it as `(EN)`. Existing captures remain unchanged and show English UI.
-
-`robots.txt` points to `sitemap.xml`, which indexes `sitemap-pages.xml` and
-the wiki sitemap. No training permission or external analytics is added.
-Search Console and Bing Webmaster Tools verification/submission require the
-owner’s existing accounts; no verification token is invented.
-
-The authoritative source is the development repository's `website/` directory
-and the public-export overlay's locale build scripts. Commit both before a
-public promotion. Changes made only in the public checkout are replaced by
-the next export. The generated German HTML and translations must remain in
-the exported website tree.
+The presentation reuses existing public illustrations, room photographs, fonts,
+brand assets and demo map data. No new media licence class is introduced.
+Application code and documentation are AGPL-3.0-only; illustrations and public
+screenshots in `website/media/` are CC BY 4.0; Hauser branding is reserved.
+Bundled fonts retain SIL OFL and map data OpenStreetMap attribution. The public
+export's `scripts/verify-license-boundary.sh` verifies these classes.

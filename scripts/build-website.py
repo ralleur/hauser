@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """Generate static German marketing pages, topic pages and the website sitemap.
 
-The English homepage is the source. Translation coverage is strict: new copy
-must be translated rather than silently falling back to English. No runtime
-translation service is required. Does not build or translate the app or wiki.
+The interactive entry template and its shared EN/DE copy are the homepage
+source. Topic pages remain static. No translation service is required.
+Does not build or translate the app or wiki.
 """
 import argparse
 from html import escape, unescape
@@ -12,6 +12,7 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
+import subprocess
 
 ORIGIN = 'https://hauserhome.app'
 UNCHANGED = {'Hauser', 'Demo', 'GitHub', 'DE', '↗', '→', '.', 'iPhone & iPad',
@@ -185,6 +186,9 @@ def topic_page(slug, language, source):
     canonical = ORIGIN + prefix + slug + '/'
     alternate = ('/' if de else '/de/') + slug + '/'
     head = source[source.index('<head>') + 6:source.index('</head>')]
+    head = re.sub(r'<link rel="stylesheet"[^>]*>', '', head)
+    head += '\n<link rel="stylesheet" href="/site.css">\n'
+    head = re.sub(r'[ \t]+\n', '\n', head)
     head = re.sub(r'<title>.*?</title>', '<title>' + escape(data['title']) + '</title>', head)
     for name in ('description', 'og:title', 'og:description', 'og:url'):
         value = canonical if name == 'og:url' else data['title'] if name == 'og:title' else data['description']
@@ -226,13 +230,53 @@ def topic_page(slug, language, source):
 '''
 
 
+def experience_page(root, language, copy):
+    """Render indexable EN/DE entry pages from the same copy as the tour."""
+    source = (root / 'experience/index.html').read_text()
+    data = copy[language]
+    de = language == 'de'
+    canonical = ORIGIN + ('/de/' if de else '/')
+    source = source.replace('<html lang="en"', f'<html lang="{language}"')
+    source = source.replace('noindex,nofollow', 'index,follow')
+    source = source.replace('data-demo-src="/demo/', 'data-demo-src="/presentation/')
+    source = re.sub(r'<title>.*?</title>', '<title>Hauser — ' + ('Komm herein.' if de else 'Come on in.') + '</title>', source)
+    source = re.sub(r'(<meta name="description" content=")[^"]*', lambda m: m[1] + escape(data['description'], quote=True), source)
+    # data-copy elements contain trusted project-owned HTML, also used at runtime.
+    source = re.sub(r'(<(?P<tag>\w+)\b[^>]*data-copy="(?P<key>[^"]+)"[^>]*>).*?(</(?P=tag)>)', lambda m: m[1] + data[m['key']] + m[4], source, flags=re.S)
+    source = source.replace('aria-label="Hauser — back to the beginning"', 'aria-label="Hauser — zurück zum Anfang"' if de else 'aria-label="Hauser — back to the beginning"')
+    if de:
+        source = source.replace('aria-label="Auf Deutsch ansehen">DE</button>', 'aria-label="View in English">EN</button>')
+        source = source.replace('Getting your home ready.', 'Dein Zuhause wird vorbereitet.').replace('Connecting to the demo…', 'Die Demo wird verbunden…')
+        source = source.replace('Hauser — interactive demo with simulated devices', 'Hauser — interaktive Demo mit simulierten Geräten')
+        source = source.replace('Hauser is a free, open-source home interface for Home Assistant and Apple Home. This interactive introduction needs JavaScript.', 'Hauser ist eine kostenlose Open-Source-Oberfläche für Home Assistant und Apple Home. Diese interaktive Einführung benötigt JavaScript.')
+        source = source.replace('Read about Hauser and installation', 'Mehr über Hauser und die Installation (EN)').replace('view the source', 'Quellcode ansehen').replace(', or <a href="https://github.com/ralleur/hauser">', ' oder <a href="https://github.com/ralleur/hauser">')
+    metadata = f'''<link rel="canonical" href="{canonical}">
+  <link rel="alternate" hreflang="en" href="{ORIGIN}/">
+  <link rel="alternate" hreflang="de" href="{ORIGIN}/de/">
+  <link rel="alternate" hreflang="x-default" href="{ORIGIN}/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Hauser — {'Komm herein.' if de else 'Come on in.'}">
+  <meta property="og:description" content="{escape(data['description'], quote=True)}">
+  <meta property="og:url" content="{canonical}">
+  <meta property="og:locale" content="{'de_DE' if de else 'en_US'}">
+  <meta property="og:locale:alternate" content="{'en_US' if de else 'de_DE'}">
+  <meta property="og:image" content="{ORIGIN}/media/social-preview.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/language.js"></script>'''
+    schema = {'@context': 'https://schema.org', '@type': 'SoftwareApplication', 'name': 'Hauser', 'description': data['description'], 'applicationCategory': 'LifestyleApplication', 'isAccessibleForFree': True, 'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'}, 'inLanguage': language, 'operatingSystem': 'Home Assistant OS, Docker, iOS', 'url': canonical, 'license': 'https://github.com/ralleur/hauser/blob/main/LICENSE'}
+    metadata += '\n<script type="application/ld+json">' + json.dumps(schema, ensure_ascii=False) + '</script>'
+    return source.replace('</head>', metadata + '\n</head>')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--website', type=Path, default=Path(__file__).resolve().parents[1] / 'website')
     root = parser.parse_args().website.resolve()
-    source = (root / 'index.html').read_text()
-    translations = json.loads((root / 'translations/de.json').read_text())
-    german = GermanPage(source, translations).render()
+    copy = json.loads(subprocess.check_output(['node', '--input-type=module', '-e', 'const {copy}=await import(process.argv[1]);process.stdout.write(JSON.stringify(copy))', (root / 'experience/copy.js').as_uri()], text=True))
+    source = experience_page(root, 'en', copy)
+    german = experience_page(root, 'de', copy)
+    (root / 'index.html').write_text(source)
     (root / 'de').mkdir(exist_ok=True)
     (root / 'de/index.html').write_text(german)
     paths = ['/', '/de/']

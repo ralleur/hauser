@@ -4,6 +4,7 @@ node_modules/
 dist/
 dist-demo/
 dist-pages-demo/
+dist-pages-presentation/
 .pages/
 .env
 .env.*

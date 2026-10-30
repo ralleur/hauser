@@ -201,6 +201,23 @@
      am Gerät verifiziert (Smoke-Test 2026-07-04):
      tablet-min: 1024px   | pad3-portrait: 1200px
      desktop-dev: 1440px  | pad3-landscape: 1696px (Design-Primärformat) */
+
+  /* Local Hauser website presentation: editorial composition. */
+  --story-gutter:clamp(var(--space-5),3vw,var(--space-7));
+  --story-header:calc(var(--space-8) + var(--space-4));
+  --story-footer:calc(var(--space-8) + var(--space-5));
+  --story-rule:1px;
+  --story-touch:calc(var(--space-6) + var(--space-3));
+  --story-guide:360px;
+  --story-guide-reserve:178px;
+  --story-title:clamp(var(--text-3xl),7.7vw,calc(var(--text-display) + var(--space-3)));
+  --story-shade:color-mix(in srgb,var(--color-surface-0) 82%,transparent);
+  --story-ink:var(--color-text-primary);
+  --story-paper:var(--color-surface-1);
+  --story-border:color-mix(in srgb,var(--color-text-primary) 16%,transparent);
+  --story-panel-width:1440px;
+  --story-sheet-width:620px;
+
 }
 
 /* ── Light Mode (Day-Theme, aus den Tagesbetrieb ausgelegt) ──

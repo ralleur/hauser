@@ -21,7 +21,15 @@ import {
 export const ambientMap = $state<AmbientMapClientState>(initialAmbientMapState());
 
 const client = createAmbientMapClient({
-  onChange: () => { Object.assign(ambientMap, client.state); },
+  onChange: () => {
+    const assetUrl = client.state.assetUrl;
+    Object.assign(ambientMap, client.state, {
+      // Static demos may live below /demo/ or the private website preview.
+      // The API contract stays root-relative; only its display URL is based.
+      assetUrl: import.meta.env.VITE_DEMO === '1' && assetUrl
+        ? `${import.meta.env.BASE_URL}${assetUrl.slice(1)}` : assetUrl,
+    });
+  },
 });
 
 let started = false;

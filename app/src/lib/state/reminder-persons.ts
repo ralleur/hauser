@@ -9,6 +9,7 @@
 import { m } from '../../paraglide/messages.js';
 import { PERSON_LABELS, type ReminderPerson } from './reminders.ts';
 import { sharedStorage } from './shared-config.ts';
+import { DEMO_REMINDER_PERSONS, IS_DEMO } from '../demo/demo-mode.ts';
 
 export interface PostitColor {
   id: string;
@@ -41,7 +42,7 @@ export const POSTIT_COLORS: readonly PostitColor[] = [
   { id: 'grau', paper: '#e2e8f0', ink: '#1f2937', muted: '#556172' },
 ];
 
-export const DEFAULT_REMINDER_PERSONS: readonly ReminderPersonConfig[] = [
+export const DEFAULT_REMINDER_PERSONS: readonly ReminderPersonConfig[] = IS_DEMO ? DEMO_REMINDER_PERSONS : [
   { id: 'alex', label: null, color: 'gruen' },
   { id: 'sam', label: null, color: 'gelb' },
   { id: 'beide', label: null, color: 'gelbgruen' },
@@ -142,7 +143,12 @@ export function adoptHaPersons(
 }
 
 export function loadReminderPersons(): ReminderPersonConfig[] {
-  try { return normalize(JSON.parse(sharedStorage.getItem(REMINDER_PERSONS_KEY) ?? 'null')); }
+  try {
+    const persons = normalize(JSON.parse(sharedStorage.getItem(REMINDER_PERSONS_KEY) ?? 'null'));
+    // Replace the old household seed on repeat demo visits as well.
+    return IS_DEMO && persons.some(person => ['alex', 'sam'].includes(person.id))
+      ? DEFAULT_REMINDER_PERSONS.map(person => ({ ...person })) : persons;
+  }
   catch { return DEFAULT_REMINDER_PERSONS.map((person) => ({ ...person })); }
 }
 
