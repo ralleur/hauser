@@ -17,6 +17,8 @@
   import { editMode } from '../state/edit-mode.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { resolveRoomHero, loadRoomHero } from '../components/room-hero-assets.ts';
+  import { mergedDevice, toggleDevice, setBrightness } from '../state/commands.ts';
+  import type { LightValue } from '../adapter/types.ts';
 
   let story = $state({ chapter: 'light', step: 'tap' });
   $effect(() => {
@@ -38,6 +40,13 @@
     let navigation = 0;
     let disposed = false;
     let cancelRoomWait = () => {};
+    let firstLampTap = true;
+
+    // Start with the real demo lights off. The first lamp tap then switches
+    // the actual room image from the unlit evening to the illuminated evening.
+    for (const lamp of appState.rooms.find(room => room.id === 'wohnzimmer')?.lights ?? []) {
+      if ((lamp.domain ?? 'light') === 'light' && (mergedDevice('wohnzimmer', lamp) as LightValue | undefined)?.on) toggleDevice(lamp);
+    }
 
     function waitForUi(find: () => HTMLElement | undefined): Promise<HTMLElement | undefined> {
       return new Promise(resolve => {
@@ -61,14 +70,17 @@
     async function preparePictures() {
       let done = 0;
       // Only the opening room gates the entrance. Other rooms load on demand.
-      const rooms = appState.rooms.filter(room => room.id === 'wohnzimmer');
-      const total = rooms.length;
+      const room = appState.rooms.find(room => room.id === 'wohnzimmer');
+      const variants = ['dark-off', 'dark'] as const;
+      const total = room ? variants.length : 0;
       tell('loading', { phase: 3, done, total });
-      await Promise.all(rooms.map(async room => {
+      // Decode both sides of the first interaction before inviting a tap.
+      await Promise.all((room ? variants : []).map(async variant => {
+        if (!room) return;
         const base = { baseUrl: import.meta.env.BASE_URL, roomId: room.id, config: roomHeroConfig(room.id) };
         const resolution = resolveRoomHero(mobile
-          ? { ...base, target: 'phone', variant: 'dark' }
-          : { ...base, target: 'panel', sun: undefined, fallbackTheme: 'dark' });
+          ? { ...base, target: 'phone', variant }
+          : { ...base, target: 'panel', sun: undefined, fallbackTheme: 'dark', allAssignedLightsOff: variant === 'dark-off' });
         await loadRoomHero(resolution);
         done++;
         if (!disposed) tell('loading', { phase: 3 + done / total, done, total });
@@ -168,6 +180,11 @@
         const lamp = appState.rooms.find(r => r.id === 'wohnzimmer')?.lights.find(l => l.entityId === 'light.wohnzimmer_fensterlampe');
         const button = target.closest('button');
         if ((button?.getAttribute('aria-label') ?? button?.textContent?.trim()) !== lamp?.name) return;
+        if (lamp && firstLampTap) {
+          firstLampTap = false;
+          const value = mergedDevice('wohnzimmer', lamp) as LightValue | undefined;
+          if (value?.on && !value.brightness) setBrightness('wohnzimmer', lamp.id, 75);
+        }
       }
       tell('interaction', { chapter, step: activeStep });
     }
