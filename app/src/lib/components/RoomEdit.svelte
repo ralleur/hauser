@@ -33,7 +33,7 @@
     roomLightPlacements,
     setLightPlacement,
   } from '../state/immersion-light.svelte.ts';
-  import { isLamp } from '../state/device-tap.ts';
+  import { moveDeviceZone, moveZoneCorner, toggleZoneShape, zoneShapeButton } from '../state/device-zone.ts';
   import {
     LIGHT_ZONE_MAX, LIGHT_ZONE_MIN, placementRotation, placementRy, type ImmersionLightPlacement,
   } from '../state/immersion-light.ts';
@@ -42,7 +42,6 @@
   import RoomImageEditor from './settings/RoomImageEditor.svelte';
   import RoomImageSetup from './settings/RoomImageSetup.svelte';
   import ImageEditorHelp from './settings/ImageEditorHelp.svelte';
-  import ImageControlNotice from './ImageControlNotice.svelte';
   import { roomImageDevices } from '../state/room-image-devices.ts';
   import {
     autoSensorId,
@@ -101,18 +100,21 @@
   /* „Geräte zuweisen“ steht wieder in den Raumeinstellungen (simon42,
      Cpt.Hardy, 0.47.0) — der Pfeil führt dorthin zurück, woher man kam. */
   let immersionBack = $state<'devices' | 'background'>('background');
-  /* Geräte im Bild (Owner 2026-10-19): jedes Gerät des Raums bekommt eine
-     Stelle im Raumbild — Lampen eine Lichtzone, alle anderen einen Punkt. */
+  /* Alle Geräte bekommen eine skalierbare Kreis- oder Rechteckfläche. */
   const placeableDevices = $derived(roomImageDevices(room));
-  const lampIds = $derived(new Set(placeableDevices.filter(isLamp).map((device) => device.entityId)));
-  const selectedIsLamp = $derived(lampIds.has(selectedLightId));
   const placements = $derived(roomLightPlacements(room?.id));
   /* Während eines Zugs an Ecke oder Drehanker lebt die Zone nur hier;
      gespeichert wird beim Loslassen, nicht bei jeder Bewegung. */
   let zoneDraft = $state<ImmersionLightPlacement | null>(null);
-  let zoneDrag: 'corner' | 'rotate' | null = null;
+  let zoneDrag: 'corner' | 'rotate' | number | null = null;
   let immersionStage = $state<HTMLElement>();
+  let stageWidth = $state(0), stageHeight = $state(0);
+  let shapeButtonSize = $state(0);
+
   const selectedPlacement = $derived(zoneDraft ?? placements[selectedLightId]);
+  const shapeButtonPosition = $derived(selectedPlacement && stageWidth && stageHeight
+    ? zoneShapeButton(selectedPlacement, stageWidth, stageHeight, shapeButtonSize, shapeButtonSize / 2)
+    : { x: 0, y: 0 });
   const shownPlacements = $derived(Object.entries(placements).map(([entityId, placement]) => [
     entityId, entityId === selectedLightId && zoneDraft ? zoneDraft : placement,
   ] as const));
@@ -295,18 +297,21 @@
     if (!room || !selectedLightId) return;
     const rect = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
     if (!rect) return;
-    setLightPlacement(room.id, selectedLightId, {
-      ...(selectedPlacement && selectedIsLamp ? selectedPlacement : { radius: 0.16 }),
-      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
-      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
-    });
+    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+    setLightPlacement(room.id, selectedLightId, moveDeviceZone(selectedPlacement ?? { x, y, radius: 0.16 }, x, y));
+  }
+
+  function changeZoneShape() {
+    if (!room || !selectedPlacement || !stageWidth || !stageHeight) return;
+    setLightPlacement(room.id, selectedLightId, toggleZoneShape(selectedPlacement, stageWidth / stageHeight));
   }
 
   function clampZone(value: number): number {
     return Math.min(LIGHT_ZONE_MAX, Math.max(LIGHT_ZONE_MIN, value));
   }
 
-  function startZoneDrag(kind: 'corner' | 'rotate', event: PointerEvent) {
+  function startZoneDrag(kind: 'corner' | 'rotate' | number, event: PointerEvent) {
     if (!selectedPlacement) return;
     event.preventDefault();
     event.stopPropagation();
@@ -320,11 +325,13 @@
      vom Mittelpunkt zum Finger, 0° heißt senkrecht nach oben; nahe 0, 90, 180
      und 270 Grad rastet er ein. */
   function moveZoneDrag(event: PointerEvent) {
-    if (!zoneDrag || !zoneDraft || !immersionStage) return;
+    if (zoneDrag === null || !zoneDraft || !immersionStage) return;
     const rect = immersionStage.getBoundingClientRect();
     const dx = event.clientX - (rect.left + zoneDraft.x * rect.width);
     const dy = event.clientY - (rect.top + zoneDraft.y * rect.height);
-    if (zoneDrag === 'corner') {
+    if (typeof zoneDrag === 'number') {
+      zoneDraft = moveZoneCorner(zoneDraft, zoneDrag, { x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height });
+    } else if (zoneDrag === 'corner') {
       const angle = placementRotation(zoneDraft) * Math.PI / 180;
       const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
       const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
@@ -339,7 +346,7 @@
   }
 
   function endZoneDrag() {
-    if (zoneDrag && zoneDraft && room && selectedLightId) {
+    if (zoneDrag !== null && zoneDraft && room && selectedLightId) {
       const { ry, rotation, ...rest } = zoneDraft;
       const next: ImmersionLightPlacement = { ...rest };
       if (ry !== undefined && Math.abs(ry - rest.radius) > 0.002) next.ry = ry;
@@ -694,7 +701,6 @@
         <button class="choice-seg pressable" type="button" role="radio" aria-checked={homeView === option.id}
                 onclick={() => layoutManager.setHomeView(option.id)}>{option.label()}</button>
       {/each}
-      <ImageControlNotice floating />
     </div>
   {/if}
   <div class="room-edit-panel overlay-panel on-image" class:is-immersion={view === 'immersion'} class:is-background={view === 'background'}
@@ -1294,49 +1300,60 @@
                   <button class="re-unassign pressable" type="button" onclick={() => room && removeLightPlacement(room.id, selectedLightId)}>{m.room_unassign_light()}</button>
                 {/if}
               </aside>
-              <div class="re-immersion-stage" bind:this={immersionStage}>
+              <div class="re-immersion-stage" bind:this={immersionStage} bind:clientWidth={stageWidth} bind:clientHeight={stageHeight}>
                 <button class="re-immersion-preview" type="button" onclick={placeSelected}
                         disabled={!selectedLightId}
                         style:background-image={`url("${immersionUrl}")`}
                         aria-label={selectedLightId ? m.room_set_position() : m.room_pick_lamp_first()}></button>
-                <!-- Die Zone zeigt, wie weit das Licht reicht: halbtransparent,
-                     weißer Punkt in der Mitte. Die gewählte trägt vier Eckanker
-                     für Breite und Höhe und oben einen Drehanker — so lässt sie
-                     sich einem Lampenschirm anpassen. -->
                 <div class="re-light-zones">
                   {#each shownPlacements as [entityId, placement] (entityId)}
                     {@const selected = selectedLightId === entityId}
-                    {#if !lampIds.has(entityId)}
-                      <!-- Kein Licht, keine Zone: ein Punkt, der die Stelle markiert. -->
-                      <div class="re-device-point" class:is-selected={selected}
-                           style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}>
-                        <span class="re-light-zone-center"></span>
-                      </div>
-                    {:else}
-                    <div class="re-light-zone" class:is-selected={selected}
-                         style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}
-                         style:width={`${placement.radius * 200}%`}
-                         style:aspect-ratio={`${placement.radius} / ${placementRy(placement)}`}
-                         style:rotate={`${placementRotation(placement)}deg`}>
-                      <span class="re-light-zone-center"></span>
+                    {#if placement.points}
+                      <svg class="re-device-polygon" class:is-selected={selected} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <polygon points={placement.points.map(p => `${p.x * 100},${p.y * 100}`).join(' ')} vector-effect="non-scaling-stroke" />
+                      </svg>
+                      <span class="re-light-zone-center" style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}></span>
                       {#if selected}
-                        {#each ['nw', 'ne', 'se', 'sw'] as corner (corner)}
-                          <button class="re-zone-handle" type="button" data-corner={corner}
+                        {#each placement.points as point, index (index)}
+                          <button class="re-zone-handle" type="button"
+                                  style:left={`${point.x * 100}%`} style:top={`${point.y * 100}%`}
                                   aria-label={m.room_light_zone_resize()}
-                                  onpointerdown={(event) => startZoneDrag('corner', event)}
-                                  onpointermove={moveZoneDrag} onpointerup={endZoneDrag}
-                                  onpointercancel={endZoneDrag}></button>
+                                  onpointerdown={(event) => startZoneDrag(index, event)}
+                                  onpointermove={moveZoneDrag} onpointerup={endZoneDrag} onpointercancel={endZoneDrag}></button>
                         {/each}
-                        <span class="re-zone-rotate-stem"></span>
-                        <button class="re-zone-handle re-zone-rotate" type="button"
-                                aria-label={m.room_light_zone_rotate()}
-                                onpointerdown={(event) => startZoneDrag('rotate', event)}
-                                onpointermove={moveZoneDrag} onpointerup={endZoneDrag}
-                                onpointercancel={endZoneDrag}></button>
                       {/if}
-                    </div>
+                    {:else}
+                      <div class="re-light-zone" class:is-selected={selected}
+                           style:left={`${placement.x * 100}%`} style:top={`${placement.y * 100}%`}
+                           style:width={`${placement.radius * 200}%`}
+                           style:aspect-ratio={`${placement.radius} / ${placementRy(placement)}`}
+                           style:rotate={`${placementRotation(placement)}deg`}>
+                        <span class="re-light-zone-center"></span>
+                        {#if selected}
+                          {#each ['nw', 'ne', 'se', 'sw'] as corner (corner)}
+                            <button class="re-zone-handle" type="button" data-corner={corner}
+                                    aria-label={m.room_light_zone_resize()}
+                                    onpointerdown={(event) => startZoneDrag('corner', event)}
+                                    onpointermove={moveZoneDrag} onpointerup={endZoneDrag} onpointercancel={endZoneDrag}></button>
+                          {/each}
+                          <span class="re-zone-rotate-stem"></span>
+                          <button class="re-zone-handle re-zone-rotate" type="button"
+                                  aria-label={m.room_light_zone_rotate()}
+                                  onpointerdown={(event) => startZoneDrag('rotate', event)}
+                                  onpointermove={moveZoneDrag} onpointerup={endZoneDrag} onpointercancel={endZoneDrag}></button>
+                        {/if}
+                      </div>
                     {/if}
                   {/each}
+                  {#if selectedPlacement}
+                    <button class="re-zone-shape pressable" type="button" bind:clientWidth={shapeButtonSize}
+                            style:left={`${shapeButtonPosition.x}px`} style:top={`${shapeButtonPosition.y}px`}
+                            aria-label={selectedPlacement.points ? m.room_device_zone_circle() : m.room_device_zone_rectangle()}
+                            title={selectedPlacement.points ? m.room_device_zone_circle() : m.room_device_zone_rectangle()}
+                            onclick={changeZoneShape}>
+                      <Icon name={selectedPlacement.points ? 'i-circle-outline' : 'i-rectangle-outline'} />
+                    </button>
+                  {/if}
                 </div>
               </div>
             </div>

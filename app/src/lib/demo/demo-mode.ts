@@ -37,12 +37,6 @@ const demoShoppingConfig = {
   ],
 };
 
-export const DEMO_REMINDER_PERSONS = [
-  { id: 'mia', label: 'Mia', color: 'gruen' },
-  { id: 'leo', label: 'Leo', color: 'gelb' },
-  { id: 'beide', label: null, color: 'gelbgruen' },
-];
-
 /* Die Haushaltskonfiguration ist Referenzdaten und deshalb deutsch benannt.
    Der Einstellungs-Screen liest die Räume und Geräte direkt daraus — in der
    Demo werden die Namen darum hier übersetzt, damit sie zur restlichen
@@ -82,13 +76,7 @@ function publicDemoHouseholdConfig() {
     rooms: demoHouseholdConfig.rooms.map((room) => ({
       ...room,
       name: DEMO_ROOM_NAMES[room.id]?.() ?? room.name,
-      visibleEntities: [
-        ...room.visibleEntities,
-        ...(room.id === 'kinderzimmer' ? [
-          { id: 'nachtlicht', name: m.demo_device_nachtlicht(), entityId: 'light.demo_nachtlicht_kinderzimmer', role: 'light' },
-          { id: 'deckenlampe', name: m.demo_device_deckenlampe(), entityId: 'light.demo_deckenlampe_kinderzimmer', role: 'light' },
-        ] : []),
-      ].map((entity) => ({
+      visibleEntities: room.visibleEntities.map((entity) => ({
         ...entity,
         name: (DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role])?.() ?? entity.name,
       })),
@@ -141,11 +129,11 @@ function demoReminders() {
     version: 1,
     updatedAt: nowIso(),
     items: [
-      demoReminder('demo-1', `Mia - ${m.demo_todo_bike_light()}`, false),
-      demoReminder('demo-2', `Leo - ${m.demo_todo_filter()}`, false),
+      demoReminder('demo-1', `Alex - ${m.demo_todo_bike_light()}`, false),
+      demoReminder('demo-2', `Sam - ${m.demo_todo_filter()}`, false),
       demoReminder('demo-3', `Beide - ${m.demo_todo_garage()}`, false),
-      demoReminder('demo-4', `Mia - ${m.demo_todo_plants()}`, false),
-      demoReminder('demo-5', `Leo - ${m.demo_todo_window()}`, false),
+      demoReminder('demo-4', `Alex - ${m.demo_todo_plants()}`, false),
+      demoReminder('demo-5', `Sam - ${m.demo_todo_window()}`, false),
       demoReminder('demo-6', `Beide - ${m.demo_todo_cellar()}`, true),
     ],
   };
@@ -262,7 +250,7 @@ export function demoResponse(path: string, method: string): Response | null {
   }
   if (path.startsWith('/api/config')) {
     return method === 'GET'
-      ? json({ values: { 'hmi:shopping-config:v1': JSON.stringify(demoShoppingConfig), 'hmi:reminder-persons:v1': JSON.stringify(DEMO_REMINDER_PERSONS) } })
+      ? json({ values: { 'hmi:shopping-config:v1': JSON.stringify(demoShoppingConfig) } })
       : json({ ok: true });
   }
   if (path.startsWith('/api/reminders')) {
@@ -453,7 +441,7 @@ const DEMO_LIGHT_PLACEMENTS = {
   wohnzimmer: {
     'light.wohnzimmer_kugellampen': { x: 0.4575, y: 0.199, radius: 0.022 },
     'light.wohnzimmer_esstisch': { x: 0.894, y: 0.119, radius: 0.058, ry: 0.034 },
-    'light.wohnzimmer_fensterlampe': { x: 0.652, y: 0.304, radius: 0.017, ry: 0.010, rotation: 23 },
+    'light.wohnzimmer_fensterlampe': { x: 0.648, y: 0.293, radius: 0.025, ry: 0.016, rotation: -18 },
     'light.wohnzimmer_tv': { x: 0.476, y: 0.398, radius: 0.013 },
     [DEMO_COVER_ENTITY]: { x: 0.36, y: 0.3, radius: 0.16 },
   },
@@ -529,17 +517,11 @@ const DEMO_LIGHT_PLACEMENTS_0_48 = {
   },
 };
 
-/* Previously shipped seed: migrate it only while it is still untouched. */
-const DEMO_LIGHT_PLACEMENTS_0_49 = {
-  ...DEMO_LIGHT_PLACEMENTS,
-  wohnzimmer: { ...DEMO_LIGHT_PLACEMENTS.wohnzimmer, 'light.wohnzimmer_fensterlampe': { x: 0.648, y: 0.293, radius: 0.025, ry: 0.016, rotation: -18 } },
-};
-
 export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
   if (!IS_DEMO || !storage) return;
   try {
     const stored = storage.getItem(DEMO_LIGHT_PLACEMENT_KEY);
-    if (stored === null || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_48 }) || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_49 })) {
+    if (stored === null || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_48 })) {
       storage.setItem(DEMO_LIGHT_PLACEMENT_KEY, JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS }));
     }
   } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }

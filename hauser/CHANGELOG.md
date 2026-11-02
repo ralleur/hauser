@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.0 - 2026-11-02
+
+- Room: every device on the picture gets a resizable area; a shape button switches to a rectangle with four free corners, so a blind can cover its window. The tappable area follows the shape.
+
 ## 0.49.1 - 2026-10-29
 
 - Installation: corrected the baseline x86-64 image build.

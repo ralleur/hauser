@@ -3,7 +3,7 @@
   /* ── Geräte im Bild bedienen (Owner 2026-10-19) ──
      Jedes Gerät mit einer Stelle im Raumbild (Raum konfigurieren → Geräte
      zuweisen) bekommt hier eine unsichtbare Trefferfläche: Lampen ihre
-     Lichtzone, alle anderen einen Punkt in Fingergröße. Ein Tipp wirkt wie
+     Lichtzone; alle anderen ihre konfigurierte Gerätefläche. Ein Tipp wirkt wie
      ein Tipp auf die Kachel, langes Halten öffnet das Detail wie an der
      Kachel. Ein weicher Ring bestätigt den Tipp.
 
@@ -15,6 +15,7 @@
   import { appState } from '../state/app.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
+  import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { isLamp, tapDevice } from '../state/device-tap.ts';
@@ -63,14 +64,22 @@
          style:--hero-focus-x={phone ? phoneFocus[0] : heroConfig?.focus.panel.x ?? 0.5}
          style:--hero-focus-y={phone ? phoneFocus[1] : heroConfig?.focus.panel.y ?? 0.5}>
       {#each targets as target (target.device.entityId)}
-        <button class="hero-device-target" class:is-lamp={target.lamp} type="button"
+        {@const bounds = target.placement.points ? zoneBounds(target.placement.points) : null}
+        <button class="hero-device-target" class:is-lamp={target.lamp} class:is-rectangle={!!bounds} type="button"
                 aria-label={target.device.name}
-                style:left={`${target.placement.x * 100}%`} style:top={`${target.placement.y * 100}%`}
-                style:width={target.lamp ? `${target.placement.radius * 200}%` : undefined}
-                style:aspect-ratio={target.lamp ? `${target.placement.radius} / ${placementRy(target.placement)}` : undefined}
-                style:rotate={target.lamp ? `${placementRotation(target.placement)}deg` : undefined}
+                style:left={`${(bounds?.left ?? target.placement.x) * 100}%`} style:top={`${(bounds?.top ?? target.placement.y) * 100}%`}
+                style:width={`${bounds ? bounds.width * 100 : target.placement.radius * 200}%`}
+                style:height={bounds ? `${bounds.height * 100}%` : undefined}
+                style:aspect-ratio={!bounds ? `${target.placement.radius} / ${placementRy(target.placement)}` : undefined}
+                style:rotate={!bounds ? `${placementRotation(target.placement)}deg` : undefined}
+                style:clip-path={target.placement.points ? zoneClipPath(target.placement.points) : undefined}
                 use:longpress={{ onLongPress: () => hold(target.device) }}
                 onclick={() => tap(target.device)}>
+          {#if bounds && target.placement.points}
+            <svg class="hero-device-polygon-outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polygon points={target.placement.points.map(p => `${(p.x - bounds.left) / bounds.width * 100},${(p.y - bounds.top) / bounds.height * 100}`).join(' ')} vector-effect="non-scaling-stroke" />
+            </svg>
+          {/if}
           {#if flash?.id === target.device.entityId}
             {#key flash.seq}<span class="hero-device-flash" aria-hidden="true"></span>{/key}
           {/if}

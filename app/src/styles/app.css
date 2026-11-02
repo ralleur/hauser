@@ -4849,19 +4849,34 @@ select optgroup {
   border: 1px dashed color-mix(in srgb, #fff 75%, transparent);
   pointer-events: none;
 }
-/* Gerät ohne Licht: ein Punkt in Fingergröße, der die Stelle markiert. */
-.re-device-point {
+/* Rechtecke teilen dieselben Bildkoordinaten wie die Fenstermarkierungen. */
+.re-device-polygon {
   position: absolute;
-  width: 28px;
-  height: 28px;
-  translate: -50% -50%;
-  border: 2px solid color-mix(in srgb, var(--color-accent-warm) 80%, transparent);
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--color-accent-warm) 28%, transparent);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
+  stroke: var(--color-accent-warm);
+  stroke-width: 1.5;
 }
-.re-device-point.is-selected {
-  border-color: var(--color-accent-warm);
-  background: color-mix(in srgb, var(--color-accent-warm) 45%, transparent);
+.re-device-polygon.is-selected {
+  fill: color-mix(in srgb, var(--color-accent-warm) 34%, transparent);
+  stroke-width: 2;
+}
+.re-zone-shape {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  padding: var(--space-2);
+  border: 1px solid var(--color-accent-warm);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  color: var(--color-accent-warm);
+  box-shadow: var(--elevation-card-shadow);
+  pointer-events: auto;
 }
 .re-light-zone-center {
   position: absolute;

@@ -1,8 +1,7 @@
 import { sharedStorage } from './shared-config.ts';
 
-/* Position eines Geräts im Raumbild. Lampen nutzen Radius, Ellipse und
-   Drehung als Lichtzone; alle anderen Geräte sind ein Punkt, ihre Zonenfelder
-   bleiben unbeachtet. */
+/* Gerätefläche im Raumbild; nur Lampen verwenden sie zusätzlich als Lichtzone. */
+export interface DeviceZonePoint { x: number; y: number }
 export interface ImmersionLightPlacement {
   /** Relative Koordinate im unverzerrten Hero-Asset (0…1). */
   x: number;
@@ -13,6 +12,9 @@ export interface ImmersionLightPlacement {
   ry?: number;
   /** Drehung der Ellipse in Grad im Uhrzeigersinn, -180…180. Ohne Eintrag 0. */
   rotation?: number;
+  /** Vier einzeln verschiebbare Ecken in Bildkoordinaten, wie bei Fenstern.
+      Ohne Punkte bleibt die bisherige Kreis-/Ellipsenform erhalten. */
+  points?: DeviceZonePoint[];
 }
 
 /* Grenzen der Zone, relativ zur Bildbreite. Die iOS-App liest dieselben Felder. */
@@ -62,6 +64,7 @@ export function parseImmersionLightConfig(raw: string | null): ImmersionLightCon
         if (typeof p.rotation === 'number' && Number.isFinite(p.rotation) && p.rotation !== 0) {
           placementValue.rotation = ((((p.rotation + 180) % 360) + 360) % 360) - 180;
         }
+        if (validDeviceZonePoints(p.points)) placementValue.points = p.points.map(({ x, y }) => ({ x, y }));
         placements[entityId] = placementValue;
       }
       if (Object.keys(placements).length) rooms[roomId] = placements;
@@ -70,6 +73,19 @@ export function parseImmersionLightConfig(raw: string | null): ImmersionLightCon
   } catch {
     return structuredClone(EMPTY_IMMERSION_LIGHT_CONFIG);
   }
+}
+
+export function validDeviceZonePoints(value: unknown): value is DeviceZonePoint[] {
+  if (!Array.isArray(value) || value.length !== 4 || !value.every(p => p && validUnit(p.x) && validUnit(p.y))) return false;
+  const points = value as DeviceZonePoint[];
+  const cross = (a: DeviceZonePoint, b: DeviceZonePoint, c: DeviceZonePoint) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const intersects = (a: DeviceZonePoint, b: DeviceZonePoint, c: DeviceZonePoint, d: DeviceZonePoint) =>
+    cross(a, b, c) * cross(a, b, d) <= 0 && cross(c, d, a) * cross(c, d, b) <= 0;
+  if (intersects(points[0], points[1], points[2], points[3]) || intersects(points[1], points[2], points[3], points[0])) return false;
+  return Math.abs(points.reduce((sum, p, i) => {
+    const q = points[(i + 1) % points.length];
+    return sum + p.x * q.y - q.x * p.y;
+  }, 0)) / 2 >= 0.00001;
 }
 
 export function loadImmersionLightConfig(

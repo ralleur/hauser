@@ -118,3 +118,25 @@
   transform: none;
   pointer-events: none;
 }
+
+/* Rechtecke folgen exakt ihren vier Ecken, auch bei perspektivischem Zuschnitt. */
+.hero-device-target.is-rectangle { translate: none; min-width: 0; border-radius: 0; }
+.hero-device-target.is-rectangle::after { display: none; }
+.hero-device-polygon-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: color-mix(in srgb, var(--color-accent-warm) 18%, transparent);
+  stroke: var(--color-surface-inverse);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  opacity: 0;
+  transition: opacity var(--duration-dusk) var(--ease-in-out);
+  pointer-events: none;
+}
+.room-hero-targets.is-revealed .hero-device-polygon-outline,
+.hero-device-target:focus-visible .hero-device-polygon-outline { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-device-polygon-outline { transition: none; }
+}

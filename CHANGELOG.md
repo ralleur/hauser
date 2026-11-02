@@ -3,6 +3,13 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.50.0] - 2026-11-02
+
+- Room: every device on the picture can be resized like a lamp. A shape button switches between ellipse and rectangle, whose four corners can be adjusted individually like window corners; the button moves to the left near the image edge. Web and iOS share the shape, and the tappable area follows it.
+
+- Room: the hint about devices without a position no longer floats over the room editor; it stays in the view settings.
+
+
 ## [0.49.1] - 2026-10-29
 
 - Installation: the baseline x86-64 image installs its native build tools without running unrelated dependency hooks.

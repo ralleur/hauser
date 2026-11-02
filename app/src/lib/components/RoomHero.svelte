@@ -19,6 +19,7 @@
   import type { LightValue } from '../adapter/types.ts';
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
+  import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { fadeOffLamps, weatherWholeImage } from '../state/room-display-config.svelte.ts';
@@ -304,11 +305,14 @@
          style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
          style:--hero-focus-y={heroConfig?.focus.panel.y ?? 0.5}>
       {#each lampShades as light (light.device.entityId)}
-        <span class="lamp-off-shade" class:is-off={light.off}
-              style:left={`${light.placement.x * 100}%`} style:top={`${light.placement.y * 100}%`}
-              style:width={`${light.placement.radius * 200}%`}
-              style:aspect-ratio={`${light.placement.radius} / ${placementRy(light.placement)}`}
-              style:rotate={`${placementRotation(light.placement)}deg`}></span>
+        {@const bounds = light.placement.points ? zoneBounds(light.placement.points) : null}
+        <span class="lamp-off-shade" class:is-off={light.off} class:is-rectangle={!!bounds}
+              style:left={`${(bounds?.left ?? light.placement.x) * 100}%`} style:top={`${(bounds?.top ?? light.placement.y) * 100}%`}
+              style:width={`${bounds ? bounds.width * 100 : light.placement.radius * 200}%`}
+              style:height={bounds ? `${bounds.height * 100}%` : undefined}
+              style:aspect-ratio={!bounds ? `${light.placement.radius} / ${placementRy(light.placement)}` : undefined}
+              style:rotate={!bounds ? `${placementRotation(light.placement)}deg` : undefined}
+              style:clip-path={light.placement.points ? zoneClipPath(light.placement.points) : undefined}></span>
       {/each}
     </div>
   {/if}
@@ -347,6 +351,9 @@
             <stop offset="1" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0" />
           </radialGradient>
         </defs>
+        {#if light.placement.points}
+          <polygon points={light.placement.points.map(p => `${p.x * 3392},${p.y * 2400}`).join(' ')} fill={`url(#immersion-light-${index})`} />
+        {:else}
         <ellipse
           cx={light.placement.x * 3392}
           cy={light.placement.y * 2400}
@@ -355,6 +362,7 @@
           transform={`rotate(${placementRotation(light.placement)} ${light.placement.x * 3392} ${light.placement.y * 2400})`}
           fill={`url(#immersion-light-${index})`}
         />
+        {/if}
       </svg>
     {/each}
   </div>
