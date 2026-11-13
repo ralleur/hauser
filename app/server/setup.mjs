@@ -299,7 +299,9 @@ export async function verifySetupJellyfin(url, accessToken, userId, fetchImpl = 
       method: 'GET',
       headers: {
         accept: 'application/json',
-        'x-emby-token': accessToken,
+        // Jellyfin 12 disables legacy token headers by default. Match the
+        // browser and native clients when checking the setup session.
+        authorization: `MediaBrowser Token="${accessToken}"`,
       },
       signal: AbortSignal.timeout(5_000),
     });

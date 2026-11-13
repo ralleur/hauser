@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.1 - 2026-11-13
+
+- Setup: Jellyfin activation accepts valid sessions on servers with legacy authentication disabled, using the same supported authorization header as the library login (#43).
+
 ## 0.50.0 - 2026-11-02
 
 - Room: every device on the picture gets a resizable area; a shape button switches to a rectangle with four free corners, so a blind can cover its window. The tappable area follows the shape.

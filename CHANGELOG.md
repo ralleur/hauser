@@ -3,6 +3,10 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.50.1] - 2026-11-13
+
+- Setup: Jellyfin session verification uses the supported authorization header, so servers with legacy authentication disabled no longer reject a successful login during activation (#43).
+
 ## [0.50.0] - 2026-11-02
 
 - Room: every device on the picture can be resized like a lamp. A shape button switches between ellipse and rectangle, whose four corners can be adjusted individually like window corners; the button moves to the left near the image edge. Web and iOS share the shape, and the tappable area follows it.

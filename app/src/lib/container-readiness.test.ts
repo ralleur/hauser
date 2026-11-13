@@ -5,6 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, wr
 import { tmpdir } from 'node:os';
 // @ts-expect-error Native Node test without @types/node.
 import { join } from 'node:path';
+// @ts-expect-error Native Node test without @types/node.
+import { createServer } from 'node:http';
 // @ts-expect-error The production server intentionally remains native Node ESM.
 import { assessHmiReadiness, createHmiServer, migrateHouseholdConfigFile, verifySetupHomeAssistant, verifySetupJellyfin } from '../../server.mjs';
 
@@ -379,13 +381,25 @@ describe('container readiness contract', () => {
       },
     });
 
+    // Jellyfin with legacy authorization disabled: the browser's login token
+    // must survive the server-side check before setup writes any config.
+    const jellyfinRequests: string[] = [];
+    const jellyfin = createServer((req: any, res: any) => {
+      jellyfinRequests.push(req.url);
+      const accepted = req.headers.authorization === 'MediaBrowser Token="jellyfin-token"';
+      res.writeHead(accepted ? 200 : 401, { 'content-type': 'application/json' });
+      res.end('{}');
+    });
+    servers.push(jellyfin);
+    await new Promise<void>((resolve) => jellyfin.listen(0, '127.0.0.1', resolve));
+    const jellyfinUrl = `http://127.0.0.1:${jellyfin.address().port}`;
+
     const server = createHmiServer('', {
       ...options,
       configPath: centralConfigPath,
       paperlessPin: '',
       paperlessToken: '',
       setupConnectionVerifier: async () => ({ ok: true }),
-      setupJellyfinVerifier: async () => ({ ok: true }),
     });
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -412,7 +426,7 @@ describe('container readiness contract', () => {
         householdConfig: validConfig(),
         jellyfin: {
           enabled: true,
-          url: 'http://jellyfin.local:8096/',
+          url: `${jellyfinUrl}/`,
           accessToken: 'jellyfin-token',
           userId: 'jellyfin-user',
         },
@@ -426,11 +440,12 @@ describe('container readiness contract', () => {
       'hmi:backend': 'ha',
       'hmi:ha-url': 'http://homeassistant.local:8123',
       'hmi:ha-token': 'setup-token',
-      'hmi:jf-url': 'http://jellyfin.local:8096',
+      'hmi:jf-url': jellyfinUrl,
       'hmi:jf-token': 'jellyfin-token',
       'hmi:jf-user': 'jellyfin-user',
       'hmi:library': 'live',
     });
+    expect(jellyfinRequests).toEqual(['/Users/jellyfin-user']);
 
     const ready = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(await ready.json()).toMatchObject({ status: 'ready', schemaVersion: 4 });
@@ -533,7 +548,7 @@ describe('container readiness contract', () => {
   });
 
   it('requires the Hauser server itself to reach the authenticated Jellyfin user', async () => {
-    const requested: Array<{ url: string; token: string | null }> = [];
+    const requested: Array<{ url: string; authorization: string | null; legacyToken: string | null }> = [];
     const accepted = await verifySetupJellyfin(
       'http://jellyfin.local:8096',
       'jellyfin-token',
@@ -541,7 +556,8 @@ describe('container readiness contract', () => {
       async (url: string, init: RequestInit) => {
         requested.push({
           url,
-          token: new Headers(init.headers).get('x-emby-token'),
+          authorization: new Headers(init.headers).get('authorization'),
+          legacyToken: new Headers(init.headers).get('x-emby-token'),
         });
         return new Response('{}', { status: 200 });
       },
@@ -549,9 +565,18 @@ describe('container readiness contract', () => {
 
     expect(requested).toEqual([{
       url: 'http://jellyfin.local:8096/Users/jellyfin-user',
-      token: 'jellyfin-token',
+      authorization: 'MediaBrowser Token="jellyfin-token"',
+      legacyToken: null,
     }]);
     expect(accepted).toEqual({ ok: true });
+  });
+
+  it.each([401, 403])('still rejects Jellyfin sessions denied with HTTP %s', async (status) => {
+    const rejected = await verifySetupJellyfin(
+      'http://jellyfin.local:8096', 'rejected-token', 'jellyfin-user',
+      async () => new Response(null, { status }),
+    );
+    expect(rejected).toMatchObject({ ok: false, code: 'SETUP_JELLYFIN_AUTH_FAILED' });
   });
 
   it('does not require household config in explicit shadow mode', () => {
