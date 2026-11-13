@@ -1722,6 +1722,7 @@
   "layout_size_aria": "Grootte van bedieningspaneel",
   "layout_rooms_per_row": "Kamers per rij",
   "layout_rooms_per_page": "Kamers per pagina, hoogstens",
+  "layout_cycle_view": "Weergave: {view}. Tik om van weergave te wisselen, houd ingedrukt om de configuratie te openen.",
   "layout_home_view": "Weergave",
   "layout_home_view_fullscreen": "Schermvullend",
   "layout_home_view_rooms": "Alle kamers",

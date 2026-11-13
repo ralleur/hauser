@@ -1723,6 +1723,7 @@
   "layout_size_aria": "Dimensione delle superfici di controllo",
   "layout_rooms_per_row": "Stanze per riga",
   "layout_rooms_per_page": "Stanze per pagina, al massimo",
+  "layout_cycle_view": "Vista: {view}. Tocca per cambiare vista, tieni premuto per aprire la configurazione.",
   "layout_home_view": "Vista",
   "layout_home_view_fullscreen": "Schermo intero",
   "layout_home_view_rooms": "Tutte le stanze",

@@ -1723,6 +1723,7 @@
   "layout_size_aria": "Taille des zones de contrôle",
   "layout_rooms_per_row": "Pièces par ligne",
   "layout_rooms_per_page": "Pièces par page, au maximum",
+  "layout_cycle_view": "Vue : {view}. Touchez pour changer de vue, appuyez longuement pour ouvrir la configuration.",
   "layout_home_view": "Affichage",
   "layout_home_view_fullscreen": "Plein écran",
   "layout_home_view_rooms": "Toutes les pièces",

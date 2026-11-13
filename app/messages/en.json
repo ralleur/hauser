@@ -1722,6 +1722,7 @@
   "layout_size_aria": "Control surface size",
   "layout_rooms_per_row": "Rooms per row",
   "layout_rooms_per_page": "Rooms per page, at most",
+  "layout_cycle_view": "View: {view}. Tap to change view, hold to open configuration.",
   "layout_home_view": "View",
   "layout_home_view_fullscreen": "Full screen",
   "layout_home_view_rooms": "All rooms",

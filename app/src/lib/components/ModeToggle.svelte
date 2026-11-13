@@ -26,6 +26,19 @@
   let pinOpen = $state(false);
   let pinDraft = $state('');
   let pinWrong = $state(false);
+  let afterUnlock: (() => void) | undefined;
+
+  export function enterEditMode(action: () => void): void {
+    if (editModeNeedsPin()) {
+      afterUnlock = action;
+      pinDraft = '';
+      pinWrong = false;
+      pinOpen = true;
+      return;
+    }
+    setEditMode(true);
+    action();
+  }
 
   const label = $derived(editMode.active ? m.mode_edit() : m.mode_user());
   /* Läuft im Hintergrund ein Raumbild-Auftrag, dreht sich dasselbe Zeichen und
@@ -58,6 +71,7 @@
   }
 
   function activate(): void {
+    afterUnlock = undefined;
     if (editModeNeedsPin()) {
       pinDraft = '';
       pinWrong = false;
@@ -85,6 +99,9 @@
     pinDraft = '';
     wave();
     setEditMode(true);
+    const action = afterUnlock;
+    afterUnlock = undefined;
+    action?.();
   }
 </script>
 

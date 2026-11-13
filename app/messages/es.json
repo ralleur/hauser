@@ -1722,6 +1722,7 @@
   "layout_size_aria": "Tamaño de la zona de control",
   "layout_rooms_per_row": "Habitaciones por fila",
   "layout_rooms_per_page": "Habitaciones por página, como máximo",
+  "layout_cycle_view": "Vista: {view}. Toca para cambiar de vista, mantén pulsado para abrir la configuración.",
   "layout_home_view": "Vista",
   "layout_home_view_fullscreen": "Pantalla completa",
   "layout_home_view_rooms": "Todas las habitaciones",

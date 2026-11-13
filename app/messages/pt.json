@@ -1722,6 +1722,7 @@
   "layout_size_aria": "Tamanho das superfícies de controlo",
   "layout_rooms_per_row": "Cômodos por linha",
   "layout_rooms_per_page": "Divisões por página, no máximo",
+  "layout_cycle_view": "Vista: {view}. Toque para mudar de vista, mantenha premido para abrir a configuração.",
   "layout_home_view": "Visualização",
   "layout_home_view_fullscreen": "Tela cheia",
   "layout_home_view_rooms": "Todos os cômodos",

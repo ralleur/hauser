@@ -6,11 +6,36 @@
   import { longpress } from '../actions/longpress.ts';
   import { connection, retryConnection } from '../state/connection.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
-  import { nav } from '../state/nav.svelte.ts';
+  import { nav, showScreen } from '../state/nav.svelte.ts';
   import ModeToggle from './ModeToggle.svelte';
   import Icon from './Icon.svelte';
   import { m } from '../../paraglide/messages.js';
   import { openFeedback } from '../state/feedback.svelte.ts';
+
+  import { layoutManager } from '../state/layout-manager.svelte.ts';
+  import { layoutHomeView, type HomeViewId } from '../state/layout-config.ts';
+  import { appState } from '../state/app.svelte.ts';
+  import { openRoomEdit } from '../state/overlay.svelte.ts';
+
+  let modeToggle: ModeToggle | undefined = $state();
+  const homeView = $derived(layoutHomeView(layoutManager.applied));
+  const viewLabel = $derived(homeView === 'rooms' ? m.layout_home_view_rooms()
+    : homeView === 'image' ? m.layout_home_view_image() : m.layout_home_view_fullscreen());
+  const viewHint = $derived(m.layout_cycle_view({ view: viewLabel }));
+
+  function cycleView(): void {
+    const views: HomeViewId[] = ['fullscreen', 'rooms', 'image'];
+    layoutManager.setHomeView(views[(views.indexOf(homeView) + 1) % views.length]);
+    showScreen('home');
+  }
+
+  function openConfiguration(): void {
+    modeToggle?.enterEditMode(() => {
+      showScreen('home');
+      const roomId = appState.currentRoom ?? appState.rooms[0]?.id;
+      if (roomId) openRoomEdit(roomId);
+    });
+  }
 
   const conn = $derived(connection());
 </script>
@@ -33,13 +58,18 @@
        der Knopf darin bleibt das Bedienelement. -->
   <div class="mode-toggle-slot" title={conn.banner ?? undefined}
        onclickcapture={() => { if (conn.banner !== null) retryConnection(); }}>
-    <ModeToggle />
+    <ModeToggle bind:this={modeToggle} />
   </div>
 
   <!-- Rechts nur noch Standby: der Erscheinungsbild-Umschalter ist entfallen
        (Owner-Wunsch 2026-09-12), der Modus bleibt unter Oberfläche & Bedienung
        einstellbar. -->
   <div class="status-group status-group-end">
+    <button class="standby-btn pressable" type="button" aria-label={viewHint}
+            title={viewHint} onclick={cycleView}
+            use:longpress={{ onLongPress: openConfiguration }}>
+      <Icon name={homeView === 'rooms' ? 'i-view-grid-outline' : homeView === 'image' ? 'i-image-outline' : 'i-view-dashboard-outline'} cls="icon icon-md" />
+    </button>
     <!-- Fragezeichen (R40): Problem melden oder Vorschlag machen, ohne Konto. -->
     <button class="standby-btn pressable" type="button" aria-label={m.feedback_button_label()}
             title={m.feedback_button_label()} onclick={openFeedback}>

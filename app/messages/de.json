@@ -1722,6 +1722,7 @@
   "layout_size_aria": "Größe der Kontrollflächen",
   "layout_rooms_per_row": "Räume pro Zeile",
   "layout_rooms_per_page": "Räume je Seite höchstens",
+  "layout_cycle_view": "Ansicht: {view}. Tippen wechselt die Ansicht, langes Drücken öffnet die Konfiguration.",
   "layout_home_view": "Ansicht",
   "layout_home_view_fullscreen": "Vollbild",
   "layout_home_view_rooms": "Alle Räume",

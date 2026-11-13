@@ -37,7 +37,6 @@
      bleibt draußen; bedient wird über die Geräte im Bild. Ein Wisch wechselt
      den Raum, langer Druck öffnet die Konfiguration. */
   const imageView = $derived(layoutHomeView(layoutManager.preview) === 'image');
-  const activeRoomIds = $derived(layoutManager.preview.slots.map((slot) => slotRoom(slot.roomId)?.id ?? ''));
   let HomeRoomGrid = $state<Component<{
     rooms: typeof appState.rooms;
     activeIds: readonly string[];
@@ -58,6 +57,7 @@
      und nach dem Standby — und kommt erst, wenn eine Kachel angetippt wird
      (Owner-Wunsch 2026-09-12). */
   let panelsHidden = $state(false);
+  const activeRoomIds = $derived(panelsHidden ? [] : layoutManager.preview.slots.map((slot) => slotRoom(slot.roomId)?.id ?? ''));
   $effect(() => {
     panelsHidden = (roomsView || imageView) && !ambientState.active;
   });
@@ -144,15 +144,13 @@
     if (!roomsView) preloadNeighbours(roomId);
   }
 
-  /* Kachel angetippt: der Raum kommt in die erste Kontrollfläche. Zeigt die
-     schon diesen Raum und es gibt eine zweite, wandert er dorthin — so lassen
-     sich beide Flächen ohne Raumauswahl belegen. */
+  /* Ein erneuter Tipp auf einen sichtbaren Raum schließt die Kontrollfläche. */
   function selectRoomFromTile(roomId: string) {
-    const slots = layoutManager.applied.slots;
-    const first = slots[0];
-    const second = slots[1];
-    const target = second && slotRoom(first.roomId)?.id === roomId ? second.id : first.id;
-    selectRoom(target, roomId);
+    if (!panelsHidden && activeRoomIds.includes(roomId)) {
+      panelsHidden = true;
+      return;
+    }
+    selectRoom(layoutManager.applied.slots[0].id, roomId);
     panelsHidden = false;
   }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.2 - 2026-11-14
+
+- Panel: the button beside Help cycles through Full screen, All rooms and Image control. Hold it to unlock editing and open configuration; an Edit PIN is still required when set.
+- All rooms: tapping a room whose controls are visible closes the control panels; tapping again opens them.
+
 ## 0.50.1 - 2026-11-13
 
 - Setup: Jellyfin activation accepts valid sessions on servers with legacy authentication disabled, using the same supported authorization header as the library login (#43).
