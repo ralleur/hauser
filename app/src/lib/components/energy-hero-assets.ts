@@ -209,24 +209,16 @@ function placeNote(note: { x: number; y: number }, bounds: PlacementBounds): { x
   const hw = size.w / 2;
   const hh = size.h / 2;
   const gap = 1.5;
-  let x = clampTo(note.x, visible.x0 + hw + gap, visible.x1 - hw - gap);
-  let y = clampTo(note.y, visible.y0 + hh + gap, visible.y1 - hh - gap);
-  for (const block of bounds.blocked) {
-    const box = { x0: x - hw, y0: y - hh, x1: x + hw, y1: y + hh };
-    if (!intersects(box, block)) continue;
-    /* Vier Auswege, der kürzeste gewinnt — solange er im Sichtbaren bleibt. */
-    const candidates = [
-      { x, y: block.y1 + gap + hh },
-      { x: block.x1 + gap + hw, y },
-      { x, y: block.y0 - gap - hh },
-      { x: block.x0 - gap - hw, y },
-    ].filter((c) => c.x - hw >= visible.x0 && c.x + hw <= visible.x1 && c.y - hh >= visible.y0 && c.y + hh <= visible.y1);
-    if (!candidates.length) continue;
-    const best = candidates.reduce((a, b) => (Math.hypot(a.x - x, a.y - y) <= Math.hypot(b.x - x, b.y - y) ? a : b));
-    x = best.x;
-    y = best.y;
-  }
-  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  const x = clampTo(note.x, visible.x0 + hw + gap, visible.x1 - hw - gap);
+  const y = clampTo(note.y, visible.y0 + hh + gap, visible.y1 - hh - gap);
+  const xs = [x, visible.x0 + hw + gap, visible.x1 - hw - gap, ...bounds.blocked.flatMap(b => [b.x0 - hw - gap, b.x1 + hw + gap])];
+  const ys = [y, visible.y0 + hh + gap, visible.y1 - hh - gap, ...bounds.blocked.flatMap(b => [b.y0 - hh - gap, b.y1 + hh + gap])];
+  // Check every obstacle together. Moving away from one card must not push
+  // the note back into an earlier card or the growing period summary.
+  const candidates = xs.flatMap(cx => ys.map(cy => ({ x: Math.round(cx * 10) / 10, y: Math.round(cy * 10) / 10 })))
+    .filter(c => c.x - hw >= visible.x0 && c.x + hw <= visible.x1 && c.y - hh >= visible.y0 && c.y + hh <= visible.y1)
+    .filter(c => !bounds.blocked.some(b => intersects({ x0: c.x - hw, y0: c.y - hh, x1: c.x + hw, y1: c.y + hh }, b)));
+  return candidates.reduce((best, c) => Math.hypot(c.x - x, c.y - y) < Math.hypot(best.x - x, best.y - y) ? c : best, candidates[0] ?? { x, y });
 }
 
 function placePoint(point: { x: number; y: number }, visible: PlacementRect): { x: number; y: number } {
@@ -238,10 +230,11 @@ function placePoint(point: { x: number; y: number }, visible: PlacementRect): { 
 
 export function placeFrame(frame: EnergyHeroFrame, bounds: PlacementBounds | null): EnergyHeroFrame {
   if (!bounds) return frame;
-  const place = (anchor: EnergyMarkAnchor): EnergyMarkAnchor => ({
-    point: placePoint(anchor.point, bounds.visible),
-    note: placeNote(anchor.note, bounds),
-    tilt: anchor.tilt,
-  });
+  const blocked = [...bounds.blocked];
+  const place = (anchor: EnergyMarkAnchor): EnergyMarkAnchor => {
+    const note = placeNote(anchor.note, { ...bounds, blocked });
+    blocked.push({ x0: note.x - bounds.note.w / 2, y0: note.y - bounds.note.h / 2, x1: note.x + bounds.note.w / 2, y1: note.y + bounds.note.h / 2 });
+    return { point: placePoint(anchor.point, bounds.visible), note, tilt: anchor.tilt };
+  };
   return { ratio: frame.ratio, sun: place(frame.sun), house: place(frame.house), grid: place(frame.grid) };
 }

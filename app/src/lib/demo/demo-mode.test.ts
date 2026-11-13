@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { applyDemoImageLink, DEMO_DEVICE_CONFIG_KEY, DEMO_LIGHT_PLACEMENT_KEY, installDemoDevices } from './demo-mode.ts';
+import { applyDemoImageLink, demoResponse, DEMO_DEVICE_CONFIG_KEY, DEMO_LIGHT_PLACEMENT_KEY, installDemoDevices } from './demo-mode.ts';
 import { LAYOUT_CONFIG_KEY, parseLayoutConfig } from '../state/layout-config.ts';
 import { DEVICE_CONFIG_KEY, parseDeviceConfig } from '../state/device-config.ts';
 import { IMMERSION_LIGHT_CONFIG_KEY, parseImmersionLightConfig } from '../state/immersion-light.ts';
 
 describe('demo devices', () => {
+  it('uses fictional people for both reminder titles and the configured residents', async () => {
+    const reminders = await demoResponse('/api/reminders', 'GET')!.json();
+    const config = await demoResponse('/api/config', 'GET')!.json();
+    const persons = JSON.parse(config.values['hmi:reminder-persons:v1']);
+    expect(persons.map((person: { id: string }) => person.id)).toEqual(['mia', 'leo', 'beide']);
+    expect(reminders.items.some((item: { title: string }) => item.title.startsWith('Mia - '))).toBe(true);
+    expect(reminders.items.some((item: { title: string }) => item.title.startsWith('Leo - '))).toBe(true);
+    expect(JSON.stringify({ reminders, persons })).not.toMatch(/Sam|Alex/i);
+  });
   it('uses the device manager key without importing it into the start path', () => {
     expect(DEMO_DEVICE_CONFIG_KEY).toBe(DEVICE_CONFIG_KEY);
     expect(DEMO_LIGHT_PLACEMENT_KEY).toBe(IMMERSION_LIGHT_CONFIG_KEY);

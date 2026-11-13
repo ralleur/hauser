@@ -259,6 +259,9 @@ export default defineConfig({
       emitTsDeclarations: true,
     }),
     VitePWA({
+      // The embedded website exhibit uses HTTP caching, without installing an
+      // offline app or prefetching the whole application during the first visit.
+      disable: BUILD_ENV.HAUSER_EXPERIENCE_PREVIEW === '1',
       registerType: 'prompt',
       injectRegister: false,
       manifest: false,

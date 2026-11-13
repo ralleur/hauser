@@ -262,9 +262,11 @@
     const blocked: PlacementBounds['blocked'] = [];
     const wall = wallEl?.getBoundingClientRect();
     if (wall && wall.width && wall.height) blocked.push(toRect(wall));
-    const noteEl = frameEl.querySelector<HTMLElement>('.energy-mark');
-    const noteW = noteEl?.offsetWidth ?? 120;
-    const noteH = noteEl?.offsetHeight ?? 84;
+    // Measure the rotated cards in the same coordinate space as the frame.
+    // offsetWidth is unscaled and the first card need not be the widest.
+    const notes = [...frameEl.querySelectorAll<HTMLElement>('.energy-mark')].map(el => el.getBoundingClientRect());
+    const noteW = notes.length ? Math.max(...notes.map(rect => rect.width)) : 120;
+    const noteH = notes.length ? Math.max(...notes.map(rect => rect.height)) : 84;
     bounds = { visible, blocked, note: { w: (noteW / f.width) * 100, h: (noteH / f.height) * 100 } };
   }
   $effect(() => {

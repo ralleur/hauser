@@ -7,12 +7,16 @@ cd "$ROOT"
 python3 scripts/build-website.py
 
 npm run build:pages-demo --prefix app
+node scripts/build-presentation.mjs
 npm run build --prefix docs-site
 
 rm -rf .pages
-mkdir -p .pages/demo .pages/docs
+mkdir -p .pages/demo .pages/docs .pages/presentation .pages/design-tokens
 cp -R website/. .pages/
 cp -R app/dist-pages-demo/. .pages/demo/
+cp -R app/dist-pages-presentation/assets/. .pages/demo/assets/
+cp app/dist-pages-presentation/index.html .pages/presentation/index.html
+cp design-tokens/tokens.css .pages/design-tokens/tokens.css
 cp -R docs-site/dist/. .pages/docs/
 touch .pages/.nojekyll
 
@@ -37,6 +41,16 @@ if not icon_sources or any(not isinstance(src, str) or src.startswith('/') for s
     raise SystemExit(f'Demo manifest icon paths must be relative: {icon_sources}')
 
 print('pages_base_path_contract=PASS')
+
+presentation = Path('.pages/presentation/index.html').read_text()
+for ref in re.findall(r'(?:src|href)="([^"]+)"', presentation):
+    if ref.startswith('/') and not Path('.pages' + ref).is_file():
+        raise SystemExit(f'Presentation entry references a missing shared asset: {ref}')
+for locale in ('', 'de/'):
+    entry = Path('.pages') / locale / 'index.html'
+    if 'data-demo-src="/presentation/?presentation=1' not in entry.read_text():
+        raise SystemExit(f'Homepage does not use the presentation entry: {entry}')
+print('presentation_shared_assets_contract=PASS')
 
 # The wiki is built with base /docs. Since the site moved to its own domain it
 # is served from the domain root, so no reference may still carry the old

@@ -120,4 +120,20 @@ describe('note placement (R21: notes stay on screen and off the summary)', () =>
     const frame = { ratio: 1.5, sun: anchor(98, 2), house: anchor(50, 50), grid: anchor(50, 99) };
     expect(placeFrame(frame, null)).toBe(frame);
   });
+
+  it('keeps all three notes apart when a larger period summary displaces them', () => {
+    for (const bottom of [58, 76]) {
+      const note = { w: 18, h: 14 };
+      const placed = placeFrame({ ratio: 1.5, sun: anchor(32, 42), house: anchor(32, 42), grid: anchor(32, 42) }, {
+        ...bounds, note, blocked: [{ x0: 0, y0: 8, x1: 72, y1: bottom }],
+      });
+      const notes = [placed.sun.note, placed.house.note, placed.grid.note];
+      for (const [index, a] of notes.entries()) {
+        expect(a.x - note.w / 2 >= 72 || a.y - note.h / 2 >= bottom).toBe(true);
+        for (const b of notes.slice(index + 1)) {
+          expect(Math.abs(a.x - b.x) >= note.w || Math.abs(a.y - b.y) >= note.h).toBe(true);
+        }
+      }
+    }
+  });
 });
