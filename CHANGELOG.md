@@ -3,6 +3,10 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.50.4] - 2026-11-14
+
+- Touch: device and climate overlays scale down to fit smaller screens, keeping light colours visible without scrolling. Large displays retain the existing maximum size; long settings lists remain scrollable.
+
 ## [0.50.3] - 2026-11-14
 
 - Android: signed public companion beta with the existing iPhone Home Assistant onboarding flow and your own server's web interface; download and update instructions at https://hauserhome.app/android/.

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   import { SUN_ENTITY, appState } from '../state/app.svelte.ts';
   import { energyCurve, energyPeriodTotals, energyTodayInput, initEnergyHistory } from '../state/energy-history.svelte.ts';
   import { energyBalanceToday } from '../state/energy-balance.ts';
@@ -523,7 +524,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
          — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
     <div class="overlay-scrim" onclick={() => (menuOpen = false)}></div>
-    <div class="energy-menu-panel overlay-panel" role="dialog" aria-modal="true"
+    <div class="energy-menu-panel overlay-panel" use:fitOverlay role="dialog" aria-modal="true"
          aria-label={m.energy_menu_title()} tabindex="-1" onkeydown={onMenuKeydown}>
       <header class="ld-header">
         <h2 class="ld-title">{m.energy_menu_title()}</h2>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* Klima-Overlay des Panels (Owner-Entscheidung 2026-09-11): Tap auf die
      Klima-Kachel zeigt die Karte mit Istwert, Sollwert und Betriebsart; ein
      langer Druck zeigt die Einstellungen der Kachel. Modal wie das Geräte-
@@ -55,7 +56,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closeRoomClimate()}></div>
-  <div class="light-detail-panel overlay-panel on-image" role="dialog" aria-modal="true"
+  <div class="light-detail-panel overlay-panel on-image" use:fitOverlay={0} role="dialog" aria-modal="true"
        aria-label={settings ? m.climate_settings_title() : `${m.cat_temp()} ${room?.name ?? ''}`}
        tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (roomClimate.mode === 'closing' && e.target === e.currentTarget) finishRoomClimateClose(); }}>

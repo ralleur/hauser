@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* „Heute" am Panel (wie die iOS-App): die Tagesbilanz als Scheibe rechts
      neben der Wand. Kein Schleier — die Wand bleibt daneben lesbar; ein Tipp
      außerhalb der Scheibe schließt. Zustandsmaschine wie das Last-Overlay. */
@@ -36,7 +37,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={onRequestClose}></div>
-  <div class="elo-panel ebo-panel overlay-panel on-image" role="dialog" aria-modal="true"
+  <div class="elo-panel ebo-panel overlay-panel on-image" use:fitOverlay role="dialog" aria-modal="true"
        aria-label={m.period_today()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (mode === 'closing' && e.target === e.currentTarget) onClosed(); }}>
     <header class="elo-header">

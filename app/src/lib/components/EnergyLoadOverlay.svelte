@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* Last-Overlay (B-19): Touch auf die „Erfasste Last" öffnet diese leichte
      Aufschlüsselung als SVG-Donut + Legende. Reuse der Overlay-Shell
      (overlay-scrim/overlay-panel + is-open/is-closing-Zustandsmaschine, s.
@@ -53,7 +54,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={onRequestClose}></div>
-  <div class="elo-panel overlay-panel on-image" role="dialog" aria-modal="true"
+  <div class="elo-panel overlay-panel on-image" use:fitOverlay role="dialog" aria-modal="true"
        aria-label="Verbrauchsaufteilung" tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (mode === 'closing' && e.target === e.currentTarget) onClosed(); }}>
     <header class="elo-header">

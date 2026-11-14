@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* Gerätegruppe bilden oder bearbeiten (Owner-Wunsch 2026-09-13): erreichbar
      über den Gruppen-Knopf im Gerätedetail (statt des Schließen-Kreuzes).
      Zwei oder mehr Geräte derselben Art aus allen Räumen werden EIN Gerät —
@@ -87,7 +88,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={close}></div>
-  <div class="room-edit-panel overlay-panel on-image" role="dialog" aria-modal="true" aria-label={title} tabindex="-1"
+  <div class="room-edit-panel overlay-panel on-image" use:fitOverlay role="dialog" aria-modal="true" aria-label={title} tabindex="-1"
        onanimationend={(e) => { if (mode === 'closing' && e.target === e.currentTarget) onClose(); }}>
     <header class="ld-header">
       <span class="ld-symbol is-on grp-symbol" aria-hidden="true"><Icon name={symbol} /></span>

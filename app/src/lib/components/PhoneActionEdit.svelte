@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* Schnellzugriff der Telefonleiste einrichten (Long-Press auf den
      Urlaubsknopf, analog CentralClimateEdit). Zwei Entscheidungen, in der
      Reihenfolge, in der sie zusammenhängen: erst das Gerät, dann sein Symbol —
@@ -94,7 +95,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions
        — Scrim ist bewusst kein Button (Tap außerhalb schließt, docs/07) -->
   <div class="overlay-scrim" onclick={() => closePhoneActionEdit()}></div>
-  <div class="room-edit-panel overlay-panel on-image" role="dialog" aria-modal="true"
+  <div class="room-edit-panel overlay-panel on-image" use:fitOverlay role="dialog" aria-modal="true"
        aria-label={m.phone_action_title()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (phoneActionEdit.mode === 'closing' && e.target === e.currentTarget) finishPhoneActionEditClose(); }}>
     <header class="ld-header">

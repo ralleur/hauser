@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fitOverlay } from '../actions/fit-overlay.ts';
   /* Geräte-Detail (zweite Ebene, docs/07): EIN Modal für alle Overlay-Kategorien,
      per Long-Press (bzw. Tap bei nicht-schaltbaren Kacheln) geöffnet. Die Shell
      (Scrim, Panel, Header mit Symbol-Picker, Zustandsmaschine) ist das bisherige
@@ -362,7 +363,7 @@
   <div class="overlay-scrim" onclick={() => closeDeviceDetail()}></div>
   <!-- `on-image`: im Glas-Kartenstil ist das Overlay dieselbe Milchglasscheibe
        wie die Gerätesteuerung auf der Bühne (styles/on-image.css). -->
-  <div class="light-detail-panel overlay-panel on-image" role="dialog" aria-modal="true"
+  <div class="light-detail-panel overlay-panel on-image" use:fitOverlay={0} role="dialog" aria-modal="true"
        aria-label={device?.name ?? m.dev_device()} tabindex="-1" bind:this={panelEl}
        onanimationend={(e) => { if (deviceDetail.mode === 'closing' && e.target === e.currentTarget) finishDeviceDetailClose(); }}>
     {#if device}

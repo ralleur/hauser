@@ -1,3 +1,7 @@
+## 0.50.4 - 2026-11-14
+
+- Touch: overlays fit smaller tablet screens without growing beyond their existing size. Light colours stay visible without scrolling.
+
 ## 0.50.3 - 2026-11-14
 
 - Android companion: paired WebView sessions authenticate HTTP and WebSocket requests, with exact-Origin CSRF checks and revocation. Signed Android beta: https://hauserhome.app/android/.
