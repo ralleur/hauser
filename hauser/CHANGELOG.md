@@ -1,3 +1,7 @@
+## 0.50.5 - 2026-11-14
+
+- Image control: device zones accept taps up to 32 pixels beyond their edges. Overlapping touch margins select one device using the nearest original zone, with direct hits taking priority.
+
 ## 0.50.4 - 2026-11-14
 
 - Touch: overlays fit smaller tablet screens without growing beyond their existing size. Light colours stay visible without scrolling.

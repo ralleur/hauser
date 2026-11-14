@@ -3,6 +3,10 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.50.5] - 2026-11-14
+
+- Image control: a generous 32-pixel touch margin around device zones catches near misses. Direct hits take priority; overlapping margins choose the nearest original zone edge, independently of drawing order.
+
 ## [0.50.4] - 2026-11-14
 
 - Touch: device and climate overlays scale down to fit smaller screens, keeping light colours visible without scrolling. Large displays retain the existing maximum size; long settings lists remain scrollable.
