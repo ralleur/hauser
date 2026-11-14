@@ -15,6 +15,7 @@
   import { appState } from '../state/app.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
+  import { deviceZoneOutline, nearestDeviceZone } from '../state/device-zone-hit.ts';
   import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
@@ -43,6 +44,22 @@
     .filter((device) => placements[device.entityId])
     .map((device) => ({ device, placement: placements[device.entityId], lamp: isLamp(device) })));
 
+  let imageSpace: HTMLDivElement;
+  let imageWidth = $state(0), imageHeight = $state(0);
+  let hitLayer: HTMLDivElement;
+  let pressed: Light | undefined;
+  const hitTargets = $derived(targets.map(target => ({ ...target, id: target.device.entityId,
+    outline: deviceZoneOutline(target.placement, imageWidth, imageHeight) })));
+
+  function hit(event: MouseEvent | PointerEvent): Light | undefined {
+    const rect = imageSpace.getBoundingClientRect();
+    // The stage adds a small visual overscan; convert back into its local coordinates.
+    const scale = rect.width / imageWidth;
+    const point = { x: (event.clientX - rect.left) / scale, y: (event.clientY - rect.top) / scale };
+    const tolerance = parseFloat(getComputedStyle(hitLayer).getPropertyValue('--device-hit-padding')) / scale;
+    return nearestDeviceZone(hitTargets, point, tolerance)?.device;
+  }
+
   let flash = $state<{ id: string; seq: number } | null>(null);
 
   function tap(device: Light): void {
@@ -60,9 +77,20 @@
 
 {#if room && targets.length > 0}
   <div class="room-hero-targets" class:is-revealed={reveal} class:is-phone={phone} style:--hero-parallax={`${heroParallax.offsetPx}px`}>
-    <div class="hero-image-space"
+    <div class="hero-image-space" bind:this={imageSpace} bind:clientWidth={imageWidth} bind:clientHeight={imageHeight}
          style:--hero-focus-x={phone ? phoneFocus[0] : heroConfig?.focus.panel.x ?? 0.5}
          style:--hero-focus-y={phone ? phoneFocus[1] : heroConfig?.focus.panel.y ?? 0.5}>
+      <!-- Only the union of expanded zones accepts touches; free space keeps its gestures. -->
+      <div class="hero-device-hit-layer" aria-hidden="true" bind:this={hitLayer}
+           onpointerdown={(event) => { pressed = hit(event); }}
+           use:longpress={{ onLongPress: () => { if (pressed) hold(pressed); } }}
+           onclick={(event) => { const device = hit(event); if (device) tap(device); }}>
+        <svg width="100%" height="100%" aria-hidden="true">
+          {#each hitTargets as target (target.id)}
+            <polygon class="hero-device-hit-zone" points={target.outline.map(p => `${p.x},${p.y}`).join(' ')} />
+          {/each}
+        </svg>
+      </div>
       {#each targets as target (target.device.entityId)}
         {@const bounds = target.placement.points ? zoneBounds(target.placement.points) : null}
         <button class="hero-device-target" class:is-lamp={target.lamp} class:is-rectangle={!!bounds} type="button"

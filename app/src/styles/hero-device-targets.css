@@ -19,7 +19,7 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  pointer-events: auto;
+  pointer-events: none;
   touch-action: pan-y pinch-zoom;
   -webkit-tap-highlight-color: transparent;
 }
@@ -139,4 +139,23 @@
 .hero-device-target:focus-visible .hero-device-polygon-outline { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .hero-device-polygon-outline { transition: none; }
+}
+
+/* A full finger-width halo, independent of zone size. Arbitration uses all
+   original contours, so overlapping halos never depend on paint order. */
+.hero-device-hit-layer {
+  --device-hit-padding: var(--space-6);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  touch-action: pan-y pinch-zoom;
+}
+.hero-device-hit-layer svg { overflow: visible; }
+.hero-device-hit-zone {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: calc(var(--device-hit-padding) * 2);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
 }
