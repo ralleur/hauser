@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { tourSteps, loadingCopy } from './tour.js';
-import { copy } from './copy.js?v=brand-beta-3';
+import { copy } from './copy.js?v=sheet-beta-4';
 
 const $ = id => document.getElementById(id);
 const frame = $('home');

@@ -84,4 +84,6 @@ body[data-loading=true][data-mode=welcome] :is(.invitation-actions,.intro-footno
 #sheet-body>.sheet-section:first-child{border-top:0;padding-top:0}
 
 .brand{gap:var(--space-3)}.brand-beta{font-size:var(--text-2xs);font-weight:var(--font-weight-medium);line-height:var(--leading-tight);white-space:nowrap;color:var(--color-accent-warm);border:var(--story-rule) solid var(--story-border);border-radius:var(--radius-full);padding:var(--space-1) var(--space-2)}
-@media(max-width:767px){.brand{flex-direction:column;align-items:flex-start;gap:0}.brand-beta{font-size:var(--text-3xs);border:0;padding:0}}
+@media(max-width:767px){.brand{flex-direction:column;align-items:flex-start;gap:0}.brand .brand-beta{font-size:var(--text-3xs);border:0;padding:0}}
+
+.sheet-brand{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;min-width:0}.sheet-brand img{flex-shrink:0}
