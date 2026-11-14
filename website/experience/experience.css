@@ -80,3 +80,5 @@ body[data-loading=true][data-mode=welcome] :is(.invitation-actions,.intro-footno
  .guide .next-button{flex:1;min-width:0;justify-content:space-between;gap:var(--space-2);padding-inline:var(--space-4);text-align:left}
  .guide.is-collapsed .journey-controls{margin-top:var(--space-3)}
 }
+
+#sheet-body>.sheet-section:first-child{border-top:0;padding-top:0}
