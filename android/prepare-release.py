@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
 """Stage only verified release artifacts and generate EN/DE installation pages."""
-import hashlib,json,shutil
+import hashlib,json,re,shutil
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent;REPO=ROOT.parent
 v=json.loads((ROOT/'build/release.json').read_text());apk=ROOT/'build'/v['file']
@@ -10,6 +10,11 @@ assert v['signerSha256']==(ROOT/'signer-sha256.txt').read_text().strip()
 assert v['debuggable'] is False
 out=REPO/'website/downloads';out.mkdir(exist_ok=True)
 for name in [v['file'],v['file']+'.sha256','release.json']:shutil.copy2(ROOT/'build'/name,out/name)
+experience=REPO/'website/experience/experience.js'
+source=experience.read_text()
+source,count=re.subn(r'/downloads/hauser-android-[^\"\s]+\.apk', '/downloads/'+v['file'], source)
+assert count == 1, 'Expected one homepage APK download link'
+experience.write_text(source)
 for de in (False,True):
     t=lambda a,b:a if de else b
     folder=REPO/'website'/('de/android' if de else 'android');folder.mkdir(parents=True,exist_ok=True)
