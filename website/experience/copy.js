@@ -2,7 +2,7 @@
 export const copy = {
   en: {
     description:'Come on in. Explore Hauser, the free visual home interface for Home Assistant and Apple Home, through its working demo.',
-    skip:'Skip to the introduction', loading:'Opening the door…', headerNote:'A little closer to home.', about:'The idea', get:'Get Hauser ↗',
+    skip:'Skip to the introduction', loading:'Opening the door…', betaLabel:'Beta versions', headerNote:'A little closer to home.', about:'The idea', get:'Get Hauser ↗',
     introKicker:'THIS IS ALREADY HAUSER.', introTitle:'Less dashboard.<br>More <em>home.</em>', introText:'The best way to understand Hauser<br>is to make yourself at home.',
     enter:'Come on in', explore:'I’ll find my own way ↗', introFootnote:'The real app. A simulated home. Yours to explore.', sceneMeta:'THE LIVING ROOM<br>One ordinary room. A different kind of interface.',
     free:'Free. No subscription.', for:'For Home Assistant & Apple Home', guide:'A few moments inside ↗', next:'Next', finish:'Make it yours', exploreMode:'Explore freely', storyMode:'Back to the story',
@@ -24,7 +24,7 @@ export const copy = {
   },
   de: {
     description:'Komm herein. Entdecke Hauser, die kostenlose visuelle Oberfläche für Home Assistant und Apple Home, direkt in der funktionierenden Demo.',
-    skip:'Zur Einführung springen', loading:'Die Tür geht auf…', headerNote:'Ein Stück mehr Zuhause.', about:'Die Idee', get:'Hauser holen ↗',
+    skip:'Zur Einführung springen', loading:'Die Tür geht auf…', betaLabel:'Beta-Versionen', headerNote:'Ein Stück mehr Zuhause.', about:'Die Idee', get:'Hauser holen ↗',
     introKicker:'DAS HIER IST SCHON HAUSER.', introTitle:'Weniger Dashboard.<br>Mehr <em>Zuhause.</em>', introText:'Hauser versteht man am besten,<br>wenn man sich zu Hause fühlt.',
     enter:'Komm herein', explore:'Ich schaue mich selbst um ↗', introFootnote:'Die echte App. Ein simuliertes Zuhause. Zum Entdecken.', sceneMeta:'DAS WOHNZIMMER<br>Ein ganz normaler Raum. Eine andere Art der Bedienung.',
     free:'Kostenlos. Ohne Abo.', for:'Für Home Assistant & Apple Home', guide:'Ein paar Momente drinnen ↗', next:'Weiter', finish:'Für dein Zuhause', exploreMode:'Frei erkunden', storyMode:'Zurück zur Geschichte',
