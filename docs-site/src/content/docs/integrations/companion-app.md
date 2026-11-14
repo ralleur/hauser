@@ -76,3 +76,15 @@ is not the web page inside an app wrapper.
 
 For the browser-based phone interface, see
 [Phones and panels](/docs/getting-started/phones-and-panels/).
+
+## Android app
+
+The signed Android beta is available from [the Android download page](https://hauserhome.app/android/). It requires Android 11 or newer and an up-to-date Android System WebView. It uses your existing Hauser server web interface. Apple Home is not offered on Android.
+
+The first-run sequence follows the iPhone app: Lights on, Home Assistant, local discovery, pairing, then optional resident selection. Photograph the complete QR code from System → Pair a phone, or enter the Hauser address and eight-character code manually. Pair on your trusted home network; HTTP requires explicit confirmation.
+
+Install subsequent APKs over the current app to preserve pairing. Updates must use the same package and signing certificate and a higher version code. Do not uninstall to update. The download page lists the APK hash and signing certificate. This public package is separate from private tablet development builds.
+
+Android Back at the root opens the app menu, including reload, change connection and fullscreen. Insets are handled natively once. Xiaomi multitasking-handle spacing is optional and off by default. Uploads use the system document picker. Web camera/microphone permissions and browser blob-download exports are not implemented by this wrapper.
+
+A remote HTTPS route requires Hauser server 0.50.3 or newer with the Android web-session endpoint and must permit device-token requests and WebSocket upgrades. A proxy redirecting to its own identity login is not bypassed. Older trusted-LAN servers retain their existing browser access behavior. Server health or a painted room is not proof of a working live socket. See the [Android source and connection details](https://github.com/ralleur/hauser/tree/main/android).

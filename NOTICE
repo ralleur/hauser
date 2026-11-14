@@ -124,3 +124,12 @@ a produced work that is not a browsable map to carry its credit where credits
 are customarily found rather than inside the image. The credit is therefore
 placed where it stays legible and reachable instead of being reduced to an
 unreadable line on a wall panel.
+
+Android companion
+-----------------
+ZXing Core 3.5.3 — Apache License 2.0
+  Copyright 2007 ZXing authors. https://github.com/zxing/zxing
+  Used to decode the photographed Hauser pairing QR code.
+  License: android/assets/LICENSE-ZXing.txt
+  Android bundles the same room illustrations, reserved Hauser icon and OFL fonts
+  already classified above; build.py copies their source assets without changes.

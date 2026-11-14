@@ -61,3 +61,5 @@ Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/RO
 ## Not planned
 
 A Lovelace card version, cloud accounts, telemetry, and paid tiers. See the [roadmap](https://github.com/ralleur/hauser/blob/main/ROADMAP.md#not-planned).
+
+- **Android companion beta:** signed APK for Android 11+, using your own Hauser server web interface with the iPhone-derived Home Assistant setup flow. [Download and requirements](https://hauserhome.app/android/).

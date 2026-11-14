@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-Hauser has a web interface for Home Assistant and a native iOS app. The native
+Hauser has a web interface for Home Assistant and native iOS and Android clients. The iOS
 app can use Apple Home directly or pair with a Hauser server. Choose the
 connection first, then the device you want to use.
 
@@ -19,6 +19,10 @@ connection first, then the device you want to use.
 The native app is available through [TestFlight](/docs/integrations/companion-app/).
 iPhone uses a room grid and room controls; iPad uses the panel layout. Optional
 Apple Intelligence features need additional hardware and OS support.
+
+## Android companion beta
+
+The [signed Android APK](https://hauserhome.app/android/) runs on Android 11 or newer with a current Android System WebView. It loads your own Hauser server web interface after the iPhone-derived Home Assistant pairing flow. It does not connect to Apple Home. Android versions are independent of server versions. Remote HTTPS requires Hauser server 0.50.3 or newer and a route permitting paired-device sessions and WebSockets. Older trusted-LAN servers retain their existing browser access behavior.
 
 ## Where the server runs
 

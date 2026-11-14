@@ -1,0 +1,12 @@
+{
+  "name": "1.0.0-beta.1",
+  "code": 1,
+  "package": "de.ralleur.hauser",
+  "file": "hauser-android-1.0.0-beta.1.apk",
+  "sha256": "bdab0e9f21fc91bdafaaa6e46526f4251b2a081205f9c3715ec824a44ca67bc3",
+  "signerSha256": "837fa7be56d61008902e66ef0865c87306fe9de1e373a591a8f07d65668e15e0",
+  "minSdk": 30,
+  "targetSdk": 35,
+  "bytes": 1889799,
+  "debuggable": false
+}

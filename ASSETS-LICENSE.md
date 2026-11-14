@@ -64,3 +64,13 @@ Fonts in `app/public/fonts/` and `website/fonts/` are third-party works licensed
 under the SIL Open Font License. Material Design Icons are Apache-2.0. Their
 licenses and attribution are listed in [NOTICE](NOTICE); neither category is
 covered by this file.
+
+## Android package copies
+
+The Android build copies the existing living-room illustrations from
+`app/public/hero/` unchanged into APK `assets/`. They remain CC BY 4.0.
+It also copies the existing OFL fonts and reserved Hauser brand/icon into the
+APK, retaining their respective terms. These build outputs are not a new
+media license class. Android ships the license texts and attribution in
+`android/assets/NOTICE.txt`. Public APKs in `website/downloads/` are signed
+compiled distributions; their source is `android/` at the matching release tag.

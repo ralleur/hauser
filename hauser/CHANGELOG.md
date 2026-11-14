@@ -1,3 +1,7 @@
+## 0.50.3 - 2026-11-14
+
+- Android companion: paired WebView sessions authenticate HTTP and WebSocket requests, with exact-Origin CSRF checks and revocation. Signed Android beta: https://hauserhome.app/android/.
+
 # Changelog
 
 ## 0.50.2 - 2026-11-14

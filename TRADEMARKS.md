@@ -42,3 +42,10 @@ container image, hosted service or application-store listing in a way that could
 reasonably be mistaken for an official distribution.
 
 For permission beyond this policy, contact the maintainer through the repository.
+
+## Android distribution
+
+The official Android APK embeds unchanged copies of the reserved brand from
+`app/public/brand/` and the application icon from `app/public/icons/`. Their
+presence in the APK does not grant additional trademark or copyright rights.
+The Android implementation in `android/` remains AGPL-3.0-only.

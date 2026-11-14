@@ -132,6 +132,7 @@ export const API_ROUTES = [
 
   /* ── Companion-App (Plan 21) ── */
   { id: 'pairingStart', methods: ['POST'], path: '/api/pairing/start', area: 'app', access: 'origin', purpose: 'Einmalcode für die Kopplung eines Telefons (nur im LAN).', response: 'PairingStartResponse' },
+  { id: 'pairingWebSession', methods: ['POST'], path: '/api/pairing/web-session', area: 'app', access: 'session', purpose: 'Gültigen Gerätetoken in eine HttpOnly-WebView-Sitzung tauschen.' },
   { id: 'pairingClaim', methods: ['POST'], path: '/api/pairing/claim', area: 'app', access: 'public', purpose: 'Code einlösen, Gerätetoken erhalten (nur im LAN).', response: 'PairingClaimResponse' },
   { id: 'pairingDevices', methods: ['GET'], path: '/api/pairing/devices', area: 'app', access: 'origin', purpose: 'Gekoppelte Geräte.', response: 'PairingDevicesResponse' },
   { id: 'pairingDeviceRevoke', methods: ['DELETE', 'PATCH'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin', purpose: 'Gerät widerrufen oder seine Person setzen.' },

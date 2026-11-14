@@ -28,3 +28,12 @@ app/config/households/*.backup-v*-*
 
 # Astro: generated types of the wiki (docs-site)
 .astro/
+
+# Android release builds; signing material is always kept outside source.
+android/build/
+android/.deps/
+*.keystore
+*.jks
+# Also ignore locally reused dependency-directory symlinks.
+app/node_modules
+docs-site/node_modules

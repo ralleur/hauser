@@ -140,7 +140,7 @@ asset_suffixes = {
     '.mp4', '.ogg', '.otf', '.png', '.svg', '.ttf', '.wav', '.webm', '.webp',
     '.woff', '.woff2',
 }
-scan_roots = (Path('app/public'), Path('website'))
+scan_roots = (Path('app/public'), Path('website'), Path('android/assets'))
 unknown = []
 
 
@@ -166,6 +166,30 @@ if unknown:
         'Unclassified media assets found. Add each path to ASSETS-LICENSE.md, '
         'TRADEMARKS.md or NOTICE and update this verifier:\n' + formatted
     )
+
+# Android packages may contain only the declared release artifact, never a
+# development keystore, device evidence or arbitrary private download files.
+android_metadata = Path('website/downloads/release.json')
+if android_metadata.is_file():
+    import json, zipfile
+    metadata = json.loads(android_metadata.read_text())
+    apk = android_metadata.parent / metadata['file']
+    if apk.parent != android_metadata.parent or apk.suffix != '.apk':
+        raise SystemExit('Android release path is outside downloads/.')
+    if hashlib.sha256(apk.read_bytes()).hexdigest() != metadata['sha256']:
+        raise SystemExit('Android APK hash does not match release metadata.')
+    if metadata['debuggable'] is not False or metadata['package'] != 'de.ralleur.hauser':
+        raise SystemExit('Android release metadata is not the public production package.')
+    if metadata['signerSha256'] != Path('android/signer-sha256.txt').read_text().strip():
+        raise SystemExit('Android release signer metadata is unexpected.')
+    with zipfile.ZipFile(apk) as package:
+        names = package.namelist()
+        if any(name.endswith(('.keystore', '.jks', '.p12')) or '/device-tests/' in name for name in names):
+            raise SystemExit('Android APK includes private signing or device-test material.')
+        for required in ('assets/LICENSE.txt', 'assets/LICENSE-Alegreya-OFL.txt', 'assets/LICENSE-ZXing.txt', 'assets/NOTICE.txt'):
+            if required not in names:
+                raise SystemExit(f'Android APK missing bundled notice: {required}')
+    print('android_distribution_boundary=PASS')
 
 print('license_files=PASS')
 print('media_asset_boundary=PASS')

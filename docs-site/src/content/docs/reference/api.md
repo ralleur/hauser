@@ -40,3 +40,7 @@ Reports `mode: supervisor` in the App and `mode: direct` on Compose.
 ## Everything else
 
 The contract lives in [`app/server/api-contract.mjs`](https://github.com/ralleur/hauser/blob/main/app/server/api-contract.mjs). Read routes answer repeated requests with `304` through ETags. Requests are checked for an allowed browser origin or a device token.
+
+## Android WebView session
+
+Since 0.50.3, `POST /api/pairing/web-session` accepts an existing paired-device Bearer token and returns protocol version 1 plus a host-only HttpOnly SameSite=Strict cookie. HTTPS responses mark it Secure. This does not create a device or extend its lifetime. Subsequent HTTP and WebSocket requests authenticate the same revocable token. Cookie-authenticated writes and upgrades require the exact effective Origin; cross-site cookie requests are rejected. Health alone does not prove the live Home Assistant socket works.

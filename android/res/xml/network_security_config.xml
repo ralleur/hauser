@@ -1,0 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<network-security-config>
+  <!-- User-configured LAN servers use HTTP; native origin validation restricts it to private hosts. -->
+  <base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system" /></trust-anchors></base-config>
+</network-security-config>

@@ -72,6 +72,30 @@ describe('Kopplung der Companion-App', () => {
     expect(store.list()[0].lastSeenVia).toBe('lan');
   });
 
+  it('authentifiziert WebView-Cookies mit CSRF-Grenze und widerruft sie auch am Socket', () => {
+    const store = tempStore();
+    const { token, device } = store.claim(store.startPairing().code, { platform: 'android' })!;
+    const request = (method = 'GET', extra = {}) => ({ method, url: '/api/config', headers: { host: 'hauser.example', cookie: `hauser_device_session=${token}`, ...extra }, socket: { encrypted: true } });
+    expect(bearerToken(request())).toBe(token);
+    expect(bearerToken(request('POST'))).toBe(null);
+    expect(bearerToken(request('POST', { origin: 'https://evil.example' }))).toBe(null);
+    expect(bearerToken(request('GET', { 'sec-fetch-site': 'cross-site' }))).toBe(null);
+    expect(bearerToken(request('POST', { origin: 'https://hauser.example' }))).toBe(token);
+    expect(bearerToken(request('GET', { upgrade: 'websocket' }))).toBe(null);
+    const socket = request('GET', { upgrade: 'websocket', origin: 'https://hauser.example' });
+    expect(authenticateRequest(socket, store)?.id).toBe(device.id);
+    store.revoke(device.id);
+    expect(authenticateRequest(request(), store)).toBe(null);
+    expect(bearerToken(request('GET', { cookie: `hauser_device_session=${token}; hauser_device_session=${token}` }))).toBe(null);
+    const tunnel = { method: 'POST', url: '/api/config', headers: { host: 'hauser.example', origin: 'https://hauser.example', 'x-hauser-remote': '1', cookie: `hauser_device_session=${token}` }, socket: {} };
+    expect(bearerToken(tunnel)).toBe(token);
+    const proxy = { ...tunnel, headers: { ...tunnel.headers, 'x-hauser-remote': '0', 'x-forwarded-proto': 'https' } };
+    expect(bearerToken(proxy)).toBe(token);
+    const revoked = request();
+    authenticateRequest(revoked, store);
+    expect(remoteGateAllows(revoked)).toBe(false);
+  });
+
   it('lässt über den Tunnel ohne Gerät nur Health und Build-Info durch', () => {
     const store = tempStore();
     const { token } = store.claim(store.startPairing().code, {})!;

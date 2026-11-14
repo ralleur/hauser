@@ -3,6 +3,11 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.50.3] - 2026-11-14
+
+- Android: signed public companion beta with the existing iPhone Home Assistant onboarding flow and your own server's web interface; download and update instructions at https://hauserhome.app/android/.
+- Companion authentication: a paired Android WebView can use a host-only HttpOnly session cookie for HTTP and WebSocket requests. Exact-Origin checks protect cookie writes; revoked sessions cannot silently fall back to trusted-LAN access.
+
 ## [0.50.2] - 2026-11-14
 
 - Panel: the button beside Help cycles through Full screen, All rooms and Image control. Hold it to unlock editing and open configuration; an Edit PIN is still required when set.

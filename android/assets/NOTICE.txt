@@ -1,0 +1,12 @@
+Hauser Android
+Code and technical documentation: AGPL-3.0-only (LICENSE.txt).
+Source: https://github.com/ralleur/hauser/tree/main/android
+Room illustrations: Hauser project, CC BY 4.0, https://creativecommons.org/licenses/by/4.0/
+AI-generated artwork, unchanged from app/public/hero/ in Hauser.
+Hauser name, logos and application icon: reserved project identity; see TRADEMARKS.md in source.
+Alegreya and Alegreya Sans: SIL Open Font License 1.1 (LICENSE-Alegreya-OFL.txt).
+Alegreya Sans copyright 2013 The Alegreya Sans Project Authors.
+Alegreya copyright 2011 The Alegreya Project Authors.
+ZXing Core 3.5.3: Apache License 2.0 (LICENSE-ZXing.txt).
+Copyright 2007 ZXing authors. https://github.com/zxing/zxing
+No analytics or third-party account is included. The configured Hauser server receives network requests.

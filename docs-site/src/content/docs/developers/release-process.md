@@ -27,3 +27,13 @@ On a version tag it also publishes the multi-architecture image to `ghcr.io/rall
 ## Versioning
 
 Patch for fixes, minor for visible changes. Trunk based: fixes ship with the next release from `main`.
+
+## Signed Android APK
+
+Android has an independent version in `android/version.json`; use `android/bump-version.py` to increase the name and monotonically increasing code. `android/build.py` builds with pinned Android SDK tools and ZXing Core, then checks the production signing certificate, manifest and APK hash. It never generates a replacement key. Keep the encrypted keystore and a recoverable password backup outside source control.
+
+`android/prepare-release.py` stages only the checked signed APK, its checksum and metadata in `website/downloads/`, and generates English and German installation pages. Keep those versioned downloads in source so later website promotions retain them. Source tags use `android-v<version>`. Publish the matching APK and checksum as GitHub prerelease assets as well. Never replace a published APK under the same version name/code.
+
+Run the focused device matrix, pairing/socket/command/restart/revocation checks and public license/privacy gates before publication. Deploy the website with the existing `pages.yml` workflow. Download the actual website artifact afterwards, compare its hash and signing certificate, inspect its version, then install it as an update on a dedicated test device.
+
+When a companion release needs a server change, use the existing server release order: build and verify the tagged multi-architecture image before moving `main`, pass `main` quality, then dispatch Pages for that same commit. Updating a personal Home Assistant host is a separate operation.

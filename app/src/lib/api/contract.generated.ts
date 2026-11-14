@@ -97,6 +97,7 @@ export const API_ROUTES = {
   hotelUnlock: { methods: ['POST'], path: '/api/hotel-mode/unlock', area: 'hotel', access: 'guest' },
   hotelLock: { methods: ['POST'], path: '/api/hotel-mode/lock', area: 'hotel', access: 'guest' },
   pairingStart: { methods: ['POST'], path: '/api/pairing/start', area: 'app', access: 'origin' },
+  pairingWebSession: { methods: ['POST'], path: '/api/pairing/web-session', area: 'app', access: 'session' },
   pairingClaim: { methods: ['POST'], path: '/api/pairing/claim', area: 'app', access: 'public' },
   pairingDevices: { methods: ['GET'], path: '/api/pairing/devices', area: 'app', access: 'origin' },
   pairingDeviceRevoke: { methods: ['DELETE', 'PATCH'], path: '/api/pairing/devices/:deviceId', area: 'app', access: 'origin' },

@@ -20,6 +20,7 @@ export const PAIRING_ROUTE_PREFIX = '/api/pairing';
    Aus dem LAN kann ihn jeder setzen — das macht die Anfrage nur strenger. */
 export const REMOTE_MARKER_HEADER = 'x-hauser-remote';
 export const DEVICE_TOKEN_QUERY = 'device_token';
+export const DEVICE_SESSION_COOKIE = 'hauser_device_session';
 /* Ohne Token bleibt über den Tunnel nur das Nötigste erreichbar. */
 export const REMOTE_PUBLIC_PATHS = new Set(['/api/health', '/api/build-info']);
 
@@ -101,6 +102,27 @@ export function bearerToken(req) {
     const token = url.searchParams.get(DEVICE_TOKEN_QUERY);
     if (token) return token;
   } catch { /* ohne gültige URL gibt es keinen Token */ }
+  // Android WebView: host-only HttpOnly cookie, checked on every request and
+  // upgrade. Cookies never waive CSRF checks: cross-site requests and unsafe
+  // methods without the exact effective Origin cannot authenticate this way.
+  const cookie = req?.headers?.cookie;
+  if (typeof cookie === 'string') {
+    const origin = req?.headers?.origin;
+    const site = req?.headers?.['sec-fetch-site'];
+    if (site === 'cross-site') return null;
+    const method = req?.method || 'GET';
+    const upgrade = String(req?.headers?.upgrade || '').toLowerCase() === 'websocket';
+    const needsOrigin = !['GET', 'HEAD', 'OPTIONS'].includes(method) || upgrade;
+    const protocol = isRemoteRequest(req) || req?.socket?.encrypted || req?.headers?.['x-forwarded-proto'] === 'https' ? 'https:' : 'http:';
+    let same = false;
+    try { same = origin === new URL(`${protocol}//${req?.headers?.host}`).origin; } catch { /* malformed host */ }
+    if ((origin && !same) || (needsOrigin && !same)) return null;
+    const values = cookie.split(';').map((part) => part.trim()).filter((part) => part.startsWith(`${DEVICE_SESSION_COOKIE}=`));
+    if (values.length === 1) {
+      const token = values[0].slice(DEVICE_SESSION_COOKIE.length + 1);
+      if (/^[A-Za-z0-9_-]{32,128}$/.test(token)) return token;
+    }
+  }
   return null;
 }
 
@@ -249,6 +271,8 @@ export function createDeviceStore(path, { now = Date.now, random = randomBytes }
 export function authenticateRequest(req, store, { failures = null } = {}) {
   const token = bearerToken(req);
   const device = token ? store.authenticate(token) : null;
+  req.hauserInvalidSession = typeof req.headers?.cookie === 'string'
+    && req.headers.cookie.split(';').some((part) => part.trim().startsWith(`${DEVICE_SESSION_COOKIE}=`)) && !device;
   if (device) {
     req.hauserDevice = device;
     store.touch(device.id, isRemoteRequest(req) ? 'remote' : 'lan');
@@ -262,7 +286,7 @@ export function authenticateRequest(req, store, { failures = null } = {}) {
 
 /** Tunnel-Anfragen ohne Gerät dürfen nur Health und Build-Info sehen. */
 export function remoteGateAllows(req) {
-  if (req.hauserThrottled) return false;
+  if (req.hauserThrottled || req.hauserInvalidSession) return false;
   if (!isRemoteRequest(req)) return true;
   if (req.hauserDevice) return true;
   try {
@@ -337,6 +361,20 @@ export function servePairing(req, res, { store, allowedOrigins, remoteUrl = null
   const url = new URL(req.url || '/', 'http://hauser.local');
   const pathname = url.pathname;
   const method = req.method || 'GET';
+
+  if (pathname === `${PAIRING_ROUTE_PREFIX}/web-session` && method === 'POST') {
+    // Explicit bearer exchange; a cookie alone cannot mint or renew itself.
+    const authorization = req.headers?.authorization;
+    if (!req.hauserDevice || typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+      return jsonResponse(res, 401, { ok: false, code: 'DEVICE_TOKEN_REQUIRED' });
+    }
+    const token = authorization.slice(7).trim();
+    const secure = isRemoteRequest(req) || req.socket?.encrypted || req.headers?.['x-forwarded-proto'] === 'https';
+    return jsonResponse(res, 200, { ok: true, version: 1 }, {
+      'cache-control': 'no-store',
+      'set-cookie': `${DEVICE_SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`,
+    });
+  }
 
   if (pathname === `${PAIRING_ROUTE_PREFIX}/start` && method === 'POST') {
     /* Nur aus dem LAN und nur aus der Oberfläche: der Code gehört auf das
