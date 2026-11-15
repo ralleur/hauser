@@ -1,5 +1,7 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
+  import { slide } from 'svelte/transition';
+  import { tokenDuration } from '../motion/index.ts';
   import { TABS, activeTab, showScreen, type ScreenId } from '../state/nav.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
   import { connection } from '../state/connection.svelte.ts';
@@ -17,8 +19,27 @@
   import { m } from '../../paraglide/messages.js';
   import { localeState } from '../state/locale.svelte.ts';
   import { openingsLabel } from '../state/open-label.ts';
+  import { tabGlider } from '../actions/tab-glider.ts';
+
+  let tabletReady = $state(false);
+  let tabletPanel = $state('');
+  let tabletUnread = $state(0);
+  $effect(() => {
+    tabletReady = document.documentElement.dataset.tabletShell === 'hauser';
+    const ready = () => { tabletReady = true; };
+    const panel = (event: Event) => { tabletPanel = (event as CustomEvent<string>).detail; };
+    const badge = (event: Event) => { tabletUnread = (event as CustomEvent<number>).detail; };
+    window.addEventListener('hauser:tablet-ready', ready);
+    window.addEventListener('hauser:tablet-panel', panel);
+    window.addEventListener('hauser:tablet-badge', badge);
+    return () => { window.removeEventListener('hauser:tablet-ready', ready); window.removeEventListener('hauser:tablet-panel', panel); window.removeEventListener('hauser:tablet-badge', badge); };
+  });
+  const notificationCount = $derived(tabletReady ? tabletUnread : notifications.items.length);
+  const selectedTab = $derived(tabletPanel === 'store' || tabletPanel === 'apps' ? 'apps' : activeTab());
+  function openNotifications() { detailOpen = false; window.dispatchEvent(new Event('hauser:notifications')); }
 
   const visibleTabs = $derived(TABS.filter((tab) => {
+    if (tab.id === 'system' && !editMode.active) return false;
     // Ablage bleibt aus der öffentlichen Demo heraus (docs/12).
     if (tab.id === 'ablage' && IS_DEMO) return false;
     // Abgeschaltete Module verschwinden sofort, nicht erst beim Neustart.
@@ -26,6 +47,9 @@
     return tab.id !== 'calendar' || familyCalendar.sources.length > 0;
   }));
 
+  const tabletTabs = [{ id: 'apps', label: 'Apps', icon: 'i-apps' }];
+  const navigationTabs = $derived(!tabletReady ? visibleTabs : visibleTabs.some(tab => tab.id === 'system')
+    ? visibleTabs.flatMap(tab => tab.id === 'system' ? [...tabletTabs, tab] : [tab]) : [...visibleTabs, ...tabletTabs]);
   /* Sicherheitsstatus (docs/06 §5): jede Zeile ist ein realer Sensor. Ohne
      zugeordnete Kontakte gilt weiter der Seed-Wert des Raums (Demo). */
   interface ContactRow extends RoomContact {
@@ -35,8 +59,10 @@
     name: string;
   }
 
+  const catalogNames = $derived(new Map(deviceManager.catalog.map((item) => [item.entityId, item.name])));
+
   function catalogName(entityId: string): string {
-    return deviceManager.catalog.find((item) => item.entityId === entityId)?.name ?? entityId;
+    return catalogNames.get(entityId) ?? entityId;
   }
 
   const contactRows = $derived<ContactRow[]>(appState.rooms.flatMap((room) =>
@@ -81,10 +107,23 @@
   let navEl = $state<HTMLElement | null>(null);
   let glider = $state<{ x: number; w: number } | null>(null);
   let viewportTick = $state(0);
+  let climateFits = $state(false);
 
   $effect(() => {
-    void activeTab();
-    void visibleTabs;
+    void centralClimate.hasClimate;
+    const edge = navEl?.parentElement?.querySelector<HTMLElement>('.tab-edge-start');
+    const dock = edge?.querySelector<HTMLElement>('.climate-dock');
+    if (!edge || !dock) return;
+    const measure = () => { climateFits = dock.offsetWidth <= edge.clientWidth; };
+    const observer = new ResizeObserver(measure);
+    observer.observe(edge);
+    observer.observe(dock);
+    return () => observer.disconnect();
+  });
+
+  $effect(() => {
+    void selectedTab;
+    void navigationTabs;
     void viewportTick;
     void localeState.current;
     const nav = navEl;
@@ -107,6 +146,7 @@
       noteBlockedConfigAttempt(true);
       return;
     }
+    if (tabletPanel) window.dispatchEvent(new Event('hauser:tablet-dismiss'));
     detailOpen = false;       // die Sensor-Liste gehört zum aufrufenden Screen
     closeDeviceDetail(true);  // Detail gehört zum aufrufenden Tab
 
@@ -121,7 +161,7 @@
 <svelte:window onresize={() => (viewportTick += 1)} />
 
 <nav class="tab-bar" aria-label={m.nav_main()}>
-  <div class="tab-edge tab-edge-start">
+  <div class="tab-edge tab-edge-start" class:climate-fits={climateFits}>
     {#if centralClimate.hasClimate}
       <ClimatePill label={m.status_climate_central()}
                    coolerLabel={m.status_all_rooms_cooler()}
@@ -130,18 +170,20 @@
     {/if}
   </div>
 
-  <div class="tab-nav" bind:this={navEl}
+  <div class="tab-nav" data-tablet-navigation="shared" bind:this={navEl}
        class:has-glider={glider !== null}
        style:--glider-x={glider ? `${glider.x}px` : '0px'}
        style:--glider-w={glider ? `${glider.w}px` : '0px'}>
-    {#if glider}<span class="tab-glider" aria-hidden="true"></span>{/if}
-    {#each visibleTabs as tab (tab.id)}
-      <button class="tab pressable" class:is-active={activeTab() === tab.id}
-              class:is-locked={tab.id === 'system' && !editMode.active}
+    {#if glider}<span class="tab-glider" use:tabGlider={glider} aria-hidden="true"></span>{/if}
+    {#each navigationTabs as tab (tab.id)}
+      <div class="tab-slot" transition:slide={{ axis: 'x', duration: tab.id === 'system' ? tokenDuration(navEl, 'enter') : 0 }}
+           inert={tab.id === 'system' && !editMode.active} aria-hidden={tab.id === 'system' && !editMode.active ? true : undefined}>
+      <button class="tab pressable" class:is-active={selectedTab === tab.id}
               type="button" data-nav={tab.id} aria-label={tab.label}
-              onclick={() => go(tab.id)}>
+              onclick={() => { if (tab.id === 'apps') location.href = `hauser-tablet://open/${tab.id}`; else go(tab.id); }}>
         <Icon name={tab.icon} cls="icon tab-icon" /><span class="tab-label">{tab.label}</span>
       </button>
+      </div>
     {/each}
   </div>
 
@@ -149,6 +191,7 @@
     {#if detailOpen}
       <!-- Detail-Liste (docs/06 §5): eine Zeile je Sensor, 48px Touch-Höhe. -->
       <div class="security-detail" role="dialog" aria-label={m.status_security_title()}>
+        <button class="secondary-btn pressable" type="button" onclick={openNotifications}><Icon name="i-bell" cls="icon icon-md" />{m.settings_section_notifications_label()}{notificationCount ? ` · ${notificationCount}` : ''}</button>
         <ul class="security-list">
           {#each contactRows as row (row.entityId)}
             <li class="security-row">
@@ -167,22 +210,14 @@
         </ul>
       </div>
     {/if}
-    {#if hasDetail}
       <button class="security-bar pressable" type="button"
               class:has-warning={openRooms.length > 0} class:is-active={detailOpen}
-              aria-expanded={detailOpen} aria-label={m.status_security_title()}
-              onclick={() => { detailOpen = !detailOpen; }}
+              aria-expanded={detailOpen} aria-label={`${m.status_security_title()} · ${m.settings_section_notifications_label()}${notificationCount ? ` · ${notificationCount}` : ''}`}
+              onclick={() => { if (hasDetail) detailOpen = !detailOpen; else openNotifications(); }}
               title={securityTitle}>
         <Icon name={openRooms.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
         <span>{securityLabel}</span>
+        <Icon name="i-bell" cls="icon icon-md" />{#if notificationCount}<span>{notificationCount}</span>{/if}
       </button>
-    {:else}
-      <!-- Ohne zugeordnete Sensoren bleibt es reine Anzeige (docs/06 §5:
-           `disabled` = nicht anwendbar) — ein Knopf ohne Ziel wäre gelogen. -->
-      <div class="security-bar" class:has-warning={openRooms.length > 0} title={securityTitle}>
-        <Icon name={openRooms.length ? 'i-window' : 'i-shield'} cls="icon icon-md" />
-        <span>{securityLabel}</span>
-      </div>
-    {/if}
   </div>
 </nav>

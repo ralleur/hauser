@@ -255,3 +255,9 @@
   outline: 2px solid var(--color-accent-cool);
   outline-offset: var(--space-1);
 }
+.phone-room-morph-image {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}

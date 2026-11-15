@@ -18,6 +18,7 @@
   import { deviceManager } from '../state/device-manager.svelte.ts';
   import { categoryById, categoryColor } from '../state/notification-categories.ts';
   import { categoryForTestNotificationId, ruleForNotificationId } from '../state/notification-rules.ts';
+  import { iconAssetUrlFromId } from '../state/icon-path.ts';
 
   let now = $state(Date.now());
   let remote = $state<PersistentNotification[]>([]);
@@ -25,6 +26,31 @@
   let width = $state(0);
   let hidden = $state(false);
   let inboxOpen = $state(false);
+  // The Android home surface paints its own inbox. Only notification data and
+  // existing notification actions cross this DOM boundary; no native bridge.
+  function publishTabletNotifications(): void {
+    window.dispatchEvent(new CustomEvent('hauser:notification-state', { detail: notifications.items.map((item) => ({
+      ...item, iconUrl: iconAssetUrlFromId(item.icon ?? 'i-bell'),
+      group: item.source === 'hauser-update' || item.source.startsWith('room-image:') ? 'system'
+        : item.source.startsWith('app:') ? 'apps' : 'home',
+    })) }));
+  }
+  $effect(() => { publishTabletNotifications(); });
+  $effect(() => {
+    const command = (event: Event) => {
+      const { action, id } = (event as CustomEvent).detail ?? {};
+      const item = notifications.items.find((entry) => entry.id === id);
+      if (!item) return;
+      if (action === 'dismiss') notifications.dismiss(item.dedupeKey);
+      if (action === 'activate' && item.action) void import('../state/notification-targets.ts').then(({ followNotification }) => followNotification(item));
+    };
+    window.addEventListener('hauser:notification-request', publishTabletNotifications);
+    window.addEventListener('hauser:notification-command', command);
+    return () => {
+      window.removeEventListener('hauser:notification-request', publishTabletNotifications);
+      window.removeEventListener('hauser:notification-command', command);
+    };
+  });
   $effect(() => {
     const open = () => { inboxOpen = true; };
     const resize = () => { width = window.innerWidth; };
@@ -164,11 +190,13 @@
 
 
 {#if notifications.items.length > 0}
-  <aside bind:this={layer} class="notification-layer" class:is-sidebar={sidebar} class:is-hidden={hidden} aria-label={m.settings_section_notifications_label()}>
+  <aside bind:this={layer} class="notification-layer" class:is-sidebar={sidebar} class:is-hidden={hidden} class:is-ambient={ambientState.active} aria-label={m.settings_section_notifications_label()}>
+    {#if !ambientState.active}
     <button class="notification-inbox-button secondary-btn pressable" type="button" onclick={() => { inboxOpen = true; }}>
       <Icon name="i-bell" cls="icon icon-md" /> {m.settings_section_notifications_label()} · {notifications.items.length}
       {#if !sidebar && notifications.items.length > 2}<span>+{notifications.items.length - 2}</span>{/if}
     </button>
+    {/if}
     <div class="notification-stack">
     {#each (sidebar ? notifications.items : notifications.items.slice(0, 2)) as item (item.id)}
       <NotificationTile {item} {now}

@@ -19,11 +19,13 @@
     active = false,
     heroVariant,
     onopen,
+    transitionName,
   }: {
     summary: PhoneRoomSummary;
     active?: boolean;
     heroVariant: PhoneHeroVariant;
     onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
+    transitionName?: string;
   } = $props();
 
   /* Doppelpuffer wie auf der grossen Buehne: das neue Bild kommt in die
@@ -93,6 +95,7 @@
 
 <button
   class="phone-room-card pressable"
+  data-room-id={summary.id}
   class:is-active={active}
   class:has-hero={shownHero !== null}
   class:is-dimming={dimming}
@@ -102,12 +105,14 @@
   use:longpress={{ onLongPress: whenEditable(() => openRoomEdit(summary.id)) }}
   onclick={(event) => onopen(summary, event.currentTarget)}
 >
+  <span class="phone-room-morph-image" style:view-transition-name={transitionName} aria-hidden="true">
   <span class="phone-room-hero-layer" class:is-front={front === 'a'} aria-hidden="true"
         style:--phone-room-hero={layerA ? `url("${layerA.url}")` : undefined}
         style:--phone-room-focus={layerA?.position}></span>
   <span class="phone-room-hero-layer" class:is-front={front === 'b'} aria-hidden="true"
         style:--phone-room-hero={layerB ? `url("${layerB.url}")` : undefined}
         style:--phone-room-focus={layerB?.position}></span>
+  </span>
   {#if summary.camera}
     <span class="phone-room-camera" aria-hidden="true"><span class="icon tabler-icon-mask" style={`--icon-url:url("${iconAssetUrlFromId('i-video')}")`}></span></span>
   {/if}

@@ -108,11 +108,13 @@ export interface ManagedDevice {
    Widget zählten bisher auch Steckdosen, offene Rollos und Saugroboter mit,
    das Telefon nur Lampen — die Glühbirne leuchtete in Räumen, in denen alles
    aus war (`ralleur/hauser#32`). Eine Regel für alle Oberflächen, auch für
-   bestehende Haushalte; ein Relais, das eine Lampe schaltet, nimmt der
-   Schalter „Zählt als Licht“ dazu. */
+   bestehende Haushalte. Explizit als Licht konfigurierte Relais zählen
+   weiterhin mit; Lampen selbst sind immer eingeschlossen. */
 export function countsForBulb(device: { countsAsLight?: boolean; domain?: string; entityId?: string }): boolean {
-  if (typeof device.countsAsLight === 'boolean') return device.countsAsLight;
   const domain = device.domain ?? device.entityId?.split('.')[0];
+  // Lampen zählen immer; frühere Overlay-Schalter dürfen sie nicht unsichtbar machen.
+  if (domain === 'light') return true;
+  if (typeof device.countsAsLight === 'boolean') return device.countsAsLight;
   return !domain || domain === 'light';
 }
 

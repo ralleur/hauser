@@ -658,6 +658,10 @@ export function createAmbientMapService({
     ready,
     route,
     close,
+    getRadarLocation() {
+      return activeConfig ? { latitude: activeConfig.location.latitude, longitude: activeConfig.location.longitude,
+        radiusMetres: activeConfig.render.radiusMetres, assetUrl: publicStatus().asset.url } : null;
+    },
     getPublicStatus: publicStatus,
     getAdminStatus: adminStatus,
     selectLocation,

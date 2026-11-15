@@ -20,6 +20,35 @@
   touch-action: pan-y pinch-zoom;
 }
 
+.home-stage > .room-hero { view-transition-name: home-room; }
+/* Name the glass itself: naming its parent cuts off the image backdrop. */
+.home-stage .home-panel:first-child { view-transition-name: home-control-primary; }
+.home-stage .home-panel:nth-child(2) { view-transition-name: home-control-secondary; }
+.home-stage.is-view-changing .home-panels { transition: none; }
+.home-stage.is-view-changing .phone-room-hero-layer { transition: none; }
+
+::view-transition-group(home-room),
+::view-transition-group(home-control-primary),
+::view-transition-group(home-control-secondary) {
+  animation-duration: calc(var(--duration-enter) + var(--duration-normal));
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-group(home-room) {
+  z-index: 1;
+  overflow: clip;
+  border-radius: var(--radius-xl);
+}
+::view-transition-group(home-control-primary),
+::view-transition-group(home-control-secondary) { z-index: 2; }
+::view-transition-old(home-room),
+::view-transition-new(home-room) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation-duration: calc(var(--duration-enter) + var(--duration-normal));
+  animation-timing-function: var(--ease-out);
+}
+
 /* ── Hero-Bildebenen ── */
 .room-hero {
   position: absolute;
@@ -163,7 +192,29 @@
    Gruppe blendet alt gegen neu, beide Bilder sind gleich, man sieht nichts.
    Gilt für jede View Transition der App (Bibliothek, künftige Screens). */
 .status-bar { view-transition-name: status-bar; }
-.tab-bar { view-transition-name: tab-bar; }
+.tab-bar { view-transition-name: none; }
+[data-shell="panel"] .tab-nav { view-transition-name: bottom-navigation; }
+[data-shell="panel"] .tab-edge-start .climate-dock { view-transition-name: bottom-climate; }
+[data-shell="panel"] .security-bar { view-transition-name: bottom-status; }
+
+/* Persistent chrome stays above every room snapshot, without a crossfade. */
+::view-transition-group(status-bar),
+::view-transition-group(bottom-navigation),
+::view-transition-group(bottom-climate),
+::view-transition-group(bottom-status) {
+  z-index: 30;
+  animation: none;
+}
+::view-transition-old(bottom-navigation),
+::view-transition-old(bottom-climate),
+::view-transition-old(bottom-status) { display: none; }
+::view-transition-new(bottom-navigation),
+::view-transition-new(bottom-climate),
+::view-transition-new(bottom-status) {
+  animation: none;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
 /* Der Name macht jede Leiste zu einem eigenen Stapelkontext. Was aus ihr
    herausragt — Modus-Hinweis, Kreiswelle und PIN-Feld unter dem Umschalter,
    die Sensorliste über „Alles ruhig" — konnte den Screen-Inhalt deshalb nicht
@@ -530,8 +581,9 @@
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: var(--space-1);
+  gap: 0;
 }
+.tab-slot { display: flex; flex: none; padding-inline: calc(var(--space-1) / 2); }
 
 /* ── Layout-Konfiguration ── */
 /* Ladehinweis der Overlay-Ebenen: nur für Screenreader, ohne sichtbares Panel. */
@@ -1015,17 +1067,25 @@
   }
 }
 
-/* ── Bottom-Leiste auf schmalen Panels ──
-   Zwei feste 296-px-Ränder und sechs Tabs brauchen rund 1360 px. Das hat am
-   Wandpanel immer gereicht, auf einem Tablet nicht — quer wie hochkant. Das
-   Klima-Dock weicht deshalb unterhalb dieser Breite: der Raum hat seinen
-   Klimablock auf dem Home-Screen, die zentrale Steuerung bleibt über die
-   Klimakachel erreichbar. Der rechte Rand (Benachrichtigungen) bleibt und
-   darf schrumpfen. Eine Breiten-, keine Ausrichtungsfrage — deshalb steht
-   das hier und nicht im Hochformat-Block. */
+/* Auf schmalen Panels entscheidet der gemessene Platz neben den sichtbaren
+   Tabs, ob das zentrale Klima-Dock vollständig hineinpasst. */
 @media (max-width: 1399px) {
   [data-shell="panel"] .tab-edge-start {
-    display: none;
+    grid-column: 1;
+    width: 100%;
+  }
+  [data-shell="panel"] .tab-edge-start .climate-dock {
+    flex: none;
+    visibility: hidden;
+    pointer-events: none;
+    animation: modal-exit var(--duration-fast) var(--ease-in) both;
+    transition: visibility 0s var(--duration-fast);
+  }
+  [data-shell="panel"] .tab-edge-start.climate-fits .climate-dock {
+    visibility: visible;
+    pointer-events: auto;
+    animation: modal-enter var(--duration-enter) var(--ease-spring) both;
+    transition-delay: 0s;
   }
 
   [data-shell="panel"] .tab-edge {
@@ -1039,11 +1099,7 @@
     flex: 0 0 200px;
   }
 
-  /* Ohne linken Rand rutschte die Navigation an den linken Rand — die
-     Zentrierung lebte von zwei gleich breiten Zonen. Ein Raster mit zwei
-     gleichen Außenspalten hält die Pille in der Mitte; die rechte Zone
-     schrumpft mit und lässt „Alles ruhig" per Container-Abfrage zum Symbol
-     werden, sobald es eng wird. */
+  /* Gleiche Außenspalten halten die Navigation mittig. */
   [data-shell="panel"] .tab-bar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

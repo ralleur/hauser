@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
@@ -25,7 +25,7 @@
   import { ambientCopy, refreshAmbientCopy } from '../state/ambient-copy.svelte.ts';
   import { currentMoment, initMoments } from '../state/moments.svelte.ts';
   import { momentLine } from '../state/moment-copy.ts';
-  import { outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
+  import { openWeather, weatherView, outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { ambientMap, ensureAmbientMapStatus } from '../state/ambient-map.svelte.ts';
   import { localeState } from '../state/locale.svelte.ts';
@@ -74,6 +74,7 @@
   const forceDeepNight = new URLSearchParams(location.search).get('deepnight') === '1';
 
   let active = $state(false);
+  let deviceStandby = false;
   let deepNightPreview = $state(false);
   /* Vorschau aus den Einstellungen: zeigt den Stadtplan auch bei ausgeschaltetem
      Schalter und weckt an Ort und Stelle zurück, statt nach Home zu navigieren. */
@@ -111,11 +112,12 @@
   let menuEl = $state<HTMLElement | null>(null);
   let menuBox = $state({ left: 0, top: 0, flipped: false });
 
-  function showAmbient(previewDeepNight = false, fromSettings = false, origin: { x: number; y: number } | null = null) {
+  function showAmbient(previewDeepNight = false, fromSettings = false, origin: { x: number; y: number } | null = null, fromDevice = false) {
+    if (weatherView.open) return;
     if (active) return;
     // Laufende Wiedergabe hemmt den Idle-Timeout — Film schauen ist kein
     // Leerlauf (Phase 4 übernimmt das die Player-Aktivität)
-    if (!previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
+    if (!fromDevice && !previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
     deepNightPreview = previewDeepNight;
     settingsPreview = fromSettings;
     commuteMode = null;
@@ -177,8 +179,10 @@
   }
 
   function wakeAmbient() {
+    if (weatherView.open) return;
     if (!active) return;
     active = false;
+    deviceStandby = false;
     setAmbientActive(false);
     deepNightPreview = false;
     settingsPreview = false;
@@ -209,7 +213,7 @@
   const openEditor = whenEditable(() => { void startEdit(); });
 
   function pressStart(e: PointerEvent) {
-    if ((e.target as Element).closest('.commute-view-control')) return;
+    if (weatherView.open || (e.target as Element).closest('.commute-view-control, .ambient-weather-access')) return;
     if (!active || e.button !== 0) return;
     if (editing) { selected = null; return; }
     holdFired = false;
@@ -227,7 +231,7 @@
     holdTimer = undefined;
   }
   function pressEnd(e: PointerEvent) {
-    if ((e.target as Element).closest('.commute-view-control')) return;
+    if (weatherView.open || (e.target as Element).closest('.commute-view-control, .ambient-weather-access')) return;
     pressCancel();
     if (holdFired || editing) { holdFired = false; return; }
     wakeTo(e);
@@ -259,9 +263,11 @@
 
   function armIdleTimer() {
     clearTimeout(idleTimer);
-    if (idleTimeoutMs === null) return;
+    if (weatherView.open || idleTimeoutMs === null) return;
     idleTimer = setTimeout(showAmbient, idleTimeoutMs);
   }
+
+  $effect(() => { if (weatherView.open) clearTimeout(idleTimer); else armIdleTimer(); });
 
   /* Demo (Owner-Wunsch 2026-09-14): der erste Aufruf im Browser-Tab beginnt
      im Standby — Uhr und Stadtplan sind die Begrüßung, nicht der Raum. Ein
@@ -308,7 +314,23 @@
     const known = motionSeen;
     motionSeen = motion;
     // Erst die Flanke weckt — der erste Messwert nach dem Abo tut es nicht.
-    if (motion && !known && active && !editing && settingsValues.presenceWake) wakeAmbient();
+    if (motion && !known && active && !editing && !deviceStandby && settingsValues.presenceWake) wakeAmbient();
+  });
+
+  onMount(() => {
+    const standby = (event: Event) => {
+      if (document.documentElement.dataset.tabletShell !== 'hauser') return;
+      weatherView.open = false;
+      deviceStandby = true;
+      editing = false; draft = null; selected = null;
+      showAmbient(false, false, null, true);
+      // A device wake shows the settled clock, including when power interrupts a wake animation.
+      clearTimeout(wakeTimer); clearTimeout(settleTimer);
+      waking = false; settling = false; ring = null;
+      (event as CustomEvent<{ handled: boolean }>).detail.handled = true;
+    };
+    window.addEventListener('hauser:device-standby', standby);
+    return () => window.removeEventListener('hauser:device-standby', standby);
   });
 
   /* Leeres Haus: der Standby fällt auf Schwarz zurück. Der Tap weckt wie
@@ -735,11 +757,11 @@
     <div class="ambient-status">
       {#if outdoor.temp !== null}
         {@const arrow = trendIcon(outdoor.trend)}
-        <span class="ambient-temp" aria-label={m.ambient_temp_aria({ temp: fmtTemp(outdoor.temp), trend: trendLabel(outdoor.trend) })}>
+        <button type="button" class="ambient-temp ambient-weather-access pressable" disabled={editing} aria-label={m.ambient_temp_aria({ temp: fmtTemp(outdoor.temp), trend: trendLabel(outdoor.trend) }) + ' · ' + m.weather_ui_open_weather()} onclick={(e) => { e.stopPropagation(); openWeather(); }}>
           <Icon name={weatherConditionIcon(currentCondition)} cls="ambient-temp-icon" />
           <span class="num">{fmtTemp(outdoor.temp)}°</span>
           {#if arrow}<Icon name={arrow} cls="ambient-temp-trend" />{/if}
-        </span>
+        </button>
       {:else if editing && refTemp === null && !safety}
         <span class="ambient-temp">
           <Icon name="i-sun-thermometer-outline" cls="ambient-temp-icon" />
@@ -952,3 +974,7 @@
        zu fuehren, wo Credits ueblicherweise stehen. Sie steht deshalb sichtbar
        in den Einstellungen unter Ambient & Standby und im NOTICE. -->
 </div>
+
+<style>
+  .ambient-weather-access { font: inherit; color: inherit; border: 0; padding: 0; background: transparent; cursor: pointer; min-height: var(--touch-min); }
+</style>

@@ -72,6 +72,7 @@
   {#each summaries as summary (summary.id)}
     <RoomSummaryCard
       {summary}
+      transitionName={summary.id === appState.currentRoom ? 'home-room' : undefined}
       active={activeIds.includes(summary.id)}
       heroVariant={phoneHeroVariantForRoom(summary, heroVariant)}
       onopen={(item) => onselect(item.id)}

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, type Component } from 'svelte';
+  import { clock } from '../../state/clock.svelte.ts';
   import RoomSummaryCard from './RoomSummaryCard.svelte';
   import { appState } from '../../state/app.svelte.ts';
   import { phoneHeroVariantForRoom, type PhoneHeroVariant, type PhoneRoomSummary } from '../../state/phone-home.ts';
@@ -32,9 +33,13 @@
   );
   let QuickActionsComponent = $state<Component<QuickActionsProps> | null>(null);
   let HomeExtras = $state<Component<{ currentRoom: string | null }> | null>(null);
+  let WeatherControl = $state<Component | null>(null);
 
   onMount(() => {
     let cancelled = false;
+    void import('../WeatherButton.svelte').then(({ default: component }) => {
+      if (!cancelled) WeatherControl = component;
+    }).catch(() => {});
     void import('./PhoneQuickActions.svelte').then(({ default: component }) => {
       if (!cancelled) QuickActionsComponent = component;
     }).catch(() => {});
@@ -133,6 +138,8 @@
         onDragEnd: () => { layoutDrag = null; },
       }}>
   <h1 bind:this={titleAnchor} id="phone-target-title" class="phone-visually-hidden" tabindex="-1">{m.phone_home()}</h1>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)"><span>{clock.date}</span><span style="display:inline-flex;align-items:center;justify-content:flex-end;min-height:var(--touch-min);min-width:calc(var(--space-8) + var(--space-4))">{#if WeatherControl}<WeatherControl />{/if}</span></div>
 
   {#if HomeExtras}<HomeExtras {currentRoom} />{/if}
 

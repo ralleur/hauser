@@ -74,13 +74,13 @@ function phoneLightsOn(rooms: ReturnType<typeof runtimeRooms>, on: readonly stri
 }
 
 describe('countsForBulb', () => {
-  it('uses the explicit choice and otherwise counts only lights', () => {
+  it('always counts lamps and otherwise respects the explicit choice', () => {
     expect(countsForBulb({ domain: 'light' })).toBe(true);
     expect(countsForBulb({ entityId: 'light.lamp' })).toBe(true);
     expect(countsForBulb({ domain: 'switch' })).toBe(false);
     expect(countsForBulb({ entityId: 'cover.blind' })).toBe(false);
     expect(countsForBulb({ domain: 'vacuum' })).toBe(false);
-    expect(countsForBulb({ domain: 'light', countsAsLight: false })).toBe(false);
+    expect(countsForBulb({ domain: 'light', countsAsLight: false })).toBe(true);
     expect(countsForBulb({ domain: 'switch', countsAsLight: true })).toBe(true);
   });
 });
@@ -129,12 +129,12 @@ describe('room lightbulb count (phone summary)', () => {
     expect(phoneLightsOn(rooms, everything)).toMatchObject({ lightsOn: 1, lightsTotal: 1 });
   });
 
-  it('counts a plug the user marks as a light, and drops a lamp marked as not', () => {
+  it('counts a plug marked as a light and keeps lamps enabled despite old overrides', () => {
     const rooms = runtimeRooms(projectedRoom({ lamp: true, plug: true }));
     expect(phoneLightsOn(rooms, ['switch.den_plug'])).toMatchObject({ lightsOn: 1, lightsTotal: 2 });
     expect(phoneLightsOn(rooms, [])).toMatchObject({ lightsOn: 0, lightsTotal: 2 });
     const muted = runtimeRooms(projectedRoom({ lamp: false }));
-    expect(phoneLightsOn(muted, ['light.den_lamp'])).toMatchObject({ lightsOn: 0, lightsTotal: 0 });
+    expect(phoneLightsOn(muted, ['light.den_lamp'])).toMatchObject({ lightsOn: 1, lightsTotal: 1 });
   });
 
   it('keeps the previous phone behaviour when the field is missing (only lights count)', () => {

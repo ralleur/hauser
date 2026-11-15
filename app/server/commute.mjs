@@ -137,9 +137,11 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
   async function sources() {
     return withClient(async (client) => {
       const registry = await client.ws('config/entity_registry/list');
-      const result = await client.rest('GET', '/api/states');
-      if (!Array.isArray(registry) || result.status !== 200 || !Array.isArray(result.body)) throw new Error('HA_UNAVAILABLE');
-      return { registry, states: result.body };
+      // Whole households can exceed the REST client's 1 MiB response limit.
+      // Reuse the authenticated socket for the complete state snapshot.
+      const states = await client.ws('get_states');
+      if (!Array.isArray(registry) || !Array.isArray(states)) throw new Error('HA_UNAVAILABLE');
+      return { registry, states };
     });
   }
   async function options() {

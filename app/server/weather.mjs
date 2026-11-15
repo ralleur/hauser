@@ -23,15 +23,15 @@ export function openMeteoForecastUrl({ latitude, longitude }) {
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
-    current: 'temperature_2m,weather_code,precipitation,rain,wind_speed_10m',
-    hourly: 'temperature_2m',
+    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation,rain,wind_speed_10m,wind_direction_10m',
+    hourly: 'temperature_2m,weather_code,precipitation_probability,precipitation,wind_speed_10m',
     minutely_15: 'rain',
     forecast_minutely_15: '12',
     past_hours: '1',
-    forecast_hours: '1',
+    forecast_hours: '48',
     /* Auf- und Untergang für den Sonnenbogen über der Energie. */
-    daily: 'sunrise,sunset',
-    forecast_days: '1',
+    daily: 'sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max',
+    forecast_days: '7',
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${params}`;

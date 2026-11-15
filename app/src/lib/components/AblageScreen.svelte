@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PinField from './PinField.svelte';
   import { nativeBridge } from '../native/bridge.ts';
   import { m } from '../../paraglide/messages.js';
   import { intlLocale } from '../state/locale.svelte.ts';
@@ -63,8 +64,6 @@
         await biometrics.secretSet('ablage-pin', null);
       }
     }
-    await tick();
-    pinInput?.focus();
   });
 
   $effect(() => {
@@ -73,7 +72,7 @@
     if (active === panelWasActive) return;
     panelWasActive = active;
     if (active) {
-      void enterAblage().then(tick).then(() => pinInput?.focus());
+      void enterAblage();
     } else {
       void leaveAblage();
     }
@@ -224,8 +223,8 @@
       {:else}
         <form onsubmit={submitPin}>
           <label for="ablage-pin">PIN</label>
-          <input bind:this={pinInput} bind:value={pin} id="ablage-pin" type="password" inputmode="numeric"
-                 autocomplete="off" maxlength="12" disabled={ablage.loading} aria-describedby={ablage.error ? 'ablage-error' : undefined} />
+          <PinField bind:input={pinInput} bind:value={pin} id="ablage-pin" disabled={ablage.loading}
+                    describedby={ablage.error ? 'ablage-error' : undefined} />
           <button class="pressable" type="submit" disabled={!pin || ablage.loading}>{ablage.loading ? m.abl_checking() : m.abl_unlock()}</button>
         </form>
       {/if}

@@ -47,7 +47,6 @@ import {
 import { catalogItemFromHaState, isForeignContact } from './capabilities.ts';
 import type { EntityCatalogItem } from '../state/device-config.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
-import { calendarEventsMessage } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 import { reminderListMessage } from '../state/reminders.ts';
 import { sharedStorage } from '../state/shared-config.ts';
@@ -342,6 +341,7 @@ export class HaBackend implements Backend {
 
   async getCalendarEvents(entityId: string, start: Date, end: Date): Promise<CalendarEvent[]> {
     if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
+    const { calendarEventsMessage } = await import('../state/calendar.ts');
     const result = await this.#conn.sendMessagePromise<{ response?: Record<string, { events?: HaCalendarEvent[] }> }>(
       calendarEventsMessage(entityId, start, end),
     );

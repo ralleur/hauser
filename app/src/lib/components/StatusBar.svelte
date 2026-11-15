@@ -1,4 +1,5 @@
 <script lang="ts">
+  import WeatherButton from './WeatherButton.svelte';
   import LockButton from './LockButton.svelte';
   import { clock } from '../state/clock.svelte.ts';
   import { hudClockTap } from '../state/hud.svelte.ts';
@@ -49,6 +50,7 @@
     <span class="status-clock num" onpointerdown={hudClockTap}
           use:longpress={{ enabled: true, onLongPress: showClockZoom }}>{clock.time}</span>
     <span class="status-date">{clock.date}</span>
+    <WeatherButton />
   </div>
   <!-- Mitte: Bearbeiten ⇄ Bedienen. „Bedienen" sperrt die Konfigurations-
        Zugänge; Geräte bleiben voll bedienbar. Getrennt: das Rad wird rot und

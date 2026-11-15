@@ -60,8 +60,11 @@ response alone is not proof of live device control.
 Network, HTTP, revoked-session and certificate errors offer retry or a new
 connection. The web interface retains its own live/offline indicators. Android
 Back navigates within the page; at the root it opens the app menu (reload,
-connection, fullscreen, Xiaomi handle spacing, close). System navigation stays
-available. Insets for navigation, cutouts and keyboard are handled once natively
+connection, fullscreen, Xiaomi handle spacing, close). On phones system navigation stays
+available. Tablets use an immersive Hauser home surface with device controls,
+Store, app drawer and an optional system-wide Hauser keyboard. See
+[tablet prototype](../docs/android-tablet-prototype.md) for setup, permissions
+and the dedicated-device boundary. Insets for navigation, cutouts and keyboard are handled once natively
 and cleared before forwarding to WebView. Fullscreen hides only the app's status
 bar. The optional Xiaomi handle spacing is **off by default**.
 
@@ -119,3 +122,44 @@ Code and documentation: AGPL-3.0-only. Built-in room illustrations are unchanged
 Hauser artwork, CC BY 4.0. Brand/icon rights remain reserved. Fonts retain SIL
 OFL; ZXing retains Apache-2.0. The build copies those existing asset sources and
 ships their license texts and notices. It never copies private tablet data.
+
+## House-tablet prototype
+
+On Android tablets (smallest width at least 600dp), the APK supplies the Hauser
+device panel, installed-app drawer and Store with official Google Play search as an offline native-owned
+surface. Only this surface has device access; the server page never receives
+a privileged JavaScript bridge. Hauser can be selected as the Android Home app.
+Its QWERTZ input method is enabled separately and works across apps. Admin-only
+setup grants optional display, quiet-mode and Bluetooth access. Existing phones
+keep the companion flow. See [the prototype specification](../docs/android-tablet-prototype.md).
+
+For the existing, private Xiaomi test package and local signing identity:
+
+```sh
+python3 android/build.py --prototype-server http://YOUR-PRIVATE-LAN-HOST:4173
+```
+
+This variant is debuggable, uses `de.ralleur.hauser.tablet` and writes only to
+`android/build/tablet-prototype/`. It must not be prepared or published as a
+public APK. Regular builds remain non-debuggable and contain no prototype
+server. The separate keyboard process uses its own WebView data directory and
+does not store typed text or contact a suggestion service. Complete system
+lockdown requires dedicated-device provisioning; choosing a Home app alone
+does not grant Device Owner privileges.
+
+Die Tablet-Mitteilungszentrale und ihre Einzelbanner liegen in
+`assets/tablet-notifications.{js,css}`. Die Zentrale läuft in der Offline-WebView;
+`HauserNotificationListener` ergänzt dort nach Android-Freigabe echte aktive
+Appmitteilungen. Ihre Inhalte werden weder an die Server-WebView weitergereicht
+noch gespeichert. Hauser-Meldungen verwenden die bisherigen Meldungsaktionen;
+Lesen bleibt von Quittieren getrennt. Night Mode ist standardmäßig an und in den
+Geräteeinstellungen abschaltbar. Navigation und Glas verwenden dieselben
+Piktogramme und Tokens wie die bestehende Hauser-Oberfläche.
+
+Der fokussierte Abnahmepfad für die Integrationskorrekturen ist
+`tests/tablet-integration-fixes.mjs`; er entfernt seine Prüfmeldungen und stellt
+beide Meldungsspeicher wieder her. Vor der Ausführung muss das Tablet wach und
+entsperrt sein. Das Skript benötigt die lokale WebView-Weiterleitung auf 9487.
+Bei einem normalen APK-Update kein `am force-stop` für das Paket ausführen:
+Das kann die aktive Eingabemethode auf Gboard zurücksetzen. Die Hauser-IME nach
+einem gezielten Stop bei Bedarf erneut auswählen und prüfen.

@@ -249,13 +249,8 @@
   --color-surface-2: rgba(255, 255, 255, 0.14);
   color: var(--color-text-primary);
 }
-/* Der Blur der Pillen braucht das Bild hinter der Leiste. Ihr
-   `view-transition-name` (hero-layout.css) macht die Fußzeile aber zu einer
-   eigenen Render-Ebene: der Backdrop-Filter sieht dann nur die leere Leiste
-   und blurrt nichts — die Pillen wirkten glatt statt milchig, auch wenn die
-   Werte stimmten. Im Glas-Kartenstil fällt der Name deshalb weg; die Leiste
-   wird beim Screenwechsel mit der Wurzel überblendet, was auf dem Bild
-   nicht auffällt. */
+/* Die Leiste bleibt ohne eigenen Backdrop-Root. Ihre drei Glasscheiben
+   werden einzeln und dauerhaft über dem Raum-Morph gehalten (hero-layout). */
 :root:not([data-card-style="standard"]) .tab-bar { view-transition-name: none; }
 /* Alle drei Pillen tragen dieselbe Scheibe — ausdrücklich, nicht über die
    geerbte Fassung, damit keine ihre eigene Deckkraft mitbringt. */
@@ -408,7 +403,7 @@
    Chrome nur dessen leere Ebene — auf der Hülle selbst sieht er das Bild. */
 :root:not([data-card-style="standard"]):has([data-shell="panel"]) .notification-tile-shell {
   border-radius: var(--radius-xl);
-  background: var(--glass-face);
+  background: var(--notification-face);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }

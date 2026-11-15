@@ -13,10 +13,11 @@
   import { swipeleft } from '../actions/swipeleft.ts';
   import { fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { prefersReducedMotion } from '../motion/index.ts';
+  import { prefersReducedMotion, tokenDuration, withViewTransition } from '../motion/index.ts';
+  import { tick, untrack } from 'svelte';
   import { ambientState } from '../state/ambient.svelte.ts';
   import { layoutManager } from '../state/layout-manager.svelte.ts';
-  import { layoutHomeView, layoutRoomsPerRow, widthPreset, type LayoutSlotId } from '../state/layout-config.ts';
+  import { layoutHomeView, layoutRoomsPerRow, widthPreset, type HomeViewId, type LayoutSlotId } from '../state/layout-config.ts';
   import { cameraPopouts } from '../state/camera-popouts.svelte.ts';
   import { deviceDetail, openRoomEdit, roomEdit } from '../state/overlay.svelte.ts';
   import { currentMoment, initMoments } from '../state/moments.svelte.ts';
@@ -32,11 +33,16 @@
      die Kontrollfläche gehört dann ganz den Szenen und Geräten. Das Raster
      kommt erst, wenn die Ansicht gewählt ist — im Vollbild bleibt der
      Startpfad unverändert. */
-  const roomsView = $derived(layoutHomeView(layoutManager.preview) === 'rooms');
+  let renderedHomeView = $state<HomeViewId>(untrack(() => layoutHomeView(layoutManager.preview)));
+  let viewChanging = $state(false);
+  let stageEl: HTMLDivElement | undefined = $state();
+  let viewRequest = 0;
+  const requestedHomeView = $derived(layoutHomeView(layoutManager.preview));
+  const roomsView = $derived(renderedHomeView === 'rooms');
   /* Bildsteuerung (Owner 2026-10-19): nur das Raumbild, die Kontrollfläche
      bleibt draußen; bedient wird über die Geräte im Bild. Ein Wisch wechselt
      den Raum, langer Druck öffnet die Konfiguration. */
-  const imageView = $derived(layoutHomeView(layoutManager.preview) === 'image');
+  const imageView = $derived(renderedHomeView === 'image');
   let HomeRoomGrid = $state<Component<{
     rooms: typeof appState.rooms;
     activeIds: readonly string[];
@@ -50,6 +56,35 @@
       .then((module) => { HomeRoomGrid = module.default; })
       .catch(() => { /* ohne Kacheln weiter */ });
   });
+  $effect(() => {
+    const next = requestedHomeView;
+    const request = ++viewRequest;
+    if (next === untrack(() => renderedHomeView)) return;
+    untrack(() => { void changeHomeView(next, request); });
+  });
+
+  async function changeHomeView(next: HomeViewId, request: number): Promise<void> {
+    if (next === 'rooms' && !HomeRoomGrid) {
+      const module = await import('../components/HomeRoomGrid.svelte');
+      if (request !== viewRequest) return;
+      HomeRoomGrid = module.default;
+    }
+    viewChanging = 'startViewTransition' in document && !prefersReducedMotion();
+    await withViewTransition(async () => {
+      if (request !== viewRequest) return;
+      renderedHomeView = next;
+      await tick();
+      if (next !== 'rooms' || !viewChanging) return;
+      // Capture the decoded tile, including its finished image crossfade.
+      const card = stageEl?.querySelector<HTMLElement>('[data-room-id="' + CSS.escape(appState.currentRoom ?? '') + '"]');
+      const deadline = performance.now() + tokenDuration(stageEl ?? null, 'enter') * 2;
+      while (card && !card.classList.contains('has-hero') && performance.now() < deadline && request === viewRequest) {
+        // Rendering (including animation frames) pauses during snapshot updates.
+        await new Promise<void>((resolve) => setTimeout(resolve, tokenDuration(stageEl ?? null, 'fast')));
+      }
+    });
+    if (request === viewRequest) viewChanging = false;
+  }
   /* Wisch nach links auf der Kontrollfläche lässt sie aus dem Bild fliegen —
      die Bühne gehört dann ganz dem Bild bzw. den Kacheln. Im Vollbild holt
      die nächste Berührung irgendwo sie zurück; der Tipp selbst wirkt weiter.
@@ -190,7 +225,7 @@
      Bildsteuerung wechselt er stattdessen den Raum. Die Kontrollfläche behält
      ihre eigene Geste. -->
 <div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2}
-     class:is-rooms-view={roomsView} style={layoutStyle}
+     class:is-rooms-view={roomsView} class:is-view-changing={viewChanging} style={layoutStyle} bind:this={stageEl}
      use:swipeleft={{ onSwipe: () => (imageView ? stepRoom(1) : openConfig()), move: false, ignore: '.home-panels, .image-edge-pull', threshold: 120, angle: 60 }}
      use:swipeleft={{ onSwipe: () => stepRoom(-1), move: false, direction: 'right', ignore: '.image-edge-pull', threshold: 120, angle: 60, enabled: imageView }}>
   {#if !roomsView}

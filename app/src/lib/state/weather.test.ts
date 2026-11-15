@@ -82,6 +82,9 @@ describe('openMeteoUrl', () => {
     const url = openMeteoUrl(DEMO_COORDS);
     expect(url).toContain(`latitude=${DEMO_COORDS.latitude}`);
     expect(url).toContain(`longitude=${DEMO_COORDS.longitude}`);
-    expect(url).toContain('current=temperature_2m%2Cweather_code%2Cprecipitation%2Cwind_speed_10m');
+    const params = new URL(url).searchParams;
+    expect(params.get('current')?.split(',')).toEqual(expect.arrayContaining(['temperature_2m', 'apparent_temperature', 'relative_humidity_2m', 'weather_code', 'precipitation', 'wind_speed_10m', 'wind_direction_10m']));
+    expect(params.get('forecast_days')).toBe('7');
+    expect(params.get('forecast_hours')).toBe('48');
   });
 });

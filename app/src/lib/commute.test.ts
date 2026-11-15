@@ -2,6 +2,10 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error Server modules run in Node without app declarations.
 import { createCommuteService, DEFAULT_COMMUTE, parseCommuteConfig, projectCommute, rainStart } from '../../server/commute.mjs';
+// @ts-expect-error Native Node server module.
+import { createLaundryHomeAssistantClient } from '../../server/laundry.mjs';
+// @ts-expect-error Native Node test without @types/node.
+import { WebSocketServer } from 'ws';
 import { departureFor, inCommuteWindow, freshCommute, type CommuteConfig, type CommuteRoute } from './state/commute.ts';
 
 const now = Date.parse('2026-11-16T06:18:00Z');
@@ -55,14 +59,62 @@ describe('Morning commute', () => {
     expect(rainStart(forecast, now + 31 * 60_000)).toBeNull();
   });
   it('discovers HA routes and reads their geometry via TomTom without fetching traffic itself', async () => {
-    const ws = vi.fn(async (type: string) => type === 'config/entity_registry/list' ? registry : raw);
+    const ws = vi.fn(async (type: string) => type === 'config/entity_registry/list' ? registry : type === 'get_states' ? states : raw);
     const close = vi.fn();
     const service = createCommuteService({ configStore: { read: () => ({ 'hmi:commute:v1': JSON.stringify(config) }) },
-      resolveCredentials: () => ({}), clientFactory: () => ({ ws, close, rest: async () => ({ status: 200, body: states }) }),
+      resolveCredentials: () => ({}), clientFactory: () => ({ ws, close }),
       now: () => now, fetchImpl: async () => ({ ok: false }) });
     expect((await service.options()).routes).toEqual([{ id: 'work', name: 'Work' }]);
     expect((await service.read()).route.durationMinutes).toBe(37);
     expect(ws).toHaveBeenCalledWith('tomtom/route', { config_entry_id: 'work' });
     expect(close).toHaveBeenCalled();
+  });
+  it.each(['direct', 'supervisor'])('loads settings and live traffic above 1 MiB through the real %s client', async (mode) => {
+    const largeStates = [...states, ...Array.from({ length: 2500 }, (_, index) => ({
+      entity_id: `sensor.fixture_${index}`, state: '0', attributes: { details: 'x'.repeat(500) },
+    }))];
+    expect(new TextEncoder().encode(JSON.stringify(largeStates)).length).toBeGreaterThan(1024 * 1024);
+    const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
+    const socketPath = mode === 'supervisor' ? '/core/websocket' : '/api/websocket';
+    let installed = true;
+    const paths: string[] = [];
+    server.on('connection', (socket: any, request: { url: string }) => {
+      paths.push(request.url);
+      socket.send(JSON.stringify({ type: 'auth_required' }));
+      socket.on('message', (data: { toString(): string }) => {
+        const frame = JSON.parse(data.toString());
+        if (frame.type === 'auth') { socket.send(JSON.stringify({ type: 'auth_ok' })); return; }
+        const result = frame.type === 'get_states' ? (installed ? largeStates : largeStates.slice(states.length))
+          : frame.type === 'config/entity_registry/list' ? (installed ? registry : []) : raw;
+        socket.send(JSON.stringify({ id: frame.id, type: 'result', success: true, result }));
+      });
+    });
+    const rest = vi.fn(() => { throw new Error('State discovery must not use REST'); });
+    const service = createCommuteService({
+      configStore: { read: () => ({ 'hmi:commute:v1': JSON.stringify(config) }) },
+      resolveCredentials: () => ({ baseUrl, token: 'fixture', ...(mode === 'supervisor' ? { websocketUrl: baseUrl.replace('http:', 'ws:') + socketPath } : {}) }),
+      clientFactory: (options: object) => createLaundryHomeAssistantClient({ ...options, fetchImpl: rest }),
+      now: () => now, fetchImpl: async () => ({ ok: false }),
+    });
+    try {
+      let status = 0;
+      let body = '';
+      await service.serve({ method: 'GET', url: '/api/admin/commute', headers: {} }, {
+        writeHead: (value: number) => { status = value; }, end: (value: string) => { body = value; },
+      }, new Set());
+      expect(status).toBe(200);
+      expect(JSON.parse(body).routes).toEqual([{ id: 'work', name: 'Work' }]);
+      expect(JSON.parse(body).parking).toHaveLength(2501);
+      expect((await service.read()).route.durationMinutes).toBe(37);
+      installed = false;
+      expect((await service.options()).routes).toEqual([]);
+      expect(rest).not.toHaveBeenCalled();
+      expect(paths.every((path) => path === socketPath)).toBe(true);
+    } finally {
+      for (const socket of server.clients) socket.terminate();
+      await new Promise<void>((resolve) => server.close(resolve));
+    }
   });
 });

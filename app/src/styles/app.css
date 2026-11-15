@@ -410,6 +410,9 @@ button {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
+[data-shell="panel"] .status-bar .standby-btn {
+  color: var(--color-text-secondary);
+}
 .ha-status {
   display: flex;
   align-items: center;
@@ -714,7 +717,8 @@ body.theme-fade.is-dusk { --duration-theme-fade: var(--duration-dusk); }
 /* ── Gleiter (Owner-Idee 2026-09-12): eine warme Pille fährt hinter dem
    aktiven Tab her, statt dass je Tab ein Unterstrich aufblendet. Position und
    Breite misst TabBar.svelte (--glider-x/--glider-w); die Bewegung ist eine
-   Feder, die leicht überschwingt. Nur Transform und Breite der einen Pille.
+   Feder, die leicht überschwingt. Die Breite wird einmal gesetzt, die
+   Bewegung läuft über Transform (tab-glider.ts), ohne Layout pro Frame.
    Das Symbol des aktiven Tabs hüpft einen Hauch und trägt das Gold. ── */
 .tab-nav { position: relative; }
 .tab-glider {
@@ -728,15 +732,14 @@ body.theme-fade.is-dusk { --duration-theme-fade: var(--duration-dusk); }
   box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
               inset 0 0 0 1px color-mix(in srgb, var(--color-accent-warm) 22%, transparent);
   transform: translate3d(var(--glider-x), 0, 0);
-  transition: transform 460ms cubic-bezier(0.34, 1.4, 0.64, 1),
-              width 460ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  transform-origin: left center;
   pointer-events: none;
 }
 .tab { z-index: 1; }
 .tab.is-active .tab-icon {
   color: var(--color-accent-warm);
   transform: scale(1.06);
-  transition: transform 460ms cubic-bezier(0.34, 1.56, 0.64, 1), color var(--duration-normal) var(--ease-out);
+  transition: transform var(--duration-glider) var(--ease-spring), color var(--duration-normal) var(--ease-out);
 }
 .tab.is-active.is-pressed .tab-icon { transform: scale(0.94); }
 @media (prefers-reduced-motion: reduce) {

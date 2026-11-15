@@ -1,4 +1,4 @@
-import { DEMO_COORDS, openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type OutdoorReading } from './weather.ts';
+import { parseWeatherDetails, type WeatherDetails, DEMO_COORDS, openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type OutdoorReading } from './weather.ts';
 import { apiPath } from '../api/client.ts';
 import { IS_DEMO } from '../demo/demo-mode.ts';
 import { createSnapshotStore } from '../data/query-cache.ts';
@@ -47,6 +47,8 @@ registerRevalidation({
   revalidate: () => refreshWeather(),
 });
 
+export const weatherView = $state({ open: false, loading: false, failed: false, details: null as WeatherDetails | null });
+export function openWeather(): void { weatherView.open = true; void refreshWeather(); }
 let inflight = false;
 
 /* Der Ort gehört dem Server: er liest ihn aus Home Assistant und fragt
@@ -59,10 +61,14 @@ function weatherUrl(): string {
 export async function refreshWeather(): Promise<void> {
   if (inflight) return;
   inflight = true;
+  weatherView.loading = true;
+  weatherView.failed = false;
   try {
     const res = await fetch(weatherUrl(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-    if (!res.ok) return;
-    const reading = parseOutdoor(await res.json());
+    if (!res.ok) { weatherView.failed = true; return; }
+    const data = await res.json();
+    const reading = parseOutdoor(data);
+    weatherView.details = parseWeatherDetails(data);
     // Nur übernehmen, wenn eine Temperatur da ist; sonst letzten Wert halten.
     if (reading.temp !== null) {
       outdoor.temp = reading.temp;
@@ -74,8 +80,8 @@ export async function refreshWeather(): Promise<void> {
       outdoor.sunset = reading.sunset ?? null;
       void snapshot.save({ ...reading });
     }
-  } catch { /* offline / Timeout: letzter Wert bleibt stehen */ }
-  finally { inflight = false; }
+  } catch { weatherView.failed = true; }
+  finally { inflight = false; weatherView.loading = false; }
 }
 
 /* ── Innen-Trend über gesampelte Live-Raumtemperatur ──────────────────────────

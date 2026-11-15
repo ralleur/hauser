@@ -76,6 +76,8 @@ export const API_ROUTES = [
   { id: 'shoppingNotion', methods: ['GET'], path: '/api/shopping/notion', area: 'family', access: 'origin', purpose: 'Einkaufsliste aus der Notion-Seite lesen.', response: 'ShoppingResponse', cacheable: true },
   { id: 'shoppingNotionItems', methods: ['POST'], path: '/api/shopping/notion/items', area: 'family', access: 'origin', purpose: 'Eintrag auf der Notion-Seite anlegen.' },
   { id: 'shoppingNotionItemUpdate', methods: ['PATCH'], path: '/api/shopping/notion/items/:id', area: 'family', access: 'origin', purpose: 'Notion-Eintrag abhaken.' },
+  { id: 'weatherRadar', methods: ['GET'], path: '/api/weather/radar', area: 'family', access: 'origin', purpose: 'Beobachtete Regenradar-Bilder im 100-km-Ausschnitt um den Lockscreen-Standort, ohne Koordinaten in der Antwort.' },
+  { id: 'weatherRadarFrame', methods: ['GET'], path: '/api/weather/radar/:frame', area: 'family', access: 'origin', purpose: 'Regionales Karten- oder Radarbild mit identischem 100-km-Ausschnitt.' },
   { id: 'weather', methods: ['GET'], path: '/api/weather', area: 'family', access: 'origin', purpose: 'Außenwetter für den Heimatort aus Home Assistant (Open-Meteo, serverseitig, ohne Koordinaten in der Antwort).', cacheable: true },
   { id: 'moments', methods: ['GET'], path: '/api/moments', area: 'family', access: 'origin', purpose: 'Kalendermomente des Tages (Geburtstag, fester Tag, erster Schnee).', response: 'MomentsResponse', cacheable: true },
 

@@ -3,12 +3,29 @@
   <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="35" />
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-  <queries><intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent></queries>
+  <uses-permission android:name="android.permission.REORDER_TASKS" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+  <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+  <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+  <queries><intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent><package android:name="com.android.vending" /><intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent></queries>
   <application android:label="Hauser" android:icon="@drawable/icon" android:allowBackup="false" android:debuggable="false" android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config" android:theme="@style/HauserTheme">
-    <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustResize">
+    <activity android:name="de.ralleur.hauser.MainActivity" android:launchMode="singleTask" android:exported="true" android:configChanges="orientation|screenSize|keyboard|keyboardHidden" android:windowSoftInputMode="adjustResize">
       <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+      <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /><category android:name="android.intent.category.DEFAULT" /></intent-filter>
       <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="hauser" android:host="pair" /></intent-filter>
     </activity>
-    <provider android:name=".CaptureProvider" android:authorities="de.ralleur.hauser.capture" android:exported="false" android:grantUriPermissions="true" />
+    <provider android:name="de.ralleur.hauser.CaptureProvider" android:authorities="de.ralleur.hauser.capture" android:exported="false" android:grantUriPermissions="true" />
+    <service android:name="de.ralleur.hauser.HauserKeyboard" android:process=":keyboard" android:label="@string/keyboard_name" android:permission="android.permission.BIND_INPUT_METHOD" android:exported="true">
+      <intent-filter><action android:name="android.view.InputMethod" /></intent-filter>
+      <meta-data android:name="android.view.im" android:resource="@xml/input_method" />
+    </service>
+    <service android:name="de.ralleur.hauser.HauserNotificationListener" android:label="Hauser Mitteilungen" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
+      <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+    </service>
+    <receiver android:name="de.ralleur.hauser.HauserDeviceAdmin" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="true">
+      <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin" />
+      <intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED" /></intent-filter>
+    </receiver>
   </application>
 </manifest>

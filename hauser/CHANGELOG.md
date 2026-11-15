@@ -1,3 +1,16 @@
+## 0.51.1 - 2026-11-15
+
+- Weather: detailed current conditions, 12/24-hour and seven-day forecasts, weather overlays above Home and standby, and real observed rain radar with buffered playback and background refresh.
+- Android: home launcher, device controls, Apps with Google Play search, notification centre, floating Hauser keyboard and direct Power-button standby; Android beta.2 is available as a signed update.
+- Performance: transform-driven navigation indicator, fewer repeated app-icon and status transfers, and an iOS image cache sized by its actual memory cost.
+- Panel: smooth room-to-tile transitions, persistent bottom navigation, restored smoky glass and System hidden in use mode.
+- Standby: compact notifications at the top without the redundant heading and counter; full messages remain available on tap.
+- Commute: load settings and live traffic in large Home Assistant households whose state data exceeds 1 MiB; applies to web and native iOS.
+- Light controls: remove the room-bulb counting switch.
+- Files: digit places for numeric PIN entry; the keyboard opens only after tapping the field.
+- Android tablets: Google Play catalog search without a featured banner, shared navigation for Store and Apps, and notifications in the bottom-right status pill.
+- Standby: temperature moves smoothly with the time and date when switching to the commute view.
+
 ## 0.51.0 - 2026-11-15
 
 - Configurable commute view using the Home Assistant TomTom integration, live traffic preview and lock-screen switching.

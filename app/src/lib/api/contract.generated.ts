@@ -49,6 +49,8 @@ export const API_ROUTES = {
   shoppingNotion: { methods: ['GET'], path: '/api/shopping/notion', area: 'family', access: 'origin' },
   shoppingNotionItems: { methods: ['POST'], path: '/api/shopping/notion/items', area: 'family', access: 'origin' },
   shoppingNotionItemUpdate: { methods: ['PATCH'], path: '/api/shopping/notion/items/:id', area: 'family', access: 'origin' },
+  weatherRadar: { methods: ['GET'], path: '/api/weather/radar', area: 'family', access: 'origin' },
+  weatherRadarFrame: { methods: ['GET'], path: '/api/weather/radar/:frame', area: 'family', access: 'origin' },
   weather: { methods: ['GET'], path: '/api/weather', area: 'family', access: 'origin' },
   moments: { methods: ['GET'], path: '/api/moments', area: 'family', access: 'origin' },
   roomImageCapability: { methods: ['GET', 'HEAD'], path: '/api/room-images/capability', area: 'room-images', access: 'origin' },

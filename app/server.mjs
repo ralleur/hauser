@@ -126,6 +126,7 @@ import {
 import { createFamilyDataStore, serveFamilyData } from './server/family-data.mjs';
 import { notionShoppingRoute, serveNotionShopping } from './server/shopping-notion.mjs';
 import { createMomentsService, MOMENT_HOLIDAYS_CONFIG_KEY, serveMoments } from './server/moments.mjs';
+import { createWeatherRadarService, serveWeatherRadar } from './server/weather-radar.mjs';
 import { createWeatherService, serveWeather } from './server/weather.mjs';
 import { createCommuteService } from './server/commute.mjs';
 import { createFeedbackService, serveFeedback } from './server/feedback.mjs';
@@ -909,6 +910,7 @@ export function createHmiServer(
      Setup-Recovery hält sie wie Raumbilder und Wäsche fail-closed. */
   const ambientMapDirectoriesReady = existsSync(dirname(ambientMapConfigPath))
     && existsSync(dirname(ambientMapAssetDirectory));
+  const radar = createWeatherRadarService({ cacheDirectory: join(ambientMapAssetDirectory, 'radar-tiles'), resolveMap: async () => { await ambientMap?.ready; return ambientMap?.getRadarLocation?.() ?? null; } });
   const ambientMapGeocoder = ambientMapGeocode ?? createAmbientMapGeocoder();
   const ambientMap = !setupRecoveryResult.ok ? null : (ambientMapService ?? (ambientMapDirectoriesReady
     ? createAmbientMapService({
@@ -1220,6 +1222,9 @@ export function createHmiServer(
         /* Icons aus Geräte-, Raum- und Szenenkonfiguration gehören ins Bundle. */
         configTexts: () => [JSON.stringify(configStore.read()), readTextIfExists(householdConfigPath)],
       });
+    } else if ((req.url || '').startsWith('/api/weather/radar')) {
+      if (!requestOriginAllowed(req, allowedOrigins)) jsonResponse(res, 403, { ok: false, code: 'WEATHER_ORIGIN_FORBIDDEN' });
+      else void serveWeatherRadar(req, res, radar);
     } else if ((req.url || '') === '/api/weather') {
       if (!requestOriginAllowed(req, allowedOrigins)) {
         jsonResponse(res, 403, {

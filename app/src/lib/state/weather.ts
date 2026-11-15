@@ -32,12 +32,12 @@ export function openMeteoUrl(coords: { latitude: number; longitude: number }): s
   const p = new URLSearchParams({
     latitude: String(coords.latitude),
     longitude: String(coords.longitude),
-    current: 'temperature_2m,weather_code,precipitation,wind_speed_10m',
-    hourly: 'temperature_2m',
+    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation,wind_speed_10m,wind_direction_10m',
+    hourly: 'temperature_2m,weather_code,precipitation_probability,precipitation,wind_speed_10m',
     past_hours: '1',
-    forecast_hours: '1',
-    daily: 'sunrise,sunset',
-    forecast_days: '1',
+    forecast_hours: '48',
+    daily: 'sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max',
+    forecast_days: '7',
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${p}`;
@@ -93,7 +93,7 @@ export function classifyTrend(
 
 /* WMO-Codes 0/1 sind klar bzw. überwiegend klar. Niederschlags-Codes beginnen
    bei 51; zusätzlich gewinnt ein realer aktueller Niederschlagswert. */
-function weatherCondition(
+export function weatherCondition(
   code: number | null | undefined,
   precipitation: number | null | undefined,
 ): WeatherCondition | null {
@@ -123,5 +123,44 @@ export function parseOutdoor(data: OpenMeteoResponse): OutdoorReading {
       ? data.current.wind_speed_10m : null,
     sunrise: localInstant(data.daily?.sunrise?.[0], data.utc_offset_seconds),
     sunset: localInstant(data.daily?.sunset?.[0], data.utc_offset_seconds),
+  };
+}
+
+
+export interface ForecastHour {
+  time: number; temp: number | null; condition: WeatherCondition | null;
+  rainChance: number | null; rain: number | null; wind: number | null;
+}
+export interface ForecastDay {
+  date: string; high: number | null; low: number | null;
+  condition: WeatherCondition | null; rainChance: number | null;
+}
+export interface WeatherDetails {
+  updatedAt: number; offsetSeconds: number; feelsLike: number | null; humidity: number | null;
+  windDirection: number | null; uv: number | null;
+  hours: ForecastHour[]; days: ForecastDay[];
+}
+
+/* Keep the provider's local times tied to its offset, including when the
+   panel and home are in different time zones. Missing values stay missing. */
+export function parseWeatherDetails(value: unknown, now = Date.now()): WeatherDetails {
+  const data = value as Record<string, any>;
+  const current = data?.current ?? {}, hourly = data?.hourly ?? {}, daily = data?.daily ?? {};
+  const number = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
+  return {
+    updatedAt: typeof data?.updatedAt === 'string' ? Date.parse(data.updatedAt) : now,
+    offsetSeconds: number(data?.utc_offset_seconds) ?? 0,
+    feelsLike: number(current.apparent_temperature), humidity: number(current.relative_humidity_2m),
+    windDirection: number(current.wind_direction_10m), uv: number(daily.uv_index_max?.[0]),
+    hours: (Array.isArray(hourly.time) ? hourly.time : []).flatMap((time: string, i: number) => {
+      const instant = localInstant(time, data.utc_offset_seconds);
+      return instant === null ? [] : [{ time: instant, temp: number(hourly.temperature_2m?.[i]),
+        condition: weatherCondition(number(hourly.weather_code?.[i]), number(hourly.precipitation?.[i])),
+        rainChance: number(hourly.precipitation_probability?.[i]), rain: number(hourly.precipitation?.[i]), wind: number(hourly.wind_speed_10m?.[i]) }];
+    }),
+    days: (Array.isArray(daily.time) ? daily.time : []).map((date: string, i: number) => ({
+      date, high: number(daily.temperature_2m_max?.[i]), low: number(daily.temperature_2m_min?.[i]),
+      condition: weatherCondition(number(daily.weather_code?.[i]), null), rainChance: number(daily.precipitation_probability_max?.[i]),
+    })),
   };
 }

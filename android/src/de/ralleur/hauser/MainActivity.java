@@ -31,9 +31,42 @@ public final class MainActivity extends Activity {
     private static final int PICK=73, SCAN=74;
     private final ExecutorService work=Executors.newSingleThreadExecutor();
     private WebView web; private FrameLayout root; private boolean onboarding, errorVisible, destroyed;
+    private TabletShell tablet;
     private JSONObject pairing; private String base="", pendingLink, pickerOrigin;
     private ValueCallback<Uri[]> fileCallback;
     private View customView; private WebChromeClient.CustomViewCallback customCallback;
+    private boolean deviceStandby, screenReceiverRegistered;
+    private final BroadcastReceiver screenReceiver=new BroadcastReceiver(){
+        @Override public void onReceive(Context context,Intent intent){
+            if(!tabletHome())return;
+            if(Intent.ACTION_SCREEN_OFF.equals(intent.getAction())){
+                deviceStandby=true;prepareDeviceStandby();
+                // Return from other apps without waking the display. Secure keyguards stay in charge.
+                if(!getSystemService(KeyguardManager.class).isKeyguardSecure())
+                    bringDeviceStandby();
+            }else if(Intent.ACTION_SCREEN_ON.equals(intent.getAction())||Intent.ACTION_USER_PRESENT.equals(intent.getAction())){
+                if(Intent.ACTION_SCREEN_ON.equals(intent.getAction())&&!getSystemService(KeyguardManager.class).isKeyguardSecure())bringDeviceStandby();
+                updateLockscreenVisibility();prepareDeviceStandby();
+            }
+        }
+    };
+    private void bringDeviceStandby(){
+        startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setClass(this,MainActivity.class)
+            .putExtra("tabletStandby",true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        getSystemService(ActivityManager.class).moveTaskToFront(getTaskId(),0);
+    }
+    private boolean tabletHome(){return tablet!=null&&getSystemService(android.app.role.RoleManager.class).isRoleHeld(android.app.role.RoleManager.ROLE_HOME);}
+    private void updateLockscreenVisibility(){
+        KeyguardManager keyguard=getSystemService(KeyguardManager.class);
+        boolean show=tabletHome()&&!keyguard.isKeyguardSecure();
+        setShowWhenLocked(show);
+        if(show&&getSystemService(PowerManager.class).isInteractive()&&keyguard.isKeyguardLocked())keyguard.requestDismissKeyguard(this,null);
+    }
+    private void prepareDeviceStandby(){
+        if(!deviceStandby||tablet==null)return;
+        hideCustom();tablet.hide();
+        web.evaluateJavascript("window.hauserTabletStandby?.()===true",value->{if("true".equals(value))deviceStandby=false;});
+    }
     private boolean german(){return Locale.getDefault().getLanguage().equals("de");}
     private String t(String de,String en){return german()?de:en;}
 
@@ -41,30 +74,41 @@ public final class MainActivity extends Activity {
         super.onCreate(saved); getWindow().setDecorFitsSystemWindows(false);
         pendingLink=getIntent().getDataString();
         try{pairing=readPairing();}catch(Exception ignored){}
-        if(pairing==null || pendingLink!=null) showOnboarding(); else connect();
+        if(!BuildConfig.PROTOTYPE_SERVER.isEmpty()&&pendingLink==null){base=BuildConfig.PROTOTYPE_SERVER;showServer(base+"/");}
+        else if(pairing==null || pendingLink!=null) showOnboarding(); else connect();
+        if(TabletShell.supported(this)){
+            IntentFilter filter=new IntentFilter(Intent.ACTION_SCREEN_OFF);filter.addAction(Intent.ACTION_SCREEN_ON);filter.addAction(Intent.ACTION_USER_PRESENT);
+            if(Build.VERSION.SDK_INT>=33)registerReceiver(screenReceiver,filter,Context.RECEIVER_NOT_EXPORTED);else registerReceiver(screenReceiver,filter);
+            screenReceiverRegistered=true;
+        }
     }
     private void layout(WebView next){
+        if(tablet!=null){tablet.close();tablet=null;}
         if(web!=null){web.removeJavascriptInterface("HauserSetup");web.stopLoading();web.destroy();}
         web=next; root=new FrameLayout(this);root.addView(web,new FrameLayout.LayoutParams(-1,-1));
         root.setOnApplyWindowInsetsListener((v,insets)->{
             int bars=getPreferences(0).getBoolean("fullscreen",true)?WindowInsets.Type.navigationBars():WindowInsets.Type.systemBars();
             android.graphics.Insets b=insets.getInsets(bars|WindowInsets.Type.ime()|WindowInsets.Type.displayCutout());
-            v.setPadding(b.left,b.top,b.right,b.bottom);
+            boolean floating=tablet!=null&&insets.isVisible(WindowInsets.Type.ime())&&insets.getInsets(WindowInsets.Type.ime()).bottom==0;
+            v.setPadding(b.left,b.top,b.right,floating?0:b.bottom);
+            if(tablet!=null)tablet.keyboard(insets.isVisible(WindowInsets.Type.ime()));
             return new WindowInsets.Builder(insets).setInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime()|WindowInsets.Type.displayCutout(),android.graphics.Insets.NONE)
                 .setInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout(),android.graphics.Insets.NONE).setDisplayCutout(null).build();
         });
+        if(!onboarding&&TabletShell.supported(this)){tablet=new TabletShell(this,web,root);getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);getWindow().setNavigationBarContrastEnforced(false);}
         setContentView(root);root.requestApplyInsets();bars();
     }
     private void bars(){WindowInsetsController c=getWindow().getInsetsController();if(c!=null){
         c.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         boolean full=getPreferences(0).getBoolean("fullscreen",true);
-        if(full)c.hide(WindowInsets.Type.statusBars());else c.show(WindowInsets.Type.statusBars());
+        if(tablet!=null&&tablet.immersive())c.hide(WindowInsets.Type.systemBars());
+        else if(full)c.hide(WindowInsets.Type.statusBars());else c.show(WindowInsets.Type.statusBars());
     }}
     private WebView newWeb(){
         WebView v=new WebView(this); WebSettings s=v.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);
         s.setAllowFileAccess(false);s.setAllowContentAccess(true);s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setMediaPlaybackRequiresUserGesture(true);s.setSupportMultipleWindows(false);s.setSafeBrowsingEnabled(true);
-        WebView.setWebContentsDebuggingEnabled(false);CookieManager.getInstance().setAcceptCookie(true);
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.PROTOTYPE);CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(v,false);
         v.setWebChromeClient(new WebChromeClient(){
             public void onPermissionRequest(PermissionRequest r){r.deny();}
@@ -119,7 +163,7 @@ public final class MainActivity extends Activity {
                 savePairing(pairing);runOnUiThread(()->connect());}catch(Exception e){fail(e);}
         });}
         @JavascriptInterface public void scan(){runOnUiThread(()->{
-            Uri uri=Uri.parse("content://de.ralleur.hauser.capture/qr.jpg");
+            Uri uri=Uri.parse("content://"+getPackageName()+".capture/qr.jpg");
             Intent i=new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).putExtra(android.provider.MediaStore.EXTRA_OUTPUT,uri)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
             i.setClipData(ClipData.newRawUri("QR",uri));
@@ -149,6 +193,7 @@ public final class MainActivity extends Activity {
 
         }catch(Exception e){callback(result("error",t("Kein gültiger Hauser-Kopplungscode. Bitte neu aufnehmen oder manuell eingeben.","Not a valid Hauser pairing code. Try another photo or enter it manually.")));}
     }
+    void reconnectTablet(){if(pairing!=null)connect();else if(web!=null)web.reload();}
     private void connect(){
         work.execute(()->{
             try{String token=pairing.getString("token"),lan=pairing.getString("lan"),remote=pairing.optString("remote","");
@@ -170,7 +215,12 @@ public final class MainActivity extends Activity {
         onboarding=false;WebView v=newWeb();
         v.setWebViewClient(new WebViewClient(){
             public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest r){
-                Uri u=r.getUrl();if(ServerAddress.same(base,u.toString()))return false;
+                Uri u=r.getUrl();
+                if(tablet!=null&&"hauser-tablet".equals(u.getScheme())){
+                    if(r.isForMainFrame()&&r.hasGesture()&&ServerAddress.same(base,view.getUrl())){if("close".equals(u.getHost())){tablet.hide();return true;}if(!"open".equals(u.getHost()))return true;if("notifications".equals(u.getLastPathSegment()))tablet.openNotification(u.getQueryParameter("item"));else tablet.open(u.getLastPathSegment());}
+                    return true;
+                }
+                if(ServerAddress.same(base,u.toString()))return false;
                 if(r.isForMainFrame()&&r.hasGesture()&&"https".equals(u.getScheme()))externalUrl(u);return true;
             }
             public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest r){
@@ -184,11 +234,14 @@ public final class MainActivity extends Activity {
                     showError(code==401||code==403?t("Anmeldung abgelaufen oder widerrufen. Bitte erneut koppeln; bei Access zuerst anmelden.","Sign-in expired or revoked. Pair again; with Access, sign in first."):t("Der Server antwortet mit Fehler ","Server error ")+code);
             }
             public void onPageFinished(WebView view,String url){
+                if(tablet!=null&&ServerAddress.same(base,url))tablet.decorate();
+                updateLockscreenVisibility();prepareDeviceStandby();
                 if(getPreferences(0).getBoolean("handle",false)&&ServerAddress.same(base,url))view.evaluateJavascript("(()=>{let s=document.createElement('style');s.textContent='.app[data-shell=panel]>.status-bar{padding-top:8px!important}.app[data-shell=panel]{--bar-top:56px!important}';document.head.append(s)})()",null);
             }
         });layout(v);web.loadUrl(url);
     }
     private void showError(String message){
+        if(tablet!=null){tablet.error(message);return;}
         if(destroyed||errorVisible)return;errorVisible=true;
         new AlertDialog.Builder(this).setTitle("Hauser").setMessage(message).setPositiveButton(t("Erneut verbinden","Try again"),(d,w)->{if(pairing!=null)connect();else showOnboarding();})
             .setNeutralButton(t("Verbindung ändern","Change connection"),(d,w)->showOnboarding()).setNegativeButton(t("Schließen","Close"),null).setOnDismissListener(d->errorVisible=false).show();
@@ -203,8 +256,9 @@ public final class MainActivity extends Activity {
     private void externalUrl(Uri u){try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(ActivityNotFoundException ignored){}}
     private void hideCustom(){if(customView!=null){root.removeView(customView);customView=null;customCallback.onCustomViewHidden();customCallback=null;}}
     private void finishPicker(Uri[] uris){if(fileCallback!=null){fileCallback.onReceiveValue(uris);fileCallback=null;}}
-    @Override public void onBackPressed(){if(customView!=null){hideCustom();return;}if(onboarding){if(web.canGoBack())web.goBack();else web.evaluateJavascript("window.goBack()",value->{if("false".equals(value))finish();});return;}if(web!=null&&web.canGoBack())web.goBack();else menu();}
-    @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);pendingLink=intent.getDataString();showOnboarding();}
+    @Override public void onBackPressed(){if(tablet!=null){if(tablet.back())return;web.evaluateJavascript("window.hauserTabletNotifications?.back()===true",value->{if(!"true".equals(value))backToPage();});return;}backToPage();}
+    private void backToPage(){if(customView!=null){hideCustom();return;}if(onboarding){if(web.canGoBack())web.goBack();else web.evaluateJavascript("window.goBack()",value->{if("false".equals(value))finish();});return;}if(web!=null&&web.canGoBack())web.goBack();else if(tablet!=null)tablet.open("settings");else menu();}
+    @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);pendingLink=intent.getDataString();if(pendingLink!=null)showOnboarding();else if(intent.getBooleanExtra("tabletStandby",false)){deviceStandby=true;prepareDeviceStandby();}else if(tablet!=null){tablet.hide();web.evaluateJavascript("document.querySelector('[data-nav=home]')?.click()",null);}}
     @Override protected void onActivityResult(int req,int result,Intent data){super.onActivityResult(req,result,data);
         if(req==PICK){ArrayList<Uri> selected=new ArrayList<>();
             if(result==RESULT_OK&&data!=null&&pickerOrigin.equals(base)){
@@ -224,8 +278,8 @@ public final class MainActivity extends Activity {
     }
     @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)bars();}
     @Override public void onPause(){if(web!=null)web.onPause();CookieManager.getInstance().flush();super.onPause();}
-    @Override public void onResume(){super.onResume();if(web!=null)web.onResume();}
-    @Override public void onDestroy(){destroyed=true;finishPicker(null);work.shutdownNow();if(web!=null){web.removeJavascriptInterface("HauserSetup");web.destroy();}super.onDestroy();}
+    @Override public void onResume(){super.onResume();if(web!=null)web.onResume();if(tablet!=null)tablet.resume();updateLockscreenVisibility();prepareDeviceStandby();}
+    @Override public void onDestroy(){destroyed=true;if(screenReceiverRegistered)unregisterReceiver(screenReceiver);if(tablet!=null)tablet.close();finishPicker(null);work.shutdownNow();if(web!=null){web.removeJavascriptInterface("HauserSetup");web.destroy();}super.onDestroy();}
 
     private static final class ApiFailure extends IOException{final int status;ApiFailure(String message){this(0,message);}ApiFailure(int status,String message){super(message);this.status=status;}}
     private JSONObject request(String origin,String method,String path,JSONObject body,String token,int timeout)throws Exception{

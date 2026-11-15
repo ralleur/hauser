@@ -9,16 +9,18 @@ interface Placement { left: number; top: number; width: number; height: number; 
  * Layout changes once; only compositor transforms run during the movement. */
 export function commuteClockMotion(node: HTMLElement, initial: Options) {
   let options = initial;
-  const positions = new Map<HTMLElement, Placement>();
+  const positions = new Map<string, Placement>();
   const animations = new Map<HTMLElement, Animation>();
   let queued = false, disposed = false;
-  const elements = () => [...node.querySelectorAll<HTMLElement>('.ambient-clock, .ambient-date, .ambient-status')];
+  const surface = node.closest('.ambient') ?? node;
+  const elements = () => [...surface.querySelectorAll<HTMLElement>('.ambient-clock, .ambient-date, .ambient-status')];
+  const key = (element: HTMLElement) => ['ambient-clock', 'ambient-date', 'ambient-status'].find(name => element.classList.contains(name))!;
   function measure(animate = true) {
     queued = false;
     if (disposed) return;
     const duration = options.active && animate ? commuteTiming('map') : 0;
     const updates = elements().map(element => {
-      const previous = positions.get(element);
+      const previous = positions.get(key(element));
       const animation = animations.get(element), time = animation?.currentTime;
       // Layout has already changed: apply the current transform to the old
       // target to recover the painted position before that layout change.
@@ -30,7 +32,7 @@ export function commuteClockMotion(node: HTMLElement, initial: Options) {
       } : previous;
       animation?.cancel();
       const target = element.getBoundingClientRect();
-      positions.set(element, { left: target.left, top: target.top, width: target.width, height: target.height,
+      positions.set(key(element), { left: target.left, top: target.top, width: target.width, height: target.height,
         parentScaleX: target.width / element.offsetWidth || 1, parentScaleY: target.height / element.offsetHeight || 1 });
       const changed = previous && (['left', 'top', 'width', 'height'] as const).some(key => Math.abs(previous[key] - target[key]) > .5);
       if (animation && !changed && duration) {
@@ -66,8 +68,7 @@ export function commuteClockMotion(node: HTMLElement, initial: Options) {
   for (const element of elements()) resize.observe(element);
   const changes = new MutationObserver(schedule);
   changes.observe(node, { attributes: true, childList: true, subtree: true });
-  const surface = node.closest('.ambient');
-  if (surface) changes.observe(surface, { attributes: true, attributeFilter: ['class'] });
+  changes.observe(surface, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
   return {
     update(next: Options) {
       const entering = next.active && !options.active;
