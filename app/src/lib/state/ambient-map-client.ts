@@ -88,6 +88,7 @@ export interface AmbientMapClientState {
   state: AmbientMapState;
   radiusMetres: number | null;
   assetUrl: string | null;
+  layers: boolean;
   source: AmbientMapSource | null;
   label: string | null;
   /** Ursache des letzten gescheiterten Auftrags, rein diagnostisch. */
@@ -135,6 +136,7 @@ export function initialAmbientMapState(): AmbientMapClientState {
     state: 'empty',
     radiusMetres: null,
     assetUrl: null,
+    layers: false,
     source: null,
     label: null,
     errorCode: null,
@@ -160,6 +162,7 @@ export function parseAmbientMapStatus(value: unknown): {
   state: AmbientMapState;
   radiusMetres: number | null;
   assetUrl: string | null;
+  layers: boolean;
   source: AmbientMapSource | null;
   label: string | null;
   /* Warum der letzte Auftrag scheiterte. Nur im Adminstatus vorhanden, rein
@@ -195,6 +198,7 @@ export function parseAmbientMapStatus(value: unknown): {
        bedeutungslos und werden verworfen. */
     radiusMetres: url ? radius : null,
     assetUrl: url,
+    layers: url !== null && asset?.layers === true,
     source: url && typeof value.source === 'string' && SOURCES.has(value.source as AmbientMapSource)
       ? value.source as AmbientMapSource
       : null,

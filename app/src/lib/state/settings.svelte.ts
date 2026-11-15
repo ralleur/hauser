@@ -131,6 +131,7 @@ export const settingsValues = $state({
   ambientDeepNight: lsGet('hmi:ambient-deep-night') !== 'off',
   standbyAfterMinutes: loadStandbyMinutes(),
   ambientCityMap: lsGet('hmi:ambient-map') !== 'off',
+  ambientMapColors: lsGet('hmi:ambient-map-colors') !== 'off',
   presenceWake: lsGet('hmi:presence-wake') === 'on',
   presenceAwayDark: lsGet('hmi:presence-away-dark') === 'on',
   presenceGreeting: lsGet('hmi:presence-greeting') === 'on',
@@ -225,6 +226,12 @@ export function setStandbyAfterMinutes(minutes: number | null): void {
 export function setAmbientCityMap(on: boolean): void {
   settingsValues.ambientCityMap = on;
   lsSet('hmi:ambient-map', on ? null : 'off');
+}
+
+/** Gerätelokale Flächenfarben; ausgeschaltet bleibt die zweifarbige Straßenkarte. */
+export function setAmbientMapColors(on: boolean): void {
+  settingsValues.ambientMapColors = on;
+  lsSet('hmi:ambient-map-colors', on ? null : 'off');
 }
 
 /* ── Präsenz und Person (Paket 8) ──

@@ -15,8 +15,8 @@
 /* Die eine Glasscheibe: Bühnen-Fläche und Fußzeilen-Pillen tragen dieselbe
    Dichte und denselben Blur — nur so wirken beide gleich frostig. */
 :root:not([data-card-style="standard"]) {
-  --glass-face: rgba(26, 28, 34, 0.42);
-  --glass-blur: blur(18px) saturate(1.2);
+  --glass-face: var(--glass-fill);
+  --glass-blur: blur(var(--glass-blur-radius)) saturate(var(--glass-saturation));
 }
 
 /* Dieselbe Token-Ebene tragen am Panel die Flächen der übrigen Screens
@@ -271,12 +271,40 @@
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
-:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .tab-edge .climate-dock .cd-key {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
+/* Der zentrale Regler folgt der Navigation: eine gemeinsame Glasfläche,
+   ruhige Schrift und freie Zeichen statt einer zweiten Ebene aus Rundtasten. */
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .climate-dock .cd-key {
+  background: transparent;
+  border-color: transparent;
   box-shadow: none;
+  color: var(--color-text-secondary);
 }
-:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar .icon { color: var(--color-success); }
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .climate-dock .cd-step-icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .climate-dock .cd-value {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-tight);
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .climate-dock .cd-current {
+  padding-top: 0;
+  border-top: 0;
+}
+/* Ruhiger Status folgt denselben neutralen Zeichen wie Navigation und Klima.
+   Erst ein offener Kontakt bekommt die semantische Warnfarbe. */
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar .icon {
+  color: var(--color-text-secondary);
+}
+:root:not([data-card-style="standard"]) .app:not([data-screen="system"]) .security-bar.has-warning .icon {
+  color: var(--color-warning);
+}
 
 /* „Alle Räume" hat kein Raumbild — Glas braucht aber Struktur dahinter, sonst
    ist es nur eine graue Fläche. Die Bühne trägt deshalb ein ruhiges Relief,
@@ -400,7 +428,7 @@
    brechen könnte (Owner-Ansage 2026-09-12). Alle Overlay-Flächen tragen
    `on-image`, das Token-Set oben liefert Schrift und Kontrollflächen. */
 :root:not([data-card-style="standard"]) :is(.light-detail, .room-edit, .energy-load-overlay, .room-overlay) .overlay-scrim {
-  background: rgba(11, 14, 18, 0.35);
+  background: var(--glass-scrim);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -450,7 +478,7 @@
    schärfere, die zum Rand hin ausblendet — die Mitte ist klar, der Rand
    verschwimmt. Zwei hauchfeine radiale Verläufe heben die Mitte und dunkeln
    den Rand ab. Das Wochenband liegt offen darauf. Einkaufszettel und Post-its bleiben, wie sie sind. */
-:root:not([data-card-style="standard"]) .ambient {
+:root:not([data-card-style="standard"]) .ambient:not(.deep-night) {
   /* Karte: helles, entsättigtes Taupe auf warmem Creme, deutlich zurück-
      genommen — Struktur, kein Motiv. */
   --ambient-glass-ground: #ede4d6;
@@ -469,7 +497,7 @@
     radial-gradient(ellipse 60% 55% at 85% 15%, rgba(238, 226, 208, 0.4), transparent 70%),
     var(--ambient-glass-ground);
 }
-:root:not([data-card-style="standard"])[data-theme='dark'] .ambient {
+:root:not([data-card-style="standard"])[data-theme='dark'] .ambient:not(.deep-night) {
   --ambient-glass-ground: #37312c;
   --ambient-glass-ink: #8a7f73;
   --ambient-glass-soft: 0.34;

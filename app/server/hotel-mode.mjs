@@ -938,6 +938,8 @@ function hotelCommandMessage(code) {
  * Haushaltsstruktur, die die Gastoberfläche selbst zum Rendern braucht.
  */
 const HOTEL_ADMIN_ONLY_PREFIXES = [
+  '/api/commute',
+  '/api/admin/commute',
   '/api/config',
   '/api/backup',
   '/api/setup',

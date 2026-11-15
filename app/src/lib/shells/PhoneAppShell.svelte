@@ -128,6 +128,26 @@
   let PhoneScreenComponent = $state<Component<any> | null>(null);
   let phoneScreenFailed = $state(false);
   let SceneEditComponent = $state<Component<any> | null>(null);
+  const sceneEditorLoader = createLatestPhoneLoader({
+    scene: () => import('../components/SceneEdit.svelte'),
+  });
+  let sceneEditorLoadFailed = $state(false);
+  let sceneEditorRequested = $state(false);
+  let sceneEditorLabel = $state('');
+
+  function closeRequestedSceneEditor(): void {
+    sceneEditorRequested = false;
+    void import('../state/scene-edit-overlay.svelte.ts').then(({ closeSceneEdit }) => closeSceneEdit(true));
+  }
+
+  function ensureSceneEditor(): void {
+    if (SceneEditComponent) return;
+    ensureFeatureStyles();
+    sceneEditorLoadFailed = false;
+    void sceneEditorLoader.load('scene', (loaded) => {
+      SceneEditComponent = loaded.default;
+    }).catch(() => { sceneEditorLoadFailed = true; });
+  }
   /* Rückgängig-Streifen (Paket 6): erst laden, wenn es etwas zurückzunehmen
      gibt — der Startpfad bleibt unberührt. */
   let UndoToastComponent = $state<Component<any> | null>(null);
@@ -454,11 +474,10 @@
   }
 
   onMount(() => {
-    const handleSceneEditOpen = () => {
-      if (SceneEditComponent) return;
-      void import('../components/SceneEdit.svelte').then((module) => {
-        SceneEditComponent = module.default;
-      });
+    const handleSceneEditOpen = (event: Event) => {
+      sceneEditorRequested = true;
+      sceneEditorLabel = (event as CustomEvent<{ label: string }>).detail.label;
+      ensureSceneEditor();
     };
     window.addEventListener('hauser:scene-edit-open', handleSceneEditOpen);
     /* Companion-App (Plan 21, Stufe 4): Navigation von außen (Widget, Push)
@@ -705,6 +724,12 @@
   <!-- Nur wenn kein Raum-Sheet offen ist: das bringt den Szenen-Editor selbst mit. -->
   {#if !roomOpen && featureStylesReady && SceneEditComponent}
     <SceneEditComponent />
+  {:else if !roomOpen && sceneEditorRequested}
+    {#if sceneEditorLoadFailed || featureStylesFailed}
+      {@render phoneLayerError('room', sceneEditorLabel, () => { if (featureStylesFailed) retryFeatureStyles(); ensureSceneEditor(); }, closeRequestedSceneEditor)}
+    {:else}
+      {@render phoneLayerLoading('room', sceneEditorLabel)}
+    {/if}
   {/if}
   {#if UndoToastComponent}<UndoToastComponent />{/if}
 {#if ClockZoomComponent && clockZoom.active}<ClockZoomComponent />{/if}

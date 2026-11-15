@@ -80,6 +80,12 @@ describe('settings registry', () => {
    Objekt, das die Einstellung betrifft — niemals nach der Technik dahinter.
    Diese Zuordnung ist der Zweck der Registry und wird deshalb festgehalten. */
 describe('fachliche Gliederung', () => {
+  it('macht den Arbeitsweg als eigene Inhaltsseite über Route, Bürotage und Parkplatz auffindbar', () => {
+    expect(settingsSection('commute').group).toBe('content');
+    for (const query of ['pendeln', 'bürotage', 'parkplatz']) {
+      expect(searchSettings(query).some((match) => match.section.id === 'commute')).toBe(true);
+    }
+  });
   it('bündelt alle Integrationen inklusive KI-Zugang unter Verbindungen · Dienste', () => {
     for (const id of ['connection-status', 'ha-url', 'ha-token', 'jf-url', 'jf-session', 'jf-device', 'icloud-setup', 'ablage-status', 'ai-models']) {
       expect(settingsEntry(id)?.section).toBe('services');

@@ -6,6 +6,41 @@
    ============================================ */
 
 :root {
+  --ambient-map-edge-blur: 2px;
+  --ambient-map-focus-mask: radial-gradient(ellipse 60% 65% at 50% 45%, transparent 50%, #000 100%);
+  --ambient-map-water: #435c61;
+  --ambient-map-green: #555d32;
+  --ambient-map-water-opacity: 0.55;
+  --ambient-map-green-opacity: 0.5;
+  --glass-scrim: rgba(11, 14, 18, 0.35);
+  --glass-fill: rgba(26, 28, 34, 0.42);
+  --glass-blur-radius: 18px;
+  --glass-saturation: 1.2;
+  --glass-text: #fff;
+  --glass-text-secondary: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --tablet-night-shade: rgba(0, 0, 0, 0.22);
+  /* Android house-tablet shell and offline QWERTZ input method. */
+  --tablet-panel: var(--glass-fill);
+  --tablet-control: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+  --tablet-bar-top: 48px;
+  --tablet-bar-bottom: 64px;
+  --tablet-dock-height: 60px;
+  --tablet-panel-radius: 24px;
+  --tablet-device-width: 360px;
+  --tablet-content-width: 440px;
+  --tablet-notification-width: 620px;
+  --tablet-notification-toast-width: 520px;
+  --tablet-notification-row-height: 72px;
+  --tablet-slider-height: 148px;
+  --tablet-slider-compact: 100px;
+  --tablet-slider-width: 60px;
+  --tablet-segment-gap: 3px;
+  --tablet-app-height: 88px;
+  --tablet-keyboard-width: 1040px;
+  --tablet-keyboard-landscape-height: 280px;
+  --tablet-keyboard-portrait-height: 320px;
+
   /* ── Surfaces (Dark Mode, Default) ──
      Kühler Unterton (Blau > Rot), für kühle, kontrastreiche Oberflächen abgestimmt:
      Screen #12171D, Panel #1E262E, Chips #313B46 */
@@ -312,3 +347,32 @@ body {
 .text-primary { color: var(--color-text-primary); }
 .text-secondary { color: var(--color-text-secondary); }
 .text-tertiary { color: var(--color-text-tertiary); }
+
+/* Arbeitsweg: gemeinsame Karten- und Glaswerte. */
+:root {
+  --commute-map-duration: 900ms;
+  --commute-route-duration: 1400ms;
+  --commute-map-zoom: 0.24;
+  --commute-route-width: 3px;
+  --commute-line-thin: 1px;
+  --commute-pin-width: 1.5px;
+  --commute-route-halo-opacity: 0.12;
+  --commute-card-opacity: 88%;
+  --commute-card-top: 55%;
+  --commute-card-width: calc(var(--space-8) * 9);
+  --commute-clock-top: 8%;
+  --commute-card-compact-top: 54%;
+  --commute-phone-bottom: 21%;
+  --commute-phone-clock-top: 10%;
+}
+
+:root[data-theme='light'] {
+  --ambient-map-water: #98b4b7;
+  --ambient-map-green: #b2ba8a;
+}
+
+:root {
+  --time-picker-selection-opacity: 0.35;
+  --time-picker-width: calc(var(--space-8) * 12);
+  --time-picker-dial-size: calc(var(--space-8) * 5);
+}

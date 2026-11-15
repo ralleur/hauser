@@ -601,6 +601,26 @@ describe('ambient map routes', () => {
     await service.close();
   });
 
+  it('serves water and green masks with distinct validators and HEAD semantics', async () => {
+    const svg = '<svg><defs><g id="water"><path d="M0 0L10 0L10 10Z" fill="#fff"/></g><g id="green"></g></defs></svg>';
+    const service = createAmbientMapService({ ...tempPaths(), jobRunner: async () => ({ ...renderResult(svg), algorithmVersion: 2 }) });
+    await service.ready;
+    await service.selectLocation({ source: 'manual', latitude: 10, longitude: 20 });
+    await waitFor(() => service.getPublicStatus().state === 'ready');
+    const { url, etag, layers } = service.getPublicStatus().asset;
+    expect(layers).toBe(true);
+    const water = await invoke(service, `${url}?layer=water`);
+    expect(water.status).toBe(200);
+    expect(water.text).toContain('<path');
+    expect(water.text).not.toContain('<defs>');
+    expect(water.headers.ETag).not.toBe(etag);
+    expect((await invoke(service, `${url}?layer=green`)).text).not.toContain('<path');
+    expect((await invoke(service, `${url}?layer=water`, 'HEAD')).headers).toEqual(water.headers);
+    expect((await invoke(service, `${url}?layer=water`, 'GET', undefined, { 'if-none-match': water.headers.ETag })).status).toBe(304);
+    expect((await invoke(service, `${url}?layer=invalid`)).status).toBe(400);
+    await service.close();
+  });
+
   it('answers location and regenerate mutations with 202 before their render jobs finish', async () => {
     const paths = tempPaths();
     let release: (() => void) | undefined;

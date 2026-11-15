@@ -23,8 +23,10 @@ export function openMeteoForecastUrl({ latitude, longitude }) {
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
-    current: 'temperature_2m,weather_code,precipitation,wind_speed_10m',
+    current: 'temperature_2m,weather_code,precipitation,rain,wind_speed_10m',
     hourly: 'temperature_2m',
+    minutely_15: 'rain',
+    forecast_minutely_15: '12',
     past_hours: '1',
     forecast_hours: '1',
     /* Auf- und Untergang für den Sonnenbogen über der Energie. */
@@ -103,6 +105,7 @@ export function createWeatherService({
           updatedAt: new Date(now()).toISOString(),
           current: forecast.current ?? null,
           hourly: forecast.hourly ?? null,
+          minutely_15: forecast.minutely_15 ?? null,
           daily: forecast.daily ?? null,
           utc_offset_seconds: forecast.utc_offset_seconds ?? null,
         };

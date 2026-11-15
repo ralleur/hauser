@@ -36,6 +36,11 @@
   import { prefersReducedMotion } from '../motion/index.ts';
   import { weatherConditionIcon, type TempTrend } from '../state/weather.ts';
   import Icon from './Icon.svelte';
+  import CommuteLayer from './CommuteLayer.svelte';
+  import { commute, prepareCommutePreview, refreshCommute } from '../state/commute.svelte.ts';
+  import { inCommuteWindow } from '../state/commute.ts';
+  import { commuteMapTransition } from '../state/commute-motion.ts';
+  import { commuteClockMotion } from '../actions/commute-clock-motion.ts';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
   import {
     STANDBY_ANCHORS, STANDBY_ELEMENTS, STANDBY_SIZE_MAX, STANDBY_SIZE_MIN, STANDBY_SIZE_DEFAULT,
@@ -73,10 +78,27 @@
   /* Vorschau aus den Einstellungen: zeigt den Stadtplan auch bei ausgeschaltetem
      Schalter und weckt an Ort und Stelle zurück, statt nach Home zu navigieren. */
   let settingsPreview = $state(false);
+  let commuteVisible = $state(false);
+  let commuteMode = $state<boolean | null>(null);
+  let commuteLoading = $state(false);
+  let commuteError = $state('');
+  async function toggleCommute() {
+    if (commuteLoading) return;
+    commuteError = '';
+    if (commuteVisible) { commuteMode = false; return; }
+    commuteLoading = true;
+    try {
+      await prepareCommutePreview(!inCommuteWindow(commute.config, new Date()));
+      if (active) commuteMode = true;
+    } catch { commuteError = m.commute_preview_error(); }
+    finally { commuteLoading = false; }
+  }
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let shiftTimer: ReturnType<typeof setInterval> | undefined;
   let contentEl: HTMLElement;
   let clockEl = $state<HTMLElement>();
+  let clockHost = $state<HTMLElement>();
+  let commuteClockLayout = $state({ x: 32, y: 32, width: 320 });
 
   /* Ruhebild anpassen (R63): gespeicherter Stand, Entwurf und Auswahl —
      die Funktionen dazu stehen unten beim Anordnen. */
@@ -96,6 +118,9 @@
     if (!previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
     deepNightPreview = previewDeepNight;
     settingsPreview = fromSettings;
+    commuteMode = null;
+    commuteError = '';
+    void refreshCommute();
     settleFrom(origin);
     active = true;
     setAmbientActive(true);
@@ -157,6 +182,8 @@
     setAmbientActive(false);
     deepNightPreview = false;
     settingsPreview = false;
+    commuteMode = null;
+    commuteError = '';
     clearInterval(shiftTimer);
     contentEl.style.transform = '';
     /* Wer mitten im Anordnen geweckt wird (Bewegungsmelder), verliert nur den
@@ -182,6 +209,7 @@
   const openEditor = whenEditable(() => { void startEdit(); });
 
   function pressStart(e: PointerEvent) {
+    if ((e.target as Element).closest('.commute-view-control')) return;
     if (!active || e.button !== 0) return;
     if (editing) { selected = null; return; }
     holdFired = false;
@@ -199,6 +227,7 @@
     holdTimer = undefined;
   }
   function pressEnd(e: PointerEvent) {
+    if ((e.target as Element).closest('.commute-view-control')) return;
     pressCancel();
     if (holdFired || editing) { holdFired = false; return; }
     wakeTo(e);
@@ -311,7 +340,7 @@
      auch beim Einschalten des Ambient-Screens einmal ausgelöst */
   $effect(() => {
     void clock.time;
-    if (!active || !clockEl) return;
+    if (!active || !clockEl || clockHost?.classList.contains('is-clock-morphing')) return;
     clockEl.classList.remove('is-tick');
     void clockEl.offsetWidth;
     clockEl.classList.add('is-tick');
@@ -341,8 +370,8 @@
   /* Beim Anordnen steht das Band auch ohne Termine — sonst ließe es sich nicht setzen. */
   const weekHasEvents = $derived(editing || ambientWeek.some((day) => day.events.length > 0));
   const deepNight = $derived(
-    !editing && (deepNightPreview
-      || (settingsValues.ambientDeepNight && (forceDeepNight || isDeepNightHour(clock.hours)))),
+    !editing && commuteMode !== true && (deepNightPreview
+      || (!settingsPreview && settingsValues.ambientDeepNight && (forceDeepNight || isDeepNightHour(clock.hours)))),
   );
   /* Welche Plätze gelten: beim Anordnen der Entwurf, sonst der gespeicherte
      Stand. In tiefer Nacht gilt weiter nur die gedimmte Uhr in der Mitte —
@@ -668,6 +697,39 @@
   const canShrink = $derived(!!selectedPlacement && selectedPlacement.size > STANDBY_SIZE_MIN);
 </script>
 
+{#snippet ambientClock()}
+  <div class="ambient-content" class:without-hero={!settingsValues.ambientHeroText && !deepNight}
+       class:deep-night-content={deepNight} bind:this={contentEl}>
+    {#if deepNight}
+      <div class="ambient-clock num" bind:this={clockEl}>{clock.time}</div>
+    {:else}
+    <!-- Hero-Zeile: höchstens zwei bewusst getrennte Kommentarzeilen. Sie steht
+         auch leer im Layout, solange der Text noch formuliert wird — sonst
+         rutscht die Uhr nach unten, sobald er eintrifft. -->
+    {#if heroLines.length > 0 || settingsValues.ambientHeroText}
+      <p class="ambient-greeting ambient-copy"
+         aria-label={heroLines.length ? 'Kommentar zum heutigen Tag' : undefined}
+         aria-hidden={heroLines.length ? undefined : 'true'}>
+        {#each heroLines as line, index}
+          {#if index > 0}<br />{/if}{line}
+        {/each}
+      </p>
+    {/if}
+    <div class="ambient-clock num" bind:this={clockEl}>{clock.time}</div>
+    <div class="ambient-date">{clock.date}</div>
+
+    <!-- Klima-/Statuszeile: Außentemp Köln + Innentemp, je mit Piktogramm
+         (Sonne = außen, Haus = innen) und Trendpfeil (oben/rechts/unten =
+         steigt/gleich/fällt). Die Sensormeldung tritt nur hinzu, wenn ein
+         Sensor etwas meldet. Ganz leer → die Zeile entfällt. Mit eigenem
+         Platz (R63) steht die Zeile für sich außerhalb des Uhrblocks. -->
+    {#if (!placed?.weather || commuteVisible)}
+      {@render statusRow()}
+    {/if}
+    {/if}
+  </div>
+{/snippet}
+
 {#snippet statusRow()}
   {#if outdoor.temp !== null || refTemp !== null || safety || editing}
     <div class="ambient-status">
@@ -711,6 +773,7 @@
      Notizen, Mitte → Home (Wohnzimmer). ── -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="ambient" class:is-on={active} aria-hidden={active ? 'false' : 'true'}
+     class:has-commute={commuteVisible}
      class:has-side-notes={(shoppingSections.length > 0 || postits.items.length > 0) && !placed}
      class:deep-night={deepNight}
      class:is-away-dark={awayDark && !editing}
@@ -733,53 +796,46 @@
   {#if editing}
     <div class="ambient-blueprint" aria-hidden="true"></div>
   {/if}
-  <!-- Genau ein dekorativer Kartenlayer, ganz hinten: das fertige Serverasset
-       dient als Maske über der primären Schriftfarbe. Kein Inline-SVG, keine
-       Geometrie im Browser, kein Pointer-Ziel — Light und Dark teilen sich
-       dasselbe Asset und ändern nur die CSS-Farbe (docs/18 §3.1, §8). -->
+  <!-- Fertige, dekorative Masken: Grünflächen und Wasser unter dem Straßennetz.
+       Dieselben Geometrien in Light/Dark, die Farben kommen aus den Tokens. -->
   {#if mapVisible}
+    {#if !commuteVisible}
+    <div class="ambient-home-map" transition:commuteMapTransition>
+    {#if ambientMap.layers && settingsValues.ambientMapColors}
+      <div class="ambient-map-area ambient-map-green" aria-hidden="true"
+           style="--ambient-map-area-src: url('{ambientMap.assetUrl}?layer=green')"></div>
+      <div class="ambient-map-area ambient-map-water" aria-hidden="true"
+           style="--ambient-map-area-src: url('{ambientMap.assetUrl}?layer=water')"></div>
+    {/if}
     <div class="ambient-map" aria-hidden="true"
          style="--ambient-map-src: url('{ambientMap.assetUrl}')"></div>
+    </div>
+    {/if}
+  {/if}
+  <CommuteLayer active={active && !deepNight && !editing} mode={commuteMode} preview={settingsPreview} clockHost={clockHost} onlayout={(layout) => { commuteClockLayout = layout; }} onvisible={(shown) => { commuteVisible = shown; }} />
+  {#if mapVisible || commuteVisible}<div class="ambient-map-focus" aria-hidden="true"></div>{/if}
+  {#if active && !editing && commute.config.entryId}
+    <div class="commute-view-control">
+      <button type="button" class="commute-view-switch pressable" aria-pressed={commuteVisible} aria-busy={commuteLoading} aria-label={commuteLoading ? m.commute_loading() : commuteVisible ? m.commute_home_view() : m.commute_title()} disabled={commuteLoading} onclick={() => void toggleCommute()}>
+        <Icon name="i-car-outline" cls="icon icon-md" />
+      </button>
+      {#if commuteError}<p class="commute-view-note" role="alert">{commuteError}</p>{/if}
+      {#if commuteLoading}<span class="sr-only" role="status">{m.commute_loading()}</span>{/if}
+    </div>
   {/if}
   {#if weatherLayer && !editing}
     <HeroWeatherLayer layer={weatherLayer} />
   {/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="ambient-el" class:is-placed={!!placed?.clock} class:is-selected={selected === 'clock'}
-       data-standby-el="clock" data-anchor={STANDBY_ANCHORS.clock} style={placeStyle('clock')}
-       onpointerdown={(e) => grab(e, 'clock')}>
-  <div class="ambient-content" class:without-hero={!settingsValues.ambientHeroText && !deepNight}
-       class:deep-night-content={deepNight} bind:this={contentEl}>
-    {#if deepNight}
-      <div class="ambient-clock num" bind:this={clockEl}>{clock.time}</div>
-    {:else}
-    <!-- Hero-Zeile: höchstens zwei bewusst getrennte Kommentarzeilen. Sie steht
-         auch leer im Layout, solange der Text noch formuliert wird — sonst
-         rutscht die Uhr nach unten, sobald er eintrifft. -->
-    {#if heroLines.length > 0 || settingsValues.ambientHeroText}
-      <p class="ambient-greeting ambient-copy"
-         aria-label={heroLines.length ? 'Kommentar zum heutigen Tag' : undefined}
-         aria-hidden={heroLines.length ? undefined : 'true'}>
-        {#each heroLines as line, index}
-          {#if index > 0}<br />{/if}{line}
-        {/each}
-      </p>
-    {/if}
-    <div class="ambient-clock num" bind:this={clockEl}>{clock.time}</div>
-    <div class="ambient-date">{clock.date}</div>
-
-    <!-- Klima-/Statuszeile: Außentemp Köln + Innentemp, je mit Piktogramm
-         (Sonne = außen, Haus = innen) und Trendpfeil (oben/rechts/unten =
-         steigt/gleich/fällt). Die Sensormeldung tritt nur hinzu, wenn ein
-         Sensor etwas meldet. Ganz leer → die Zeile entfällt. Mit eigenem
-         Platz (R63) steht die Zeile für sich außerhalb des Uhrblocks. -->
-    {#if !placed?.weather}
-      {@render statusRow()}
-    {/if}
-    {/if}
+  <div class="ambient-el" class:is-placed={!commuteVisible && !!placed?.clock} class:is-selected={selected === 'clock'}
+       class:is-commute-clock={commuteVisible} bind:this={clockHost}
+       use:commuteClockMotion={{ active: active && !editing && !deepNight, commute: commuteVisible }}
+       data-standby-el="clock" data-anchor={STANDBY_ANCHORS.clock}
+       style={commuteVisible ? `left:${commuteClockLayout.x}px;top:${commuteClockLayout.y}px;width:${commuteClockLayout.width}px` : placeStyle('clock')}
+       onpointerdown={(e) => { if (!commuteVisible) grab(e, 'clock'); }}>
+    {@render ambientClock()}
   </div>
-  </div>
-  {#if placed?.weather && !deepNight}
+  {#if placed?.weather && !deepNight && !commuteVisible}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="ambient-el is-placed" class:is-selected={selected === 'weather'}
          data-standby-el="weather" data-anchor={STANDBY_ANCHORS.weather} style={placeStyle('weather')}

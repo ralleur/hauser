@@ -1,4 +1,4 @@
-export const ALGORITHM_VERSION = 1;
+export const ALGORITHM_VERSION = 2;
 export const VIEWBOX_WIDTH = 1_920;
 export const VIEWBOX_HEIGHT = 1_200;
 export const MAX_QUERY_RADIUS_METRES = 5_000;
@@ -219,13 +219,22 @@ function serializePolyline(points) {
   return `M${rounded[0][0]} ${rounded[0][1]}${rounded.slice(1).map(([x, y]) => `L${x} ${y}`).join('')}`;
 }
 
-export function serializeSvg(classPaths, { maxBytes = MAX_SVG_BYTES } = {}) {
+export function serializeSvg(classPaths, { maxBytes = MAX_SVG_BYTES, areas = [] } = {}) {
   const paths = ROAD_CLASSES.flatMap(({ name, strokeWidth }) => {
     const pathData = (classPaths[name] ?? []).map(serializePolyline).filter(Boolean).join('');
     if (!pathData) return [];
     return [`<path d="${pathData}" fill="none" stroke="#fff" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`];
   });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}">${paths.join('')}</svg>`;
+  // Definitions keep the default image a street mask. The service exposes
+  // the same immutable asset's water/green definitions as separate masks.
+  const definitions = ['green', 'water'].map((layer) => {
+    const polygons = areas.filter((area) => area.layer === layer).map(({ rings }) => {
+      const d = rings.map((ring) => `${serializePolyline(ring)}Z`).join('');
+      return d ? `<path d="${d}" fill="#fff" fill-rule="evenodd"/>` : '';
+    }).join('');
+    return `<g id="${layer}">${polygons}</g>`;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}"><defs>${definitions}</defs>${paths.join('')}</svg>`;
   if (Buffer.byteLength(svg, 'utf8') > maxBytes) {
     throw new AmbientMapRendererError(RENDERER_ERROR_CODES.SVG_TOO_LARGE);
   }
@@ -237,7 +246,7 @@ export function validateOsmData(data, centre) {
   if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.elements)) {
     throw invalidOsmStructure();
   }
-  return data.elements.map((element) => {
+  return data.elements.filter((element) => !classifyArea(element?.tags)).map((element) => {
     if (!element || typeof element !== 'object' || Array.isArray(element)
       || element.type !== 'way' || !element.tags || typeof element.tags !== 'object'
       || Array.isArray(element.tags) || !HIGHWAY_TYPE_SET.has(element.tags.highway)
@@ -247,6 +256,86 @@ export function validateOsmData(data, centre) {
     const points = element.geometry.map((point) => projectToLocalMetres(point, centre));
     return { highway: element.tags.highway, points };
   });
+}
+
+export function classifyArea(tags) {
+  if (!tags) return null;
+  if (tags.natural === 'water' || tags.waterway === 'riverbank' || tags.landuse === 'reservoir') return 'water';
+  if (['wood', 'grassland', 'scrub'].includes(tags.natural)
+    || ['forest', 'meadow', 'grass', 'recreation_ground', 'village_green'].includes(tags.landuse)
+    || ['park', 'garden'].includes(tags.leisure)) return 'green';
+  return null;
+}
+
+// Overpass supplies relation member geometry, with outer rings often split
+// into several ways. Join either direction; leave incomplete rings unfilled.
+export function joinAreaRings(segments) {
+  const remaining = segments.filter((points) => points.length >= 2).map((points) => [...points]);
+  const rings = [];
+  while (remaining.length) {
+    const ring = remaining.pop();
+    while (!samePoint(ring[0], ring.at(-1))) {
+      const index = remaining.findIndex((part) => samePoint(ring.at(-1), part[0]) || samePoint(ring.at(-1), part.at(-1)));
+      if (index < 0) break;
+      const [part] = remaining.splice(index, 1);
+      if (!samePoint(ring.at(-1), part[0])) part.reverse();
+      ring.push(...part.slice(1));
+    }
+    if (ring.length >= 4 && samePoint(ring[0], ring.at(-1))) rings.push(ring);
+  }
+  return rings;
+}
+
+// Clip filled rings as polygons, never as independent street segments.
+// This also keeps large forests/river relations outside the viewport out of SVG.
+export function clipAreaRing(points, bounds) {
+  let ring = points.slice(0, -1);
+  for (const [axis, edge, keepAbove] of [[0, bounds.minX, true], [0, bounds.maxX, false], [1, bounds.minY, true], [1, bounds.maxY, false]]) {
+    const input = ring;
+    ring = [];
+    if (!input.length) break;
+    let previous = input.at(-1);
+    let previousInside = keepAbove ? previous[axis] >= edge : previous[axis] <= edge;
+    for (const point of input) {
+      const inside = keepAbove ? point[axis] >= edge : point[axis] <= edge;
+      if (inside !== previousInside) {
+        const t = (edge - previous[axis]) / (point[axis] - previous[axis]);
+        ring.push([previous[0] + t * (point[0] - previous[0]), previous[1] + t * (point[1] - previous[1])]);
+      }
+      if (inside) ring.push(point);
+      previous = point;
+      previousInside = inside;
+    }
+  }
+  return ring.length >= 3 ? [...ring, ring[0]] : [];
+}
+
+export function projectAreas(data, centre, radiusMetres) {
+  return data.elements.flatMap((element) => {
+    const layer = classifyArea(element.tags);
+    if (!layer) return [];
+    const project = (geometry) => (geometry ?? []).map((point) => projectToLocalMetres(point, centre));
+    let outer, inner;
+    if (element.type === 'way') {
+      outer = joinAreaRings([project(element.geometry)]);
+      inner = [];
+    } else if (element.type === 'relation' && element.tags.type === 'multipolygon') {
+      const members = element.members ?? [];
+      outer = joinAreaRings(members.filter((member) => member.type === 'way' && (member.role === 'outer' || member.role === '')).map((member) => project(member.geometry)));
+      inner = joinAreaRings(members.filter((member) => member.type === 'way' && member.role === 'inner').map((member) => project(member.geometry)));
+    } else return [];
+    const bounds = renderBounds(radiusMetres);
+    outer = outer.map((ring) => clipAreaRing(ring, bounds)).filter((ring) => ring.length);
+    if (!outer.length) return [];
+    inner = inner.map((ring) => clipAreaRing(ring, bounds)).filter((ring) => ring.length);
+    return [{ layer, rings: [...outer, ...inner].map((ring) => ring.map((point) => projectToViewBox(point, radiusMetres))) }];
+  });
+}
+
+export function ambientMapLayerSvg(svg, layer) {
+  if (!['green', 'water'].includes(layer)) return svg;
+  const content = svg.match(new RegExp(`<g id="${layer}">([\\s\\S]*?)</g>`))?.[1] ?? '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}">${content}</svg>`;
 }
 
 export function renderAmbientMap(data, centre, options = {}) {
@@ -262,7 +351,7 @@ export function renderAmbientMap(data, centre, options = {}) {
     }
   }
 
-  const svg = serializeSvg(classPaths, options);
+  const svg = serializeSvg(classPaths, { ...options, areas: projectAreas(data, centre, radiusMetres) });
   return {
     svgBytes: new TextEncoder().encode(svg),
     radiusMetres,

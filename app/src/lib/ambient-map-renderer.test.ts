@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error The production renderer intentionally remains native Node ESM without declarations.
-import { ALGORITHM_VERSION, HIGHWAY_TYPES, MAX_QUERY_RADIUS_METRES, RADIUS_CANDIDATES_METRES, RENDERER_ERROR_CODES, ROAD_CLASSES, VIEWBOX_HEIGHT, VIEWBOX_WIDTH, chooseRenderRadius, classifyHighway, clipSegmentLiangBarsky, projectToLocalMetres, projectToViewBox, renderAmbientMap, serializeSvg } from '../../server/ambient-map-renderer.mjs';
+import { ALGORITHM_VERSION, HIGHWAY_TYPES, MAX_QUERY_RADIUS_METRES, RADIUS_CANDIDATES_METRES, RENDERER_ERROR_CODES, ROAD_CLASSES, VIEWBOX_HEIGHT, VIEWBOX_WIDTH, chooseRenderRadius, classifyHighway, clipSegmentLiangBarsky, projectToLocalMetres, projectToViewBox, renderAmbientMap, serializeSvg, ambientMapLayerSvg, clipAreaRing } from '../../server/ambient-map-renderer.mjs';
 // @ts-expect-error The production worker intentionally remains native Node ESM without declarations.
 import { OVERPASS_ENDPOINTS, OVERPASS_RESPONSE_LIMIT_BYTES, OVERPASS_TIMEOUT_MS, OVERPASS_USER_AGENT, WORKER_ERROR_CODES, WORKER_MESSAGE_TYPE, executeWorkerMessage, fetchOverpassData, toWorkerErrorPayload, validateWorkerMessage } from '../../server/ambient-map-worker.mjs';
 
@@ -70,7 +70,7 @@ describe('ambient map renderer contract', () => {
       VIEWBOX_WIDTH: 1_920,
       VIEWBOX_HEIGHT: 1_200,
       MAX_QUERY_RADIUS_METRES: 5_000,
-      ALGORITHM_VERSION: 1,
+      ALGORITHM_VERSION: 2,
     });
     expect(RADIUS_CANDIDATES_METRES).toEqual([800, 1_000, 1_250, 1_500, 2_000, 2_500, 3_500, 5_000]);
     expect(HIGHWAY_TYPES).toEqual([
@@ -133,6 +133,50 @@ describe('ambient map renderer contract', () => {
     const rounded = serializeSvg({ local: [[[0.1, 0.1], [0.4, 0.4], [1.2, 1.2]]] });
     expect(rounded).toContain('d="M0 0L1 1"');
     expect(rounded).not.toContain('L0 0');
+  });
+
+  it('renders split/reversed multipolygons with islands and separate overlapping green features', async () => {
+    const ring = (points: [number, number][]) => points.map(localPointToGeo);
+    const result = renderAmbientMap({ elements: [
+      ...osmFixture().elements,
+      { type: 'relation', tags: { type: 'multipolygon', natural: 'water' }, members: [
+        { type: 'way', role: 'outer', geometry: ring([[-400, -300], [400, -300], [400, 300]]) },
+        { type: 'way', role: 'outer', geometry: ring([[-400, -300], [-400, 300], [400, 300]]) },
+        { type: 'way', role: 'inner', geometry: ring([[-100, -100], [100, -100], [100, 100], [-100, 100], [-100, -100]]) },
+      ] },
+      { type: 'way', tags: { leisure: 'park' }, geometry: ring([[-300, -200], [300, -200], [300, 200], [-300, 200], [-300, -200]]) },
+      { type: 'way', tags: { natural: 'wood' }, geometry: ring([[-200, -100], [200, -100], [200, 100], [-200, 100], [-200, -100]]) },
+      { type: 'way', tags: { natural: 'water' }, geometry: ring([[500, 100], [600, 100], [600, 200]]) },
+    ] }, centre);
+    const svg = new TextDecoder().decode(result.svgBytes);
+    const water = ambientMapLayerSvg(svg, 'water');
+    const green = ambientMapLayerSvg(svg, 'green');
+    expect(water.match(/<path/g)).toHaveLength(1);
+    expect(water).toContain('fill-rule="evenodd"');
+    expect(water).not.toContain('stroke-width');
+    expect(green.match(/<path/g)).toHaveLength(2);
+    const { default: sharp } = await import('sharp');
+    const sample = async (mask: string, x: number, y: number) => {
+      const { data, info } = await sharp(new TextEncoder().encode(mask)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      return data[(y * info.width + x) * info.channels + 3];
+    };
+    expect(await sample(water, 960, 600)).toBe(0); // island
+    expect(await sample(water, 700, 600)).toBe(255);
+    expect(await sample(water, 100, 100)).toBe(0);
+    expect(await sample(green, 960, 600)).toBe(255); // overlap stays filled
+    expect(ambientMapLayerSvg('<svg/>', 'water')).not.toContain('<path');
+    expect(result.wayCount).toBe(1);
+  });
+
+  it('clips filled areas at the viewport while retaining enclosing polygons', () => {
+    const bounds = { minX: -10, maxX: 10, minY: -5, maxY: 5 };
+    const clipped = clipAreaRing([[-20, -20], [20, -20], [20, 20], [-20, 20], [-20, -20]], bounds);
+    expect(clipped).toHaveLength(5);
+    for (const [x, y] of clipped) {
+      expect(Math.abs(x)).toBeLessThanOrEqual(10);
+      expect(Math.abs(y)).toBeLessThanOrEqual(5);
+    }
+    expect(clipAreaRing([[20, 20], [30, 20], [30, 30], [20, 20]], bounds)).toEqual([]);
   });
 
   it('enforces the named SVG maximum with a stable error', () => {

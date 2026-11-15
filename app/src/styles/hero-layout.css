@@ -137,6 +137,12 @@
   opacity: 0;
   transition: opacity calc(var(--duration-enter) * 2.5) var(--ease-out);
 }
+.lamp-off-shade.is-rectangle {
+  translate: none;
+  border-radius: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 .lamp-off-shade.is-off {
   opacity: 1;
   transition: opacity var(--duration-dusk) var(--ease-in-out);

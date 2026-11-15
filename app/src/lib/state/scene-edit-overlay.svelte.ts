@@ -12,6 +12,7 @@
    an — er ist geladen, sobald der Editor je offen war, und ohne offenen Editor
    gibt es auch keine Vorschau zurückzunehmen. */
 
+import { m } from '../../paraglide/messages.js';
 import type { SceneId } from './scene-config.ts';
 
 export const sceneEdit = $state({
@@ -31,7 +32,7 @@ export function openSceneEdit(roomId: string, sceneId: SceneId): void {
   sceneEdit.roomId = roomId;
   sceneEdit.sceneId = sceneId;
   sceneEdit.mode = 'open';
-  if (typeof window !== 'undefined') window.dispatchEvent(new Event('hauser:scene-edit-open'));
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hauser:scene-edit-open', { detail: { label: m.scene_scenes() } }));
 }
 
 export function closeSceneEdit(instant = false): void {

@@ -60,6 +60,7 @@
     'appearance': () => import('../components/settings/InterfaceSection.svelte'),
     'ambient': () => import('../components/settings/AmbientSection.svelte'),
     'calendar': () => import('../components/settings/CalendarSection.svelte'),
+    'commute': () => import('../components/settings/CommuteSection.svelte'),
     'shopping': () => import('../components/settings/ShoppingSection.svelte'),
     'media': () => import('../components/settings/MediaSection.svelte'),
     'services': () => import('../components/settings/ServicesSection.svelte'),
@@ -73,6 +74,7 @@
   let sectionFailed = $state(false);
 
   function loadSection(id: SettingsSectionId): void {
+    SectionView = null;
     sectionFailed = false;
     void sectionLoader.load(id, (module) => { SectionView = module.default; })
       .catch(() => { sectionFailed = true; });
@@ -233,6 +235,8 @@
           {m.sys_section_failed()}
           <button class="secondary-btn pressable" type="button"
                   onclick={() => loadSection(settingsUi.section)}>{m.library_retry()}</button>
+          <button class="secondary-btn pressable" type="button"
+                  onclick={() => location.reload()}>{m.sys_reload_now()}</button>
         </p>
       {/if}
     </div>

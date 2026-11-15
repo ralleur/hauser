@@ -1,3 +1,9 @@
+## 0.51.0 - 2026-11-15
+
+- Configurable commute view using the Home Assistant TomTom integration, live traffic preview and lock-screen switching.
+- Coloured maps with water and green areas, smoother transitions and cached rendering for wall tablets.
+- Pure black Deep Night background and a discreet car icon for the commute.
+
 ## 0.50.5 - 2026-11-14
 
 - Image control: device zones accept taps up to 32 pixels beyond their edges. Overlapping touch margins select one device using the nearest original zone, with direct hits taking priority.

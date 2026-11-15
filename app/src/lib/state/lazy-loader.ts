@@ -12,8 +12,10 @@ export function createRetryableLazyCache<Key extends string, Loaded>() {
 
     let attempt!: Promise<Loaded>;
     attempt = Promise.resolve()
-      .then(importer)
+      .then(() => importer())
       .then((loaded) => {
+        // An empty import is a failed attempt, never a usable cached module.
+        if (loaded == null) throw new Error('LAZY_MODULE_UNAVAILABLE');
         successful.set(key, loaded);
         return loaded;
       })

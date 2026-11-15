@@ -127,6 +127,7 @@ import { createFamilyDataStore, serveFamilyData } from './server/family-data.mjs
 import { notionShoppingRoute, serveNotionShopping } from './server/shopping-notion.mjs';
 import { createMomentsService, MOMENT_HOLIDAYS_CONFIG_KEY, serveMoments } from './server/moments.mjs';
 import { createWeatherService, serveWeather } from './server/weather.mjs';
+import { createCommuteService } from './server/commute.mjs';
 import { createFeedbackService, serveFeedback } from './server/feedback.mjs';
 import { createErrorBook, serveErrors, startErrorReports } from './server/error-book.mjs';
 import { applyAppCors, authenticateRequest, CLAIM_LIMIT_PER_MINUTE, createDeviceStore, createRateLimiter, PAIRING_ROUTE_PREFIX, remoteGateAllows, remoteGateReject, servePairing, TOKEN_FAILURE_LIMIT_PER_MINUTE } from './server/pairing.mjs';
@@ -868,6 +869,8 @@ export function createHmiServer(
     clientFactory: laundryClientFactory,
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode),
   });
+  const commute = createCommuteService({ configStore, clientFactory: laundryClientFactory,
+    resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode), readForecast: () => weather.read() });
   /* Companion-App (Plan 21): gekoppelte Geräte und die Dateilisten, mit
      denen die App Bundle und Raumbilder spiegelt. */
   const devices = deviceStore ?? createDeviceStore(pairingDevicesPath);
@@ -1186,6 +1189,8 @@ export function createHmiServer(
         code: 'SETUP_REQUIRED',
         message: 'Die Ersteinrichtung muss zuerst abgeschlossen werden.',
       });
+    } else if (['/api/commute', '/api/admin/commute', '/api/admin/commute/preview', '/api/admin/commute/places', '/api/admin/commute/route'].includes((req.url || '').split('?')[0])) {
+      void commute.serve(req, res, allowedOrigins);
     } else if (ambientMapAdminRoute(req.url || '/')) {
       /* Hinter Hotel-Admin-Gate, Migrations- und Setup-Schranke: hier bleibt
          nur noch die bestehende Origin-Grenze für die Mutationen. */

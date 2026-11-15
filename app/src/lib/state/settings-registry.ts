@@ -47,6 +47,7 @@ export type SettingsSectionId =
   | 'ambient'
   /* Inhalte */
   | 'calendar'
+  | 'commute'
   | 'shopping'
   | 'media'
   /* Verbindungen */
@@ -135,6 +136,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'calendar', needsServer: true, group: 'content',
     get label() { return m.settings_section_calendar_label(); }, icon: 'i-calendar', tint: 'cool',
     get description() { return m.settings_section_calendar_desc(); },
+  },
+  {
+    id: 'commute', needsServer: true, group: 'content',
+    get label() { return m.commute_title(); }, icon: 'i-car-outline', tint: 'warm',
+    get description() { return m.commute_page_description(); },
   },
   {
     id: 'shopping', needsServer: true, group: 'content',
@@ -270,7 +276,16 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
     keywords: ['stadtplan', 'karte', 'map', 'straßen', 'strassen', 'hintergrund', 'standort',
       'ort', 'koordinaten', 'lockscreen', 'standby', 'openstreetmap', 'osm'] },
 
+  { id: 'ambient-map-colors', needsServer: true, section: 'ambient', get label() { return m.sys_map_colors(); },
+    keywords: ['stadtplan', 'karte', 'farben', 'zweifarbig', 'gewässer', 'wasser', 'grünflächen', 'parks', 'map', 'colours', 'colors'] },
+
   /* ── Inhalte ── */
+  { id: 'commute-route', needsServer: true, section: 'commute', get label() { return m.commute_route(); },
+    keywords: ['arbeitsweg', 'pendeln', 'büro', 'arbeitsort', 'route', 'tomtom', 'blitzer', 'verkehr', 'stau', 'commute'] },
+  { id: 'commute-schedule', needsServer: true, section: 'commute', get label() { return m.commute_days(); },
+    keywords: ['bürotage', 'wochentage', 'homeoffice', 'morgen', 'abfahrt', 'ankunft', 'zeitfenster', 'arbeitsweg'] },
+  { id: 'commute-extras', needsServer: true, section: 'commute', get label() { return m.commute_extras(); },
+    keywords: ['regen', 'wetter', 'parkplatz', 'parken', 'p+r', 'park and ride', 'arbeitsweg'] },
   { id: 'calendar-selection', section: 'calendar', get label() { return m.settings_entry_calendar_selection_label(); },
     keywords: ['auswahl', 'familie', 'termine', 'agenda', 'entität', 'anzeigen', 'ausblenden'] },
   { id: 'reminders-selection', section: 'calendar', get label() { return m.settings_entry_reminders_selection_label(); },

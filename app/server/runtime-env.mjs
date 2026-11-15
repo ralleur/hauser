@@ -285,6 +285,7 @@ export const SHARED_CONFIG_KEYS = new Set([
   'hmi:device-config:v1', 'hmi:scene-config:v1', 'hmi:home-layout:v1',
   'hmi:light-icon-overrides:v1', 'hmi:calendar-selected', 'hmi:reminders-selected',
   'hmi:moment-holidays:v1',
+  'hmi:commute:v1',
   'hmi:shopping-config:v1', 'hmi:reminder-persons:v1',
   'hmi:paperless-url', 'hmi:paperless-token', 'hmi:ablage-pin',
   'hmi:notion-token', 'hmi:notion-page',

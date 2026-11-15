@@ -5676,3 +5676,57 @@ select optgroup {
   border-color: var(--overlay-border);
   background: var(--overlay-control-background);
 }
+
+/* Morgenpendeln: die Uhr schafft Platz für Route und Arbeitsweg-Zettel. */
+/* A single clock remains mounted while its rectangles move between layouts. */
+.ambient-el.is-clock-morphing .ambient-clock { animation: none; }
+.ambient-el.is-commute-clock { display: block; position: absolute; }
+.is-commute-clock > .ambient-content { gap: var(--space-2); width: 100%; }
+.is-commute-clock > .ambient-content .ambient-clock { font-size: var(--text-4xl); }
+.is-commute-clock > .ambient-content .ambient-date { font-size: var(--text-md); }
+.is-commute-clock > .ambient-content .ambient-status { min-width: 0; margin-top: var(--space-2); padding-top: 0; border: 0; gap: var(--space-4); font-size: var(--text-base); flex-wrap: wrap; }
+.is-commute-clock .ambient-greeting { display: none; }
+@media (max-width: 767px), (max-height: 650px) { .is-commute-clock > .ambient-content .ambient-clock { font-size: var(--text-3xl); } }
+.ambient.has-commute .ambient-week { grid-row: 2; }
+@media (max-width: 767px) {
+  .ambient.has-commute .ambient-shopping,
+  .ambient.has-commute .ambient-postits { display: none; }
+  .ambient.has-commute .ambient-week { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ambient.has-commute .ambient-week-day:nth-child(n+4) { display: none; }
+}
+
+/* Independently tinted, pre-rendered land and water masks below the streets. */
+.ambient-map-area {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask: var(--ambient-map-area-src) center / cover no-repeat;
+  mask: var(--ambient-map-area-src) center / cover no-repeat;
+}
+.ambient-map-green { background: var(--ambient-map-green); opacity: var(--ambient-map-green-opacity); }
+.ambient-map-water { background: var(--ambient-map-water); opacity: var(--ambient-map-water-opacity); }
+.ambient.deep-night .ambient-map-area,
+.ambient.is-editing .ambient-map-area { display: none; }
+
+/* Blur the finished map behind this radial mask, after all three geometry
+   masks have been composited. The centre stays sharp; content sits above it. */
+.ambient-map-focus {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(var(--ambient-map-edge-blur));
+  backdrop-filter: blur(var(--ambient-map-edge-blur));
+  -webkit-mask-image: var(--ambient-map-focus-mask);
+  mask-image: var(--ambient-map-focus-mask);
+}
+.ambient.is-editing .ambient-map-focus { display: none; }
+
+/* Standby: explicit home/commute choice stays inside the lock screen. */
+.ambient-home-map { position: absolute; inset: 0; z-index: -1; isolation: isolate; pointer-events: none; }
+.commute-view-control { position: absolute; top: max(env(safe-area-inset-top), var(--space-5)); left: 50%; transform: translateX(-50%); z-index: 2; text-align: center; }
+.commute-view-switch { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-2); border: 0; color: var(--color-text-secondary); background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+.commute-view-switch[aria-pressed="true"] { color: var(--color-accent-warm); }
+.commute-view-switch:disabled { opacity: 1; }
+.commute-view-note { width: min(var(--commute-card-width), 80vw); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); font-size: var(--text-sm); color: var(--color-error); background: var(--overlay-control-background); }

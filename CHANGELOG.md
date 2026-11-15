@@ -3,6 +3,14 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.51.0] - 2026-11-15
+
+- Standby: configure your commute, office days and morning times with the existing Home Assistant TomTom integration. Preview the route or switch to it from the lock screen and refresh live traffic outside the morning window.
+- Maps: water and green areas, smooth map and clock transitions, a route drawn in travel direction, cached native-resolution rendering and compact traffic updates. Manual viewing shows arrival when leaving now.
+- Standby: Deep Night uses a pure black background; the commute switch is a discreet car icon.
+
+- Web: empty lazy imports are rejected before component assignment and are not cached. If the phone scene editor cannot load, it shows retry and close actions instead of leaving an unhandled promise rejection.
+
 ## [0.50.5] - 2026-11-14
 
 - Image control: a generous 32-pixel touch margin around device zones catches near misses. Direct hits take priority; overlapping margins choose the nearest original zone edge, independently of drawing order.

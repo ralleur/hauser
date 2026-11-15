@@ -40,6 +40,19 @@ describe('retryable lazy loader', () => {
     expect(importer).toHaveBeenCalledTimes(2);
   });
 
+  it.each([undefined, null])('rejects an empty module (%s) before accessing default and allows retry', async (empty) => {
+    const component = vi.fn();
+    const importer = vi.fn().mockResolvedValueOnce(empty).mockResolvedValueOnce({ default: component });
+    const accept = vi.fn((module) => module.default);
+    const loader = createLatestLazyLoader({ screen: importer });
+
+    await expect(loader.load('screen', accept)).rejects.toThrow('LAZY_MODULE_UNAVAILABLE');
+    expect(accept).not.toHaveBeenCalled();
+    await expect(loader.load('screen', accept)).resolves.toBeUndefined();
+    expect(importer).toHaveBeenCalledTimes(2);
+    expect(accept).toHaveReturnedWith(component);
+  });
+
   it('accepts only the latest requested target while still caching stale success', async () => {
     const first = deferred<{ id: string }>();
     const second = deferred<{ id: string }>();

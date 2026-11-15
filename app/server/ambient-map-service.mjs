@@ -5,6 +5,8 @@ import * as defaultFs from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 
+import { ambientMapLayerSvg } from './ambient-map-renderer.mjs';
+
 import { WORKER_MESSAGE_TYPE } from './ambient-map-worker.mjs';
 
 export const AMBIENT_MAP_CONFIG_VERSION = 1;
@@ -468,6 +470,7 @@ export function createAmbientMapService({
         url: `/assets/ambient-maps/${activeConfig.asset.id}.svg`,
         etag: `"${activeConfig.asset.id}"`,
         byteLength: activeConfig.asset.byteLength,
+        layers: activeConfig.algorithmVersion >= 2,
       },
     };
   }
@@ -516,7 +519,7 @@ export function createAmbientMapService({
     schedule(resolveHomeAssistantLocationSource);
   }
 
-  async function serveAsset(request, response, id) {
+  async function serveAsset(request, response, id, layer) {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       emptyResponse(response, 405, { Allow: 'GET, HEAD' });
       return;
@@ -537,10 +540,12 @@ export function createAmbientMapService({
       emptyResponse(response, 404);
       return;
     }
+    if (layer && !['green', 'water'].includes(layer)) { emptyResponse(response, 400); return; }
+    if (layer) bytes = Buffer.from(ambientMapLayerSvg(bytes.toString('utf8'), layer));
     const headers = {
       'Content-Type': 'image/svg+xml; charset=utf-8',
       'Cache-Control': 'public, max-age=31536000, immutable',
-      ETag: `"${id}"`,
+      ETag: `"${id}${layer ? `-${layer}` : ''}"`,
       'Content-Length': String(bytes.byteLength),
     };
     if (request.headers?.['if-none-match'] === headers.ETag) {
@@ -563,7 +568,7 @@ export function createAmbientMapService({
     }
     const assetMatch = ASSET_PATH_PATTERN.exec(pathname);
     if (assetMatch) {
-      await serveAsset(request, response, assetMatch[1]);
+      await serveAsset(request, response, assetMatch[1], new URL(request.url, 'http://ambient-map.invalid').searchParams.get('layer'));
       return true;
     }
     if (rawAssetRequest || pathname.startsWith('/assets/ambient-maps/')) {

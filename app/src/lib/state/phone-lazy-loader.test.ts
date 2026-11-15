@@ -76,6 +76,19 @@ describe('latest phone lazy loader', () => {
     expect(accept).toHaveBeenCalledWith({ id: 'recovered' });
   });
 
+  it.each([undefined, null])('rejects an empty module (%s) before accessing default and allows retry', async (empty) => {
+    const component = vi.fn();
+    const load = vi.fn().mockResolvedValueOnce(empty).mockResolvedValueOnce({ default: component });
+    const accept = vi.fn((module) => module.default);
+    const loader = createLatestPhoneLoader({ scene: load });
+
+    await expect(loader.load('scene', accept)).rejects.toThrow('LAZY_MODULE_UNAVAILABLE');
+    expect(accept).not.toHaveBeenCalled();
+    await expect(loader.load('scene', accept)).resolves.toBeUndefined();
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(accept).toHaveReturnedWith(component);
+  });
+
   it('deduplicates concurrent attempts, caches only success and can cancel stale acceptance', async () => {
     const attempt = deferred<{ id: string }>();
     const load = vi.fn(() => attempt.promise);

@@ -100,6 +100,7 @@ describe('parseAmbientMapStatus', () => {
       errorCode: null,
       radiusMetres: 2_000,
       assetUrl: ASSET_URL,
+      layers: false,
       source: 'manual',
       label: 'Saarburg',
     });

@@ -110,6 +110,11 @@ export const API_ROUTES = [
   { id: 'roomImageAssignmentLegacy', methods: ['PUT'], path: '/api/rooms/:roomId/room-image-assignment', area: 'room-images', access: 'admin', purpose: 'Ältere Zuweisungsroute; bleibt für bestehende Clients beantwortet.' },
 
   /* ── Ambient ── */
+  { id: 'commute', methods: ['GET'], path: '/api/commute', area: 'ambient', access: 'origin', purpose: 'Arbeitsweg aus der HA-TomTom-Integration, ohne Anbieterzugangsdaten.' },
+  { id: 'commuteAdmin', methods: ['GET', 'PUT'], path: '/api/admin/commute', area: 'ambient', access: 'admin', purpose: 'HA-Route, Bürotage, Morgenfenster, Ankunft und optional P+R wählen.' },
+  { id: 'commutePreview', methods: ['POST'], path: '/api/admin/commute/preview', area: 'ambient', access: 'admin', purpose: 'Aktuelle HA-TomTom-Daten für die Arbeitsweg-Vorschau auch außerhalb des Zeitfensters laden.' },
+  { id: 'commutePlaces', methods: ['GET'], path: '/api/admin/commute/places', area: 'ambient', access: 'admin', purpose: 'Adressen über die HA-TomTom-Integration suchen.' },
+  { id: 'commuteRoute', methods: ['GET', 'PUT'], path: '/api/admin/commute/route', area: 'ambient', access: 'admin', purpose: 'Start und Arbeitsort einer HA-TomTom-Route lesen, anlegen und bearbeiten.' },
   { id: 'ambientMap', methods: ['GET', 'HEAD'], path: '/api/ambient-map', area: 'ambient', access: 'public', purpose: 'Sanitisierter Status des Stadtplan-Hintergrunds.' },
   { id: 'ambientMapAdmin', methods: ['GET', 'HEAD'], path: '/api/admin/ambient-map', area: 'ambient', access: 'admin', purpose: 'Vollständiger Status mit Ort.' },
   { id: 'ambientMapLocation', methods: ['PUT', 'DELETE'], path: '/api/admin/ambient-map/location', area: 'ambient', access: 'admin', purpose: 'Ort setzen oder entfernen.' },
@@ -177,6 +182,7 @@ export const UPSTREAM_API_PATHS = [
   '/api/calendars',
   '/api/calendars/',
   '/api/template',
+  '/api/config/config_entries/',
   '/api/config/config_entries/flow',
   '/api/config/config_entries/flow/',
   '/api/config/automation/config/',

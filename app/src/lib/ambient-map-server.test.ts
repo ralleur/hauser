@@ -174,6 +174,7 @@ describe('Ambient-Map-Verdrahtung im direkten Modus', () => {
         url: `/assets/ambient-maps/${SVG_ID}.svg`,
         etag: `"${SVG_ID}"`,
         byteLength: SVG_BYTES.byteLength,
+        layers: false,
       },
       source: 'home_assistant',
       label: 'Saarburg',
@@ -203,6 +204,7 @@ describe('Ambient-Map-Verdrahtung im direkten Modus', () => {
         url: `/assets/ambient-maps/${SVG_ID}.svg`,
         etag: `"${SVG_ID}"`,
         byteLength: SVG_BYTES.byteLength,
+        layers: false,
       },
     });
     const text = JSON.stringify(payload);

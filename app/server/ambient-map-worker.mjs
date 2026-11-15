@@ -81,7 +81,15 @@ export function buildOverpassQuery(latitude, longitude) {
   const west = longitude - metresToLongitude(MAX_QUERY_RADIUS_METRES, latitude);
   const east = longitude + metresToLongitude(MAX_QUERY_RADIUS_METRES, latitude);
   const highwayPattern = HIGHWAY_TYPES.join('|');
-  return `[out:json][timeout:90];way(${south},${west},${north},${east})["highway"~"^(${highwayPattern})$"];out geom;`;
+  const bbox = `${south},${west},${north},${east}`;
+  return `[out:json][timeout:90];(
+    way(${bbox})["highway"~"^(${highwayPattern})$"];
+    wr(${bbox})["natural"="water"];
+    wr(${bbox})["waterway"="riverbank"];
+    wr(${bbox})["landuse"~"^(reservoir|forest|meadow|grass|recreation_ground|village_green)$"];
+    wr(${bbox})["natural"~"^(wood|grassland|scrub)$"];
+    wr(${bbox})["leisure"~"^(park|garden)$"];
+  );out geom;`;
 }
 
 function isTimeoutError(error) {

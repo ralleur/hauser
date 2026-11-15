@@ -14,7 +14,10 @@ export function createLatestPhoneLoader<Key extends string, Loaded>(
   function loadValue(key: Key): Promise<Loaded> {
     const existing = attempts.get(key);
     if (existing) return existing;
-    const attempt = Promise.resolve().then(() => loaders[key]());
+    const attempt = Promise.resolve().then(() => loaders[key]()).then((loaded) => {
+      if (loaded == null) throw new Error('LAZY_MODULE_UNAVAILABLE');
+      return loaded;
+    });
     attempts.set(key, attempt);
     void attempt.catch(() => {
       if (attempts.get(key) === attempt) attempts.delete(key);

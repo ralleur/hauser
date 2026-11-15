@@ -11,6 +11,7 @@
   import {
     settingsValues,
     setAmbientCityMap,
+    setAmbientMapColors,
     setAmbientDeepNight,
     setAmbientHeroText,
     setPresenceAwayDark,
@@ -345,6 +346,20 @@
         <span class="settings-switch-knob"></span>
       </button>
     </div>
+  </div>
+
+  <div class="settings-row" data-setting-id="ambient-map-colors">
+    <span class="settings-row-icon"><Icon name="i-map" cls="icon icon-md" /></span>
+    <div class="settings-row-text">
+      <span class="settings-row-label">{m.sys_map_colors()}</span>
+      <span class="settings-row-sub">{m.sys_map_colors_hint()}</span>
+    </div>
+    <button class="settings-switch pressable" type="button" role="switch"
+            aria-checked={settingsValues.ambientMapColors}
+            aria-label={m.sys_map_colors()}
+            onclick={() => setAmbientMapColors(!settingsValues.ambientMapColors)}>
+      <span class="settings-switch-knob"></span>
+    </button>
   </div>
 
   <div class="settings-row">
