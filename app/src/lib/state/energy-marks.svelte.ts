@@ -1,4 +1,4 @@
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 /* ── Von Hand gesetzte Zettelplätze des Energie-Screens (R19, docs/23) ──
    Die Vorlage sagt, wo Zettel und Punkte sitzen; wer sie verschiebt, legt
    das im Haushalt ab — je Motiv, damit ein Bildwechsel keine fremden Plätze

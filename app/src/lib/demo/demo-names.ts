@@ -1,5 +1,7 @@
 import { m } from '../../paraglide/messages.js';
 import demoHouseholdConfig from '../../../config/households/current-v1.json';
+import { IS_DEMO } from './recording-mode.ts';
+import { demoMessage } from './demo-locale.ts';
 
 /* Demo-only presentation state. Kept outside demo-mode.ts so production startup
    does not retain translated sample names and synthetic room values. */
@@ -9,7 +11,7 @@ export function applyDemoNames(rooms: {
   presence: boolean;
   lights: Array<{ entityId: string; name: string }>;
 }[]): void {
-  if (import.meta.env.VITE_DEMO !== '1') return;
+  if (!IS_DEMO) return;
 
   const room: Record<string, () => string> = {
     wohnzimmer: m.demo_room_wohnzimmer, kinderzimmer: m.demo_room_kinderzimmer,
@@ -52,7 +54,7 @@ export function applyDemoNames(rooms: {
   };
 
   for (const item of rooms) {
-    if (room[item.id]) item.name = room[item.id]();
+    if (room[item.id]) item.name = demoMessage(room[item.id]);
     item.presence = present.has(item.id);
 
     const configured = demoHouseholdConfig.rooms.find(({ id }) => id === item.id);
@@ -62,7 +64,7 @@ export function applyDemoNames(rooms: {
     }
     const activeIndexes = new Set(lightsOn[item.id] ?? []);
     item.lights.forEach((light, index) => {
-      if (device[light.entityId]) light.name = device[light.entityId]();
+      if (device[light.entityId]) light.name = demoMessage(device[light.entityId]);
       if (activeIndexes.has(index)) {
         merge(light.entityId, { on: true, brightness: index === 0 ? 68 : 42 });
       }

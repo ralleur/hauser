@@ -107,6 +107,21 @@ Overpass API — the public query service
   is included or depended upon; the query is a plain HTTPS request made by the
   server.
 
+OpenFreeMap — regional commute maps
+  https://openfreemap.org/
+  Large commute views use precomputed vector tiles from OpenFreeMap. Tile
+  data is © OpenMapTiles (https://openmaptiles.org/) and OpenStreetMap
+  contributors (https://www.openstreetmap.org/copyright). The server requests
+  tile coordinates at an appropriate zoom level and renders the tiles locally.
+  Vector tile parsing uses @mapbox/vector-tile and pbf (BSD-3-Clause) and
+  @mapbox/point-geometry (ISC). The packages carry their license texts.
+
+Open-Meteo — commute weather forecasts
+  https://open-meteo.com/
+  With commute weather enabled, the server requests rain at the home location
+  and snowfall at up to four sampled points on the active commute. Hauser
+  caches the forecast and displays the precipitation hints with source credit.
+
 
 Images
 ------
@@ -116,8 +131,9 @@ separately from the code. See ASSETS-LICENSE.md.
 
 Attribution placement
 ---------------------
-The OpenStreetMap credit is shown in Hauser's settings (Appearance > Ambient &
-Standby) and in this file, not on the standby screen itself. The standby screen
+The city map's OpenStreetMap credit is shown in Hauser's settings (Appearance >
+Ambient & Standby) and in this file. Regional commute maps carry their credit
+on the standby screen. The city map
 is a purely decorative surface with no controls, and the map is rendered as a
 low-opacity mask behind the clock. OpenStreetMap's attribution guidelines allow
 a produced work that is not a browsable map to carry its credit where credits

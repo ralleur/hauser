@@ -3,7 +3,7 @@
   import { m } from '../../paraglide/messages.js';
   import { appState } from '../state/app.svelte.ts';
   import { ambientRequest, setAmbientActive } from '../state/ambient.svelte.ts';
-  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { IS_DEMO } from '../demo/recording-mode.ts';
   import { clock } from '../state/clock.svelte.ts';
   import { closeDeviceDetail } from '../state/overlay.svelte.ts';
   import { roomOpenings, roomPresence, roomTemperature } from '../state/commands.ts';

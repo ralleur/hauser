@@ -1,6 +1,6 @@
 import { parseWeatherDetails, type WeatherDetails, DEMO_COORDS, openMeteoUrl, parseOutdoor, classifyTrend, type TempTrend, type OutdoorReading } from './weather.ts';
 import { apiPath } from '../api/client.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO, RECORDING_HOME_COORDS, RECORDING_DEMO } from '../demo/recording-mode.ts';
 import { createSnapshotStore } from '../data/query-cache.ts';
 import { registerRevalidation } from '../data/revalidation.ts';
 
@@ -55,7 +55,7 @@ let inflight = false;
    Open-Meteo selbst (Issue #15 — vorher stand hier eine feste Stadt). Nur die
    statische Demo ohne Server ruft Open-Meteo direkt mit Beispielkoordinaten. */
 function weatherUrl(): string {
-  return IS_DEMO ? openMeteoUrl(DEMO_COORDS) : apiPath('weather');
+  return IS_DEMO ? openMeteoUrl(RECORDING_DEMO ? RECORDING_HOME_COORDS : DEMO_COORDS) : apiPath('weather');
 }
 
 export async function refreshWeather(): Promise<void> {

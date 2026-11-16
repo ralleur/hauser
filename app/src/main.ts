@@ -3,7 +3,7 @@ import { mount, unmount } from 'svelte';
 import '../../design-tokens/tokens.css';
 import './styles/climate-controls.css';
 import './styles/on-image.css';
-import { applyDemoDeepLink, installDemoApi } from './lib/demo/demo-mode.ts';
+import { initRecordingMode, IS_DEMO } from './lib/demo/recording-mode.ts';
 
 const STARTUP_LABELS: Record<string, string> = {
   'hmi:app-start': 'app start',
@@ -35,7 +35,9 @@ const shellLoaders = {
 type ShellModule = Awaited<ReturnType<(typeof shellLoaders)[keyof typeof shellLoaders]>>;
 
 // Vor den Bootstrap-Fetches: die Demo stellt ihre isolierten API-Antworten bereit.
-installDemoApi();
+initRecordingMode();
+const demo = IS_DEMO ? await import('./lib/demo/demo-mode.ts') : null;
+demo?.installDemoApi();
 
 async function healthStatus(): Promise<'ready' | 'setup_required' | null> {
   const controller = new AbortController();
@@ -146,8 +148,8 @@ if (reconfigureRequested) {
     uiModeModule.initUiMode();
     initialShell = await shellLoaders[uiModeModule.uiMode.effective]();
     document.documentElement.setAttribute('data-standalone', String(standalone.active));
-    applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
-    if (import.meta.env.VITE_DEMO === '1') {
+    demo?.applyDemoDeepLink((screen) => { nav.screen = screen as typeof nav.screen; });
+    if (demo) {
       const { applyDemoNames } = await import('./lib/demo/demo-names.ts');
       applyDemoNames(appState.rooms);
     }

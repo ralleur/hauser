@@ -5,16 +5,20 @@
   import Icon from './Icon.svelte';
   import CommuteMapBackdrop from './CommuteMapBackdrop.svelte';
   import { settingsValues } from '../state/settings.svelte.ts';
-  import { commute, refreshCommute } from '../state/commute.svelte.ts';
-  import { departureFor, freshCommute, inCommuteWindow, mapPath } from '../state/commute.ts';
+  import { commute, coverCommuteMap, refreshCommute } from '../state/commute.svelte.ts';
+  import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, freshCommute, inCommuteWindow, mapPath } from '../state/commute.ts';
   import { intlLocale } from '../state/locale.svelte.ts';
   let { active, preview = false, mode = null, clockHost, onlayout, onvisible }: { active: boolean; preview?: boolean; mode?: boolean | null; clockHost?: HTMLElement; onlayout: (layout: { x: number; y: number; width: number }) => void; onvisible: (shown: boolean) => void } = $props();
   let mapEl = $state<SVGSVGElement>();
   let cardEl = $state<HTMLElement>();
-  let composition = $state({ width: 1000, height: 600, panelWidth: 320, x: 32, clockY: 32, cardY: 320, scale: 1, tx: 0, ty: 0, transform: '' });
+  let routeDrawn = $state(false);
+  let composition = $state({ width: 1000, height: 600, panelWidth: 320, cardX: 32, cardY: 320, scale: 1, tx: 0, ty: 0, transform: '' });
   let now = $state(new Date());
   const visible = $derived(active && freshCommute(commute.route, now) && (mode ?? (preview || inCommuteWindow(commute.config, now))));
   $effect(() => { onvisible(visible); });
+  $effect(() => {
+    if (visible) return () => coverCommuteMap(null);
+  });
   $effect(() => {
     if (!active) return;
     now = new Date();
@@ -27,6 +31,11 @@
     document.addEventListener('visibilitychange', resume);
     return () => { clearInterval(tick); document.removeEventListener('visibilitychange', resume); };
   });
+  $effect(() => {
+    if (!visible || commute.route?.mapStatus !== 'loading') return;
+    const poll = setInterval(() => void refreshCommute(), 5_000);
+    return () => clearInterval(poll);
+  });
   const time = (date: Date) => date.toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' });
   $effect(() => {
     const route = commute.route;
@@ -37,7 +46,6 @@
     function measure() {
       const bounds = surface.getBoundingClientRect();
       const gap = parseFloat(getComputedStyle(surface).getPropertyValue('--space-5'));
-      const pad = gap * 2;
       const control = surface.querySelector('.commute-view-control')?.getBoundingClientRect();
       const top = control ? control.bottom - bounds.top + gap : gap;
       let left = gap, right = bounds.width - gap, bottom = bounds.height - gap;
@@ -51,24 +59,13 @@
         else right = Math.min(right, box.left - bounds.left - gap);
       }
       const width = Math.max(gap, right - left), height = Math.max(gap, bottom - top);
-      const xs = route!.line.map(p => p[0]), ys = route!.line.map(p => p[1]);
-      const minX = Math.min(...xs) - 20, maxX = Math.max(...xs) + 20;
-      const minY = Math.min(...ys) - 44, maxY = Math.max(...ys) + 12;
-      const split = width >= 480 && (maxY - minY) > (maxX - minX);
-      const panelWidth = split ? Math.min(360, (width - gap) * .52) : Math.min(576, width);
+      const panelWidth = commutePanelWidth(width, gap);
       card.style.width = `${panelWidth}px`; host.style.width = `${panelWidth}px`;
       const clockHeight = clock.getBoundingClientRect().height, cardHeight = card.getBoundingClientRect().height;
-      const x = split ? left : left + (width - panelWidth) / 2;
-      const clockY = split ? top + Math.max(0, (height - clockHeight - gap - cardHeight) / 2) : top;
-      const cardY = split ? clockY + clockHeight + gap : bottom - cardHeight;
-      const map = split
-        ? { x: left + panelWidth + gap, y: top, width: width - panelWidth - gap, height }
-        : { x: left, y: clockY + clockHeight + gap, width, height: Math.max(gap, cardY - clockY - clockHeight - gap * 2) };
-      const scale = Math.min(Math.max(gap, map.width - pad) / (maxX - minX), Math.max(gap, map.height - pad) / (maxY - minY));
-      const tx = map.x + map.width / 2 - (minX + maxX) / 2 * scale;
-      const ty = map.y + map.height / 2 - (minY + maxY) / 2 * scale;
-      onlayout({ x, y: clockY, width: panelWidth });
-      composition = { width: bounds.width, height: bounds.height, panelWidth, x, clockY, cardY, scale, tx, ty, transform: `translate(${tx},${ty}) scale(${scale})` };
+      const { clockX, clockY, cardX, cardY, scale, tx, ty } = fitCommuteLayout(route!.line, { x: left, y: top, width, height }, gap, panelWidth, clockHeight, cardHeight);
+      onlayout({ x: clockX, y: clockY, width: panelWidth });
+      composition = { width: bounds.width, height: bounds.height, panelWidth, cardX, cardY, scale, tx, ty, transform: `translate(${tx},${ty}) scale(${scale})` };
+      coverCommuteMap(commuteMapCoverage(bounds.width, bounds.height, { scale, tx, ty }, gap * 2));
     }
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
     const resize = new ResizeObserver(schedule);
@@ -85,6 +82,8 @@
   {@const route = commute.route}
   {@const departure = departureFor(commute.config, route.durationMinutes, now)}
   {@const immediate = mode === true}
+  {@const traffic = route.reports.find((report) => !report.group || report.group === 'traffic')}
+  {@const weather = route.reports.find((report) => report.category === 'ice') ?? route.reports.find((report) => report.group === 'weather')}
   {@const home = route.line[0]}
   {@const work = route.line[route.line.length - 1]}
   <svg class="commute-map" transition:commuteMapTransition={{ commute: true }} bind:this={mapEl} viewBox={`0 0 ${composition.width} ${composition.height}`} style:--commute-map-scale={composition.scale} aria-hidden="true">
@@ -93,15 +92,28 @@
     </foreignObject>
     <g transform={composition.transform}>
     <path class="commute-route-halo" in:commuteRouteDraw out:commuteFade d={mapPath(route.line)} />
-    <path class="commute-route-line" in:commuteRouteDraw out:commuteFade d={mapPath(route.line)} />
-    {#each route.sections as section}
-      <path class="commute-traffic" in:commuteFade={{ delay: commuteTiming('map') + commuteTiming('route') }} out:commuteFade class:is-severe={section.severe} d={mapPath(section.points)} />
-    {/each}
-    {#each route.reports.filter((r) => r.point && ['jam', 'accident', 'road_closed', 'road_works'].includes(r.category)) as report}
-      {#if report.point}<g class="commute-incident" in:commuteFade={{ delay: commuteTiming('map') + commuteTiming('route') }} out:commuteFade transform={`translate(${report.point[0]},${report.point[1]})`}>
-        <path d="M0,-10 L10,8 L-10,8 Z" /><text y="5">!</text>
-      </g>{/if}
-    {/each}
+    <path class="commute-route-line" in:commuteRouteDraw out:commuteFade d={mapPath(route.line)}
+      onintrostart={() => { routeDrawn = false; }} onintroend={() => { routeDrawn = true; }} />
+    {#if routeDrawn}
+      {#each route.sections as section}
+        <path class="commute-traffic" in:commuteFade out:commuteFade class:is-severe={section.severe} d={mapPath(section.points)} />
+      {/each}
+      {#each route.reports.slice().reverse() as report}
+        {#if report.point}<g class="commute-incident" class:is-camera={report.group === 'camera'} class:is-weather={report.group === 'weather'} in:commuteFade out:commuteFade transform={`translate(${report.point[0]},${report.point[1]})`}>
+          {#if report.group === 'camera'}
+            <rect x="-9" y="-7" width="18" height="14" rx="3" /><circle r="3" />
+          {:else if report.category === 'ice'}
+            <path d="M0,-8 V8 M-7,-4 L7,4 M-7,4 L7,-4" />
+          {:else if report.category === 'fog'}
+            <path d="M-7,-5 H4 M-4,0 H8 M-8,5 H4" />
+          {:else if report.group === 'weather'}
+            <path d="M-6,5 A4 4 0 0 1 -8,-2 A5 5 0 0 1 2,-5 A5 5 0 0 1 6,5 Z" />
+          {:else}
+            <path d="M0,-10 L10,8 L-10,8 Z" /><text y="5">!</text>
+          {/if}
+        </g>{/if}
+      {/each}
+    {/if}
     <g class="commute-pin" in:commuteFade={{ delay: commuteTiming('map') }} out:commuteFade transform={`translate(${home[0]},${home[1]})`}>
       <circle r="4" /><path d="M0,-3 L-7,-17 L7,-17 Z" /><circle cy="-24" r="14" />
       <path class="commute-pin-symbol" d="M-7,-24 L0,-30 L7,-24 M-5,-25 V-18 H5 V-25 M-1,-18 V-23 H2 V-18" />
@@ -112,31 +124,40 @@
     </g>
     </g>
   </svg>
-  <section class="commute-card" in:commuteFade={{ delay: commuteTiming('map') }} out:commuteFade bind:this={cardEl} style:left={`${composition.x}px`} style:top={`${composition.cardY}px`} style:width={`${composition.panelWidth}px`} aria-label={m.commute_title()}>
+  {#if route.mapSource === 'openfreemap'}
+    <small class="commute-map-credit">© OpenMapTiles · © OpenStreetMap</small>
+  {/if}
+  <section class="commute-card" in:commuteFade={{ delay: commuteTiming('map') }} out:commuteFade bind:this={cardEl} style:left={`${composition.cardX}px`} style:top={`${composition.cardY}px`} style:width={`${composition.panelWidth}px`} aria-label={m.commute_title()}>
     <div class="commute-card-icon"><Icon name="i-car-outline" cls="icon icon-xl" /></div>
     <div class="commute-copy">
       <h2>{m.commute_title()}</h2>
       <p class="commute-duration num">{m.commute_minutes({ count: route.durationMinutes })}
-        {#if route.delayMinutes !== null && route.delayMinutes > 0}<strong> · {m.commute_delay({ count: route.delayMinutes })}</strong>{/if}
+        {#if route.delayMinutes !== null && route.delayMinutes > 0}<strong class="commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}> · {m.commute_delay({ count: route.delayMinutes })}</strong>{/if}
       </p>
-      {#if !immediate && route.reports[0]}<p class="commute-report">{route.reports[0].title}</p>{/if}
+      {#if traffic}<p class="commute-report commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}>{traffic.title}</p>{/if}
+      {#if weather}<p class="commute-report commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}>{weather.title}</p>{/if}
       <p class="commute-departure">
         {immediate ? m.commute_arrival_now({ time: time(new Date(now.getTime() + route.durationMinutes * 60_000)) })
-          : departure.minutes > 0 ? m.commute_leave_in({ count: departure.minutes, arrival: commute.config.arrival })
-          : departure.minutes === 0 ? m.commute_leave_now({ arrival: commute.config.arrival })
-            : m.commute_leave_at({ time: time(departure.at), arrival: commute.config.arrival })}
+          : departure.minutes > 0 ? m.commute_leave_in({ count: departure.minutes, arrival: departure.arrival })
+          : departure.minutes === 0 ? m.commute_leave_now({ arrival: departure.arrival })
+            : m.commute_leave_at({ time: time(departure.at), arrival: departure.arrival })}
       </p>
-      {#if !immediate && (route.rainAt || route.parking)}<div class="commute-extras">
+      {#if route.rainAt || route.snowAt || route.cameraCount}<div class="commute-extras">
         {#if route.rainAt}<span><Icon name="i-weather-rainy" cls="icon icon-md" />{Date.parse(route.rainAt) <= now.getTime() ? m.commute_rain_now() : m.commute_rain_at({ time: time(new Date(route.rainAt)) })}</span>{/if}
-        {#if route.parking}<span><Icon name="i-parking" cls="icon icon-md" />{route.parking.name} · {route.parking.state} {route.parking.unit}</span>{/if}
+        {#if route.snowAt}<span><Icon name="i-weather-snowy" cls="icon icon-md" />{Date.parse(route.snowAt) <= now.getTime() ? m.commute_snow_now() : m.commute_snow_at({ time: time(new Date(route.snowAt)) })}</span>{/if}
+        {#if route.cameraCount}<span class="commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}><Icon name="i-camera-outline" cls="icon icon-md" />{route.cameraCount === 1 ? m.commute_camera_one() : m.commute_camera_count({ count: route.cameraCount })}</span>{/if}
       </div>{/if}
-      <small class="commute-source">TomTom · {m.commute_updated({ time: time(new Date(route.updatedAt)) })}</small>
+      <small class="commute-source">TomTom · {m.commute_updated({ time: time(new Date(route.updatedAt)) })}{#if route.rainAt || route.snowAt} · Open-Meteo{/if}</small>
+      {#if route.mapStatus === 'loading' || route.mapStatus === 'unavailable' || route.mapStatus === 'too-large'}
+        <small class="commute-source" role="status">{route.mapStatus === 'loading' ? m.commute_map_loading() : route.mapStatus === 'too-large' ? m.commute_map_too_large() : m.commute_map_unavailable()}</small>
+      {/if}
     </div>
   </section>
 {/if}
 
 <style>
   .commute-map { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
+  .commute-map-credit { position: absolute; right: var(--space-3); bottom: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-xs); pointer-events: none; }
   .commute-map path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   /* Dash lengths must scale with the path. Non-scaling strokes repeat the dash
      near the destination before drawing has reached it. Keep the ink width
@@ -150,6 +171,7 @@
   .commute-pin .commute-pin-symbol { stroke: var(--color-accent-warm); }
   .commute-incident path { stroke: var(--color-warning); fill: var(--color-surface-1); stroke-width: calc(var(--commute-line-thin) * 2); }
   .commute-incident text { fill: var(--color-warning); text-anchor: middle; font: bold var(--text-xs) var(--font-family); }
+  .commute-incident.is-camera :is(rect, circle), .commute-incident.is-weather path { stroke: var(--color-text-secondary); fill: var(--color-surface-1); stroke-width: var(--commute-line-thin); vector-effect: non-scaling-stroke; }
   .commute-card { position: absolute;
     display: flex; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-xl);
     background: color-mix(in srgb, var(--ambient-glass-ground, var(--color-surface-1)) var(--commute-card-opacity), transparent); color: var(--color-text-primary); box-shadow: var(--elevation-overlay-shadow); pointer-events: none; }
@@ -159,7 +181,10 @@
   .commute-copy h2 { font-size: var(--text-lg); font-weight: var(--font-weight-semibold); margin: 0 0 var(--space-1); }
   .commute-copy p { margin: var(--space-1) 0 0; font-size: var(--text-base); line-height: var(--leading-snug); }
   .commute-copy strong { color: var(--color-accent-warm); }
+  .commute-traffic-detail { opacity: 0; transition: opacity var(--duration-enter) var(--ease-out); }
+  .commute-traffic-detail.is-drawn { opacity: 1; }
   .commute-report, .commute-departure { color: var(--color-text-secondary); }
+  .commute-report { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .commute-source { display: block; margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-text-secondary); }
   .commute-extras { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
   .commute-extras span { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }

@@ -4,7 +4,7 @@ import { setRoomHeroConfig } from './room-hero-config.svelte.ts';
 
 /* Die öffentliche Demo hat keinen Companion-Server; die Bibliothek kommt aus
    vorbereiteten Assets. Dynamischer Import: kein Demo-Code im Produktbundle. */
-const IS_DEMO = import.meta.env?.VITE_DEMO === '1';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 
 /* Erkannte Flächen eines Bildsets (Paket 13): Polygone in Bildanteilen, 0…1,
    je mit einer Art. Fehlt das Feld, wurde für dieses Set noch nie erkannt.

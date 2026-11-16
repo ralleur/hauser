@@ -1,5 +1,5 @@
 import type { ScreenId } from './nav.svelte.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { m } from '../../paraglide/messages.js';
 import { HOUSEHOLD_DATA_SOURCE, NAV_SCREENS, NAV_TABS } from '../config/household-runtime-data.ts';
 

@@ -69,6 +69,18 @@ export async function changeLocale(
     import('./app.svelte.ts'),
   ]);
   applyDemoNames(appState.rooms);
+  const { IS_DEMO } = await import('../demo/recording-mode.ts');
+  if (IS_DEMO) {
+    const [{ demoTodoSeed, translateDemoReminderTitles }, calendar, reminders, shopping, commute] = await Promise.all([
+      import('../demo/demo-mode.ts'),
+      import('./calendar.svelte.ts'), import('./reminders.svelte.ts'),
+      import('./shopping.svelte.ts'), import('./commute.svelte.ts'),
+    ]);
+    reminders.reminders.items = translateDemoReminderTitles(reminders.reminders.items);
+    const shoppingTitles = new Map(demoTodoSeed().flatMap(([, items]) => items.map(item => [item.id, item.title] as const)));
+    shopping.shopping.doneLog = shopping.shopping.doneLog.map(item => ({ ...item, title: shoppingTitles.get(item.id) ?? item.title }));
+    await Promise.all([calendar.refreshFamilyCalendar(), shopping.refreshShopping(), commute.refreshCommute()]);
+  }
 }
 
 /** Einmalig beim Start: `lang` am Dokument spiegeln (Screenreader, Silbentrennung). */

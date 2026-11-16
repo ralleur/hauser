@@ -5,7 +5,7 @@
    Haushaltsänderungen; danach heißt der Raum sofort überall so. Die Demo hat
    keinen Server und benennt nur für diese Sitzung um. */
 import { ROOM_SEED, appState } from './app.svelte.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 
 export const ROOM_NAME_MAX = 60;
 

@@ -871,7 +871,7 @@ export function createHmiServer(
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode),
   });
   const commute = createCommuteService({ configStore, clientFactory: laundryClientFactory,
-    resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode), readForecast: () => weather.read() });
+    resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode), readForecast: () => weather.read(), readRouteSnow: weather.readRouteSnow });
   /* Companion-App (Plan 21): gekoppelte Geräte und die Dateilisten, mit
      denen die App Bundle und Raumbilder spiegelt. */
   const devices = deviceStore ?? createDeviceStore(pairingDevicesPath);

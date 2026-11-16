@@ -6,7 +6,7 @@
   import { m } from '../../../paraglide/messages.js';
   import { appState } from '../../state/app.svelte.ts';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { intlLocale } from '../../state/locale.svelte.ts';
   import {
     assignRoomImage,

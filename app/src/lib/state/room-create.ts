@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 import { ROOM_SEED } from './app.svelte.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { cleanRoomName } from './room-rename.ts';
 
 /* R56: Ein neuer Bereich in Home Assistant wird ein Raum. Der Server legt ihn

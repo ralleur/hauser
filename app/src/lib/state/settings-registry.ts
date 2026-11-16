@@ -1,6 +1,6 @@
 import { m } from '../../paraglide/messages.js';
 import { AI_CUSTOMIZING_ENABLED, ROOM_IMAGE_WIZARD_ENABLED } from '../config/product-capabilities.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 /* ============================================
    Einstellungs-Registry — die eine Quelle für Gruppen, Sektionen (Sidebar) und
    durchsuchbare Einträge (Chrome-Settings-artige Suche). Pure Daten +
@@ -285,7 +285,7 @@ const ALL_SETTINGS_ENTRIES: readonly SettingsEntry[] = [
   { id: 'commute-schedule', needsServer: true, section: 'commute', get label() { return m.commute_days(); },
     keywords: ['bürotage', 'wochentage', 'homeoffice', 'morgen', 'abfahrt', 'ankunft', 'zeitfenster', 'arbeitsweg'] },
   { id: 'commute-extras', needsServer: true, section: 'commute', get label() { return m.commute_extras(); },
-    keywords: ['regen', 'wetter', 'parkplatz', 'parken', 'p+r', 'park and ride', 'arbeitsweg'] },
+    keywords: ['regen', 'schnee', 'wetter', 'arbeitsweg'] },
   { id: 'calendar-selection', section: 'calendar', get label() { return m.settings_entry_calendar_selection_label(); },
     keywords: ['auswahl', 'familie', 'termine', 'agenda', 'entität', 'anzeigen', 'ausblenden'] },
   { id: 'reminders-selection', section: 'calendar', get label() { return m.settings_entry_reminders_selection_label(); },

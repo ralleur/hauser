@@ -9,7 +9,7 @@
 import { m } from '../../paraglide/messages.js';
 import { PERSON_LABELS, type ReminderPerson } from './reminders.ts';
 import { sharedStorage } from './shared-config.ts';
-import { DEMO_REMINDER_PERSONS, IS_DEMO } from '../demo/demo-mode.ts';
+import { demoSeeds, IS_DEMO } from '../demo/recording-mode.ts';
 
 export interface PostitColor {
   id: string;
@@ -42,7 +42,7 @@ export const POSTIT_COLORS: readonly PostitColor[] = [
   { id: 'grau', paper: '#e2e8f0', ink: '#1f2937', muted: '#556172' },
 ];
 
-export const DEFAULT_REMINDER_PERSONS: readonly ReminderPersonConfig[] = IS_DEMO ? DEMO_REMINDER_PERSONS : [
+export const DEFAULT_REMINDER_PERSONS: readonly ReminderPersonConfig[] = demoSeeds.people ?? [
   { id: 'alex', label: null, color: 'gruen' },
   { id: 'sam', label: null, color: 'gelb' },
   { id: 'beide', label: null, color: 'gelbgruen' },

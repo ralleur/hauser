@@ -1,3 +1,4 @@
+import { RECORDING_DEMO, demoSeeds } from '../demo/recording-mode.ts';
 /* ============================================
    FakeBackend (ADR-017) — Schicht-1-Attrappe hinter dem Backend-Interface.
    Hält die Fake-Wahrheit intern und echot Commands als State-Updates zurück,
@@ -99,6 +100,7 @@ export class FakeBackend implements Backend {
   }
 
   async listCalendarSources(): Promise<CalendarSource[]> {
+    if (RECORDING_DEMO) return (await import('../demo/recording-data.ts')).recordingCalendars();
     return [{ entityId: 'calendar.familie', name: 'Familie', color: '#67a4ff' }];
   }
 
@@ -140,6 +142,7 @@ export class FakeBackend implements Backend {
   }
 
   async getCalendarEvents(entityId: string, start: Date, end: Date): Promise<CalendarEvent[]> {
+    if (RECORDING_DEMO) return (await import('../demo/recording-data.ts')).recordingEvents(entityId).filter(item => new Date(item.start) < end && new Date(item.end) > start);
     if (entityId !== 'calendar.familie') return [];
     // An „heute" verankert (nicht am Fenster-Start), damit der aktuelle Tag im
     // Monatsraster und in der Ambient-Zeile stets belegt ist — offset in Tagen.
@@ -185,7 +188,10 @@ export class FakeBackend implements Backend {
   /* Listen sind in der Demo veränderlich: die Einkaufsliste schreibt über
      addTodoItem/setTodoItemStatus in dieselben Einträge. */
   async getReminders(entityId: string): Promise<Reminder[]> {
-    return structuredClone(this.#todoItems(entityId));
+    const items = structuredClone(this.#todoItems(entityId));
+    if (!demoSeeds.todo) return items;
+    const titles = new Map(demoSeeds.todo().flatMap(([, items]) => items.map(item => [item.id, item.title] as const)));
+    return items.map(item => ({ ...item, title: titles.get(item.id) ?? item.title }));
   }
 
   async addTodoItem(entityId: string, title: string): Promise<void> {

@@ -10,7 +10,7 @@
   import { pulse } from '../actions/pulse.ts';
   import { fmtTime } from '../format.ts';
   import type { MediaValue } from '../adapter/types.ts';
-  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { IS_DEMO } from '../demo/recording-mode.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { loadMediaPresets, saveMediaPresets } from '../state/media-presets.ts';
 

@@ -19,7 +19,7 @@
   import { refreshFamilyCalendar } from '../../state/calendar.svelte.ts';
   import { serviceProbes, probeLocalServices } from '../../state/service-probes.svelte.ts';
   import { confirmThen, isConfirming } from '../../state/settings-actions.svelte.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { m } from '../../../paraglide/messages.js';
   import { aiHealth, checkAiHealth } from '../../state/ai-health.svelte.ts';
   import { AMBIENT_LLM_DEFAULT_MODEL } from '../../state/ambient-copy-client.ts';

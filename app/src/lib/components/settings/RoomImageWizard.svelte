@@ -13,7 +13,7 @@
   import { getRoomImageAccess, type RoomImageAccessStatus } from '../../state/room-image-access.ts';
   import { appState } from '../../state/app.svelte.ts';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { assignRoomImage, loadRoomImageLibrary } from '../../state/room-image-library-client.ts';
   import { setRoomImageStage } from '../../state/room-image-activity.svelte.ts';
   import {

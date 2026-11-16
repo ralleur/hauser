@@ -6,7 +6,7 @@
      Einträge lassen sich vorher aufklappen. */
   import { onMount } from 'svelte';
   import { m } from '../../paraglide/messages.js';
-  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { IS_DEMO } from '../demo/recording-mode.ts';
   import { buildInfo, loadBuildInfo } from '../state/build-info.svelte.ts';
   import { localeLabel } from '../state/locale.svelte.ts';
   import { closeFeedback, feedbackClientInfo, loadErrorBook, sendFeedback, type ErrorBookEntry, type FeedbackKind, type FeedbackOutcome } from '../state/feedback.svelte.ts';

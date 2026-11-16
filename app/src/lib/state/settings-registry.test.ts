@@ -80,9 +80,9 @@ describe('settings registry', () => {
    Objekt, das die Einstellung betrifft — niemals nach der Technik dahinter.
    Diese Zuordnung ist der Zweck der Registry und wird deshalb festgehalten. */
 describe('fachliche Gliederung', () => {
-  it('macht den Arbeitsweg als eigene Inhaltsseite über Route, Bürotage und Parkplatz auffindbar', () => {
+  it('macht den Arbeitsweg als eigene Inhaltsseite über Route, Bürotage und Wetter auffindbar', () => {
     expect(settingsSection('commute').group).toBe('content');
-    for (const query of ['pendeln', 'bürotage', 'parkplatz']) {
+    for (const query of ['pendeln', 'bürotage', 'schnee']) {
       expect(searchSettings(query).some((match) => match.section.id === 'commute')).toBe(true);
     }
   });

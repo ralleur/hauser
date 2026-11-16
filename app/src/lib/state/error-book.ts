@@ -8,7 +8,7 @@
    geht ein Bündel an `/api/errors`. Namen und Werte entfernt der Server beim
    Eintragen — dort sitzt die Grenze für alle Quellen.
    ============================================ */
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 
 interface PendingError { where: string; kind: string; detail: string; count: number }
 

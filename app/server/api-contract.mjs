@@ -113,7 +113,7 @@ export const API_ROUTES = [
 
   /* ── Ambient ── */
   { id: 'commute', methods: ['GET'], path: '/api/commute', area: 'ambient', access: 'origin', purpose: 'Arbeitsweg aus der HA-TomTom-Integration, ohne Anbieterzugangsdaten.' },
-  { id: 'commuteAdmin', methods: ['GET', 'PUT'], path: '/api/admin/commute', area: 'ambient', access: 'admin', purpose: 'HA-Route, Bürotage, Morgenfenster, Ankunft und optional P+R wählen.' },
+  { id: 'commuteAdmin', methods: ['GET', 'PUT'], path: '/api/admin/commute', area: 'ambient', access: 'admin', purpose: 'HA-Route, Bürotage, Morgenfenster und Ankunftszeiten wählen.' },
   { id: 'commutePreview', methods: ['POST'], path: '/api/admin/commute/preview', area: 'ambient', access: 'admin', purpose: 'Aktuelle HA-TomTom-Daten für die Arbeitsweg-Vorschau auch außerhalb des Zeitfensters laden.' },
   { id: 'commutePlaces', methods: ['GET'], path: '/api/admin/commute/places', area: 'ambient', access: 'admin', purpose: 'Adressen über die HA-TomTom-Integration suchen.' },
   { id: 'commuteRoute', methods: ['GET', 'PUT'], path: '/api/admin/commute/route', area: 'ambient', access: 'admin', purpose: 'Start und Arbeitsort einer HA-TomTom-Route lesen, anlegen und bearbeiten.' },

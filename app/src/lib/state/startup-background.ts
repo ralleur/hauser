@@ -1,6 +1,6 @@
 import { installHaRetryFactory } from '../adapter/ha-backend.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
-import { reapplyDemoNames } from '../demo/demo-mode.ts';
+import { IS_DEMO, reapplyDemoNames } from '../demo/recording-mode.ts';
 import { appState, ROOM_SEED } from './app.svelte.ts';
 import { syncAuthState } from './auth.svelte.ts';
 import { startQueryRevalidation } from '../data/revalidation.ts';
@@ -58,7 +58,7 @@ export function rehydrateSharedConfigConsumers(): void {
   rehydrateCentralClimate();
   rehydrateShoppingConfig();
   rehydrateReminderPersons();
-  settingsValues.demoMode = readShared('hmi:backend') === 'fake';
+  settingsValues.demoMode = IS_DEMO || readShared('hmi:backend') === 'fake';
   settingsValues.haUrl = readShared('hmi:ha-url') ?? '';
   settingsValues.jellyfinUrl = readShared('hmi:jf-url') ?? '';
   settingsValues.libraryMode = (readShared('hmi:library') ?? 'auto') as 'auto' | 'live' | 'fake';

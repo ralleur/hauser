@@ -1,3 +1,4 @@
+import { RECORDING_DEMO } from '../demo/recording-mode.ts';
 /* ── Datenschicht: Snapshot-Cache mit Staleness ──
 
    Jede Leseabfrage (Kalender, Erinnerungen, Einkaufsliste, Bibliothek …)
@@ -96,7 +97,7 @@ const localBackend: RawBackend = {
   },
 };
 
-const DB_NAME = 'hauser-query-cache';
+const DB_NAME = RECORDING_DEMO ? 'hauser-recording-query-cache' : 'hauser-query-cache';
 const STORE = 'snapshots';
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 

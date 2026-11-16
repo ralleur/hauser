@@ -737,7 +737,6 @@ describe('productive household bootstrap cutover', () => {
       .map((path) => relative(appRoot, path).replaceAll('\\', '/'))
       .sort();
     const expectedGraph = [
-      'config/households/current-v1.json',
       'src/lib/config/household-config-compiler.ts',
       'src/lib/config/household-config-runtime.ts',
       'src/lib/config/household-config-schema.ts',
@@ -746,7 +745,7 @@ describe('productive household bootstrap cutover', () => {
       'src/lib/config/household-runtime-data.ts',
       'src/lib/config/legacy-household-config.ts',
       'src/lib/config/legacy-household-data.ts',
-      'src/lib/demo/demo-mode.ts',
+      'src/lib/demo/recording-mode.ts',
       'src/lib/shells/MinimalAppShell.svelte',
       'src/lib/shells/minimal-shell-loader.ts',
       'src/main.ts',
@@ -780,7 +779,7 @@ describe('productive household bootstrap cutover', () => {
 
   it('detects a forbidden productive import from another real pre-paint module', () => {
     const mainUrl = new URL('../../main.ts', import.meta.url);
-    const demoUrl = new URL('../demo/demo-mode.ts', import.meta.url);
+    const demoUrl = new URL('../demo/recording-mode.ts', import.meta.url);
     const demoSource = readFileSync(demoUrl, 'utf8');
     const poisonedGraph = collectProductivePrePaintSourceGraph(mainUrl.pathname, {
       sourceOverrides: new Map([[

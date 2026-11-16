@@ -12,7 +12,7 @@ import { EntityStore } from './entity-store.svelte.ts';
 import { FakeBackend } from './fake-backend.ts';
 import { LazyPlatformBackend } from './platform-backend-lazy.ts';
 import '../native/bridge.ts';
-import { demoEnergySeed, demoTodoSeed } from '../demo/demo-mode.ts';
+import { demoSeeds } from '../demo/recording-mode.ts';
 import { HaBackend, type HaTransport } from './ha-backend.ts';
 import { reconcile, subsetMatch, mergePatch, COMMAND_TIMEOUT_MS, CONFIDENCE_TIMEOUT_MS } from './overlay.ts';
 import { enqueue } from './command-queue.ts';
@@ -499,7 +499,7 @@ export const seed = new Map<string, unknown>([
   // Laundry remains empty until Home Assistant sends a fresh raw state.
   // Demo-Build: Energie-Sensoren bekommen Startwerte, sonst zeigt der Screen
   // nur „—" (leer außerhalb der Demo).
-  ...demoEnergySeed(),
+  ...(demoSeeds.energy?.() ?? []),
 ]);
 
 // The website starts with every lamp off in the backend's initial truth,
@@ -585,7 +585,7 @@ export function usePlatform(): boolean {
 export let backend: Backend = usePlatform()
   ? new LazyPlatformBackend(window.HauserNative!.home!)
   : useFake()
-  ? new FakeBackend(seed, undefined, undefined, demoTodoSeed())
+  ? new FakeBackend(seed, undefined, undefined, demoSeeds.todo?.())
   : new HaBackend({
       // Erst in start() nach dem Shared-Config-Sync auflösen; der Modulimport
       // darf noch mit dem lokalen letzten Stand die Shell erzeugen.

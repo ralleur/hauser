@@ -46,6 +46,40 @@ export function homeLocationFromHaConfig(payload) {
   return { latitude, longitude };
 }
 
+function routeWeatherPoints(points) {
+  const distances = [0];
+  for (let i = 1; i < points.length; i++) {
+    const [lat, lon] = points[i], [previousLat, previousLon] = points[i - 1];
+    const length = Math.hypot(lat - previousLat, (lon - previousLon) * Math.cos((lat + previousLat) * Math.PI / 360));
+    distances.push(distances[i - 1] + length);
+  }
+  const total = distances.at(-1);
+  const samples = [points[0], points.at(-1)];
+  for (const fraction of [1 / 3, 2 / 3]) {
+    const target = total * fraction;
+    const i = distances.findIndex((distance, index) => index > 0 && distance >= target);
+    if (i < 1 || distances[i] === distances[i - 1]) continue;
+    const weight = (target - distances[i - 1]) / (distances[i] - distances[i - 1]);
+    samples.push(points[i - 1].map((start, axis) => start + (points[i][axis] - start) * weight));
+  }
+  return [...new Set(samples.map(([lat, lon]) => `${lat.toFixed(2)},${lon.toFixed(2)}`))].map((point) => point.split(','));
+}
+
+function earliestSnow(forecasts, timestamp) {
+  let first = Infinity;
+  for (const forecast of forecasts) {
+    const times = forecast?.minutely_15?.time, snowfall = forecast?.minutely_15?.snowfall;
+    if (!Array.isArray(times) || !Array.isArray(snowfall)) continue;
+    for (const [i, seconds] of times.entries()) {
+      const end = seconds * 1000;
+      if (Number.isFinite(seconds) && snowfall[i] > 0 && end > timestamp && end <= timestamp + 2 * 60 * 60_000) {
+        first = Math.min(first, Math.max(timestamp, end - 15 * 60_000));
+      }
+    }
+  }
+  return first === Infinity ? null : new Date(first).toISOString();
+}
+
 export function createWeatherService({
   clientFactory,
   resolveCredentials,
@@ -58,6 +92,7 @@ export function createWeatherService({
   let location = null;   // { value, at }
   let cache = null;      // { data, at }
   let inflight = null;
+  let routeSnow = null;
 
   async function readLocation() {
     if (location && now() - location.at < locationTtlMs) return location.value;
@@ -118,7 +153,26 @@ export function createWeatherService({
     return inflight;
   }
 
-  return { read };
+  async function readRouteSnow(points) {
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const samples = routeWeatherPoints(points);
+    const key = JSON.stringify(samples);
+    const timestamp = now();
+    if (routeSnow?.key !== key || timestamp - routeSnow.at >= ttlMs) {
+      const params = new URLSearchParams({ latitude: samples.map(([lat]) => lat).join(','), longitude: samples.map(([, lon]) => lon).join(','),
+        minutely_15: 'snowfall', forecast_minutely_15: '9', timeformat: 'unixtime' });
+      const forecasts = (async () => {
+        const response = await fetchImpl(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(Math.min(timeoutMs, 4000)) });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data) ? data : [data];
+      })().catch(() => []);
+      routeSnow = { key, at: timestamp, forecasts };
+    }
+    return earliestSnow(await routeSnow.forecasts, timestamp);
+  }
+
+  return { read, readRouteSnow };
 }
 
 export async function serveWeather(req, res, service) {

@@ -19,7 +19,7 @@ import {
 } from '../config/household-runtime-data.ts';
 import { energyRefIds } from '../config/legacy-household-data.ts';
 import { appState, ROOM_SEED, type RoomSeed, type MediaSeed } from './app.svelte.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 
 export {
   LAUNDRY_ENTITIES,

@@ -10,6 +10,8 @@ import { backend } from '../adapter/runtime.svelte.ts';
 import { HaBackend } from '../adapter/ha-backend.ts';
 import { loadAvailableCalendars } from './calendar.svelte.ts';
 import { sharedStorage } from './shared-config.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
+import { setRecordingDemo } from '../demo/recording-mode.ts';
 
 function lsGet(key: string): string | null {
   try { return sharedStorage.getItem(key); } catch { return null; }
@@ -118,7 +120,7 @@ function loadStandbyMinutes(): number | null {
 }
 
 export const settingsValues = $state({
-  demoMode: lsGet('hmi:backend') === 'fake',
+  demoMode: IS_DEMO || lsGet('hmi:backend') === 'fake',
   haUrl: lsGet('hmi:ha-url') ?? '',
   jellyfinUrl: lsGet('hmi:jf-url') ?? '',
   paperlessUrl: lsGet('hmi:paperless-url') ?? '',
@@ -284,8 +286,8 @@ export function setOffConfirmBefore(value: string | null): void {
    Umschaltung greift deshalb erst nach einem Neuladen. */
 export function setDemoMode(on: boolean): void {
   settingsValues.demoMode = on;
-  lsSet('hmi:backend', on ? 'fake' : null);
-  settingsUi.needsReload = true;
+  if (!on && !IS_DEMO && lsGet('hmi:backend') === 'fake') lsSet('hmi:backend', null);
+  setRecordingDemo(on);
 }
 
 /* HA-Basis-URL: backend/runtime-Singleton entsteht beim App-Start → Neuladen nötig.

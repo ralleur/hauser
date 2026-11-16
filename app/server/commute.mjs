@@ -2,11 +2,12 @@
  * Morgenpendeln: TomTom bleibt die HA-Datenquelle; Hauser zeichnet und zeigt.
  * Keine Anbieter-Schlüssel, keine eigenen Routing-Abfragen. */
 import { jsonResponse, readRoomImageJsonBody, requestOriginAllowed } from './shared.mjs';
-import { commutePlace, writeTomTomRoute } from './commute-route-editor.mjs';
+import { commutePlace, TomTomRouteNameConflict, writeTomTomRoute } from './commute-route-editor.mjs';
 import { classifyArea, joinAreaRings, clipAreaRing, clipPolyline } from './ambient-map-renderer.mjs';
+import { commuteOverviewTiles, loadCommuteOverview } from './commute-overview.mjs';
 
 export const COMMUTE_KEY = 'hmi:commute:v1';
-export const DEFAULT_COMMUTE = Object.freeze({ entryId: '', days: [1, 2, 3, 4, 5], from: '06:00', until: '09:00', arrival: '08:00', parkingEntity: '', showRain: true });
+export const DEFAULT_COMMUTE = Object.freeze({ entryId: '', days: [1, 2, 3, 4, 5], from: '06:00', until: '09:00', arrival: '08:00', showRain: true });
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_AGE = 30 * 60_000;
 const text = (v, limit = 180) => typeof v === 'string' ? v.slice(0, limit) : '';
@@ -41,20 +42,40 @@ function visibleMapRing(ring) {
   for (let i = 1; i < ring.length; i++) twiceArea += ring[i - 1][0] * ring[i][1] - ring[i][0] * ring[i - 1][1];
   return Math.abs(twiceArea) >= 1;
 }
-// Overscan on every edge keeps auto-alignment inside rendered geography.
-const MAP_BOUNDS = { minX: -150, maxX: 1150, minY: -90, maxY: 690 };
+const DEFAULT_MAP_BOUNDS = { minX: -150, maxX: 1150, minY: -90, maxY: 690 };
+const MAP_EXTENT_LIMIT = Symbol('commute map extent limit');
+
+function requestedMapBounds(value) {
+  if (value === null) return DEFAULT_MAP_BOUNDS;
+  if (value === 'route') return null;
+  const coords = value.split(',');
+  if (coords.length !== 4 || coords.some((n) => !/^-?\d{1,5}$/.test(n))) return null;
+  const [minX, minY, maxX, maxY] = coords.map(Number);
+  if (coords.some((n) => Math.abs(Number(n)) > 8192)) return MAP_EXTENT_LIMIT;
+  return minX < 500 && maxX > 500 && minY < 280 && maxY > 280 ? { minX, minY, maxX, maxY } : null;
+}
 
 export function parseCommuteConfig(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || typeof value.entryId !== 'string' || !/^[\w-]{0,80}$/.test(value.entryId)
     || !Array.isArray(value.days) || value.days.length > 7 || !value.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)
     || ![value.from, value.until, value.arrival].every((v) => typeof v === 'string' && CLOCK.test(v))
-    || typeof value.parkingEntity !== 'string' || (value.parkingEntity !== '' && !/^(sensor|binary_sensor)\.[a-z0-9_]+$/.test(value.parkingEntity))
     || (value.showRain !== undefined && typeof value.showRain !== 'boolean')
     || (value.entryId && (!value.days.length || value.from === value.until))) return null;
+  const { arrivals, nextArrival } = value;
+  if (arrivals !== undefined && (!arrivals || typeof arrivals !== 'object' || Array.isArray(arrivals)
+    || Object.entries(arrivals).some(([day, time]) => !/^[0-6]$/.test(day) || typeof time !== 'string' || !CLOCK.test(time)))) return null;
+  if (nextArrival !== undefined) {
+    if (!nextArrival || typeof nextArrival.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(nextArrival.date)
+      || typeof nextArrival.time !== 'string' || !CLOCK.test(nextArrival.time)) return null;
+    const date = new Date(`${nextArrival.date}T00:00:00Z`);
+    if (!Number.isFinite(+date) || date.toISOString().slice(0, 10) !== nextArrival.date) return null;
+  }
   const places = value.places && { start: commutePlace(value.places.start), destination: commutePlace(value.places.destination) };
   if (value.places && (!places.start || !places.destination)) return null;
-  return { entryId: value.entryId, days: [...new Set(value.days)], from: value.from, until: value.until, arrival: value.arrival, parkingEntity: value.parkingEntity, showRain: value.showRain ?? true, ...(places ? { places } : {}) };
+  return { entryId: value.entryId, days: [...new Set(value.days)], from: value.from, until: value.until, arrival: value.arrival, showRain: value.showRain ?? true,
+    ...(arrivals && Object.keys(arrivals).length ? { arrivals } : {}),
+    ...(nextArrival ? { nextArrival: { date: nextArrival.date, time: nextArrival.time } } : {}), ...(places ? { places } : {}) };
 }
 
 export function commuteInWindow(config, date) {
@@ -81,9 +102,15 @@ export function commuteGeometry(route) {
     .map((s) => ({ points: s.points.map(project), severe: Number(s.magnitude) >= 3 || Number(s.delay) >= 300, category: text(s.category, 40) }));
   return {
     line, sections, project,
-    bounds: [cy + (280 - MAP_BOUNDS.maxY) / scale, (cx + (MAP_BOUNDS.minX - 500) / scale) / cos,
-      cy + (280 - MAP_BOUNDS.minY) / scale, (cx + (MAP_BOUNDS.maxX - 500) / scale) / cos],
+    geographicBounds: ({ minX, minY, maxX, maxY }) => [cy + (280 - maxY) / scale, (cx + (minX - 500) / scale) / cos,
+      cy + (280 - minY) / scale, (cx + (maxX - 500) / scale) / cos],
   };
+}
+
+function reportGroup(category) {
+  if (category.startsWith('camera_')) return 'camera';
+  if (['fog', 'rain', 'ice', 'wind', 'flooding'].includes(category)) return 'weather';
+  return 'traffic';
 }
 
 export function projectCommute(config, route, states, registry, now = Date.now()) {
@@ -96,15 +123,15 @@ export function projectCommute(config, route, states, registry, now = Date.now()
   const reports = states.filter((s) => owned.has(s.entity_id) && s.entity_id.startsWith('geo_location.') && goodState(s))
     .map((s) => {
       const a = s.attributes ?? {};
-      return { title: text(a.summary || a.description || a.friendly_name), category: text(a.type, 40), delay: numeric(a.delay) ?? 0,
+      const category = text(a.type, 40);
+      return { title: text(a.summary || a.description || a.friendly_name), category, group: reportGroup(category), delay: numeric(a.delay) ?? 0,
         point: point([a.latitude, a.longitude]) ? geometry.project([a.latitude, a.longitude]) : null };
-    }).sort((a, b) => b.delay - a.delay).slice(0, 20);
-  const parking = states.find((s) => s.entity_id === config.parkingEntity && goodState(s));
-  const parkingAge = parking ? now - Date.parse(parking.last_updated) : Infinity;
+    }).sort((a, b) => b.delay - a.delay);
+  const cameras = reports.filter((report) => report.group === 'camera');
   return { name: text(route.destination?.label, 80), durationMinutes: Math.ceil(duration / 60), delayMinutes: delay === null ? null : Math.ceil(delay / 60),
-    updatedAt: new Date(computedAt).toISOString(), line: geometry.line, sections: geometry.sections, reports,
-    parking: parking && parkingAge >= -60_000 && parkingAge < MAX_AGE
-      ? { name: text(parking.attributes?.friendly_name, 80), state: text(parking.state, 60), unit: text(parking.attributes?.unit_of_measurement, 20) } : null };
+    updatedAt: new Date(computedAt).toISOString(), line: geometry.line, sections: geometry.sections, cameraCount: cameras.length,
+    reports: [...reports.filter((report) => report.group === 'traffic').slice(0, 12),
+      ...reports.filter((report) => report.group === 'weather').slice(0, 4), ...cameras.slice(0, 4)] };
 }
 
 export function rainStart(forecast, now) {
@@ -122,8 +149,9 @@ export function rainStart(forecast, now) {
   return null;
 }
 
-export function createCommuteService({ configStore, clientFactory, resolveCredentials, readForecast = async () => null, fetchImpl = fetch, now = () => Date.now() }) {
-  let cache = null, inflight = null, roadCache = null, roadsFlight = null, previewFlight = null;
+export function createCommuteService({ configStore, clientFactory, resolveCredentials, readForecast = async () => null, readRouteSnow = async () => null, fetchImpl = fetch, now = () => Date.now() }) {
+  let cache = null, inflight = null, roadsFlight = null, mapFailure = null, previewFlight = null;
+  const roadCache = new Map();
   function config() {
     try { return parseCommuteConfig(JSON.parse(configStore.read()[COMMUTE_KEY])) ?? { ...DEFAULT_COMMUTE }; }
     catch { return { ...DEFAULT_COMMUTE }; }
@@ -154,19 +182,34 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
       ids.set(entry.config_entry_id, { id: entry.config_entry_id, name: text(state.attributes.friendly_name || entry.original_name || entry.entity_id, 100) });
     }
     const home = states.find((s) => s.entity_id === 'zone.home');
-    return { config: config(), home: commutePlace({ ...home?.attributes, label: home?.attributes?.friendly_name || 'Home' }), routes: [...ids.values()], parking: states.filter((s) => /^(sensor|binary_sensor)\./.test(s.entity_id))
-      .map((s) => ({ id: s.entity_id, name: text(s.attributes?.friendly_name || s.entity_id, 100) })) };
+    return { config: config(), home: commutePlace({ ...home?.attributes, label: home?.attributes?.friendly_name || 'Home' }), routes: [...ids.values()] };
   }
-  function roadsFor(route) {
-    const geo = commuteGeometry(route);
-    if (!geo) return { roads: [], areas: [] };
-    const key = geo.bounds.map((n) => n.toFixed(4)).join(',');
-    if (roadCache?.key === key) return roadCache.map;
+  function roadsFor(geo, bounds) {
+    if (bounds === MAP_EXTENT_LIMIT) return { roads: [], areas: [], mapStatus: 'too-large' };
+    const [south, west, north, east] = geo.geographicBounds(bounds);
+    if (south < -85.0511 || north > 85.0511 || west < -180 || east > 180) return { roads: [], areas: [], mapStatus: 'too-large' };
+    const key = [south, west, north, east].map((n) => n.toFixed(5)).concat(Object.values(bounds)).join(',');
+    if (roadCache.has(key)) return roadCache.get(key);
+    if (mapFailure?.key === key && now() - mapFailure.at < 60_000) {
+      return { roads: [], areas: [], mapStatus: 'unavailable' };
+    }
     if (!roadsFlight) {
       roadsFlight = (async () => {
-        const [south, west, north, east] = geo.bounds;
-        // Limit the OSM query to a regional commute, and coarsen long routes.
-        if (north - south > 3 || east - west > 5) return;
+        if (north - south > 1.2 || east - west > 1.8) {
+          // Predrawn vector tiles keep the number of downloads and the level of detail bounded.
+          const tiles = commuteOverviewTiles([south, west, north, east]);
+          const geometry = await loadCommuteOverview(tiles, geo.project, bounds, fetchImpl);
+          const roads = geometry.roads.map(simplifyMapLine).filter((line) => line.length > 1);
+          const areas = geometry.areas.flatMap(({ layer, rings: [outer, ...holes] }) => {
+            if (!visibleMapRing(outer)) return [];
+            const outline = simplifyMapLine(outer);
+            if (outline.length < 4) return [];
+            return [{ layer, rings: [outline, ...holes.filter(visibleMapRing).map(simplifyMapLine).filter((ring) => ring.length >= 4)] }];
+          });
+          if (roads.length || areas.length) return { roads, areas, mapKey: `overview-v1:${key}`, mapStatus: 'ready', mapSource: 'openfreemap' };
+          return;
+        }
+        // Coarsen regional routes.
         const regional = north - south > .3 || east - west > .4;
         const types = regional ? 'motorway|trunk|primary|secondary' : 'motorway|trunk|primary|secondary|tertiary|residential';
         const landuse = regional ? 'reservoir|forest|recreation_ground|village_green' : 'reservoir|forest|meadow|grass|recreation_ground|village_green';
@@ -193,7 +236,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
             const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
             if (data.remark || !Array.isArray(data.elements) || !data.elements.length) continue;
             const roads = data.elements.filter((w) => w.tags?.highway && Array.isArray(w.geometry) && w.geometry.length >= 2).slice(0, 12_000)
-              .flatMap((w) => clipPolyline(w.geometry.filter((p) => point([p.lat, p.lon])).map((p) => geo.project([p.lat, p.lon])), MAP_BOUNDS))
+              .flatMap((w) => clipPolyline(w.geometry.filter((p) => point([p.lat, p.lon])).map((p) => geo.project([p.lat, p.lon])), bounds))
               .map(simplifyMapLine).filter((l) => l.length > 1);
             const areas = data.elements.flatMap((element) => {
               const layer = classifyArea(element.tags);
@@ -208,59 +251,69 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
                 if (!outer.length) return [];
                 rings = [...outer, ...joinAreaRings(members.filter((m) => m.role === 'inner').map((m) => project(m.geometry)))];
               } else return [];
-              rings = rings.map((ring) => clipAreaRing(ring, MAP_BOUNDS)).filter(visibleMapRing).map(simplifyMapLine).filter((ring) => ring.length >= 4);
+              rings = rings.map((ring) => clipAreaRing(ring, bounds)).filter(visibleMapRing).map(simplifyMapLine).filter((ring) => ring.length >= 4);
               return rings.length ? [{ layer, rings }] : [];
             });
-            const map = { roads, areas, mapKey: `overscan-v1:${key}` };
-            roadCache = { key, map };
-            if (cache?.roadsKey === key && cache.route) Object.assign(cache.route, map);
-            return;
+            if (roads.length || areas.length) return { roads, areas, mapKey: `overscan-v2:${key}`, mapStatus: 'ready' };
           } catch { /* Try the same alternate map source as the home map. */ }
         }
-      })().catch(() => {}).finally(() => { roadsFlight = null; });
+      })().catch(() => null).then((map) => {
+        if (map) {
+          roadCache.set(key, map);
+          if (roadCache.size > 3) roadCache.delete(roadCache.keys().next().value);
+        } else mapFailure = { key, at: now() };
+      }).finally(() => { roadsFlight = null; });
     }
-    return { roads: [], areas: [] };
+    return { roads: [], areas: [], mapStatus: 'loading' };
   }
-  async function read() {
+  function withMap({ geometry, ...status }, bounds) {
+    if (!status.route) return status;
+    const map = bounds ? roadsFor(geometry, bounds) : { roads: [], areas: [] };
+    return { ...status, route: { ...status.route, ...map } };
+  }
+  async function readRoute() {
     const selected = config();
     if (!selected.entryId) return { config: selected, route: null };
-    if (cache && cache.id === selected.entryId && now() - cache.at < 60_000) return { config: selected, route: cache.route };
+    if (cache && cache.id === selected.entryId && now() - cache.at < 60_000) return { config: selected, route: cache.route, geometry: cache.geometry };
     if (inflight) return inflight;
     inflight = (async () => {
       try {
         const { registry, states } = await sources();
         const raw = await withClient((client) => client.ws('tomtom/route', { config_entry_id: selected.entryId }));
         const route = projectCommute(selected, raw, states, registry, now());
-        if (route) {
-          Object.assign(route, roadsFor(raw));
-          route.rainAt = selected.showRain ? rainStart(await readForecast().catch(() => null), now()) : null;
+        if (route && selected.showRain) {
+          const [forecast, snowAt] = await Promise.all([readForecast().catch(() => null), readRouteSnow(raw.points).catch(() => null)]);
+          route.rainAt = rainStart(forecast, now());
+          route.snowAt = snowAt;
         }
-        cache = { id: selected.entryId, at: now(), route, roadsKey: commuteGeometry(raw)?.bounds.map((n) => n.toFixed(4)).join(',') };
-        return { config: selected, route };
+        cache = { id: selected.entryId, at: now(), route, geometry: route && commuteGeometry(raw) };
+        return { config: selected, route, geometry: cache.geometry };
       } catch { return { config: selected, route: null, unavailable: true }; }
     })().finally(() => { inflight = null; });
     return inflight;
   }
+  async function read(bounds = DEFAULT_MAP_BOUNDS) { return withMap(await readRoute(), bounds); }
   async function serve(req, res, allowedOrigins) {
     try {
       if (!requestOriginAllowed(req, allowedOrigins)) { jsonResponse(res, 403, { code: 'ORIGIN_FORBIDDEN' }); return; }
       const url = new URL(req.url, 'http://hauser.local');
       const path = url.pathname;
+      const mapBounds = requestedMapBounds(url.searchParams.get('mapBounds'));
       const responseStatus = (status) => status.route?.mapKey && status.route.mapKey === url.searchParams.get('mapKey')
         ? { ...status, route: { ...status.route, roads: undefined, areas: undefined } } : status;
       if (req.method === 'POST' && path === '/api/admin/commute/preview') {
         if (!previewFlight) {
           previewFlight = (async () => {
-            const status = await read();
+            const status = await readRoute();
             if (!status.config.entryId || (status.route && url.searchParams.get('refresh') !== '1')) return status;
             await withClient((client) => client.ws('call_service', { domain: 'tomtom', service: 'refresh',
               service_data: { config_entry_id: status.config.entryId } }), 90_000);
             if (inflight) await inflight;
             cache = null;
-            return read();
+            return readRoute();
           })().finally(() => { previewFlight = null; });
         }
-        const status = await previewFlight;
+        const status = withMap(await previewFlight, mapBounds);
         jsonResponse(res, status.route ? 200 : 503, responseStatus(status), { 'cache-control': 'no-store' }); return;
       }
       if (req.method === 'GET' && path === '/api/admin/commute/places') {
@@ -295,7 +348,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         jsonResponse(res, 200, { config: saved }); return;
       }
       if (req.method === 'GET' && path === '/api/commute') {
-        jsonResponse(res, 200, responseStatus(await read()), { 'cache-control': 'no-store' }); return;
+        jsonResponse(res, 200, responseStatus(await read(mapBounds)), { 'cache-control': 'no-store' }); return;
       }
       if (req.method === 'GET' && path === '/api/admin/commute') {
         jsonResponse(res, 200, await options(), { 'cache-control': 'no-store' }); return;
@@ -312,7 +365,13 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         jsonResponse(res, 200, { config: body }); return;
       }
       jsonResponse(res, 405, { code: 'METHOD_NOT_ALLOWED' });
-    } catch { jsonResponse(res, 503, { code: 'COMMUTE_UNAVAILABLE' }); }
+    } catch (error) {
+      if (error instanceof TomTomRouteNameConflict) {
+        jsonResponse(res, 409, { code: 'COMMUTE_ROUTE_NAME_TAKEN' });
+        return;
+      }
+      jsonResponse(res, 503, { code: 'COMMUTE_UNAVAILABLE' });
+    }
   }
   return { read, options, serve };
 }

@@ -14,10 +14,11 @@
    ============================================ */
 
 import { m } from '../../paraglide/messages.js';
+import { demoMessage } from './demo-locale.ts';
 import demoHouseholdConfig from '../../../config/households/current-v1.json';
 import { HOUSEHOLD_SCHEMA_VERSION } from '../config/household-config-schema.ts';
-
-export const IS_DEMO = import.meta.env?.VITE_DEMO === '1';
+import { IS_DEMO, RECORDING_DEMO, demoSeeds } from './recording-mode.ts';
+import { RECORDING_PEOPLE, RECORDING_HOME, recordingCommute } from './recording-data.ts';
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -37,7 +38,7 @@ const demoShoppingConfig = {
   ],
 };
 
-export const DEMO_REMINDER_PERSONS = [
+export const DEMO_REMINDER_PERSONS = RECORDING_DEMO ? RECORDING_PEOPLE : [
   { id: 'mia', label: 'Mia', color: 'gruen' },
   { id: 'leo', label: 'Leo', color: 'gelb' },
   { id: 'beide', label: null, color: 'gelbgruen' },
@@ -81,16 +82,17 @@ function publicDemoHouseholdConfig() {
     ...demoHouseholdConfig,
     rooms: demoHouseholdConfig.rooms.map((room) => ({
       ...room,
-      name: DEMO_ROOM_NAMES[room.id]?.() ?? room.name,
+      name: DEMO_ROOM_NAMES[room.id] ? demoMessage(DEMO_ROOM_NAMES[room.id]) : room.name,
       visibleEntities: [
         ...room.visibleEntities,
         ...(room.id === 'kinderzimmer' ? [
-          { id: 'nachtlicht', name: m.demo_device_nachtlicht(), entityId: 'light.demo_nachtlicht_kinderzimmer', role: 'light' },
-          { id: 'deckenlampe', name: m.demo_device_deckenlampe(), entityId: 'light.demo_deckenlampe_kinderzimmer', role: 'light' },
+          { id: 'nachtlicht', name: demoMessage(m.demo_device_nachtlicht), entityId: 'light.demo_nachtlicht_kinderzimmer', role: 'light' },
+          { id: 'deckenlampe', name: demoMessage(m.demo_device_deckenlampe), entityId: 'light.demo_deckenlampe_kinderzimmer', role: 'light' },
         ] : []),
       ].map((entity) => ({
         ...entity,
-        name: (DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role])?.() ?? entity.name,
+        name: (DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role])
+          ? demoMessage(DEMO_ENTITY_NAMES[entity.entityId] ?? DEMO_ROLE_NAMES[entity.role]) : entity.name,
       })),
     })),
     navigation: demoHouseholdConfig.navigation.filter((item) => item.target.id !== 'songs'),
@@ -141,14 +143,24 @@ function demoReminders() {
     version: 1,
     updatedAt: nowIso(),
     items: [
-      demoReminder('demo-1', `Mia - ${m.demo_todo_bike_light()}`, false),
-      demoReminder('demo-2', `Leo - ${m.demo_todo_filter()}`, false),
-      demoReminder('demo-3', `Beide - ${m.demo_todo_garage()}`, false),
-      demoReminder('demo-4', `Mia - ${m.demo_todo_plants()}`, false),
-      demoReminder('demo-5', `Leo - ${m.demo_todo_window()}`, false),
-      demoReminder('demo-6', `Beide - ${m.demo_todo_cellar()}`, true),
+      demoReminder('demo-1', `Mia - ${demoMessage(m.demo_todo_bike_light)}`, false),
+      demoReminder('demo-2', `Leo - ${demoMessage(m.demo_todo_filter)}`, false),
+      demoReminder('demo-3', `Beide - ${demoMessage(m.demo_todo_garage)}`, false),
+      demoReminder('demo-4', `Mia - ${demoMessage(m.demo_todo_plants)}`, false),
+      demoReminder('demo-5', `Leo - ${demoMessage(m.demo_todo_window)}`, false),
+      demoReminder('demo-6', `Beide - ${demoMessage(m.demo_todo_cellar)}`, true),
+      ...(RECORDING_DEMO ? [
+        demoReminder('demo-7', `Emma - ${demoMessage(m.demo_todo_plants)}`, false),
+        demoReminder('demo-8', `Emma - ${demoMessage(m.demo_todo_bike_light)}`, false),
+      ] : []),
     ],
   };
+}
+
+/** A language change updates sample titles without resetting completed tasks. */
+export function translateDemoReminderTitles<T extends { id: string; title: string }>(items: readonly T[]): T[] {
+  const titles = new Map(demoReminders().items.map(item => [`hmi:family-reminders:${item.id}`, item.title]));
+  return items.map(item => ({ ...item, title: titles.get(item.id) ?? item.title }));
 }
 
 /* Die Einkaufsliste liest `todo.*`-Listen über das Backend (shopping-lists.ts).
@@ -160,18 +172,18 @@ export function demoTodoSeed(): [string, { id: string; title: string; due: null;
     ({ id, title, due: null, completed, description: null });
   return [
     ['todo.walmart', [
-      item('demo-a1', m.demo_shop_oat_milk()),
-      item('demo-a2', m.demo_shop_tomatoes()),
-      item('demo-a3', m.demo_shop_bread(), true),
+      item('demo-a1', demoMessage(m.demo_shop_oat_milk)),
+      item('demo-a2', demoMessage(m.demo_shop_tomatoes)),
+      item('demo-a3', demoMessage(m.demo_shop_bread), true),
     ]],
     ['todo.carrefour', [
-      item('demo-r1', m.demo_shop_coffee()),
-      item('demo-r2', m.demo_shop_parmesan()),
-      item('demo-r3', m.demo_shop_olive_oil()),
+      item('demo-r1', demoMessage(m.demo_shop_coffee)),
+      item('demo-r2', demoMessage(m.demo_shop_parmesan)),
+      item('demo-r3', demoMessage(m.demo_shop_olive_oil)),
     ]],
     ['todo.tesco', [
-      item('demo-d1', m.demo_shop_toothpaste()),
-      item('demo-d2', m.demo_shop_detergent()),
+      item('demo-d1', demoMessage(m.demo_shop_toothpaste)),
+      item('demo-d2', demoMessage(m.demo_shop_detergent)),
     ]],
   ];
 }
@@ -182,6 +194,16 @@ export function demoTodoSeed(): [string, { id: string; title: string; due: null;
 const demoSongs = () => ({ songs: [] });
 
 export function demoResponse(path: string, method: string): Response | null {
+  if (RECORDING_DEMO && (path === '/api/commute' || path === '/api/admin/commute/preview')) return json(recordingCommute());
+  if (RECORDING_DEMO && path === '/api/admin/commute') {
+    const status = recordingCommute();
+    return json({ config: status.config, routes: [{ id: status.config.entryId, name: status.route!.name }], home: RECORDING_HOME });
+  }
+  if (RECORDING_DEMO && path === '/api/admin/commute/route') {
+    const status = recordingCommute();
+    return json({ ...status.config.places, name: status.route!.name });
+  }
+  if (RECORDING_DEMO && path === '/api/hotel-mode/status') return json({ enabled: false });
   if (path === '/api/health') {
     return method === 'GET'
       ? json({ ok: true, status: 'ready', schemaVersion: HOUSEHOLD_SCHEMA_VERSION }, 200, { 'cache-control': 'no-store' })
@@ -262,7 +284,7 @@ export function demoResponse(path: string, method: string): Response | null {
   }
   if (path.startsWith('/api/config')) {
     return method === 'GET'
-      ? json({ values: { 'hmi:shopping-config:v1': JSON.stringify(demoShoppingConfig), 'hmi:reminder-persons:v1': JSON.stringify(DEMO_REMINDER_PERSONS) } })
+      ? json({ values: { 'hmi:backend': 'fake', 'hmi:shopping-config:v1': JSON.stringify(demoShoppingConfig), 'hmi:reminder-persons:v1': JSON.stringify(DEMO_REMINDER_PERSONS) } })
       : json({ ok: true });
   }
   if (path.startsWith('/api/reminders')) {
@@ -558,6 +580,7 @@ export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'>
 
 export function installDemoApi(): void {
   if (!IS_DEMO || typeof globalThis.fetch !== 'function') return;
+  Object.assign(demoSeeds, { energy: demoEnergySeed, todo: demoTodoSeed, people: DEMO_REMINDER_PERSONS });
   installDemoDevices();
   try {
     applyDemoImageLink(location.hash, localStorage, sessionStorage);
@@ -575,14 +598,18 @@ export function installDemoApi(): void {
       return original(input as RequestInfo, init);
     }
 
+    if (new URL(url, globalThis.location?.href ?? 'http://localhost').origin !== globalThis.location?.origin) return original(input as RequestInfo, init);
     const response = demoResponse(path, method);
+    if (!response && RECORDING_DEMO && (path.startsWith('/api/') || path.startsWith('/ambient-llm'))) {
+      return json({ error: 'In der Aufnahme-Demo nicht verfügbar.' }, 403);
+    }
     return response ?? original(input as RequestInfo, init);
   };
 
   resetDemoState();
-  applyDemoDefaultLocale();
+  if (!RECORDING_DEMO) applyDemoDefaultLocale();
   document.documentElement.setAttribute('data-demo', 'true');
-  addDemoBadge();
+  if (!RECORDING_DEMO) addDemoBadge();
 }
 
 /* Jeder Demo-Besuch startet gleich: gespeicherter Zustand aus einer früheren
@@ -606,15 +633,6 @@ function applyDemoDefaultLocale(): void {
       localStorage.setItem('PARAGLIDE_LOCALE', 'en');
     }
   } catch { /* Storage blockiert — dann greift die Browsersprache */ }
-}
-
-/* Räume werden nach dem ersten Paint und bei jeder Geräteänderung neu aus dem
-   Seed projiziert — dabei tragen sie wieder die deutschen Seed-Namen. Ohne
-   erneutes Anwenden bleibt die Demo in jeder Sprache deutsch beschriftet.
-   Der dynamische Import hält demo-names.ts aus dem Produktions-Bundle heraus. */
-export function reapplyDemoNames(rooms: Parameters<typeof import('./demo-names.ts').applyDemoNames>[0]): void {
-  if (!IS_DEMO) return;
-  void import('./demo-names.ts').then(({ applyDemoNames }) => applyDemoNames(rooms));
 }
 
 /* Dauerhafte Kennzeichnung: simulierte Daten, kein echtes Zuhause. */

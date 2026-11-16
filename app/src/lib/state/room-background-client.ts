@@ -1,4 +1,4 @@
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { m } from '../../paraglide/messages.js';
 import type { RoomHeroConfig } from '../config/household-config.ts';
 import { setRoomHeroConfig } from './room-hero-config.svelte.ts';

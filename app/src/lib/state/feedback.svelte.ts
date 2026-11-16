@@ -5,7 +5,7 @@
    Satz, Senden. Hier lebt nur der Zustand und der Versand; das Blatt selbst
    wird erst geladen, wenn jemand den Knopf drückt.
    ============================================ */
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { connection } from './connection.svelte.ts';
 import { localeState } from './locale.svelte.ts';
 import { nav } from './nav.svelte.ts';

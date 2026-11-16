@@ -11,7 +11,7 @@
   import SettingsCardHead from './SettingsCardHead.svelte';
   import { settingsValues, setLibraryMode } from '../../state/settings.svelte.ts';
   import { aiHealth } from '../../state/ai-health.svelte.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { m } from '../../../paraglide/messages.js';
 
   const LIBRARY_MODES = [

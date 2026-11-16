@@ -12,11 +12,12 @@
   import { settingsValues, setDemoMode } from '../../state/settings.svelte.ts';
   import { m } from '../../../paraglide/messages.js';
   import { apiPath } from '../../api/client.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
 
   /* Sichern und wiederherstellen: die Datei kommt vom Server und geht an ihn
      zurück. Nach dem Einspielen startet er neu; die Seite wartet auf ihn und
      lädt dann selbst. */
-  const backupAvailable = import.meta.env.VITE_DEMO !== '1';
+  const backupAvailable = !IS_DEMO;
   let restoreInput = $state<HTMLInputElement | null>(null);
   let restoreFile = $state<File | null>(null);
   let restoreState = $state<'idle' | 'sending' | 'restarting' | 'failed'>('idle');

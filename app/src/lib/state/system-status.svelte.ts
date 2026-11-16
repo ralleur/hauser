@@ -2,7 +2,7 @@
 
 import { runtime } from '../adapter/runtime.svelte.ts';
 import type { SystemUpdate } from '../adapter/types.ts';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { appState } from './app.svelte.ts';
 
 export const systemStatus = $state({

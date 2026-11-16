@@ -5,7 +5,7 @@
   import LaundrySection from './LaundrySection.svelte';
   import { runtime } from '../../adapter/runtime.svelte.ts';
   import type { NotificationHistoryEntry } from '../../adapter/types.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { deviceManager } from '../../state/device-manager.svelte.ts';
   import { LAUNDRY_ENTITIES } from '../../state/entities.ts';
   import type { EntityCatalogItem } from '../../state/fake-discovery-catalog.ts';

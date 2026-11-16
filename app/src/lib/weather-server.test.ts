@@ -86,4 +86,23 @@ describe('Außenwetter vom Server', () => {
     });
     expect(await without.read()).toEqual({ ok: false, code: 'WEATHER_LOCATION_UNAVAILABLE' });
   });
+
+  it('prüft Schnee an Start, Ziel und zwei Zwischenpunkten und nutzt den frühesten Treffer', async () => {
+    const clock = Date.parse('2026-11-16T06:10:00Z');
+    const urls: string[] = [];
+    const ending = Date.parse('2026-11-16T06:30:00Z') / 1000;
+    const service = createWeatherService({ now: () => clock, fetchImpl: async (url: string) => {
+      urls.push(url);
+      return { ok: true, json: async () => [
+        { minutely_15: { time: [ending], snowfall: [0] } },
+        { minutely_15: { time: [ending + 900], snowfall: [0.5] } },
+        { minutely_15: { time: [ending], snowfall: [0.1] } },
+      ] };
+    } });
+    const points = [[50, 6], [50, 6.2], [50, 6.6]];
+    expect(await service.readRouteSnow(points)).toBe('2026-11-16T06:15:00.000Z');
+    expect(await service.readRouteSnow(points)).toBe('2026-11-16T06:15:00.000Z');
+    expect(urls).toHaveLength(1);
+    expect(new URL(urls[0]).searchParams.get('longitude')).toBe('6.00,6.60,6.20,6.40');
+  });
 });

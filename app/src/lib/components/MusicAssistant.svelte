@@ -2,7 +2,7 @@
 <script lang="ts">
   import { apiRequest } from '../api/client.ts';
   import { nav } from '../state/nav.svelte.ts';
-  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { IS_DEMO } from '../demo/recording-mode.ts';
   import { m } from '../../paraglide/messages.js';
   interface Player { id: string; name: string; state: string; title: string | null; artist: string | null; volume: number | null }
   let players = $state<Player[]>([]);

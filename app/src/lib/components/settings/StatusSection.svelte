@@ -6,7 +6,7 @@
   import { appState, SERVICE_STATUS } from '../../state/app.svelte.ts';
   import { connection } from '../../state/connection.svelte.ts';
   import { systemStatus } from '../../state/system-status.svelte.ts';
-  import { IS_DEMO } from '../../demo/demo-mode.ts';
+  import { IS_DEMO } from '../../demo/recording-mode.ts';
   import { m } from '../../../paraglide/messages.js';
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';

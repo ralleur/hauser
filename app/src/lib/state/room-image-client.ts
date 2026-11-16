@@ -1,3 +1,4 @@
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { m } from '../../paraglide/messages.js';
 export type RoomImageFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -776,7 +777,7 @@ function demoClient(): RoomImageApi {
 }
 
 export function createRoomImageClient(options: RoomImageClientOptions = {}): RoomImageApi {
-  if (!options.fetchImpl && import.meta.env?.VITE_DEMO === '1') return demoClient();
+  if (!options.fetchImpl && IS_DEMO) return demoClient();
   const fetchImpl = options.fetchImpl ?? fetch;
   return {
     getCapability: () => requestJson(

@@ -3,6 +3,12 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.52.0] - 2026-11-16
+
+- Commute: the lock screen places the clock and travel card around the route. The background map fills the screen and uses a regional overview for longer journeys.
+- Commute: set arrival times by weekday or change the next office day once. The map shows reported fog, ice and speed cameras, and the card can show a snow forecast along the route. The parking sensor has been removed.
+- Recording demo: switch on a fictional household in Settings → Maintenance. Includes calendars, shopping lists, tasks and a simulated Cologne–Aachen commute that needs no Home Assistant or TomTom setup. Sample text follows German or English, with English for other languages.
+
 ## [0.51.1] - 2026-11-15
 
 - Weather: detailed current conditions, 12/24-hour and seven-day forecasts, weather overlays above Home and standby, and real observed rain radar with buffered playback and background refresh.

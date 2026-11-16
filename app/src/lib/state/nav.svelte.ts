@@ -5,7 +5,7 @@
    App.svelte setzt die Klassen und beendet die Transition. */
 
 import { m } from '../../paraglide/messages.js';
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import {
   HOUSEHOLD_DATA_SOURCE,
   NAV_SCREENS,

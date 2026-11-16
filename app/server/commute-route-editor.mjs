@@ -17,6 +17,8 @@ function formValues(schema) {
   return values;
 }
 
+export class TomTomRouteNameConflict extends Error {}
+
 /** Drive only the documented route steps. Nothing is saved until route_review. */
 export async function writeTomTomRoute(client, { entryId, name, start, destination, config }) {
   const root = `/api/config/config_entries/${entryId ? 'options/' : ''}flow`;
@@ -34,7 +36,10 @@ export async function writeTomTomRoute(client, { entryId, name, start, destinati
   try {
     await request(root, { handler: entryId || 'tomtom' });
     if (entryId) await step('init', { next_step_id: start ? 'edit_route' : 'edit_route_settings' });
-    else await step('user', { name, search_mode: 'route_live' });
+    else {
+      const result = await step('user', { name, search_mode: 'route_live' });
+      if (result.type === 'abort' && result.reason === 'already_configured') throw new TomTomRouteNameConflict();
+    }
     if (start) {
       await step('route_start', { next_step_id: 'route_start_point' });
       await step('route_start_point', { location: { latitude: start.latitude, longitude: start.longitude } });
@@ -55,6 +60,6 @@ export async function writeTomTomRoute(client, { entryId, name, start, destinati
     finished = true;
     return id;
   } finally {
-    if (!finished && /^[\w-]+$/.test(flow?.flow_id)) await client.rest('DELETE', `${root}/${flow.flow_id}`).catch(() => {});
+    if (!finished && flow?.type !== 'abort' && /^[\w-]+$/.test(flow?.flow_id)) await client.rest('DELETE', `${root}/${flow.flow_id}`).catch(() => {});
   }
 }

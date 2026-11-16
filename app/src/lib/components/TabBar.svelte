@@ -15,7 +15,7 @@
   import { fmtTemp } from '../format.ts';
   import { familyCalendar } from '../state/calendar.svelte.ts';
   import { notifications } from '../state/notifications.svelte.ts';
-  import { IS_DEMO } from '../demo/demo-mode.ts';
+  import { IS_DEMO } from '../demo/recording-mode.ts';
   import { m } from '../../paraglide/messages.js';
   import { localeState } from '../state/locale.svelte.ts';
   import { openingsLabel } from '../state/open-label.ts';

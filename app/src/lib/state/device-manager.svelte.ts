@@ -1,4 +1,4 @@
-import { reapplyDemoNames } from '../demo/demo-mode.ts';
+import { reapplyDemoNames } from '../demo/recording-mode.ts';
 import { runtime } from '../adapter/runtime.svelte.ts';
 import { appState, ROOM_SEED } from './app.svelte.ts';
 import {

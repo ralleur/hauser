@@ -1,4 +1,4 @@
-import { IS_DEMO } from '../demo/demo-mode.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { demoPictureUrl } from '../demo/demo-picture-urls.ts';
 import type { SunValue } from '../adapter/types.ts';
 import type { RoomHeroConfig, RoomHeroFocus } from '../config/household-config.ts';
