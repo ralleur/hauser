@@ -12,19 +12,26 @@ The existing Home Assistant and Apple Home topic pages and `/docs/` remain.
 Without JavaScript, a short product introduction links directly to installation
 and the source code. Existing installation anchors open the installation sheet.
 
-Desktop has five chapters: image control, rooms and customization, energy,
-household lists, and standby with a map. Chapter 01 has four guided stops:
-switching, actual lamp controls, scenes and central climate. Chapter 02 includes
-the actual room-image editor and appearance settings. Back/next controls sit
-inside the explanation card. Visitors can collapse explanations, jump chapters,
-open product details, or switch to free exploration.
+The introduction starts automatically after the opening room and fonts are ready.
+Eight chapters tell a roughly 95-second story: welcome, room lighting and scenes,
+commute, a room photo becoming an illustration, energy, shared lists, standby and
+an invitation to explore. Reading time starts after the actual app acknowledges
+each visible result. Pause, chapter selection and free exploration remain available.
+A visitor's pointer or keyboard input pauses the director immediately, cancelling
+pending scene actions. Hidden tabs pause; continuing is explicit. The final scene
+stays available without looping. Text is localized in English and German and
+motion is reduced to fades when the visitor requests reduced motion.
 
-Mobile uses Hauser's phone shell at the actual screen width. It has four
-chapters and no standby. The explanation card is absent; chapter shortcuts,
-free exploration and back/next remain in a compact 80 px footer. The same
-guided stops open the actual app surfaces. Crossing 768 px reloads the embedded
-demo for the device class and moves navigation between footer and explanation.
-Desktop keeps a logical viewport of at least 1440 px, scaled as a whole.
+Mobile normally uses Hauser's phone shell at the actual screen width. Commute and
+standby are shown as a labelled landscape wall-panel view. Desktop uses a logical
+viewport of at least 1440 px between 4:3 and 16:10, scaled as a whole. Tour controls sit in
+the left column. Captions float in space clear of visible controls, lamp zones,
+energy values and the commute route; dense screens use the free left column. The commute chapter hides the
+surrounding household notes to leave room for the route; standby restores them.
+The free demo, including native iOS, also offers the prepared Cologne–Aachen
+commute independently of the scheduled commute window. Map data is bundled;
+traffic and travel times are simulated and labelled Demo. No live route request
+or personal location is needed.
 
 The explicit `presentation=1` flag enables the same-origin demo bridge. Normal
 demo visits keep their own hints. The determinate loading bar follows document,

@@ -7,8 +7,13 @@ import { m } from '../../paraglide/messages.js';
 
 const CLOCK_TICK_MS = 10_000;
 
+// Only the embedded demo supplies a temporary clock. Clearing it restores wall time.
+let previewDate = $state<Date | null>(null);
+export function clockNow(): Date { return previewDate ? new Date(previewDate) : new Date(); }
+export function setClockPreview(value: Date | null): void { previewDate = value; refreshClock(); }
+
 function now() {
-  const d = new Date();
+  const d = clockNow();
   return {
     time: d.toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' }),
     date: d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),

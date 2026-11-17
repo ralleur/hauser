@@ -10,7 +10,7 @@
   <title>Hauser — Come on in.</title>
   <link rel="icon" href="/brand/hauser-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/design-tokens/tokens.css">
-  <link rel="stylesheet" href="/experience/experience.css?v=sheet-beta-4">
+  <link rel="stylesheet" href="/experience/experience.css?v=float-2">
 <link rel="canonical" href="https://hauserhome.app/">
   <link rel="alternate" hreflang="en" href="https://hauserhome.app/">
   <link rel="alternate" hreflang="de" href="https://hauserhome.app/de/">
@@ -27,10 +27,11 @@
   <script src="/language.js"></script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Hauser", "description": "Come on in. Explore Hauser, the free visual home interface for Home Assistant and Apple Home, through its working demo.", "applicationCategory": "LifestyleApplication", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}, "inLanguage": "en", "operatingSystem": "Home Assistant OS, Docker, iOS", "url": "https://hauserhome.app/", "license": "https://github.com/ralleur/hauser/blob/main/LICENSE"}</script>
 </head>
-<body data-mode="welcome" data-chapter="light" data-step="tap" data-loading="true">
+<body data-mode="welcome" data-chapter="welcome" data-loading="true">
   <a class="skip-link" href="#story" data-copy="skip">Skip to the introduction</a>
   <div class="stage" id="stage">
-    <iframe id="home" data-demo-src="/presentation/?presentation=1&amp;build=112f58a72ec84e66090b6a9d6efe71441b985d70&amp;idle=240#image" title="Hauser — interactive demo with simulated devices" tabindex="-1" inert></iframe>
+    <iframe id="home" data-demo-src="/presentation/?presentation=1&amp;build=084d9f0df8873ed95c0284a66e48d2107e187b01&amp;idle=240#image" title="Hauser — interactive demo with simulated devices" tabindex="-1" inert></iframe>
+    <img class="room-photo" id="room-photo" src="/media/wizard-input-raw-1100.webp" alt="" aria-hidden="true">
   </div>
   <div class="welcome-shade" aria-hidden="true"></div>
 
@@ -64,33 +65,31 @@
 
     <div class="scene-meta" aria-hidden="true"><span class="scene-line"></span><span data-copy="sceneMeta">THE LIVING ROOM<br>One ordinary room. A different kind of interface.</span></div>
 
-    <aside class="guide" id="guide" aria-label="Guided introduction" hidden>
-      <div class="guide-top"><span class="eyebrow" id="chapter-kicker"></span><button class="icon-button" id="collapse" aria-label="Minimize explanation">−</button></div>
-      <div id="guide-content">
-        <div class="tour-progress" id="tour-progress" aria-label="Tour progress"></div>
-        <h2 id="chapter-title" tabindex="-1"></h2>
-        <p id="chapter-text"></p>
-        <div class="chapter-action" id="chapter-action"></div>
-        <p class="response" id="response" role="status" hidden></p>
-        <button class="detail-link" id="detail"></button>
-      </div>
-      <div class="journey-controls" id="journey-controls"><button class="icon-button" id="previous" aria-label="Previous moment">←</button><button class="next-button" id="next"><span data-copy="next">Next</span><span aria-hidden="true">→</span></button></div>
+    <aside class="film-copy" id="guide" aria-labelledby="chapter-title" hidden>
+      <p class="eyebrow" id="chapter-kicker"></p>
+      <h2 id="chapter-title"></h2>
+      <p id="chapter-text"></p>
+      <div class="finish-actions" id="finish-actions" hidden><button class="primary" id="finish-explore"></button><button class="get-button" id="finish-get" data-copy="get">Get Hauser ↗</button></div>
     </aside>
-
-    <div class="lamp-hint" id="lamp-hint" aria-hidden="true" hidden><span class="lamp-ring"></span><span class="hint-label" data-copy="lampHint">Try this lamp</span></div>
+    <span class="panel-label" id="panel-label" hidden></span>
     <div class="explore-label" id="explore-label" hidden><span class="live-dot" aria-hidden="true"></span><span data-copy="freeExplore">Make yourself at home. Everything here is simulated.</span></div>
   </main>
 
   <footer class="experience-footer">
     <div class="welcome-footer"><span data-copy="free">Free. No subscription.</span><span data-copy="for">For Home Assistant & Apple Home</span><button class="text-button" id="welcome-guide" data-copy="guide">A few moments inside ↗</button></div>
     <div class="story-footer" hidden>
-      <button class="mode-button" id="mode"><span class="live-dot" aria-hidden="true"></span><span data-copy="exploreMode">Explore freely</span></button>
-      <nav class="chapters" id="chapters" aria-label="Moments in Hauser"></nav>
+      <div class="playback" id="playback">
+        <button id="play" class="play-button"></button>
+        <label class="chapter-picker"><span id="chapter-number" aria-hidden="true"></span><select id="chapters"></select></label>
+        <button class="mode-button" id="mode"></button>
+        <progress id="film-progress" max="95" value="0"></progress>
+      </div>
+      <p id="playback-status" role="status"></p>
     </div>
   </footer>
 
   <dialog id="sheet" aria-labelledby="sheet-title"><div class="sheet-top"><div class="sheet-brand"><img src="/brand/hauser-logo-light.svg" width="116" height="40" alt="Hauser"><span class="brand-beta" data-copy="betaLabel">Beta versions</span></div><button class="icon-button" id="close-sheet" aria-label="Close">×</button></div><div id="sheet-body"></div></dialog>
   <noscript><div class="no-script">Hauser is a free, open-source home interface for Home Assistant and Apple Home. This interactive introduction needs JavaScript. <a href="/docs/getting-started/requirements/">Read about Hauser and installation</a>, or <a href="https://github.com/ralleur/hauser">view the source</a>.</div></noscript>
-  <script type="module" src="/experience/experience.js?v=sheet-beta-4"></script>
+  <script type="module" src="/experience/experience.js?v=float-2"></script>
 </body>
 </html>

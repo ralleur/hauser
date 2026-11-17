@@ -7,6 +7,7 @@
   import { settingsValues } from '../state/settings.svelte.ts';
   import { commute, coverCommuteMap, refreshCommute } from '../state/commute.svelte.ts';
   import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, freshCommute, inCommuteWindow, mapPath } from '../state/commute.ts';
+  import { clockNow } from '../state/clock.svelte.ts';
   import { intlLocale } from '../state/locale.svelte.ts';
   let { active, preview = false, mode = null, clockHost, onlayout, onvisible }: { active: boolean; preview?: boolean; mode?: boolean | null; clockHost?: HTMLElement; onlayout: (layout: { x: number; y: number; width: number }) => void; onvisible: (shown: boolean) => void } = $props();
   let mapEl = $state<SVGSVGElement>();
@@ -14,20 +15,20 @@
   let routeDrawn = $state(false);
   let composition = $state({ width: 1000, height: 600, panelWidth: 320, cardX: 32, cardY: 320, scale: 1, tx: 0, ty: 0, transform: '' });
   let now = $state(new Date());
-  const visible = $derived(active && freshCommute(commute.route, now) && (mode ?? (preview || inCommuteWindow(commute.config, now))));
+  const visible = $derived(active && freshCommute(commute.route, new Date()) && (mode ?? (preview || inCommuteWindow(commute.config, now))));
   $effect(() => { onvisible(visible); });
   $effect(() => {
     if (visible) return () => coverCommuteMap(null);
   });
   $effect(() => {
     if (!active) return;
-    now = new Date();
+    now = clockNow();
     void refreshCommute();
     const tick = setInterval(() => {
-      now = new Date();
+      now = clockNow();
       if (mode === true || preview || inCommuteWindow(commute.config, now)) void refreshCommute();
     }, 30_000);
-    const resume = () => { now = new Date(); if (document.visibilityState === 'visible') void refreshCommute(); };
+    const resume = () => { now = clockNow(); if (document.visibilityState === 'visible') void refreshCommute(); };
     document.addEventListener('visibilitychange', resume);
     return () => { clearInterval(tick); document.removeEventListener('visibilitychange', resume); };
   });
@@ -147,7 +148,7 @@
         {#if route.snowAt}<span><Icon name="i-weather-snowy" cls="icon icon-md" />{Date.parse(route.snowAt) <= now.getTime() ? m.commute_snow_now() : m.commute_snow_at({ time: time(new Date(route.snowAt)) })}</span>{/if}
         {#if route.cameraCount}<span class="commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}><Icon name="i-camera-outline" cls="icon icon-md" />{route.cameraCount === 1 ? m.commute_camera_one() : m.commute_camera_count({ count: route.cameraCount })}</span>{/if}
       </div>{/if}
-      <small class="commute-source">TomTom · {m.commute_updated({ time: time(new Date(route.updatedAt)) })}{#if route.rainAt || route.snowAt} · Open-Meteo{/if}</small>
+      <small class="commute-source">{route.simulated ? 'Demo' : 'TomTom'} · {m.commute_updated({ time: time(new Date(route.updatedAt)) })}{#if route.rainAt || route.snowAt} · Open-Meteo{/if}</small>
       {#if route.mapStatus === 'loading' || route.mapStatus === 'unavailable' || route.mapStatus === 'too-large'}
         <small class="commute-source" role="status">{route.mapStatus === 'loading' ? m.commute_map_loading() : route.mapStatus === 'too-large' ? m.commute_map_too_large() : m.commute_map_unavailable()}</small>
       {/if}

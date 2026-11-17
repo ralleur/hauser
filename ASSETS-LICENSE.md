@@ -65,6 +65,10 @@ under the SIL Open Font License. Material Design Icons are Apache-2.0. Their
 licenses and attribution are listed in [NOTICE](NOTICE); neither category is
 covered by this file.
 
+Map extracts in `app/public/assets/ambient-maps/`, including the prepared
+`demo-commute.json` regional map, are © OpenStreetMap contributors and
+OpenMapTiles under ODbL 1.0. They are third-party data; see [NOTICE](NOTICE).
+
 ## Android package copies
 
 The Android build copies the existing living-room illustrations from

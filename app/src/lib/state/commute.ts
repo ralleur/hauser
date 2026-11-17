@@ -12,6 +12,7 @@ export interface CommuteRoute {
   line: MapPoint[]; roads: MapPoint[][]; mapKey?: string;
   mapStatus?: 'loading' | 'ready' | 'unavailable' | 'too-large';
   mapSource?: 'openfreemap';
+  simulated?: boolean;
   areas?: { layer: 'green' | 'water'; rings: MapPoint[][] }[];
   sections: { points: MapPoint[]; severe: boolean; category: string }[];
   reports: { title: string; category: string; group?: 'traffic' | 'weather' | 'camera'; delay: number; point: MapPoint | null }[];

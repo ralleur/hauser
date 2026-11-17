@@ -3,6 +3,7 @@ import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { CommuteStatus, MapPoint } from '../state/commute.ts';
 import { RECORDING_HOME_COORDS } from './recording-mode.ts';
 import { demoText } from './demo-locale.ts';
+import demoCommuteMap from '../../../public/assets/ambient-maps/demo-commute.json';
 
 export const RECORDING_PEOPLE = [
   { id: 'mia', label: 'Mia', color: 'gruen' },
@@ -36,14 +37,16 @@ export function recordingEvents(entityId: string, now = new Date()): CalendarEve
   }))).flat();
 }
 
-/** Synthetic road geometry and traffic; no route service or personal location. */
+/** Prepared regional map and simulated traffic; no live route service or personal location. */
 export function recordingCommute(now = new Date()): CommuteStatus {
-  const line: MapPoint[] = [[920, 110], [890, 160], [820, 210], [735, 240], [650, 310], [555, 340], [470, 420], [380, 450], [280, 520], [190, 600], [120, 640]];
+  const line = demoCommuteMap.line as MapPoint[];
   return {
     config: { entryId: 'demo-koeln-aachen', days: [1, 2, 3, 4, 5], from: '06:00', until: '09:00', arrival: '08:30', showRain: true, places: { start: RECORDING_HOME, destination: RECORDING_WORK } },
     route: {
       name: demoText('Köln → Aachen · Demo Studio', 'Cologne → Aachen · Demo Studio'), durationMinutes: 58, delayMinutes: 6, updatedAt: now.toISOString(), // i18n-ignore: bilingual demo data
-      line, roads: [line, [[800, 70], [820, 210], [900, 380]], [[220, 350], [380, 450], [430, 680]]],
+      line, roads: demoCommuteMap.roads as MapPoint[][],
+      areas: demoCommuteMap.areas as NonNullable<CommuteStatus['route']>['areas'],
+      mapKey: 'demo-cologne-aachen-v1', mapStatus: 'ready', mapSource: 'openfreemap', simulated: true,
       sections: [{ points: line.slice(4, 7), severe: false, category: 'slow' }],
       reports: [{ title: demoText('Zähfließender Verkehr · A4', 'Slow traffic · A4'), category: 'slow', delay: 6, point: line[5] }], rainAt: null, // i18n-ignore: bilingual demo data
     },

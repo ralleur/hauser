@@ -3,6 +3,12 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.52.1] - 2026-11-17
+
+- Website: an automatic, bilingual introduction shows real lighting, commute, room images, energy, shopping and standby. The panel keeps its tablet proportions between 4:3 and 16:10, captions float clear of controls and the route, and tour controls sit on the left. Pause, chapter selection and free exploration stay available; touching the app pauses the tour.
+- Public demo: the Cologne–Aachen commute includes a prepared regional map and simulated traffic in web and native iOS, available without route setup or a recording-mode switch.
+- Demo image control: align the dining lamp zone with the visible inside of its shade, place the blinds over the tall left window, and fit the ceiling and TV globe lamp zones to their lamps. Unchanged older demo mappings update automatically; visitor placements stay intact.
+
 ## [0.52.0] - 2026-11-16
 
 - Commute: the lock screen places the clock and travel card around the route. The background map fills the screen and uses a regional overview for longer journeys.

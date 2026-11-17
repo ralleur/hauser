@@ -1,3 +1,9 @@
+## 0.52.1 - 2026-11-17
+
+- Website: an automatic, bilingual introduction shows real lighting, commute, room images, energy, shopping and standby. The panel keeps its tablet proportions between 4:3 and 16:10, captions float clear of controls and the route, and tour controls sit on the left. Pause, chapter selection and free exploration stay available; touching the app pauses the tour.
+- Public demo: the Cologne–Aachen commute includes a prepared regional map and simulated traffic in web and native iOS, available without route setup or a recording-mode switch.
+- Demo image control: corrected zones for the dining lamp shade, blinds on the tall left window, ceiling lamp and TV globe lamp. Unchanged older demo mappings update automatically; visitor placements are preserved.
+
 ## 0.52.0 - 2026-11-16
 
 - Commute: the lock screen places the clock and travel card around the route. The background map fills the screen and uses a regional overview for longer journeys.

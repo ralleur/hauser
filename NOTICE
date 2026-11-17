@@ -109,6 +109,10 @@ Overpass API — the public query service
 
 OpenFreeMap — regional commute maps
   https://openfreemap.org/
+  The prepared demo extract `app/public/assets/ambient-maps/demo-commute.json`
+  is distributed under ODbL 1.0, © OpenMapTiles and OpenStreetMap contributors.
+  It is simplified regional geometry downloaded from OpenFreeMap; demo traffic
+  and the example route are simulated. Visitors make no live tile requests.
   Large commute views use precomputed vector tiles from OpenFreeMap. Tile
   data is © OpenMapTiles (https://openmaptiles.org/) and OpenStreetMap
   contributors (https://www.openstreetmap.org/copyright). The server requests

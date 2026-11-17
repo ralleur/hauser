@@ -70,7 +70,7 @@ brand_roots = (
 )
 third_party_roots = (
     Path('app/public/mdi-icons'),
-    # Beispielkarte des Einrichtungsassistenten: aus OpenStreetMap-Daten
+    # Beispielkarten für Einrichtung und Pendelweg: aus OpenStreetMap-Daten
     # abgeleitet und damit ODbL, nicht unser eigenes CC-BY-Material.
     Path('app/public/assets/ambient-maps'),
 )

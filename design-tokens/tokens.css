@@ -254,6 +254,9 @@
   --story-paper:var(--color-surface-1);
   --story-border:color-mix(in srgb,var(--color-text-primary) 16%,transparent);
   --story-panel-width:1440px;
+  --story-panel-aspect:1.6;
+  --story-panel-min-aspect:1.3333333333;
+  --story-rail-width:calc(var(--space-8) * 3 + var(--space-4));
   --story-sheet-width:620px;
 
 }

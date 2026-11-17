@@ -194,12 +194,12 @@ export function demoTodoSeed(): [string, { id: string; title: string; due: null;
 const demoSongs = () => ({ songs: [] });
 
 export function demoResponse(path: string, method: string): Response | null {
-  if (RECORDING_DEMO && (path === '/api/commute' || path === '/api/admin/commute/preview')) return json(recordingCommute());
-  if (RECORDING_DEMO && path === '/api/admin/commute') {
+  if (path === '/api/commute' || path === '/api/admin/commute/preview') return json(recordingCommute());
+  if (path === '/api/admin/commute') {
     const status = recordingCommute();
     return json({ config: status.config, routes: [{ id: status.config.entryId, name: status.route!.name }], home: RECORDING_HOME });
   }
-  if (RECORDING_DEMO && path === '/api/admin/commute/route') {
+  if (path === '/api/admin/commute/route') {
     const status = recordingCommute();
     return json({ ...status.config.places, name: status.route!.name });
   }
@@ -468,16 +468,19 @@ export const DEMO_DEVICE_CONFIG_KEY = 'hmi:device-config:v1';
 /* Die Lampen der Demo sitzen auf den gezeichneten Lampen ihrer Raumbilder
    (Owner 2026-10-24): Eine ausgeschaltete Lampe liegt blass im Bild, ein Tipp
    auf sie bringt Licht und Farbe zurück. Koordinaten relativ zum Bild, Zonen
-   wie im Editor „Geräte zuweisen“; das Rollo ist ein Punkt auf der Balkontür.
+   wie im Editor „Geräte zuweisen“; das Rollo folgt dem linken hohen Fenster.
    Auch hier als Text, damit der Startpfad klein bleibt (Test hält es zusammen). */
 export const DEMO_LIGHT_PLACEMENT_KEY = 'hmi:immersion-light:v1';
 const DEMO_LIGHT_PLACEMENTS = {
   wohnzimmer: {
-    'light.wohnzimmer_kugellampen': { x: 0.4575, y: 0.199, radius: 0.022 },
-    'light.wohnzimmer_esstisch': { x: 0.894, y: 0.119, radius: 0.058, ry: 0.034 },
+    'light.wohnzimmer_kugellampen': { x: 0.457, y: 0.2033, radius: 0.0192, ry: 0.020 },
+    'light.wohnzimmer_esstisch': { x: 0.891, y: 0.148, radius: 0.0535, ry: 0.010, rotation: -6 },
     'light.wohnzimmer_fensterlampe': { x: 0.652, y: 0.304, radius: 0.017, ry: 0.010, rotation: 23 },
-    'light.wohnzimmer_tv': { x: 0.476, y: 0.398, radius: 0.013 },
-    [DEMO_COVER_ENTITY]: { x: 0.36, y: 0.3, radius: 0.16 },
+    'light.wohnzimmer_tv': { x: 0.479, y: 0.399, radius: 0.0105, ry: 0.0085 },
+    [DEMO_COVER_ENTITY]: { x: 0.2655, y: 0.3395, radius: 0.041, points: [
+      { x: 0.225, y: 0.202 }, { x: 0.300, y: 0.208 },
+      { x: 0.306, y: 0.468 }, { x: 0.232, y: 0.477 },
+    ] },
   },
   schlafzimmer: {
     'light.schlafzimmer_bett': { x: 0.658, y: 0.475, radius: 0.018, ry: 0.017 },
@@ -551,17 +554,39 @@ const DEMO_LIGHT_PLACEMENTS_0_48 = {
   },
 };
 
+/* Zwischenstand mit korrigiertem Esstisch/Fenster, vor den Kugellampen. */
+const DEMO_LIGHT_PLACEMENTS_SHADE_WINDOW = {
+  ...DEMO_LIGHT_PLACEMENTS,
+  wohnzimmer: {
+    ...DEMO_LIGHT_PLACEMENTS.wohnzimmer,
+    'light.wohnzimmer_kugellampen': { x: 0.4575, y: 0.199, radius: 0.022 },
+    'light.wohnzimmer_tv': { x: 0.476, y: 0.398, radius: 0.013 },
+  },
+};
+
+/* Vor der Fenster-/Schirmkorrektur ausgelieferte Vorbelegung. Historische
+   Geometrie festhalten, damit auch gespeicherte Demo-Besuche korrigiert werden. */
+const DEMO_LIGHT_PLACEMENTS_0_51 = {
+  ...DEMO_LIGHT_PLACEMENTS_SHADE_WINDOW,
+  wohnzimmer: {
+    ...DEMO_LIGHT_PLACEMENTS_SHADE_WINDOW.wohnzimmer,
+    'light.wohnzimmer_esstisch': { x: 0.894, y: 0.119, radius: 0.058, ry: 0.034 },
+    [DEMO_COVER_ENTITY]: { x: 0.36, y: 0.3, radius: 0.16 },
+  },
+};
+
 /* Previously shipped seed: migrate it only while it is still untouched. */
 const DEMO_LIGHT_PLACEMENTS_0_49 = {
-  ...DEMO_LIGHT_PLACEMENTS,
-  wohnzimmer: { ...DEMO_LIGHT_PLACEMENTS.wohnzimmer, 'light.wohnzimmer_fensterlampe': { x: 0.648, y: 0.293, radius: 0.025, ry: 0.016, rotation: -18 } },
+  ...DEMO_LIGHT_PLACEMENTS_0_51,
+  wohnzimmer: { ...DEMO_LIGHT_PLACEMENTS_0_51.wohnzimmer, 'light.wohnzimmer_fensterlampe': { x: 0.648, y: 0.293, radius: 0.025, ry: 0.016, rotation: -18 } },
 };
 
 export function installDemoDevices(storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
   if (!IS_DEMO || !storage) return;
   try {
     const stored = storage.getItem(DEMO_LIGHT_PLACEMENT_KEY);
-    if (stored === null || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_48 }) || stored === JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS_0_49 })) {
+    if (stored === null || [DEMO_LIGHT_PLACEMENTS_0_48, DEMO_LIGHT_PLACEMENTS_0_49, DEMO_LIGHT_PLACEMENTS_0_51, DEMO_LIGHT_PLACEMENTS_SHADE_WINDOW]
+      .some(rooms => stored === JSON.stringify({ version: 1, rooms }))) {
       storage.setItem(DEMO_LIGHT_PLACEMENT_KEY, JSON.stringify({ version: 1, rooms: DEMO_LIGHT_PLACEMENTS }));
     }
   } catch { /* ohne Speicher keine Vorbelegung, die Demo läuft trotzdem */ }
