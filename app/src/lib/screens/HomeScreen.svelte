@@ -24,8 +24,10 @@
   import type { Component } from 'svelte';
 
   import { m } from '../../paraglide/messages.js';
-  if (!appState.currentRoom) appState.currentRoom = appState.rooms[0]?.id ?? null;
   layoutManager.reconcileRooms(appState.rooms.map((room) => room.id));
+  if (!appState.currentRoom) {
+    appState.currentRoom = layoutManager.applied.slots[0]?.roomId ?? appState.rooms[0]?.id ?? null;
+  }
 
   const preset = $derived(widthPreset(layoutManager.preview));
   const roomsPerRow = $derived(layoutRoomsPerRow(layoutManager.preview));
