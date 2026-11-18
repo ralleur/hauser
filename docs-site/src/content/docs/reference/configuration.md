@@ -60,6 +60,7 @@ Set by the Compose file or the App manifest. You rarely change them.
 | `room-image-auth.json` | `/data` | OpenAI access for the wizard |
 | `hotel-mode.json` | `/data` | Hotel-mode state and PIN verifier |
 | `ambient-map.json` | `/data` | Map location |
+| `commute-map.json` | next to `config.json` | Cached commute background maps, rebuilt when route coverage changes |
 | `assets/` | `/assets` or `/data/assets` | Room-image sets, maps |
 
 ## Ports
@@ -72,3 +73,8 @@ Set by the Compose file or the App manifest. You rarely change them.
 ## Per-device settings
 
 Stored in the browser, not on the server: appearance state, standby delay, city map switch, edit or use mode with its PIN, phone bar order, rooms per row, control-surface widths.
+
+The manual normal/commute view choice is also local to each device. Room image
+focus (`hmi:room-display:v1`, `imageFocus`) and weather sources
+(`hmi:weather-source:v1`) are shared settings in `config.json`; use the app's
+settings to edit them.

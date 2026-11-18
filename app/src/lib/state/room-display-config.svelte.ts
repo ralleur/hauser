@@ -18,6 +18,8 @@ import { roomIdForArea } from './device-config.ts';
 import { presenceEntityIds, setClimateHiddenResolver, windowEntityIds } from './entities.ts';
 import { sharedStorage } from './shared-config.ts';
 import type { EntityCatalogItem } from './fake-discovery-catalog.ts';
+import { replaceRoomImageFocus } from './room-hero-config.svelte.ts';
+export { roomImageFocus } from './room-hero-config.svelte.ts';
 
 export type RoomMetric = 'temperature' | 'humidity' | 'co2';
 export const ROOM_METRICS: readonly RoomMetric[] = ['temperature', 'humidity', 'co2'];
@@ -29,6 +31,7 @@ const SHOW_KEY = { temperature: 'showTemperature', humidity: 'showHumidity', co2
 const SENSOR_KEY = { temperature: 'temperatureSensorId', humidity: 'humiditySensorId', co2: 'co2SensorId' } as const satisfies Record<RoomMetric, keyof RoomDisplayEntry>;
 
 export interface RoomDisplayEntry {
+  imageFocus?: Partial<Record<'panel' | 'phone', { x: number; y: number }>>;
   imageObjects?: { image: string; regions: RoomImageRegion[] };
   /** Temperatur auf der Kachel zeigen (Default: ja) */
   showTemperature?: boolean;
@@ -256,10 +259,20 @@ export const roomDisplay = $state({
     (`ralleur/hauser#24`). */
 export function rehydrateRoomDisplay(): void {
   roomDisplay.config = load();
+  replaceRoomImageFocus(roomDisplay.config.rooms);
 }
 
 function entry(roomId: string): RoomDisplayEntry {
   return roomDisplay.config.rooms[roomId] ?? {};
+}
+
+export function setRoomImageFocus(roomId: string, target: 'panel' | 'phone', point: { x: number; y: number }): void {
+  const current = entry(roomId);
+  roomDisplay.config = { version: 1, rooms: { ...roomDisplay.config.rooms, [roomId]: { ...current,
+    imageFocus: { ...current.imageFocus, [target]: { x: Math.max(0, Math.min(1, point.x)), y: Math.max(0, Math.min(1, point.y)) } },
+  } } };
+  save(roomDisplay.config);
+  replaceRoomImageFocus(roomDisplay.config.rooms);
 }
 
 /** Zeigt die Kachel diese Messgröße? */
@@ -440,6 +453,12 @@ export function parseRoomDisplayConfig(raw: string | null): RoomDisplayConfig {
       if (typeof value !== 'object' || value === null || Array.isArray(value)) continue;
       const cand = value as Partial<RoomDisplayEntry>;
       const next: RoomDisplayEntry = {};
+      for (const target of ['panel', 'phone'] as const) {
+        const point = cand.imageFocus?.[target];
+        if (point && [point.x, point.y].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1)) {
+          (next.imageFocus ??= {})[target] = { x: point.x, y: point.y };
+        }
+      }
       if (typeof cand.showTemperature === 'boolean') next.showTemperature = cand.showTemperature;
       if (typeof cand.showHumidity === 'boolean') next.showHumidity = cand.showHumidity;
       if (typeof cand.temperatureSensorId === 'string') next.temperatureSensorId = cand.temperatureSensorId;

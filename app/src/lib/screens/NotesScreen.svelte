@@ -6,6 +6,7 @@
   import { doubletap } from '../actions/doubletap.ts';
   import { liteBackdrop } from '../actions/lite-backdrop.ts';
   import { longpress } from '../actions/longpress.ts';
+  import { bodyPortal } from '../actions/body-portal.ts';
   import { shopping, addShoppingItem, toggleShoppingItem } from '../state/shopping.svelte.ts';
   import { refreshShopping } from '../state/shopping.svelte.ts';
   import { projectShoppingSections, type ShoppingItem, type StoreId } from '../state/shopping.ts';
@@ -295,7 +296,7 @@
 
   <!-- Kontextmenü für zentral gespeicherte Erinnerungen. -->
   {#if popout}
-    <div class="rem-popout" style="left: {popout.x}px; top: {popout.y}px" role="dialog"
+    <div class="rem-popout" use:bodyPortal style="left: {popout.x}px; top: {popout.y}px" role="dialog"
          aria-label={m.notes_reminder_menu()}>
       <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
               onclick={editSelected}>{m.notes_edit()}</button>

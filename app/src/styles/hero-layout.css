@@ -121,6 +121,7 @@
    Grundregel den Weg nach aus, die `is-on`-Regel den Weg nach an — beim
    Entfernen der Klasse gilt wieder die Grundregel. */
 .immersion-light-layer {
+  mix-blend-mode: screen;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -133,6 +134,7 @@
   opacity: 1;
   transition: opacity var(--duration-enter) var(--ease-out);
 }
+.immersion-light-layer.is-visible.is-day { opacity: var(--lamp-glow-day-strength); }
 /* Je Licht eine Ebene (RoomHero.svelte): Deckkraft auf dem SVG-Wurzelelement,
    damit das Nachdimmen im Compositor läuft statt als Vollbild-Rasterung. */
 .immersion-light {

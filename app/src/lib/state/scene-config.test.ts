@@ -63,6 +63,9 @@ describe('scene-config Updates', () => {
     let config = EMPTY_SCENE_CONFIG;
     for (const scene of SCENES) config = deleteScene(config, 'wohnzimmer', scene.id);
     expect(sceneList(config, 'wohnzimmer')).toEqual([]);
+    const restored = parseSceneConfig(JSON.stringify(config));
+    expect(sceneList(restored, 'wohnzimmer')).toEqual([]);
+    expect(sceneList(restored, 'kueche')).toHaveLength(SCENES.length);
   });
 
   it('Entfernen eines Default-Lichts landet im exclude, Wieder-Hinzufügen räumt es', () => {

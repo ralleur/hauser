@@ -7,6 +7,8 @@
    Externe Updates (Wiedergabe-Tick) kommen über den value-Parameter —
    während eines Drags gewinnt immer der Finger. */
 
+import { observeResize } from './observe-resize.ts';
+
 export interface SliderParams {
   value: number; // Prozent 0–100
   onChange: (val: number, final: boolean) => void;
@@ -53,12 +55,11 @@ export function slider(node: HTMLElement, params: SliderParams) {
   // statisch gemountet: beim App-Start ist der Container display:none und
   // misst 0. Der ResizeObserver malt nach, sobald Layout da ist (Screen wird
   // sichtbar, Overlay öffnet, Rotation) — Ersatz für den alten rAF-Fallback.
-  const ro = new ResizeObserver(() => {
+  const stopResize = observeResize(() => {
     const prev = width;
     measure();
     if (!disabled && !dragging && width > 0 && width !== prev) paint(pendingPct);
-  });
-  ro.observe(node);
+  }, node);
 
   let dragging = false;
   let rafPending = false;
@@ -129,7 +130,7 @@ export function slider(node: HTMLElement, params: SliderParams) {
     },
     destroy() {
       clearTimeout(correctTimer);
-      ro.disconnect();
+      stopResize();
       node.removeEventListener('pointerdown', onDown);
       node.removeEventListener('pointermove', onMove);
       node.removeEventListener('pointerup', end);

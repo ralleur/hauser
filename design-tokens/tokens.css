@@ -6,6 +6,9 @@
    ============================================ */
 
 :root {
+  --lamp-glow-day-strength: 0.45;
+  --lamp-glow-center-opacity: 0.85;
+  --lamp-glow-halo-opacity: 0.4;
   --ambient-map-edge-blur: 2px;
   --ambient-map-focus-mask: radial-gradient(ellipse 60% 65% at 50% 45%, transparent 50%, #000 100%);
   --ambient-map-water: #435c61;

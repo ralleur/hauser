@@ -29,6 +29,7 @@ export const SHARED_CONFIG_KEYS = [
   'hmi:reminders-selected',
   'hmi:moment-holidays:v1',
   'hmi:commute:v1',
+  'hmi:weather-source:v1',
   'hmi:paperless-url',
   'hmi:paperless-token',
   'hmi:ablage-pin',

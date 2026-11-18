@@ -42,6 +42,12 @@ editor if you want to mark window areas for weather effects.
 
 ## Adjust an existing picture
 
+Under **Set up image → Image framing**, choose **Phone** or **Wall panel**
+and move the horizontal and vertical sliders. The preview shows the selected
+crop. Both choices are saved separately for the room, including bundled
+pictures. The native iOS app uses the same settings. Window effects and
+device touch zones follow the chosen crop.
+
 Open the room’s picture settings. Once a custom picture is assigned, the
 overview shows its preview and creation method, followed by **Windows** and
 the lighting variants. Mark or adjust the windows here, without reopening

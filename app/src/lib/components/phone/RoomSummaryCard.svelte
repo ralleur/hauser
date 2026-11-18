@@ -6,7 +6,7 @@
   import { m } from '../../../paraglide/messages.js';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
-  import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
+  import { roomHeroConfig, roomImageFocus } from '../../state/room-hero-config.svelte.ts';
   import {
     accessibleRoomSummary,
     resolvePhoneHero,
@@ -49,11 +49,12 @@
   let lastVariant: PhoneHeroVariant | null = null;
 
   $effect(() => {
-    const key = [
+    const key = JSON.stringify([
       summary.id,
       heroVariant,
-      JSON.stringify(roomHeroConfig(summary.id)),
-    ].join('|');
+      roomHeroConfig(summary.id),
+      roomImageFocus(summary.id, 'phone'),
+    ]);
     if (key === requested) return;
     requested = key;
     const currentRequest = ++request;

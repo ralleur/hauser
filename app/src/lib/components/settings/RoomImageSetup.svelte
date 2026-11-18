@@ -4,6 +4,7 @@
   import { m } from '../../../paraglide/messages.js';
   import RoomObjectEditor from './RoomObjectEditor.svelte';
   import RoomImageWizard from './RoomImageWizard.svelte';
+  import RoomImageFocusEditor from './RoomImageFocusEditor.svelte';
   import { EXTERIOR_HERO_ID } from '../../config/household-config.ts';
   import { normalizeHeroRoom, PROJECT_OVERCAST_ROOMS, roomImageAssetUrl } from '../room-hero-assets.ts';
   import { energyAssetUrl, energyOvercastUrl } from '../energy-hero-assets.ts';
@@ -50,6 +51,7 @@
 </script>
 
 <section class="image-setup" aria-label={m.img_setup()}>
+  {#if !exterior}<details><summary>{m.img_focus()}</summary><RoomImageFocusEditor {roomId} {imageUrl} /></details>{/if}
     <div class="image-segments setup-modes" role="group" aria-label={m.img_setup()}>
       {#if devices}<button type="button" aria-pressed={mode === 'devices'} onclick={() => mode = 'devices'}>{m.img_devices()}</button>{/if}
       <button type="button" aria-pressed={mode === 'windows'} onclick={() => mode = 'windows'}>{m.img_windows()}</button>

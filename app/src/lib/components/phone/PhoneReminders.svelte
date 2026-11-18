@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { bodyPortal } from '../../actions/body-portal.ts';
   import Icon from '../Icon.svelte';
   import ReminderEditDialog from '../ReminderEditDialog.svelte';
   import ReminderTableDialog from '../ReminderTableDialog.svelte';
@@ -191,7 +192,7 @@
   {/each}
 
   {#if popout}
-    <div class="rem-popout" style="left: {popout.x}px; top: {popout.y}px" role="dialog"
+    <div class="rem-popout" use:bodyPortal style="left: {popout.x}px; top: {popout.y}px" role="dialog"
          aria-label={m.notes_reminder_menu()}>
       <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
               onclick={editSelected}>{m.notes_edit()}</button>

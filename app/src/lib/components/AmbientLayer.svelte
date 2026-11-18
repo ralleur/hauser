@@ -25,7 +25,7 @@
   import { ambientCopy, refreshAmbientCopy } from '../state/ambient-copy.svelte.ts';
   import { currentMoment, initMoments } from '../state/moments.svelte.ts';
   import { momentLine } from '../state/moment-copy.ts';
-  import { openWeather, weatherView, outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
+  import { openWeather, weatherView, weatherRefresh, outdoor, indoor, refreshWeather, recordIndoorTemp } from '../state/weather.svelte.ts';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { ambientMap, ensureAmbientMapStatus } from '../state/ambient-map.svelte.ts';
   import { localeState } from '../state/locale.svelte.ts';
@@ -37,7 +37,7 @@
   import { weatherConditionIcon, type TempTrend } from '../state/weather.ts';
   import Icon from './Icon.svelte';
   import CommuteLayer from './CommuteLayer.svelte';
-  import { commute, prepareCommutePreview, refreshCommute } from '../state/commute.svelte.ts';
+  import { commute, commuteView, setCommuteView, prepareCommutePreview, refreshCommute } from '../state/commute.svelte.ts';
   import { inCommuteWindow } from '../state/commute.ts';
   import { commuteMapTransition } from '../state/commute-motion.ts';
   import { commuteClockMotion } from '../actions/commute-clock-motion.ts';
@@ -80,17 +80,16 @@
      Schalter und weckt an Ort und Stelle zurück, statt nach Home zu navigieren. */
   let settingsPreview = $state(false);
   let commuteVisible = $state(false);
-  let commuteMode = $state<boolean | null>(null);
   let commuteLoading = $state(false);
   let commuteError = $state('');
   async function toggleCommute() {
     if (commuteLoading) return;
     commuteError = '';
-    if (commuteVisible) { commuteMode = false; return; }
+    if (commuteVisible) { setCommuteView(false); return; }
     commuteLoading = true;
     try {
       await prepareCommutePreview(!inCommuteWindow(commute.config, new Date()));
-      if (active) commuteMode = true;
+      if (active) setCommuteView(true);
     } catch { commuteError = m.commute_preview_error(); }
     finally { commuteLoading = false; }
   }
@@ -120,7 +119,6 @@
     if (!fromDevice && !previewDeepNight && !fromSettings && appState.playback?.playing) { armIdleTimer(); return; }
     deepNightPreview = previewDeepNight;
     settingsPreview = fromSettings;
-    commuteMode = null;
     commuteError = '';
     void refreshCommute();
     settleFrom(origin);
@@ -186,7 +184,6 @@
     setAmbientActive(false);
     deepNightPreview = false;
     settingsPreview = false;
-    commuteMode = null;
     commuteError = '';
     clearInterval(shiftTimer);
     contentEl.style.transform = '';
@@ -379,7 +376,7 @@
   /* Außentemperatur Köln (Open-Meteo): beim Mount holen und alle 15 min auffrischen. */
   $effect(() => {
     void refreshWeather();
-    const id = setInterval(() => void refreshWeather(), 15 * 60 * 1000);
+    const id = setInterval(() => { if (document.visibilityState === 'visible') void refreshWeather(); }, weatherRefresh.intervalMs);
     return () => clearInterval(id);
   });
 
@@ -392,7 +389,7 @@
   /* Beim Anordnen steht das Band auch ohne Termine — sonst ließe es sich nicht setzen. */
   const weekHasEvents = $derived(editing || ambientWeek.some((day) => day.events.length > 0));
   const deepNight = $derived(
-    !editing && commuteMode !== true && (deepNightPreview
+    !editing && commuteView.mode !== true && (deepNightPreview
       || (!settingsPreview && settingsValues.ambientDeepNight && (forceDeepNight || isDeepNightHour(clock.hours)))),
   );
   /* Welche Plätze gelten: beim Anordnen der Entwurf, sonst der gespeicherte
@@ -834,7 +831,7 @@
     </div>
     {/if}
   {/if}
-  <CommuteLayer active={active && !deepNight && !editing} mode={commuteMode} preview={settingsPreview} clockHost={clockHost} onlayout={(layout) => { commuteClockLayout = layout; }} onvisible={(shown) => { commuteVisible = shown; }} />
+  <CommuteLayer active={active && !deepNight && !editing} mode={commuteView.mode} preview={settingsPreview} clockHost={clockHost} onlayout={(layout) => { commuteClockLayout = layout; }} onvisible={(shown) => { commuteVisible = shown; }} />
   {#if mapVisible || commuteVisible}<div class="ambient-map-focus" aria-hidden="true"></div>{/if}
   {#if active && !editing && commute.config.entryId}
     <div class="commute-view-control">

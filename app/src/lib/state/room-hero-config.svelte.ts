@@ -2,6 +2,20 @@ import type { RoomHeroConfig } from '../config/household-config.ts';
 import { ROOM_HERO_CONFIGS } from '../config/household-runtime-data.ts';
 
 export type RoomHeroConfigProjection = Readonly<Record<string, RoomHeroConfig | null>>;
+type ImageFocus = Partial<Record<'panel' | 'phone', { x: number; y: number }>>;
+type FocusRoom = { imageFocus?: ImageFocus };
+
+function storedFocus(): Record<string, FocusRoom> {
+  try { return JSON.parse(localStorage.getItem('hmi:room-display:v1') ?? '{}').rooms ?? {}; }
+  catch { return {}; }
+}
+let imageFocus = $state<Record<string, FocusRoom>>(storedFocus());
+export function replaceRoomImageFocus(rooms: Record<string, FocusRoom>): void {
+  imageFocus = rooms;
+}
+export function roomImageFocus(roomId: string | null | undefined, target: 'panel' | 'phone'): { x: number; y: number } | undefined {
+  return roomId ? imageFocus[roomId]?.imageFocus?.[target] : undefined;
+}
 
 function cloneConfig(config: RoomHeroConfig | null | undefined): RoomHeroConfig | null {
   if (!config) return null;

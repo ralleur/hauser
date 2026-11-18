@@ -1,5 +1,6 @@
 <script lang="ts">
   import { m } from '../../paraglide/messages.js';
+  import { bodyPortal } from '../actions/body-portal.ts';
   import { reminders, updateReminder } from '../state/reminders.svelte.ts';
   import { reminderDisplayTitle } from '../state/reminders.ts';
 
@@ -34,7 +35,7 @@
   }
 </script>
 
-<div class="rem-edit-backdrop" role="presentation" onclick={(event) => { if (event.target === event.currentTarget) onclose(); }}>
+<div class="rem-edit-backdrop" use:bodyPortal role="presentation" onclick={(event) => { if (event.target === event.currentTarget) onclose(); }}>
   <div role="dialog" aria-modal="true" aria-labelledby="rem-edit-title">
   <form class="rem-edit-dialog" onsubmit={save}>
     <h2 id="rem-edit-title">{m.rem_edit_title()}</h2>

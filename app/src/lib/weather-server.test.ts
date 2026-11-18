@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Native Node ESM Servermodul.
 import { createWeatherService, homeLocationFromHaConfig, openMeteoForecastUrl } from '../../server/weather.mjs';
+import { parseOutdoor, parseWeatherDetails } from './state/weather.ts';
 
 const HOME = { latitude: 49.6, longitude: 6.55 };
 
@@ -21,6 +22,70 @@ function fakeFetch(body: unknown, urls: string[], status = 200) {
 const FORECAST = { current: { temperature_2m: 12.3, weather_code: 61, precipitation: 0.4, wind_speed_10m: 9 }, hourly: { temperature_2m: [11.8, 12.3] } };
 
 describe('Außenwetter vom Server', () => {
+  it('uses the selected HA provider and live sensors, with unit conversion and real forecast times', async () => {
+    const calls: string[] = [], upstreams: string[] = [];
+    const service = createWeatherService({
+      now: () => Date.parse('2026-11-18T08:00Z'),
+      readSettings: () => ({ entityId: 'weather.fusion', temperature: 'sensor.outdoor', rain: 'binary_sensor.rain' }),
+      resolveCredentials: () => ({}),
+      clientFactory: () => ({ close: () => {}, ws: async (type: string, options: any) => {
+        calls.push(type);
+        if (type === 'get_states') return [
+          { entity_id: 'weather.fusion', state: 'cloudy', attributes: { friendly_name: 'Weather Fusion AI', temperature: 68, temperature_unit: '°F', wind_speed: 2, wind_speed_unit: 'm/s', precipitation_unit: 'in' } },
+          { entity_id: 'sensor.outdoor', state: '50', attributes: { unit_of_measurement: '°F' } },
+          { entity_id: 'binary_sensor.rain', state: 'on' },
+        ];
+        if (type === 'get_config') return { time_zone: 'Europe/Berlin' };
+        expect(options).toMatchObject({ domain: 'weather', service: 'get_forecasts', return_response: true });
+        const forecast = options.service_data.type === 'hourly'
+          ? [{ datetime: '2026-11-18T10:00:00+01:00', condition: 'rainy', temperature: 50, precipitation: 0.1, wind_speed: 2 }]
+          : [{ datetime: '2026-11-18T00:00:00+01:00', condition: 'rainy', temperature: 68, templow: 32 }];
+        return { response: { 'weather.fusion': { forecast } } };
+      } }), fetchImpl: fakeFetch(FORECAST, upstreams),
+    });
+    const result = await service.read();
+    expect(result.source).toBe('Weather Fusion AI');
+    expect(result.pollAfterSeconds).toBe(30);
+    expect(result.current).toMatchObject({ temperature_2m: 10, weather_code: 61, wind_speed_10m: 7.2, precipitation: null });
+    expect(result.hourly.time).toEqual(['2026-11-18T10:00']);
+    expect(result.utc_offset_seconds).toBe(3600);
+    expect(result.hourly.precipitation[0]).toBeCloseTo(2.54);
+    expect(parseOutdoor(result).condition).toBe('rainy');
+    expect(parseWeatherDetails(result).hours[0]).toMatchObject({ time: Date.parse('2026-11-18T09:00Z'), temp: 10 });
+    expect(parseWeatherDetails(result).days[0]).toMatchObject({ high: 20, low: 0 });
+    expect(upstreams).toHaveLength(0);
+    expect(calls).toEqual(['get_states', 'get_config', 'call_service', 'call_service']);
+  });
+
+  it('applies live sensor updates without repeatedly fetching the Open-Meteo forecast', async () => {
+    let clock = 0, wet = 'on', rainId = 'binary_sensor.rain';
+    const urls: string[] = [];
+    const service = createWeatherService({ now: () => clock,
+      readSettings: () => ({ rain: rainId }), resolveCredentials: () => ({}),
+      clientFactory: () => ({ close: () => {}, rest: async () => ({ status: 200, body: HOME }),
+        ws: async () => [{ entity_id: rainId, state: wet, attributes: { unit_of_measurement: 'mm/h' } }] }), fetchImpl: fakeFetch(FORECAST, urls),
+    });
+    expect((await service.read()).current.weather_code).toBe(61);
+    wet = 'off'; clock += 31_000;
+    expect((await service.read()).current.weather_code).toBe(3);
+    rainId = 'sensor.rain_rate'; wet = '0'; clock += 31_000;
+    expect((await service.read()).current).toMatchObject({ weather_code: 3, precipitation: 0 });
+    expect(urls).toHaveLength(1);
+  });
+
+  it('does not reuse another provider or invent forecasts when the selected source is unavailable', async () => {
+    let entityId = 'weather.first';
+    const service = createWeatherService({ readSettings: () => ({ entityId }), resolveCredentials: () => ({}),
+      clientFactory: () => ({ close: () => {}, ws: async (type: string) => {
+        if (type === 'get_states') return [{ entity_id: 'weather.first', state: 'sunny', attributes: { temperature: 12 } }];
+        throw new Error('Forecast not supported');
+      } }),
+    });
+    expect((await service.read()).hourly.time).toEqual([]);
+    entityId = 'weather.missing';
+    expect(await service.read()).toMatchObject({ ok: false, code: 'WEATHER_UNAVAILABLE' });
+  });
+
   it('nimmt nur gültige Heimatkoordinaten aus der HA-Konfiguration', () => {
     expect(homeLocationFromHaConfig({ latitude: 49.6, longitude: 6.55, location_name: 'Home' })).toEqual(HOME);
     expect(homeLocationFromHaConfig({ latitude: 95, longitude: 6.55 })).toBe(null);

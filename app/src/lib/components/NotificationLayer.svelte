@@ -19,6 +19,7 @@
   import { categoryById, categoryColor } from '../state/notification-categories.ts';
   import { categoryForTestNotificationId, ruleForNotificationId } from '../state/notification-rules.ts';
   import { iconAssetUrlFromId } from '../state/icon-path.ts';
+  import { observeResize } from '../actions/observe-resize.ts';
 
   let now = $state(Date.now());
   let remote = $state<PersistentNotification[]>([]);
@@ -179,10 +180,9 @@
       );
     };
     publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(node);
+    const stop = observeResize(publish, node);
     return () => {
-      observer.disconnect();
+      stop();
       root.style.removeProperty('--notification-flow-height');
     };
   });

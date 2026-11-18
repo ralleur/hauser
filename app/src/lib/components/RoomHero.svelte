@@ -22,7 +22,7 @@
   import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
-  import { fadeOffLamps, weatherWholeImage } from '../state/room-display-config.svelte.ts';
+  import { fadeOffLamps, roomImageFocus, weatherWholeImage } from '../state/room-display-config.svelte.ts';
   import { inDuskBand } from '../state/dusk.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { simulation } from '../state/simulation.svelte.ts';
@@ -50,6 +50,7 @@
   // bleiben ausschließlich für Licht-/Immersionsdaten zuständig.
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
+  const focus = $derived(roomImageFocus(appState.currentRoom, 'panel') ?? heroConfig?.focus.panel ?? { x: 0.5, y: 0.5 });
   const placements = $derived(roomLightPlacements(room?.id));
   /* Lichtschein und Schleier gehören nur Lampen; andere Geräte im Bild sind
      ein Punkt zum Antippen (HeroDeviceTargets). */
@@ -78,7 +79,7 @@
     return lights.every((device) => (mergedDevice(room?.id ?? '', device) as LightValue | undefined)?.on !== true);
   });
   const allAssignedLightsOff = $derived(simulation.lightsOff ?? roomLightsOff);
-  const showImmersion = $derived(appState.heroSun?.day === false && !allAssignedLightsOff);
+  const showImmersion = $derived(!allAssignedLightsOff);
   /* „Lampe im Bild aus“ (R67, Owner 2026-10-19, abgenommen 2026-10-24): Das
      Raumbild zeigt die Lampen tagsüber immer und nachts brennend, sobald eine
      im Raum an ist. Eine ausgeschaltete Lampe mit Position bekommt deshalb
@@ -112,6 +113,7 @@
     baseUrl: base,
     roomId: appState.currentRoom,
     config: heroConfig,
+    focus,
     sun: appState.heroSun,
     fallbackTheme: appState.theme,
     allAssignedLightsOff,
@@ -133,6 +135,7 @@
       baseUrl: base,
       roomId: appState.currentRoom,
       config: heroConfig,
+      focus,
       sun: { day: !dayDominant },
       fallbackTheme: appState.theme,
       allAssignedLightsOff,
@@ -302,8 +305,8 @@
   {/if}
   {#if lampShades.length > 0}
     <div class="hero-image-space"
-         style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
-         style:--hero-focus-y={heroConfig?.focus.panel.y ?? 0.5}>
+         style:--hero-focus-x={focus.x}
+         style:--hero-focus-y={focus.y}>
       {#each lampShades as light (light.device.entityId)}
         {@const bounds = light.placement.points ? zoneBounds(light.placement.points) : null}
         <span class="lamp-off-shade" class:is-off={light.off} class:is-rectangle={!!bounds}
@@ -322,8 +325,8 @@
        Polygone dort, wo das Bild gerade abgeschnitten ist. -->
   {#if (RegionOverlay && overlayRegions.length > 0) || (HeroWeather && weatherLayer)}
     <div class="hero-image-space"
-         style:--hero-focus-x={heroConfig?.focus.panel.x ?? 0.5}
-         style:--hero-focus-y={heroConfig?.focus.panel.y ?? 0.5}>
+         style:--hero-focus-x={focus.x}
+         style:--hero-focus-y={focus.y}>
       {#if HeroWeather && weatherLayer}
         {#each windowClips as clip, index (index)}
           <HeroWeather layer={weatherLayer} {clip} />
@@ -339,15 +342,16 @@
        nicht im Compositor blenden, er rastert beim Nachdimmen das ganze
        Vollbild mit allen Verläufen in jedem Frame neu. Ein SVG-Wurzelelement
        je Licht blendet dagegen als Ebene. Geometrie und Verläufe sind dieselben. -->
-  <div class="immersion-light-layer" class:is-visible={showImmersion}>
+  <div class="immersion-light-layer" class:is-visible={showImmersion} class:is-day={!nightImage}>
+    <div class="hero-image-space" style:--hero-focus-x={focus.x} style:--hero-focus-y={focus.y}>
     {#each renderedLights as light, index (light.device.entityId)}
       <svg class="immersion-light" class:is-on={light.value?.on === true}
-           viewBox="0 0 3392 2400" preserveAspectRatio="xMidYMid slice"
+           viewBox="0 0 3392 2400" preserveAspectRatio="none"
            style:--light-opacity={(light.value?.brightness ?? 100) / 100}>
         <defs>
           <radialGradient id={`immersion-light-${index}`}>
-            <stop offset="0" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.7" />
-            <stop offset="0.35" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0.28" />
+            <stop offset="0" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="var(--lamp-glow-center-opacity)" />
+            <stop offset="0.35" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="var(--lamp-glow-halo-opacity)" />
             <stop offset="1" stop-color={light.value?.color ?? 'var(--light-temp-warm)'} stop-opacity="0" />
           </radialGradient>
         </defs>
@@ -365,5 +369,6 @@
         {/if}
       </svg>
     {/each}
+    </div>
   </div>
 </div>

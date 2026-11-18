@@ -16,6 +16,44 @@ const WEATHER_TTL_MS = 10 * 60 * 1000;
 const LOCATION_TTL_MS = 6 * 60 * 60 * 1000;
 const OPEN_METEO_TIMEOUT_MS = 10_000;
 const OPEN_METEO_BODY_MAX = 64 * 1024;
+export const WEATHER_SOURCE_KEY = 'hmi:weather-source:v1';
+const CONDITION_CODES = { sunny: 0, 'clear-night': 0, partlycloudy: 2, cloudy: 3, fog: 45, rainy: 61, pouring: 65,
+  snowy: 71, 'snowy-rainy': 68, hail: 96, lightning: 95, 'lightning-rainy': 95, windy: 3, 'windy-variant': 3, exceptional: 99 };
+function number(value) { return value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value) : null; }
+function celsius(value, unit) { const n = number(value); return n === null ? null : unit === '°F' ? (n - 32) * 5 / 9 : n; }
+function windKmh(value, unit) { const n = number(value); return n === null ? null : n * ({ 'm/s': 3.6, mph: 1.609344, kn: 1.852 }[unit] ?? 1); }
+function rainfall(value, unit) { const n = number(value); return n === null ? null : n * (unit?.startsWith('in') ? 25.4 : 1); }
+export function weatherSourceConfig(raw) {
+  const config = {};
+  for (const key of ['entityId', 'temperature', 'rain', 'wind', 'humidity']) {
+    const value = raw?.[key];
+    const pattern = key === 'entityId' ? /^weather\.[a-z0-9_]+$/ : key === 'rain' ? /^(?:sensor|binary_sensor)\.[a-z0-9_]+$/ : /^sensor\.[a-z0-9_]+$/;
+    if (typeof value === 'string' && pattern.test(value)) config[key] = value;
+  }
+  return config;
+}
+
+function zoneOffset(zone, timestamp) {
+  try {
+    const name = new Intl.DateTimeFormat('en', { timeZone: zone, timeZoneName: 'longOffset' }).formatToParts(new Date(timestamp)).find(part => part.type === 'timeZoneName')?.value;
+    const match = name?.match(/GMT([+-])(\d{2}):(\d{2})/);
+    return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 3600 + Number(match[3]) * 60) : 0;
+  } catch { return 0; }
+}
+
+function haForecast(rows, attributes, daily = false, offset = 0) {
+  const list = Array.isArray(rows) ? rows.filter(row => typeof row?.datetime === 'string' && Number.isFinite(Date.parse(row.datetime))).slice(0, daily ? 10 : 72) : [];
+  const field = (name, convert = value => number(value)) => list.map(row => convert(row[name]));
+  return {
+    time: list.map(row => new Date(Date.parse(row.datetime) + offset * 1000).toISOString().slice(0, daily ? 10 : 16)),
+    weather_code: field('condition', value => CONDITION_CODES[value] ?? null),
+    ...(daily ? { temperature_2m_max: field('temperature', value => celsius(value, attributes.temperature_unit)),
+      temperature_2m_min: field('templow', value => celsius(value, attributes.temperature_unit)), precipitation_probability_max: field('precipitation_probability') }
+      : { temperature_2m: field('temperature', value => celsius(value, attributes.temperature_unit)),
+        precipitation_probability: field('precipitation_probability'), precipitation: field('precipitation', value => rainfall(value, attributes.precipitation_unit)),
+        wind_speed_10m: field('wind_speed', value => windKmh(value, attributes.wind_speed_unit)) }),
+  };
+}
 
 /** Dieselbe Abfrage, die die Oberfläche früher selbst stellte; `timezone=auto`
     richtet die Stundenwerte am Ort aus, nicht an einer festen Zeitzone. */
@@ -88,11 +126,64 @@ export function createWeatherService({
   ttlMs = WEATHER_TTL_MS,
   locationTtlMs = LOCATION_TTL_MS,
   timeoutMs = OPEN_METEO_TIMEOUT_MS,
+  readSettings = () => ({}),
 } = {}) {
   let location = null;   // { value, at }
   let cache = null;      // { data, at }
   let inflight = null;
   let routeSnow = null;
+  let meteoCache = null;
+  let forecastZone = null;
+
+  async function homeAssistantWeather(selected, base) {
+    const credentials = resolveCredentials();
+    if (!credentials) return null;
+    const client = clientFactory(credentials);
+    try {
+      const states = await client.ws('get_states');
+      const byId = new Map(states.map(state => [state.entity_id, state]));
+      const entity = byId.get(selected.entityId), attributes = entity?.attributes ?? {};
+      if (selected.entityId && (!entity || ['unavailable', 'unknown'].includes(entity.state))) return null;
+      if (entity && (!forecastZone || now() - forecastZone.at >= locationTtlMs)) {
+        const config = await client.ws('get_config').catch(() => null);
+        forecastZone = { value: config?.time_zone ?? 'UTC', at: now() };
+      }
+      const offset = entity ? zoneOffset(forecastZone.value, now()) : 0;
+      const forecast = async type => {
+        if (!entity) return [];
+        try {
+          const result = await client.ws('call_service', { domain: 'weather', service: 'get_forecasts',
+            target: { entity_id: selected.entityId }, service_data: { type }, return_response: true });
+          return result?.response?.[selected.entityId]?.forecast ?? [];
+        } catch { return []; }
+      };
+      const [hourly, daily] = await Promise.all([forecast('hourly'), forecast('daily')]);
+      const current = entity ? { temperature_2m: celsius(attributes.temperature, attributes.temperature_unit),
+        apparent_temperature: celsius(attributes.apparent_temperature, attributes.temperature_unit), relative_humidity_2m: number(attributes.humidity),
+        weather_code: CONDITION_CODES[entity.state] ?? null, precipitation: number(attributes.precipitation),
+        wind_speed_10m: windKmh(attributes.wind_speed, attributes.wind_speed_unit), wind_direction_10m: number(attributes.wind_bearing) } : { ...base?.current };
+      for (const [key, field] of [['temperature', 'temperature_2m'], ['humidity', 'relative_humidity_2m'], ['wind', 'wind_speed_10m'], ['rain', 'precipitation']]) {
+        const sensor = byId.get(selected[key]);
+        if (!sensor || ['unavailable', 'unknown'].includes(sensor.state)) continue;
+        const unit = sensor.attributes?.unit_of_measurement;
+        if (key === 'rain' && sensor.entity_id.startsWith('binary_sensor.')) {
+          if (sensor.state === 'on') current.weather_code = 61;
+          else if (sensor.state === 'off' && [61, 65].includes(current.weather_code)) current.weather_code = 3;
+          // A wet/dry contact does not measure a precipitation amount.
+          current.precipitation = null;
+          continue;
+        }
+        const value = key === 'temperature' ? celsius(sensor.state, unit) : key === 'wind' ? windKmh(sensor.state, unit) : key === 'rain' ? rainfall(sensor.state, unit) : number(sensor.state);
+        if (value === null || (key === 'humidity' && (value < 0 || value > 100)) || (key === 'rain' && value < 0)) continue;
+        current[field] = value;
+        if (key === 'rain' && value > 0 && ![71, 73, 75, 77, 85, 86].includes(current.weather_code)) current.weather_code = 61;
+        if (key === 'rain' && value === 0 && [61, 65].includes(current.weather_code)) current.weather_code = 3;
+      }
+      if (!Number.isFinite(current.temperature_2m)) return null;
+      return { ...(base ?? {}), current, source: entity ? String(attributes.friendly_name ?? selected.entityId) : 'Open-Meteo + Home Assistant',
+        ...(entity ? { hourly: haForecast(hourly, attributes, false, offset), daily: haForecast(daily, attributes, true, offset), minutely_15: null, utc_offset_seconds: offset } : {}) };
+    } finally { client.close?.(); }
+  }
 
   async function readLocation() {
     if (location && now() - location.at < locationTtlMs) return location.value;
@@ -126,17 +217,32 @@ export function createWeatherService({
   }
 
   async function read() {
-    if (cache && now() - cache.at < ttlMs) return cache.data;
+    const selected = weatherSourceConfig(readSettings());
+    const key = JSON.stringify(selected);
+    const custom = Object.keys(selected).length > 0;
+    if (cache?.key === key && now() - cache.at < (custom ? Math.min(ttlMs, 30_000) : ttlMs)) return cache.data;
     if (inflight) return inflight;
     inflight = (async () => {
       try {
-        const coords = await readLocation();
-        if (!coords) return cache?.data ?? { ok: false, code: 'WEATHER_LOCATION_UNAVAILABLE' };
-        const forecast = await readForecast(coords).catch(() => null);
-        if (!forecast) return cache?.data ?? { ok: false, code: 'WEATHER_UNAVAILABLE' };
+        const previous = cache?.key === key ? cache.data : null;
+        let forecast = null;
+        if (!selected.entityId) {
+          const coords = await readLocation();
+          if (!coords) return previous ?? { ok: false, code: 'WEATHER_LOCATION_UNAVAILABLE' };
+          const locationKey = JSON.stringify(coords);
+          if (meteoCache?.key === locationKey && now() - meteoCache.at < ttlMs) forecast = meteoCache.data;
+          else {
+            forecast = await readForecast(coords).catch(() => null);
+            if (forecast) meteoCache = { key: locationKey, at: now(), data: forecast };
+          }
+        }
+        if (custom) forecast = await homeAssistantWeather(selected, forecast).catch(() => null);
+        if (!forecast) return previous ?? { ok: false, code: 'WEATHER_UNAVAILABLE' };
         const data = {
           ok: true,
           version: 1,
+          source: forecast.source ?? 'Open-Meteo',
+          pollAfterSeconds: custom ? 30 : 900,
           updatedAt: new Date(now()).toISOString(),
           current: forecast.current ?? null,
           hourly: forecast.hourly ?? null,
@@ -144,7 +250,7 @@ export function createWeatherService({
           daily: forecast.daily ?? null,
           utc_offset_seconds: forecast.utc_offset_seconds ?? null,
         };
-        cache = { data, at: now() };
+        cache = { data, at: now(), key };
         return data;
       } finally {
         inflight = null;

@@ -4,6 +4,7 @@
   import { onDestroy, onMount } from 'svelte';
   import RoomControls from '../RoomControls.svelte';
   import HeroDeviceTargets from '../HeroDeviceTargets.svelte';
+  import RoomWindowWeather from './RoomWindowWeather.svelte';
   import Icon from '../Icon.svelte';
   import { cubicOut } from 'svelte/easing';
   import { openRoomEdit } from '../../state/overlay.svelte.ts';
@@ -11,7 +12,7 @@
   import { swipeleft } from '../../actions/swipeleft.ts';
   import { appState, type Room } from '../../state/app.svelte.ts';
   import type { HeroImageCandidate } from '../room-hero-assets.ts';
-  import { roomHeroConfig } from '../../state/room-hero-config.svelte.ts';
+  import { roomHeroConfig, roomImageFocus } from '../../state/room-hero-config.svelte.ts';
   import { resolvePhoneHero, type PhoneHeroVariant } from '../../state/phone-home.ts';
   import { closeDeviceDetail, closeRoomClimate, deviceDetail, roomClimate } from '../../state/overlay.svelte.ts';
   import { closeSceneEdit, sceneEdit } from '../../state/scene-edit-overlay.svelte.ts';
@@ -76,7 +77,7 @@
   let fadeTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => () => clearTimeout(fadeTimer));
   const heroKey = (roomId: string, variant: PhoneHeroVariant) =>
-    [roomId, variant, JSON.stringify(roomHeroConfig(roomId))].join('|');
+    [roomId, variant, JSON.stringify(roomHeroConfig(roomId)), JSON.stringify(roomImageFocus(roomId, 'phone'))].join('|');
   async function loadHero(roomId: string, variant: PhoneHeroVariant, isCurrent: () => boolean): Promise<HeroImageCandidate | null> {
     const [resolution, { loadRoomHero }, { decodeHeroImageOffThread }] = await Promise.all([
       resolvePhoneHero(import.meta.env.BASE_URL, roomId, variant, roomHeroConfig(roomId)),
@@ -372,6 +373,10 @@
             style:--phone-room-hero={candidate ? `url("${candidate.url}")` : undefined}
             style:--phone-room-focus={candidate?.position}></span>
     {/each}
+
+    {#if shownHero && !dragging && !leaving}
+      <RoomWindowWeather roomId={room.id} position={shownHero.position} />
+    {/if}
 
     {#if controlsHidden && shownHero && !dragging && !leaving}
       <button class="room-sheet-image-area" type="button" aria-label={m.home_free_hero_area()} onclick={onFreeTap}></button>

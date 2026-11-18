@@ -136,6 +136,7 @@ export interface ForecastDay {
   condition: WeatherCondition | null; rainChance: number | null;
 }
 export interface WeatherDetails {
+  source?: string;
   updatedAt: number; offsetSeconds: number; feelsLike: number | null; humidity: number | null;
   windDirection: number | null; uv: number | null;
   hours: ForecastHour[]; days: ForecastDay[];
@@ -148,6 +149,7 @@ export function parseWeatherDetails(value: unknown, now = Date.now()): WeatherDe
   const current = data?.current ?? {}, hourly = data?.hourly ?? {}, daily = data?.daily ?? {};
   const number = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
   return {
+    source: typeof data?.source === 'string' ? data.source : undefined,
     updatedAt: typeof data?.updatedAt === 'string' ? Date.parse(data.updatedAt) : now,
     offsetSeconds: number(data?.utc_offset_seconds) ?? 0,
     feelsLike: number(current.apparent_temperature), humidity: number(current.relative_humidity_2m),

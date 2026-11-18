@@ -221,7 +221,7 @@
 }
 
 .phone-room-card.has-hero .phone-room-facts {
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--glass-text);
   text-shadow: var(--phone-room-ink-shadow);
 }
 

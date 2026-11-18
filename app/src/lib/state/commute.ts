@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export type MapPoint = [number, number];
+
+export function formatCommuteDuration(minutes: number, locale: string): string {
+  const total = Math.max(0, Math.round(minutes));
+  const unit = (value: number, name: 'hour' | 'minute') => new Intl.NumberFormat(locale, {
+    style: 'unit', unit: name, unitDisplay: 'short',
+  }).format(value);
+  if (total < 60) return unit(total, 'minute');
+  return [unit(Math.floor(total / 60), 'hour'), total % 60 ? unit(total % 60, 'minute') : ''].filter(Boolean).join(' ');
+}
 export type CommuteMapBounds = [minX: number, minY: number, maxX: number, maxY: number];
 export interface CommutePlace { label: string; latitude: number; longitude: number }
 export interface CommuteConfig {

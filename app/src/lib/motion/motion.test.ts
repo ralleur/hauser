@@ -24,6 +24,8 @@ describe('Motion-Tokens', () => {
     expect(parseDurationMs('0.3s')).toBe(300);
     expect(parseDurationMs('')).toBeNull();
     expect(parseDurationMs('schnell')).toBeNull();
+    expect(parseDurationMs('-240ms')).toBe(0);
+    expect(parseDurationMs('-0.3s')).toBe(0);
   });
 
   it('liest Dauer und Kurve aus den Tokens und fällt sonst auf die Vorgaben zurück', () => {
@@ -44,6 +46,14 @@ describe('Motion-Tokens', () => {
 });
 
 describe('withViewTransition', () => {
+  it('handles the ready rejection when a newer transition skips this one', async () => {
+    const update = vi.fn();
+    const ready = Promise.reject(new DOMException('Transition was skipped. New ViewTransition started', 'AbortError'));
+    await withViewTransition(update, { doc: { startViewTransition: (run: () => void) => {
+      run(); return { ready, finished: Promise.resolve() };
+    } } as unknown as Document });
+    expect(update).toHaveBeenCalledOnce();
+  });
   it('läuft ohne View-Transition-API sofort und wartet auf das DOM', async () => {
     const update = vi.fn();
     await withViewTransition(update, { doc: {} as Document });

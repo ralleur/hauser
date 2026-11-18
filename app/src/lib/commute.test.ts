@@ -2,6 +2,12 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error Native Node test without @types/node.
 import { Readable } from 'node:stream';
+// @ts-expect-error Native Node test without @types/node.
+import { mkdtempSync, rmSync } from 'node:fs';
+// @ts-expect-error Native Node test without @types/node.
+import { tmpdir } from 'node:os';
+// @ts-expect-error Native Node test without @types/node.
+import { join } from 'node:path';
 // @ts-expect-error Server modules run in Node without app declarations.
 import { commuteGeometry, createCommuteService, DEFAULT_COMMUTE, parseCommuteConfig, projectCommute, rainStart } from '../../server/commute.mjs';
 // @ts-expect-error Native Node server module.
@@ -10,7 +16,14 @@ import { commuteOverviewTiles } from '../../server/commute-overview.mjs';
 import { createLaundryHomeAssistantClient } from '../../server/laundry.mjs';
 // @ts-expect-error Native Node test without @types/node.
 import { WebSocketServer } from 'ws';
-import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, inCommuteWindow, freshCommute, type CommuteConfig, type CommuteRoute, type MapPoint } from './state/commute.ts';
+import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, formatCommuteDuration, inCommuteWindow, freshCommute, type CommuteConfig, type CommuteRoute, type MapPoint } from './state/commute.ts';
+
+it('formats long departure countdowns as hours and minutes in the selected language', () => {
+  expect(formatCommuteDuration(1043, 'de-DE')).toBe('17 Std. 23 Min.');
+  expect(formatCommuteDuration(1043, 'en-US')).toBe('17 hr 23 min');
+  expect(formatCommuteDuration(60, 'de-DE')).toBe('1 Std.');
+  expect(formatCommuteDuration(37, 'de-DE')).toBe('37 Min.');
+});
 
 const now = Date.parse('2026-11-16T06:18:00Z');
 const config: CommuteConfig = { ...DEFAULT_COMMUTE, entryId: 'work' };
@@ -189,6 +202,39 @@ describe('Morning commute', () => {
     });
     expect(fetchImpl).toHaveBeenCalledTimes(result === 'ready' ? 1 : 2);
     expect(ws.mock.calls.filter(([type]) => type === 'tomtom/route')).toHaveLength(1);
+  });
+  it('preloads a stale route in the background and reuses its map after a server restart', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'hauser-commute-map-'));
+    let current = { ...raw, live: { ...raw.live, at: new Date(now - 60 * 60_000).toISOString() } };
+    const fetchImpl = vi.fn(async () => Response.json({ elements: [{
+      type: 'way', tags: { highway: 'primary' }, geometry: current.points.map(([lat, lon]) => ({ lat, lon })),
+    }] }));
+    const ws = vi.fn(async (type: string) => type === 'config/entity_registry/list' ? registry : type === 'get_states' ? states : current);
+    const create = () => createCommuteService({ configStore: { read: () => ({ 'hmi:commute:v1': JSON.stringify(config) }) },
+      resolveCredentials: () => ({}), clientFactory: () => ({ ws, close: vi.fn() }), now: () => now, fetchImpl,
+      mapCachePath: join(directory, 'map.json') });
+    try {
+      const service = create();
+      await service.preload();
+      expect((await service.read()).route).toBeNull();
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+      current = raw;
+      const restarted = create();
+      const { route } = await restarted.read();
+      expect(route).toMatchObject({ mapStatus: 'ready', durationMinutes: 37 });
+      expect(route.roads).toHaveLength(1);
+      await restarted.preload();
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+      // A changed route must get a matching map rather than old projected roads.
+      current = { ...raw, points: raw.points.map(([lat, lon]) => [lat + .01, lon]) };
+      const changed = create();
+      expect((await changed.read()).route.mapStatus).toBe('loading');
+      await changed.preload();
+      expect((await changed.read()).route.mapStatus).toBe('ready');
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
   it('loads and clips streets and water using the wider bounds requested by the screen', async () => {
     const bounds = { minX: -512, minY: -512, maxX: 1536, maxY: 1024 };

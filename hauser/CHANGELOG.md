@@ -1,3 +1,15 @@
+## 0.53.0 - 2026-11-18
+
+- Notifications: native iOS completes notification taps on the main thread, fixing the reported crash when opening a leaving-home notification.
+- Notes: edit menus and dialogs stay at the touch position above moving screens; editing and completing a note saves normally.
+- Scenes: deleting every scene in a room remains saved after reloading.
+- Android and phone browsers: rain and snow appear inside the room picture's configured window regions.
+- Rooms: the initial background follows the saved room layout after reload (thanks to @tiptronic, PR #44). Image framing can be adjusted separately for phones and wall panels, including bundled pictures, with the same saved focus in native iOS.
+- Commute: preload and retain background maps, remember the manually chosen view between visits, and format long departure countdowns in hours and minutes.
+- Room pictures: stronger additive lamp light in day and night scenes avoids a grey glow centre; temperature text on room cards has more contrast.
+- Weather: select a Home Assistant weather entity, including providers exposed through HA, and optionally use your own outdoor temperature, rain, wind and humidity sensors. Forecasts follow the selected provider; live readings refresh every 30 seconds.
+- Reliability: handle superseded view transitions, reject negative animation durations and report an occupied server port clearly. Layout measurements defer their writes until after ResizeObserver delivery, preventing undelivered-notification loops. Stresshaus recognises renamed simulators, keeps scene-editor queries inside the editor and reconnects interrupted configuration reads once.
+
 ## 0.52.1 - 2026-11-17
 
 - Website: an automatic, bilingual introduction shows real lighting, commute, room images, energy, shopping and standby. The panel keeps its tablet proportions between 4:3 and 16:10, captions float clear of controls and the route, and tour controls sit on the left. Pause, chapter selection and free exploration stay available; touching the app pauses the tour.

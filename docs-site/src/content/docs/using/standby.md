@@ -28,6 +28,21 @@ Touching the calendar or the notes opens that screen. Touching anything else ope
 - **Time until standby** sets the idle delay, or switches standby off for this device.
 - **Start standby** switches now. The standby button in the title bar does the same.
 
+## Commute view
+
+The car button switches between the normal standby screen and your configured
+commute. A manual choice is remembered on this device when you visit a room
+and return, and after restarting the app. Long departure countdowns use hours
+and minutes. Configure office days and arrival times under **Commute**.
+
+## Weather source
+
+**Settings → Appearance → Ambient & standby → Custom weather source & sensors**
+lets you select a Home Assistant weather entity. Optional temperature, rain,
+wind and humidity entities replace the current readings. Leave a field empty
+to use Open-Meteo or that weather entity's own values. See
+[weather sources](/docs/integrations/open-meteo/) for the details.
+
 ## Deep night
 
 Between 22:00 and 06:00 the screen dims to an eye-friendly deep night. The map disappears. Switch it under **Deep night**.

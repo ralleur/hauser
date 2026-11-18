@@ -51,11 +51,8 @@ export function tokenValue(node: Element | null, name: string): string {
 
 export function parseDurationMs(value: string): number | null {
   const text = value.trim();
-  if (!text) return null;
-  if (text.endsWith('ms')) { const n = Number.parseFloat(text); return Number.isFinite(n) ? n : null; }
-  if (text.endsWith('s')) { const n = Number.parseFloat(text); return Number.isFinite(n) ? n * 1000 : null; }
   const n = Number.parseFloat(text);
-  return Number.isFinite(n) ? n : null;
+  return Number.isFinite(n) ? Math.max(0, n * (text.endsWith('s') && !text.endsWith('ms') ? 1000 : 1)) : null;
 }
 
 /** Dauer eines Tokens in Millisekunden; unter reduced motion liefern die Tokens 0. */
@@ -69,7 +66,7 @@ export function tokenEasing(node: Element | null, token: EasingToken): string {
 }
 
 type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => void | Promise<void>) => { finished: Promise<void> };
+  startViewTransition?: (update: () => void | Promise<void>) => { ready?: Promise<void>; finished: Promise<void> };
 };
 
 export interface ViewTransitionOptions {
@@ -88,7 +85,10 @@ export function withViewTransition(update: () => void | Promise<void>, options: 
     return Promise.resolve(result).then(() => tick());
   }
   try {
-    return doc.startViewTransition(update).finished.catch(() => undefined);
+    const transition = doc.startViewTransition(update);
+    // A second transition skips the first one and rejects its ready promise.
+    void transition.ready?.catch(() => undefined);
+    return transition.finished.catch(() => undefined);
   } catch {
     const result = update();
     return Promise.resolve(result).then(() => tick());

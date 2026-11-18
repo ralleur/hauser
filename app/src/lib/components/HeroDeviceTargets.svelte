@@ -14,6 +14,7 @@
      genau dort liegen, wo sie im Editor gesetzt wurden. */
   import { appState } from '../state/app.svelte.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
+  import { roomImageFocus } from '../state/room-display-config.svelte.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
   import { deviceZoneOutline, nearestDeviceZone } from '../state/device-zone-hit.ts';
   import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
@@ -39,6 +40,7 @@
 
   const room = $derived(appState.rooms.find((candidate) => candidate.id === appState.currentRoom));
   const heroConfig = $derived(roomHeroConfig(appState.currentRoom));
+  const panelFocus = $derived(roomImageFocus(appState.currentRoom, 'panel') ?? heroConfig?.focus.panel);
   const placements = $derived(roomLightPlacements(room?.id));
   const targets = $derived(roomImageDevices(room)
     .filter((device) => placements[device.entityId])
@@ -78,8 +80,8 @@
 {#if room && targets.length > 0}
   <div class="room-hero-targets" class:is-revealed={reveal} class:is-phone={phone} style:--hero-parallax={`${heroParallax.offsetPx}px`}>
     <div class="hero-image-space" bind:this={imageSpace} bind:clientWidth={imageWidth} bind:clientHeight={imageHeight}
-         style:--hero-focus-x={phone ? phoneFocus[0] : heroConfig?.focus.panel.x ?? 0.5}
-         style:--hero-focus-y={phone ? phoneFocus[1] : heroConfig?.focus.panel.y ?? 0.5}>
+         style:--hero-focus-x={phone ? phoneFocus[0] : panelFocus?.x ?? 0.5}
+         style:--hero-focus-y={phone ? phoneFocus[1] : panelFocus?.y ?? 0.5}>
       <!-- Only the union of expanded zones accepts touches; free space keeps its gestures. -->
       <div class="hero-device-hit-layer" aria-hidden="true" bind:this={hitLayer}
            onpointerdown={(event) => { pressed = hit(event); }}

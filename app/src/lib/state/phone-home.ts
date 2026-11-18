@@ -3,6 +3,7 @@ import { intlLocale, pluralCategory } from './locale.svelte.ts';
 import { openingsLabel } from './open-label.ts';
 import type { ClimateValue, LightValue } from '../adapter/types.ts';
 import type { RoomHeroConfig } from '../config/household-config.ts';
+import { roomImageFocus } from './room-hero-config.svelte.ts';
 import type {
   PhoneHeroVariant as SharedPhoneHeroVariant,
   RoomHeroResolution,
@@ -63,7 +64,7 @@ export async function resolvePhoneHero(
   config: RoomHeroConfig | null = null,
 ): Promise<RoomHeroResolution> {
   const { resolveRoomHero } = await import('../components/room-hero-assets.ts');
-  return resolveRoomHero({ target: 'phone', baseUrl, roomId, variant, config });
+  return resolveRoomHero({ target: 'phone', baseUrl, roomId, variant, config, focus: roomImageFocus(roomId, 'phone') });
 }
 
 /** Compatibility projection for callers that only need the static fallback URL. */

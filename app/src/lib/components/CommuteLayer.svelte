@@ -6,7 +6,7 @@
   import CommuteMapBackdrop from './CommuteMapBackdrop.svelte';
   import { settingsValues } from '../state/settings.svelte.ts';
   import { commute, coverCommuteMap, refreshCommute } from '../state/commute.svelte.ts';
-  import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, freshCommute, inCommuteWindow, mapPath } from '../state/commute.ts';
+  import { commuteMapCoverage, commutePanelWidth, departureFor, fitCommuteLayout, formatCommuteDuration, freshCommute, inCommuteWindow, mapPath } from '../state/commute.ts';
   import { clockNow } from '../state/clock.svelte.ts';
   import { intlLocale } from '../state/locale.svelte.ts';
   let { active, preview = false, mode = null, clockHost, onlayout, onvisible }: { active: boolean; preview?: boolean; mode?: boolean | null; clockHost?: HTMLElement; onlayout: (layout: { x: number; y: number; width: number }) => void; onvisible: (shown: boolean) => void } = $props();
@@ -21,9 +21,10 @@
     if (visible) return () => coverCommuteMap(null);
   });
   $effect(() => {
+    // Warm the remembered viewport while the normal app is still visible.
+    void refreshCommute();
     if (!active) return;
     now = clockNow();
-    void refreshCommute();
     const tick = setInterval(() => {
       now = clockNow();
       if (mode === true || preview || inCommuteWindow(commute.config, now)) void refreshCommute();
@@ -139,7 +140,7 @@
       {#if weather}<p class="commute-report commute-traffic-detail" class:is-drawn={routeDrawn} aria-hidden={!routeDrawn}>{weather.title}</p>{/if}
       <p class="commute-departure">
         {immediate ? m.commute_arrival_now({ time: time(new Date(now.getTime() + route.durationMinutes * 60_000)) })
-          : departure.minutes > 0 ? m.commute_leave_in({ count: departure.minutes, arrival: departure.arrival })
+          : departure.minutes > 0 ? m.commute_leave_in({ duration: formatCommuteDuration(departure.minutes, intlLocale()), arrival: departure.arrival })
           : departure.minutes === 0 ? m.commute_leave_now({ arrival: departure.arrival })
             : m.commute_leave_at({ time: time(departure.at), arrival: departure.arrival })}
       </p>

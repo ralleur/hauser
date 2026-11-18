@@ -1,13 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { defaultCommute, freshCommute, type CommuteMapBounds, type CommuteRoute, type CommuteStatus } from './commute.ts';
 export const commute = $state<CommuteStatus>({ config: { ...defaultCommute }, route: null });
+const VIEW_KEY = 'hmi:commute:view:v1';
+function savedView(): boolean | null {
+  try { const value = JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null'); return typeof value === 'boolean' ? value : null; }
+  catch { return null; }
+}
+export const commuteView = $state({ mode: savedView() });
+export function setCommuteView(mode: boolean): void {
+  commuteView.mode = mode;
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify(mode)); } catch { /* Keep the choice for this session. */ }
+}
 let flight: Promise<void> | null = null;
 let mapCache: Pick<CommuteRoute, 'mapKey' | 'roads' | 'areas'> | undefined;
-let mapBounds: CommuteMapBounds | null = null;
-const mapQuery = () => `mapBounds=${mapBounds?.join(',') ?? 'route'}${mapCache?.mapKey ? `&mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
+const MAP_BOUNDS_KEY = 'hmi:commute:map-bounds:v1';
+function savedMapBounds(): CommuteMapBounds | null {
+  try {
+    const bounds = JSON.parse(localStorage.getItem(MAP_BOUNDS_KEY) ?? 'null');
+    return Array.isArray(bounds) && bounds.length === 4 && bounds.every(Number.isInteger) ? bounds as CommuteMapBounds : null;
+  } catch { return null; }
+}
+let mapBounds: CommuteMapBounds | null = savedMapBounds();
+const mapQuery = () => `${mapBounds ? `mapBounds=${mapBounds.join(',')}&` : ''}${mapCache?.mapKey ? `mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
 
 export function coverCommuteMap(bounds: CommuteMapBounds | null): void {
-  if (!bounds) { mapBounds = null; return; }
+  if (!bounds) return;
   const previous = mapBounds;
   if (previous) {
     // Keep the existing coverage when hints appear, a screen rotates, or a list changes size.
@@ -15,6 +32,7 @@ export function coverCommuteMap(bounds: CommuteMapBounds | null): void {
     if (bounds.every((edge, i) => edge === previous[i])) return;
   }
   mapBounds = bounds;
+  try { localStorage.setItem(MAP_BOUNDS_KEY, JSON.stringify(bounds)); } catch { /* Memory still covers this session. */ }
   if (flight) void flight.then(() => { if (mapBounds === bounds) void refreshCommute(); });
   else void refreshCommute();
 }

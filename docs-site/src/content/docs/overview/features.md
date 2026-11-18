@@ -19,6 +19,7 @@ Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/RO
 | [Scenes](/docs/using/scenes/) | Bright, Cozy and Off per room, plus your own. Import scenes from Home Assistant. | Live |
 | [Climate](/docs/using/climate/) | Room thermostat as a tile, one central control for the whole house. | Live |
 | [Room pictures](/docs/using/room-images/) | Every room has a picture in three lighting states. Upload your own or let the wizard draw one from a photo. | Live / Built |
+| [Image framing](/docs/using/room-images/) | Separate phone and wall-panel crops, shared with native iOS. | Built |
 | Undo instead of confirm | After "everything off" or a scene, a five-second Undo toast. | Live |
 
 ## Everyday screens
@@ -26,6 +27,7 @@ Status words follow the [roadmap](https://github.com/ralleur/hauser/blob/main/RO
 | Feature | Idea | Status |
 |---|---|---|
 | [Standby](/docs/using/standby/) | Clock, week strip, notes and shopping list when the panel rests. Optional street map and weather. | Live |
+| [Custom weather sources](/docs/integrations/open-meteo/) | Choose an HA weather provider and optional sensors for current outdoor readings. | Built |
 | [Calendar](/docs/using/calendar/) | Home Assistant calendars as one sheet of paper. | Built |
 | [Shopping list](/docs/using/shopping-list/) | Home Assistant to-do lists, one per shop. Notion as an alternative. | Built |
 | [Reminders and notes](/docs/using/reminders-and-notes/) | Sticky notes per person on a pinboard. | Built |

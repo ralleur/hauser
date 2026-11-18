@@ -1,5 +1,6 @@
 <script lang="ts">
   import RoomSummaryCard from './phone/RoomSummaryCard.svelte';
+  import { observeResize } from '../actions/observe-resize.ts';
   import { appState, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomOpenings, roomPresence, roomTileTemperature } from '../state/commands.ts';
   import { phoneHeroVariantForRoom, projectPhoneRooms, type PhoneHeroVariant } from '../state/phone-home.ts';
@@ -37,8 +38,7 @@
     const free = grid.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
     const gap = parseFloat(style.rowGap) || 0;
     const count = Math.max(1, rows);
-    const next = Math.max(0, (free - (count - 1) * gap) / count);
-    if (Math.abs(next - rowHeight) > 0.5) rowHeight = next;
+    rowHeight = Math.max(0, Math.floor((free - (count - 1) * gap) / count));
   }
 
   $effect(() => {
@@ -49,9 +49,7 @@
   $effect(() => {
     const grid = gridEl;
     if (!grid || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => measureRows());
-    observer.observe(grid);
-    return () => observer.disconnect();
+    return observeResize(measureRows, grid);
   });
 
   const summaries = $derived(projectPhoneRooms(rooms, {

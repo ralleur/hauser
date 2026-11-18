@@ -1,3 +1,7 @@
+<script module lang="ts">
+  const TILE_RATIO = ['16/9', '1/1.15', '1/1.1'];
+</script>
+
 <script lang="ts">
   import { onMount, type Component } from 'svelte';
   import { clock } from '../../state/clock.svelte.ts';
@@ -37,6 +41,12 @@
 
   onMount(() => {
     let cancelled = false;
+    // Gleiche Frame-Grenze wie observeResize, ohne ein zusätzliches Modul
+    // im knappen Telefon-Startbudget.
+    const observer = new ResizeObserver(() => requestAnimationFrame(() => {
+      if (!cancelled) measureRows();
+    }));
+    observer.observe(feedEl!);
     void import('../WeatherButton.svelte').then(({ default: component }) => {
       if (!cancelled) WeatherControl = component;
     }).catch(() => {});
@@ -47,7 +57,7 @@
     void import('./PhoneHomeExtras.svelte').then(({ default: component }) => {
       if (!cancelled) HomeExtras = component;
     }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; observer.disconnect(); };
   });
 
   /* Layout-Blatt (Räume pro Zeile, Schnellaktionen): Wisch nach links auf dem
@@ -60,12 +70,10 @@
   /* Seitenverhältnis der Kachel je Spaltenzahl: eine Spalte breit wie das
      Panel, drei Spalten fast quadratisch, zwei dazwischen. Es gilt nur, solange
      nicht gemessen ist. */
-  const TILE_RATIO: Record<number, string> = { 1: '16 / 9', 2: '1 / 1.15', 3: '1 / 1.1' };
   /* Zeilen, die ohne Scrollen auf den Schirm passen — zwei Spalten zeigen sechs
      Räume (Owner-Wunsch 2026-09-12). Die Kachelhöhe kommt aus dem gemessenen
      freien Platz, weil ein festes Seitenverhältnis auf breiten Geräten nur zwei
      Zeilen übrig ließ. Mehr Räume als Platz: dann wird gescrollt. */
-  const VISIBLE_ROWS: Record<number, number> = { 1: 3, 2: 3, 3: 4 };
   let feedEl = $state<HTMLElement | undefined>();
   let gridEl = $state<HTMLElement | undefined>();
   let rowHeight = $state(0);
@@ -74,7 +82,7 @@
     const feed = feedEl;
     const grid = gridEl;
     if (!feed || !grid) return;
-    const rows = VISIBLE_ROWS[phoneLayout.roomsPerRow] ?? VISIBLE_ROWS[2];
+    const rows = phoneLayout.roomsPerRow === 3 ? 4 : 3;
     const feedStyle = getComputedStyle(feed);
     let free = feed.clientHeight
       - parseFloat(feedStyle.paddingTop)
@@ -84,32 +92,24 @@
     for (const child of feed.children) {
       if (child === grid) continue;
       const style = getComputedStyle(child);
-      if (style.display === 'none' || style.position === 'absolute' || style.position === 'fixed') continue;
+      if (style.position === 'absolute' || style.position === 'fixed') continue;
       free -= (child as HTMLElement).offsetHeight
         + parseFloat(style.marginTop)
         + parseFloat(style.marginBottom);
     }
-    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
-    const next = Math.max(0, (free - (rows - 1) * gap) / rows);
-    if (Math.abs(next - rowHeight) > 0.5) rowHeight = next;
+    const gap = parseFloat(getComputedStyle(grid).rowGap);
+    // Ganze Pixel halten die Messung auch bei gebrochenen Viewportmaßen ruhig.
+    rowHeight = Math.max(0, Math.floor((free - (rows - 1) * gap) / rows));
   }
 
   $effect(() => {
     /* Neu messen, sobald sich Spaltenzahl, Hinweiszeile oder Schnellaktionen ändern. */
-    void phoneLayout.roomsPerRow;
     void openLabel;
     void phoneLayout.quickActions;
     void QuickActionsComponent;
     measureRows();
   });
 
-  $effect(() => {
-    const feed = feedEl;
-    if (!feed || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => measureRows());
-    observer.observe(feed);
-    return () => observer.disconnect();
-  });
   let layoutOpen = $state(false);
   let layoutDrag = $state<number | null>(null);
   let LayoutSheetComponent = $state<Component<{ open: boolean; drag: number | null; onclose: () => void }> | null>(null);
@@ -131,7 +131,7 @@
 
 <main class="phone-home-feed" aria-labelledby="phone-target-title"
       bind:this={feedEl}
-      style={`--phone-rooms-per-row:${phoneLayout.roomsPerRow};--phone-tile-ratio:${TILE_RATIO[phoneLayout.roomsPerRow] ?? TILE_RATIO[2]}${rowHeight > 0 ? `;--phone-tile-height:${rowHeight}px` : ''}`}
+      style={`--phone-rooms-per-row:${phoneLayout.roomsPerRow};--phone-tile-ratio:${TILE_RATIO[phoneLayout.roomsPerRow - 1]}${rowHeight ? `;--phone-tile-height:${rowHeight}px` : ''}`}
       use:swipeleft={{
         onSwipe: () => { layoutOpen = true; }, move: false, threshold: 48, angle: 60, enabled: !layoutOpen,
         onDrag: (travel) => { loadLayoutSheet(); layoutDrag = travel; },
@@ -150,7 +150,7 @@
     </aside>
   {/if}
 
-  <section class="phone-room-feed" class:is-fitted={rowHeight > 0} bind:this={gridEl} aria-label={m.phone_rooms()}>
+  <section class="phone-room-feed" class:is-fitted={rowHeight} bind:this={gridEl} aria-label={m.phone_rooms()}>
     {#if rooms.length === 0}
       <p class="phone-empty-state">{m.phone_no_rooms()}</p>
     {:else}

@@ -5,6 +5,8 @@ import { jsonResponse, readRoomImageJsonBody, requestOriginAllowed } from './sha
 import { commutePlace, TomTomRouteNameConflict, writeTomTomRoute } from './commute-route-editor.mjs';
 import { classifyArea, joinAreaRings, clipAreaRing, clipPolyline } from './ambient-map-renderer.mjs';
 import { commuteOverviewTiles, loadCommuteOverview } from './commute-overview.mjs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export const COMMUTE_KEY = 'hmi:commute:v1';
 export const DEFAULT_COMMUTE = Object.freeze({ entryId: '', days: [1, 2, 3, 4, 5], from: '06:00', until: '09:00', arrival: '08:00', showRain: true });
@@ -149,9 +151,30 @@ export function rainStart(forecast, now) {
   return null;
 }
 
-export function createCommuteService({ configStore, clientFactory, resolveCredentials, readForecast = async () => null, readRouteSnow = async () => null, fetchImpl = fetch, now = () => Date.now() }) {
-  let cache = null, inflight = null, roadsFlight = null, mapFailure = null, previewFlight = null;
+export function createCommuteService({ configStore, clientFactory, resolveCredentials, mapCachePath = null, readForecast = async () => null, readRouteSnow = async () => null, fetchImpl = fetch, now = () => Date.now() }) {
+  let cache = null, inflight = null, previewFlight = null;
   const roadCache = new Map();
+  const roadsFlights = new Map(), mapFailures = new Map();
+  if (mapCachePath) {
+    try {
+      const stored = JSON.parse(readFileSync(mapCachePath, 'utf8'));
+      if (stored.version === 1 && Array.isArray(stored.maps)) {
+        for (const entry of stored.maps.slice(-3)) {
+          if (typeof entry.key === 'string' && entry.map?.mapStatus === 'ready' && Array.isArray(entry.map.roads)
+            && Array.isArray(entry.map.areas) && entry.bounds
+            && ['minX', 'minY', 'maxX', 'maxY'].every((edge) => Number.isFinite(entry.bounds[edge]))) roadCache.set(entry.key, entry);
+        }
+      }
+    } catch { /* A missing cache only needs its first background load. */ }
+  }
+  function saveMaps() {
+    if (!mapCachePath) return;
+    try {
+      mkdirSync(dirname(mapCachePath), { recursive: true });
+      writeFileSync(mapCachePath + '.tmp', JSON.stringify({ version: 1, maps: [...roadCache.values()] }));
+      renameSync(mapCachePath + '.tmp', mapCachePath);
+    } catch { /* Map storage must not prevent showing live traffic. */ }
+  }
   function config() {
     try { return parseCommuteConfig(JSON.parse(configStore.read()[COMMUTE_KEY])) ?? { ...DEFAULT_COMMUTE }; }
     catch { return { ...DEFAULT_COMMUTE }; }
@@ -189,12 +212,12 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
     const [south, west, north, east] = geo.geographicBounds(bounds);
     if (south < -85.0511 || north > 85.0511 || west < -180 || east > 180) return { roads: [], areas: [], mapStatus: 'too-large' };
     const key = [south, west, north, east].map((n) => n.toFixed(5)).concat(Object.values(bounds)).join(',');
-    if (roadCache.has(key)) return roadCache.get(key);
-    if (mapFailure?.key === key && now() - mapFailure.at < 60_000) {
+    if (roadCache.has(key)) return roadCache.get(key).map;
+    if (mapFailures.has(key) && now() - mapFailures.get(key) < 60_000) {
       return { roads: [], areas: [], mapStatus: 'unavailable' };
     }
-    if (!roadsFlight) {
-      roadsFlight = (async () => {
+    if (!roadsFlights.has(key)) {
+      const flight = (async () => {
         if (north - south > 1.2 || east - west > 1.8) {
           // Predrawn vector tiles keep the number of downloads and the level of detail bounded.
           const tiles = commuteOverviewTiles([south, west, north, east]);
@@ -259,16 +282,20 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         }
       })().catch(() => null).then((map) => {
         if (map) {
-          roadCache.set(key, map);
+          roadCache.set(key, { key, bounds, map });
           if (roadCache.size > 3) roadCache.delete(roadCache.keys().next().value);
-        } else mapFailure = { key, at: now() };
-      }).finally(() => { roadsFlight = null; });
+          saveMaps();
+          mapFailures.delete(key);
+        } else mapFailures.set(key, now());
+      }).finally(() => { roadsFlights.delete(key); });
+      roadsFlights.set(key, flight);
     }
     return { roads: [], areas: [], mapStatus: 'loading' };
   }
   function withMap({ geometry, ...status }, bounds) {
+    // Map geometry is useful even outside the live traffic freshness window.
+    const map = geometry && bounds ? roadsFor(geometry, bounds) : { roads: [], areas: [] };
     if (!status.route) return status;
-    const map = bounds ? roadsFor(geometry, bounds) : { roads: [], areas: [] };
     return { ...status, route: { ...status.route, ...map } };
   }
   async function readRoute() {
@@ -286,13 +313,20 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
           route.rainAt = rainStart(forecast, now());
           route.snowAt = snowAt;
         }
-        cache = { id: selected.entryId, at: now(), route, geometry: route && commuteGeometry(raw) };
+        cache = { id: selected.entryId, at: now(), route, geometry: commuteGeometry(raw) };
         return { config: selected, route, geometry: cache.geometry };
       } catch { return { config: selected, route: null, unavailable: true }; }
     })().finally(() => { inflight = null; });
     return inflight;
   }
   async function read(bounds = DEFAULT_MAP_BOUNDS) { return withMap(await readRoute(), bounds); }
+  async function preload() {
+    const { geometry } = await readRoute();
+    if (!geometry) return;
+    const bounds = roadCache.size ? [...roadCache.values()].map((entry) => entry.bounds) : [DEFAULT_MAP_BOUNDS];
+    for (const coverage of bounds) roadsFor(geometry, coverage);
+    await Promise.all([...roadsFlights.values()]);
+  }
   async function serve(req, res, allowedOrigins) {
     try {
       if (!requestOriginAllowed(req, allowedOrigins)) { jsonResponse(res, 403, { code: 'ORIGIN_FORBIDDEN' }); return; }
@@ -345,6 +379,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         const entryId = await withClient((client) => writeTomTomRoute(client, { ...body, name, start, destination, config: body }));
         const saved = { ...body, entryId, places: { start, destination } };
         configStore.update({ [COMMUTE_KEY]: JSON.stringify(saved) }); cache = null;
+        void preload();
         jsonResponse(res, 200, { config: saved }); return;
       }
       if (req.method === 'GET' && path === '/api/commute') {
@@ -362,6 +397,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
           await withClient((client) => writeTomTomRoute(client, { entryId: body.entryId, config: body }));
         }
         configStore.update({ [COMMUTE_KEY]: JSON.stringify(body) }); cache = null;
+        void preload();
         jsonResponse(res, 200, { config: body }); return;
       }
       jsonResponse(res, 405, { code: 'METHOD_NOT_ALLOWED' });
@@ -373,5 +409,5 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
       jsonResponse(res, 503, { code: 'COMMUTE_UNAVAILABLE' });
     }
   }
-  return { read, options, serve };
+  return { read, options, serve, preload };
 }

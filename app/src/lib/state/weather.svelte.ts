@@ -48,6 +48,7 @@ registerRevalidation({
 });
 
 export const weatherView = $state({ open: false, loading: false, failed: false, details: null as WeatherDetails | null });
+export const weatherRefresh = $state({ intervalMs: 15 * 60 * 1000 });
 export function openWeather(): void { weatherView.open = true; void refreshWeather(); }
 let inflight = false;
 
@@ -67,6 +68,7 @@ export async function refreshWeather(): Promise<void> {
     const res = await fetch(weatherUrl(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) { weatherView.failed = true; return; }
     const data = await res.json();
+    weatherRefresh.intervalMs = data.pollAfterSeconds === 30 ? 30_000 : 15 * 60 * 1000;
     const reading = parseOutdoor(data);
     weatherView.details = parseWeatherDetails(data);
     // Nur übernehmen, wenn eine Temperatur da ist; sonst letzten Wert halten.

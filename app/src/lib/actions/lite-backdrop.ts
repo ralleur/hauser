@@ -8,6 +8,8 @@
    die Kette kennt keine Transformationen, deshalb stimmt der Wert auch
    während der Einblend-Animation des Screens. Neu bei Größenänderung. */
 
+import { observeResize } from './observe-resize.ts';
+
 export function liteBackdrop(node: HTMLElement) {
   const measure = () => {
     let x = 0;
@@ -22,12 +24,11 @@ export function liteBackdrop(node: HTMLElement) {
     node.style.setProperty('--lite-y', `${y}px`);
   };
   measure();
-  const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-  observer?.observe(node);
+  const stop = typeof ResizeObserver === 'undefined' ? null : observeResize(measure, node);
   window.addEventListener('resize', measure);
   return {
     destroy() {
-      observer?.disconnect();
+      stop?.();
       window.removeEventListener('resize', measure);
     },
   };

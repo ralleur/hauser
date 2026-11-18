@@ -20,6 +20,7 @@
   import { localeState } from '../state/locale.svelte.ts';
   import { openingsLabel } from '../state/open-label.ts';
   import { tabGlider } from '../actions/tab-glider.ts';
+  import { observeResize } from '../actions/observe-resize.ts';
 
   let tabletReady = $state(false);
   let tabletPanel = $state('');
@@ -115,10 +116,7 @@
     const dock = edge?.querySelector<HTMLElement>('.climate-dock');
     if (!edge || !dock) return;
     const measure = () => { climateFits = dock.offsetWidth <= edge.clientWidth; };
-    const observer = new ResizeObserver(measure);
-    observer.observe(edge);
-    observer.observe(dock);
-    return () => observer.disconnect();
+    return observeResize(measure, edge, dock);
   });
 
   $effect(() => {

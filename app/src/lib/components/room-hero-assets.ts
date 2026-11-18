@@ -98,6 +98,7 @@ export interface HeroAssetInput {
 }
 
 interface HeroResolverBaseInput {
+  focus?: RoomHeroFocus;
   baseUrl: string;
   roomId: string | null | undefined;
   config: RoomHeroConfig | null | undefined;
@@ -225,14 +226,16 @@ export function resolveRoomHero(input: RoomHeroResolverInput): RoomHeroResolutio
      eine leere Fläche, und ein Haushalt ohne eigene Bilder soll überall etwas
      sehen — auf dem Telefon wie am Panel. */
   const fallbackRoom = normalizeHeroRoom(input.roomId);
+  const focus = input.focus && validFocus(input.focus) ? focusPosition(input.focus) : null;
+  const user = userCandidate(input.config, input.target, variant);
   return {
     variant,
-    userCandidate: userCandidate(input.config, input.target, variant),
+    userCandidate: user && focus ? { ...user, position: focus } : user,
     projectFallback: fallbackRoom
       ? {
           source: 'project',
           url: projectAssetUrl(input.baseUrl, fallbackRoom, variant, input.target),
-          position: CENTER_POSITION,
+          position: focus ?? CENTER_POSITION,
         }
       : null,
   };

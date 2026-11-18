@@ -83,6 +83,7 @@
       <section class="weather-card weather-current">
         <img src={image} alt="" style:object-position={hero ? `${hero.focus.panel.x}% ${hero.focus.panel.y}%` : 'center'} onerror={e => { const img = e.currentTarget as HTMLImageElement; if (img.src !== new URL(normalImage, location.href).href) img.src = normalImage; }} />
         <div class="current-copy"><h2><Icon name="i-map-marker" /> {m.weather_ui_home()}</h2>
+          {#if details?.source}<small>{details.source}</small>{/if}
           <div class="weather-temperature"><span>{value(outdoor.temp, '°')}</span><Icon name={weatherConditionIcon(outdoor.condition)} /></div>
           <h2>{condition(outdoor.condition)}</h2><p>{m.weather_ui_feels_like()} {value(details?.feelsLike, '°')}</p>
         </div>

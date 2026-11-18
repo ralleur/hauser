@@ -6,6 +6,7 @@
      die ihn erzeugt. */
   import Icon from '../Icon.svelte';
   import SettingsCardHead from './SettingsCardHead.svelte';
+  import WeatherSourceSettings from './WeatherSourceSettings.svelte';
   import { originOf, requestAmbient, requestAmbientEdit, requestAmbientPreview, requestDeepNightPreview } from '../../state/ambient.svelte.ts';
   import { parseAmbientMapCoordinate, type AmbientMapPlace } from '../../state/ambient-map-client.ts';
   import {
@@ -153,6 +154,7 @@
 </script>
 
 <div class="settings-group">
+  <WeatherSourceSettings />
   <SettingsCardHead icon="i-sleep" tint="cool"
                     title={m.sys_card_standby()} sub={m.sys_card_standby_hint()} />
 

@@ -488,8 +488,8 @@ function cleanSceneSets(raw: unknown): Record<string, RoomSceneSet> {
     const set: RoomSceneSet = {};
     if (custom.length > 0) set.custom = custom;
     if (Object.keys(names).length > 0) set.names = names;
-    // Nie den letzten Rest verstecken — der Raum braucht mindestens eine Szene.
-    if (hidden.length > 0 && hidden.length < SCENES.length + custom.length) set.hidden = hidden;
+    // Ein Raum darf dauerhaft ohne Szenenleiste bleiben.
+    if (hidden.length > 0) set.hidden = hidden;
     if (Object.keys(set).length > 0) sets[roomId] = set;
   }
   return sets;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fitOverlay } from '../actions/fit-overlay.ts';
+  import { observeResize } from '../actions/observe-resize.ts';
   import { SUN_ENTITY, appState } from '../state/app.svelte.ts';
   import { energyCurve, energyPeriodTotals, energyTodayInput, initEnergyHistory } from '../state/energy-history.svelte.ts';
   import { energyBalanceToday } from '../state/energy-balance.ts';
@@ -272,12 +273,8 @@
   }
   $effect(() => {
     if (!frameEl || !stageEl) return;
-    const observer = new ResizeObserver(() => measureBounds());
-    observer.observe(stageEl);
-    observer.observe(frameEl);
-    if (wallEl) observer.observe(wallEl);
     measureBounds();
-    return () => observer.disconnect();
+    return observeResize(measureBounds, stageEl, frameEl, ...(wallEl ? [wallEl] : []));
   });
   $effect(() => {
     void panel; void period; void frame;

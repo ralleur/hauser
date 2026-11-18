@@ -42,6 +42,14 @@ function simctl(args) {
   return execFileSync('xcrun', ['simctl', ...args], { encoding: 'utf8' });
 }
 
+export function simulatorTemplate(devices, typePattern) {
+  for (const [runtime, list] of Object.entries(devices)) {
+    const model = list.find((device) => typePattern.test(device.name) || typePattern.test(device.deviceTypeIdentifier ?? ''));
+    if (model) return { runtime, model };
+  }
+  return null;
+}
+
 function ensureSimulator(name, typePattern) {
   const { devices } = JSON.parse(simctl(['list', 'devices', 'available', '-j']));
   for (const list of Object.values(devices)) {
@@ -50,10 +58,8 @@ function ensureSimulator(name, typePattern) {
   }
   /* Typ und Laufzeit von einem vorhandenen Gerät gleicher Art abschauen — so
      passt die Laufzeit sicher zum Typ (die Typliste kennt auch iPhone 7). */
-  for (const [runtime, list] of Object.entries(devices)) {
-    const model = list.find((d) => typePattern.test(d.name));
-    if (model) return simctl(['create', name, model.deviceTypeIdentifier, runtime]).trim();
-  }
+  const template = simulatorTemplate(devices, typePattern);
+  if (template) return simctl(['create', name, template.model.deviceTypeIdentifier, template.runtime]).trim();
   throw new Error(`Kein Simulator als Vorlage für ${name}`);
 }
 
@@ -90,30 +96,45 @@ const EXPECTED_REFUSALS = [
 export function startProxy(apiOrigin, onRefusal, unrest = false) {
   const target = new URL(apiOrigin);
   const server = createServer((req, res) => {
-    const upstream = httpRequest({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
-      const path = (req.url ?? '').split('?')[0];
-      if (answer.statusCode >= 400 && !EXPECTED_REFUSALS.some(([code, re]) => code === answer.statusCode && re.test(path))) {
-        const chunks = [];
-        answer.on('data', (c) => chunks.push(c));
-        answer.on('end', () => {
-          const raw = Buffer.concat(chunks).toString('utf8');
-          /* Unruhe erzeugt absichtlich HA-Ausfälle. Seit P17 heißen sie
-             503 HA_UNAVAILABLE statt 502 HA_ERROR (Stresshaus #42).
-             Andere 503 und jeder Ausfall ohne Unruhe bleiben Befunde. */
-          if (unrest && answer.statusCode === 503 && path.startsWith('/api/app/')) {
-            try { if (JSON.parse(raw).code === 'HA_UNAVAILABLE') return; } catch { /* keine bekannte Antwort */ }
-          }
-          const body = raw.slice(0, 160).replace(/\s+/g, ' ');
-          /* Gerätekennungen zusammenfassen: dieselbe Ablehnung für zwanzig Kameras ist ein Befund. */
-          const shape = path.replace(/\/[a-z_]+\.[a-z0-9_]+/g, '/<entity>').replace(/\/[0-9a-f-]{16,}/g, '/<id>');
-          onRefusal(`${answer.statusCode} ${req.method} ${shape} — ${body}`);
-        });
-      }
-      res.writeHead(answer.statusCode ?? 502, answer.headers);
-      answer.pipe(res);
-    });
-    upstream.on('error', () => { res.writeHead(502); res.end(); });
-    req.pipe(upstream);
+    const path = (req.url ?? '').split('?')[0];
+    const forward = (retry = false) => {
+      const upstream = httpRequest({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+        if (answer.statusCode >= 400 && !EXPECTED_REFUSALS.some(([code, re]) => code === answer.statusCode && re.test(path))) {
+          const chunks = [];
+          answer.on('data', (c) => chunks.push(c));
+          answer.on('end', () => {
+            const raw = Buffer.concat(chunks).toString('utf8');
+            /* Unruhe erzeugt absichtlich HA-Ausfälle. Seit P17 heißen sie
+               503 HA_UNAVAILABLE statt 502 HA_ERROR (Stresshaus #42).
+               Andere 503 und jeder Ausfall ohne Unruhe bleiben Befunde. */
+            if (unrest && answer.statusCode === 503 && path.startsWith('/api/app/')) {
+              try { if (JSON.parse(raw).code === 'HA_UNAVAILABLE') return; } catch { /* keine bekannte Antwort */ }
+            }
+            const body = raw.slice(0, 160).replace(/\s+/g, ' ');
+            /* Gerätekennungen zusammenfassen: dieselbe Ablehnung für zwanzig Kameras ist ein Befund. */
+            const shape = path.replace(/\/[a-z_]+\.[a-z0-9_]+/g, '/<entity>').replace(/\/[0-9a-f-]{16,}/g, '/<id>');
+            onRefusal(`${answer.statusCode} ${req.method} ${shape} — ${body}`);
+          });
+        }
+        res.writeHead(answer.statusCode ?? 502, answer.headers);
+        answer.pipe(res);
+      });
+      upstream.on('error', (error) => {
+        if (res.destroyed) return;
+        if (res.headersSent) { res.destroy(error); return; }
+        /* Ein beim Lesen zurückgesetzter Socket darf einmal neu verbinden.
+           Schreibende Anfragen niemals wiederholen: der Befehl könnte bereits wirken. */
+        if (!retry && ['GET', 'HEAD'].includes(req.method) && error.code === 'ECONNRESET') {
+          forward(true);
+          return;
+        }
+        onRefusal(`503 ${req.method} ${path} — HAUSER_UPSTREAM_UNAVAILABLE (${error.code ?? 'TRANSPORT_ERROR'})`);
+        res.writeHead(503, { 'content-type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, code: 'HAUSER_UPSTREAM_UNAVAILABLE', message: 'Der Hauser-Testserver ist nicht erreichbar.' }));
+      });
+      if (retry) upstream.end(); else req.pipe(upstream);
+    };
+    forward();
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({
     origin: `http://127.0.0.1:${server.address().port}`,

@@ -867,11 +867,14 @@ export function createHmiServer(
   /* Außenwetter (Issue #15): der Ort kommt aus Home Assistant, Open-Meteo
      fragt der Server — die Oberfläche kennt keine Koordinaten mehr. */
   const weather = weatherService ?? createWeatherService({
+    readSettings: () => { try { return JSON.parse(configStore.read()['hmi:weather-source:v1'] ?? '{}'); } catch { return {}; } },
     clientFactory: laundryClientFactory,
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode),
   });
   const commute = createCommuteService({ configStore, clientFactory: laundryClientFactory,
+    mapCachePath: join(dirname(configPath), 'commute-map.json'),
     resolveCredentials: () => resolveServerHaAccess(configStore, haConnectionMode), readForecast: () => weather.read(), readRouteSnow: weather.readRouteSnow });
+  void commute.preload();
   /* Companion-App (Plan 21): gekoppelte Geräte und die Dateilisten, mit
      denen die App Bundle und Raumbilder spiegelt. */
   const devices = deviceStore ?? createDeviceStore(pairingDevicesPath);
@@ -1502,5 +1505,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     console.error(error instanceof Error ? error.message : 'HMI-Server konnte nicht starten.');
     process.exit(1);
   }
+  server.once('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`[hauser] Port ${PORT} ist bereits belegt. Die laufende Instanz bleibt bestehen.`);
+      process.exit(1);
+    }
+    logFatal('listen', error);
+  });
   server.listen(PORT, HOST, () => console.log(`Smart Home HMI hört auf ${HOST}:${PORT}`));
 }
