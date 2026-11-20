@@ -25,7 +25,7 @@ function windKmh(value, unit) { const n = number(value); return n === null ? nul
 function rainfall(value, unit) { const n = number(value); return n === null ? null : n * (unit?.startsWith('in') ? 25.4 : 1); }
 export function weatherSourceConfig(raw) {
   const config = {};
-  for (const key of ['entityId', 'temperature', 'rain', 'wind', 'humidity']) {
+  for (const key of ['entityId', 'temperature', 'feelsLike', 'rain', 'wind', 'humidity', 'uv']) {
     const value = raw?.[key];
     const pattern = key === 'entityId' ? /^weather\.[a-z0-9_]+$/ : key === 'rain' ? /^(?:sensor|binary_sensor)\.[a-z0-9_]+$/ : /^sensor\.[a-z0-9_]+$/;
     if (typeof value === 'string' && pattern.test(value)) config[key] = value;
@@ -41,6 +41,33 @@ function zoneOffset(zone, timestamp) {
   } catch { return 0; }
 }
 
+function homeSunTimes(attributes, coords, timestamp, offset) {
+  const day = new Date(timestamp + offset * 1000).toISOString().slice(0, 10);
+  const midnight = Date.parse(`${day}T00:00:00Z`);
+  let calculated = {};
+  if (coords) {
+    // Same NOAA calculation as the native SunModel. sun.sun only exposes the
+    // next event, so after sunrise/sunset it can already refer to tomorrow.
+    const rad = Math.PI / 180;
+    const dayOfYear = (midnight - Date.UTC(Number(day.slice(0, 4)), 0, 1)) / 86400000 + 1;
+    const gamma = 2 * Math.PI / 365 * (dayOfYear - 1);
+    const equation = 229.18 * (.000075 + .001868 * Math.cos(gamma) - .032077 * Math.sin(gamma) - .014615 * Math.cos(2 * gamma) - .040849 * Math.sin(2 * gamma));
+    const declination = .006918 - .399912 * Math.cos(gamma) + .070257 * Math.sin(gamma) - .006758 * Math.cos(2 * gamma) + .000907 * Math.sin(2 * gamma) - .002697 * Math.cos(3 * gamma) + .00148 * Math.sin(3 * gamma);
+    const cosAngle = Math.cos(90.833 * rad) / (Math.cos(coords.latitude * rad) * Math.cos(declination)) - Math.tan(coords.latitude * rad) * Math.tan(declination);
+    if (cosAngle >= -1 && cosAngle <= 1) {
+      const angle = Math.acos(cosAngle) / rad;
+      calculated = { sunrise: midnight + (720 - 4 * (coords.longitude + angle) - equation) * 60000,
+        sunset: midnight + (720 - 4 * (coords.longitude - angle) - equation) * 60000 };
+    }
+  }
+  return Object.fromEntries([['sunrise', 'next_rising'], ['sunset', 'next_setting']].map(([key, attribute]) => {
+    const next = typeof attributes?.[attribute] === 'string' ? Date.parse(attributes[attribute]) : NaN;
+    const today = Number.isFinite(next) && new Date(next + offset * 1000).toISOString().slice(0, 10) === day;
+    const instant = today ? next : calculated[key];
+    return [key, Number.isFinite(instant) ? new Date(instant).toISOString() : null];
+  }));
+}
+
 function haForecast(rows, attributes, daily = false, offset = 0) {
   const list = Array.isArray(rows) ? rows.filter(row => typeof row?.datetime === 'string' && Number.isFinite(Date.parse(row.datetime))).slice(0, daily ? 10 : 72) : [];
   const field = (name, convert = value => number(value)) => list.map(row => convert(row[name]));
@@ -48,7 +75,8 @@ function haForecast(rows, attributes, daily = false, offset = 0) {
     time: list.map(row => new Date(Date.parse(row.datetime) + offset * 1000).toISOString().slice(0, daily ? 10 : 16)),
     weather_code: field('condition', value => CONDITION_CODES[value] ?? null),
     ...(daily ? { temperature_2m_max: field('temperature', value => celsius(value, attributes.temperature_unit)),
-      temperature_2m_min: field('templow', value => celsius(value, attributes.temperature_unit)), precipitation_probability_max: field('precipitation_probability') }
+      temperature_2m_min: field('templow', value => celsius(value, attributes.temperature_unit)), precipitation_probability_max: field('precipitation_probability'),
+      uv_index_max: field('uv_index') }
       : { temperature_2m: field('temperature', value => celsius(value, attributes.temperature_unit)),
         precipitation_probability: field('precipitation_probability'), precipitation: field('precipitation', value => rainfall(value, attributes.precipitation_unit)),
         wind_speed_10m: field('wind_speed', value => windKmh(value, attributes.wind_speed_unit)) }),
@@ -146,7 +174,7 @@ export function createWeatherService({
       if (selected.entityId && (!entity || ['unavailable', 'unknown'].includes(entity.state))) return null;
       if (entity && (!forecastZone || now() - forecastZone.at >= locationTtlMs)) {
         const config = await client.ws('get_config').catch(() => null);
-        forecastZone = { value: config?.time_zone ?? 'UTC', at: now() };
+        forecastZone = { value: config?.time_zone ?? 'UTC', coordinates: homeLocationFromHaConfig(config), at: now() };
       }
       const offset = entity ? zoneOffset(forecastZone.value, now()) : 0;
       const forecast = async type => {
@@ -161,8 +189,9 @@ export function createWeatherService({
       const current = entity ? { temperature_2m: celsius(attributes.temperature, attributes.temperature_unit),
         apparent_temperature: celsius(attributes.apparent_temperature, attributes.temperature_unit), relative_humidity_2m: number(attributes.humidity),
         weather_code: CONDITION_CODES[entity.state] ?? null, precipitation: number(attributes.precipitation),
-        wind_speed_10m: windKmh(attributes.wind_speed, attributes.wind_speed_unit), wind_direction_10m: number(attributes.wind_bearing) } : { ...base?.current };
-      for (const [key, field] of [['temperature', 'temperature_2m'], ['humidity', 'relative_humidity_2m'], ['wind', 'wind_speed_10m'], ['rain', 'precipitation']]) {
+        wind_speed_10m: windKmh(attributes.wind_speed, attributes.wind_speed_unit), wind_direction_10m: number(attributes.wind_bearing),
+        uv_index: number(attributes.uv_index), ...homeSunTimes(byId.get('sun.sun')?.attributes, forecastZone.coordinates, now(), offset) } : { ...base?.current };
+      for (const [key, field] of [['temperature', 'temperature_2m'], ['feelsLike', 'apparent_temperature'], ['humidity', 'relative_humidity_2m'], ['wind', 'wind_speed_10m'], ['rain', 'precipitation'], ['uv', 'uv_index']]) {
         const sensor = byId.get(selected[key]);
         if (!sensor || ['unavailable', 'unknown'].includes(sensor.state)) continue;
         const unit = sensor.attributes?.unit_of_measurement;
@@ -173,8 +202,8 @@ export function createWeatherService({
           current.precipitation = null;
           continue;
         }
-        const value = key === 'temperature' ? celsius(sensor.state, unit) : key === 'wind' ? windKmh(sensor.state, unit) : key === 'rain' ? rainfall(sensor.state, unit) : number(sensor.state);
-        if (value === null || (key === 'humidity' && (value < 0 || value > 100)) || (key === 'rain' && value < 0)) continue;
+        const value = key === 'temperature' || key === 'feelsLike' ? celsius(sensor.state, unit) : key === 'wind' ? windKmh(sensor.state, unit) : key === 'rain' ? rainfall(sensor.state, unit) : number(sensor.state);
+        if (value === null || (key === 'humidity' && (value < 0 || value > 100)) || (['rain', 'uv'].includes(key) && value < 0)) continue;
         current[field] = value;
         if (key === 'rain' && value > 0 && ![71, 73, 75, 77, 85, 86].includes(current.weather_code)) current.weather_code = 61;
         if (key === 'rain' && value === 0 && [61, 65].includes(current.weather_code)) current.weather_code = 3;

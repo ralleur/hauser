@@ -116,7 +116,7 @@ export function haToLight(raw: RawEntity, prev?: Partial<LightValue>): LightValu
   const bri = raw.attributes.brightness;
   const brightness = typeof bri === 'number'
     ? Math.round((bri / 255) * 100)
-    : (prev?.brightness ?? 0);
+    : (prev?.brightness || (raw.state === 'on' ? 100 : 0));
   const v: LightValue = { on: raw.state === 'on', brightness };
 
   // Farbtemperatur: bevorzugt das Kelvin-Attribut, sonst Mireds umrechnen.

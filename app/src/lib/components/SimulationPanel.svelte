@@ -240,7 +240,7 @@
     {#each layers as layer (layer)}<li>{layer}</li>{/each}
   </ul>
 
-  <button class="sim-btn sim-reset pressable" type="button" onclick={clearSimulation}>
+  <button class="sim-btn sim-reset pressable" type="button" onclick={close}>
     Zurück zur Wirklichkeit
   </button>
 </aside>

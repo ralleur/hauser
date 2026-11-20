@@ -128,7 +128,7 @@ describe('phone home source, command and modal boundaries', () => {
     expect(phoneHomeState).toContain('resolveRoomHero');
     expect(roomCard).toContain('roomHeroConfig(summary.id)');
     expect(roomCard).toContain('resolvePhoneHero');
-    expect(roomCard).toContain('loadRoomHero');
+    expect(roomCard).toContain('loadDecodedRoomHero');
     expect(roomCard).toContain('style:--phone-room-focus');
   });
 

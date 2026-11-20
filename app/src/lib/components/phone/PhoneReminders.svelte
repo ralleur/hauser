@@ -6,7 +6,7 @@
   import { longpress } from '../../actions/longpress.ts';
   import { m } from '../../../paraglide/messages.js';
   import {
-    reminders, refreshReminders, addReminder, completeReminder, hmiReminderId,
+    reminders, refreshReminders, addReminder, completeReminder, hmiReminderId, canCompleteReminder,
   } from '../../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
@@ -61,7 +61,7 @@
   let tableOpen = $state(false);
 
   function openPopout(e: MouseEvent, reminderId: string) {
-    if (!hmiReminderId(reminderId)) return;
+    if (!canCompleteReminder(reminderId)) return;
     popoutError = null;
     popout = popout?.id === reminderId ? null : {
       id: reminderId,
@@ -71,7 +71,7 @@
   }
 
   function openPopoutCentered(reminderId: string) {
-    if (!hmiReminderId(reminderId)) return;
+    if (!canCompleteReminder(reminderId)) return;
     popout = { id: reminderId, x: window.innerWidth / 2 - 90, y: window.innerHeight / 2 - 48 };
   }
 
@@ -194,8 +194,10 @@
   {#if popout}
     <div class="rem-popout" use:bodyPortal style="left: {popout.x}px; top: {popout.y}px" role="dialog"
          aria-label={m.notes_reminder_menu()}>
-      <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
-              onclick={editSelected}>{m.notes_edit()}</button>
+      {#if hmiReminderId(popout.id)}
+        <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
+                onclick={editSelected}>{m.notes_edit()}</button>
+      {/if}
       <button class="rem-popout-btn pressable" type="button" disabled={popoutBusy}
               onclick={confirmComplete}>
         {popoutBusy ? m.phone_marking_done() : m.phone_done_check()}

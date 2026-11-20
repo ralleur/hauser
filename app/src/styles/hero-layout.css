@@ -17,7 +17,7 @@
   inset: 0;
   overflow: hidden;
   /* Wisch von rechts nach links öffnet das Layout-Menü (HomeScreen). */
-  touch-action: pan-y pinch-zoom;
+  touch-action: pan-y;
 }
 
 .home-stage > .room-hero { view-transition-name: home-room; }
@@ -26,6 +26,7 @@
 .home-stage .home-panel:nth-child(2) { view-transition-name: home-control-secondary; }
 .home-stage.is-view-changing .home-panels { transition: none; }
 .home-stage.is-view-changing .phone-room-hero-layer { transition: none; }
+.home-stage.is-view-changing .hero-layer { transition: none; }
 
 ::view-transition-group(home-room),
 ::view-transition-group(home-control-primary),

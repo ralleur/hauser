@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Native Node ESM Servermodul.
-import { createWeatherService, homeLocationFromHaConfig, openMeteoForecastUrl } from '../../server/weather.mjs';
+import { createWeatherService, homeLocationFromHaConfig, openMeteoForecastUrl, weatherSourceConfig } from '../../server/weather.mjs';
 import { parseOutdoor, parseWeatherDetails } from './state/weather.ts';
 
 const HOME = { latitude: 49.6, longitude: 6.55 };
@@ -21,7 +21,70 @@ function fakeFetch(body: unknown, urls: string[], status = 200) {
 
 const FORECAST = { current: { temperature_2m: 12.3, weather_code: 61, precipitation: 0.4, wind_speed_10m: 9 }, hourly: { temperature_2m: [11.8, 12.3] } };
 
+function fusionWeatherFixture({ at = '2026-11-19T04:00:00Z', attributes = {}, sensors = [], settings = {}, sun = {}, coordinates = HOME }: {
+  at?: string; attributes?: Record<string, unknown>; sensors?: unknown[]; settings?: Record<string, string>;
+  sun?: Record<string, string>; coordinates?: { latitude: number; longitude: number };
+} = {}) {
+  return createWeatherService({ now: () => Date.parse(at),
+    readSettings: () => ({ entityId: 'weather.fusion', ...settings }), resolveCredentials: () => ({}),
+    clientFactory: () => ({ close: () => {}, ws: async (type: string, options: any) => {
+      if (type === 'get_states') return [
+        { entity_id: 'weather.fusion', state: 'cloudy', attributes: { temperature: 11, temperature_unit: '°C', humidity: 81, ...attributes } },
+        { entity_id: 'sun.sun', state: 'below_horizon', attributes: sun }, ...sensors,
+      ];
+      if (type === 'get_config') return { time_zone: 'Europe/Berlin', ...coordinates };
+      return { response: { 'weather.fusion': { forecast: options.service_data.type === 'daily'
+        ? [{ datetime: '2026-11-19T00:00:00+01:00', temperature: 12, templow: 6, uv_index: 2.7 }] : [] } } };
+    } }),
+  });
+}
+
 describe('Außenwetter vom Server', () => {
+  it('keeps HA forecast UV maxima and reads today’s sun events independently of the provider', async () => {
+    const at = Date.parse('2026-11-19T04:00:00Z');
+    const result = await fusionWeatherFixture({ sun: { next_rising: '2026-11-19T06:50:00Z', next_setting: '2026-11-19T15:40:00Z' } }).read();
+    expect(result.daily.uv_index_max).toEqual([2.7]);
+    expect(parseWeatherDetails(result, at)).toMatchObject({ uv: 2.7, uvIsMaximum: true });
+    expect(parseOutdoor(result)).toMatchObject({ sunrise: Date.parse('2026-11-19T06:50:00Z'), sunset: Date.parse('2026-11-19T15:40:00Z') });
+  });
+
+  it('keeps today’s solar date after sunset when HA already reports tomorrow’s events', async () => {
+    const at = '2026-11-19T22:00:00Z';
+    const result = await fusionWeatherFixture({ at, sun: { next_rising: '2026-11-20T06:50:00Z', next_setting: '2026-11-20T15:40:00Z' } }).read();
+    const outside = parseOutdoor(result);
+    expect(new Date(outside.sunrise!).toISOString().slice(0, 10)).toBe('2026-11-19');
+    expect(new Date(outside.sunset!).toISOString().slice(0, 10)).toBe('2026-11-19');
+    expect(outside.sunrise).toBeLessThan(outside.sunset!);
+    expect(outside.sunset).toBeLessThan(Date.parse(at));
+  });
+
+  it('uses separate feels-like and UV sensors, converts Fahrenheit and preserves a zero UV index', async () => {
+    const settings = { feelsLike: 'sensor.feels_like', uv: 'sensor.uv' };
+    expect(weatherSourceConfig(settings)).toEqual(settings);
+    const result = await fusionWeatherFixture({ settings, attributes: { apparent_temperature: 9, uv_index: 1.2 }, sensors: [
+      { entity_id: settings.feelsLike, state: '46.4', attributes: { unit_of_measurement: '°F' } },
+      { entity_id: settings.uv, state: '0', attributes: {} },
+    ] }).read();
+    const details = parseWeatherDetails(result, Date.parse('2026-11-19T04:00Z'));
+    expect(details.feelsLike).toBeCloseTo(8);
+    expect(details).toMatchObject({ uv: 0, uvIsMaximum: false });
+    expect(result.daily.uv_index_max).toEqual([2.7]);
+  });
+
+  it('keeps provider readings when an assigned sensor is unavailable or invalid', async () => {
+    const result = await fusionWeatherFixture({ settings: { feelsLike: 'sensor.feels_like', uv: 'sensor.uv' },
+      attributes: { apparent_temperature: 8, uv_index: 1.2 }, sensors: [
+        { entity_id: 'sensor.feels_like', state: 'unavailable' }, { entity_id: 'sensor.uv', state: '-1' },
+      ] }).read();
+    expect(parseWeatherDetails(result)).toMatchObject({ feelsLike: 8, uv: 1.2, uvIsMaximum: false });
+  });
+
+  it('leaves sun times empty in polar night and never labels tomorrow’s UV forecast as today’s maximum', async () => {
+    const result = await fusionWeatherFixture({ coordinates: { latitude: 80, longitude: 20 } }).read();
+    expect(parseOutdoor(result)).toMatchObject({ sunrise: null, sunset: null });
+    expect(parseWeatherDetails(result, Date.parse('2026-11-18T08:00Z'))).toMatchObject({ uv: null, uvIsMaximum: false });
+  });
+
   it('uses the selected HA provider and live sensors, with unit conversion and real forecast times', async () => {
     const calls: string[] = [], upstreams: string[] = [];
     const service = createWeatherService({

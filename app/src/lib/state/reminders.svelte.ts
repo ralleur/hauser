@@ -69,11 +69,21 @@ function hmiTaskToReminder(task: HmiTask): Reminder {
   };
 }
 
-/* Nur zentral im HMI gespeicherte Aufgaben lassen sich hier abhaken. */
+/* Zentrale Aufgaben lassen sich außerdem bearbeiten; HA-Listen werden über
+   ihre ursprüngliche Entität und UID abgehakt, wie in der nativen App. */
 export function hmiReminderId(reminderId: string): string | null {
   const prefix = `${HMI_SOURCE_ID}:`;
   const id = reminderId.startsWith(prefix) ? reminderId.slice(prefix.length) : null;
   return id?.startsWith('optimistic-') ? null : id;
+}
+
+function haReminderId(reminderId: string): { entityId: string; uid: string } | null {
+  const match = /^(todo\.[^:]+):(.+)$/.exec(reminderId);
+  return match ? { entityId: match[1], uid: match[2] } : null;
+}
+
+export function canCompleteReminder(reminderId: string): boolean {
+  return Boolean(hmiReminderId(reminderId) || haReminderId(reminderId));
 }
 
 const CACHE_KEY = 'hmi:reminders-cache';
@@ -162,8 +172,10 @@ export async function addReminder(who: ReminderPerson, title: string, due: strin
 /* Aufgabe zentral auf erledigt setzen und anschließend neu laden. */
 export async function completeReminder(reminderId: string): Promise<void> {
   const id = hmiReminderId(reminderId);
-  if (!id) throw new Error('Diese Erinnerung kann hier nicht abgehakt werden.');
-  await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}/complete`, 'POST');
+  const ha = haReminderId(reminderId);
+  if (id) await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}/complete`, 'POST');
+  else if (ha) await runtime.setTodoItemStatus(ha.entityId, ha.uid, true);
+  else throw new Error('Diese Erinnerung kann hier nicht abgehakt werden.');
   await refreshReminders();
 }
 

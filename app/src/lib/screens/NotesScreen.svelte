@@ -16,7 +16,7 @@
     shoppingConfig, shoppingSort, shoppingItemOrder, sortShoppingList, undoShoppingSort,
   } from '../state/shopping-settings.svelte.ts';
   import {
-    reminders, refreshReminders, addReminder, completeReminder, hmiReminderId,
+    reminders, refreshReminders, addReminder, completeReminder, hmiReminderId, canCompleteReminder,
   } from '../state/reminders.svelte.ts';
   import {
     reminderRowsByPerson, reminderDisplayTitle, postitDueLabel, reminderOverdue,
@@ -100,7 +100,7 @@
   let personDialog = $state<string | null>(null);
 
   function openPopout(e: MouseEvent, reminderId: string) {
-    if (!hmiReminderId(reminderId)) return; // HA-Erinnerungen bleiben read-only
+    if (!canCompleteReminder(reminderId)) return;
     popoutError = null;
     popout = popout?.id === reminderId ? null : {
       id: reminderId,
@@ -266,7 +266,7 @@
                 <button class="rem-card pressable" type="button" style={postitStyle(entry.color)}
                         class:is-selected={popout?.id === item.id}
                         aria-label={m.rem_context_menu({ title: reminderDisplayTitle(item.title, persons) })}
-                        use:longpress={{ onLongPress: () => { if (hmiReminderId(item.id)) popout = { id: item.id, x: window.innerWidth / 2 - 90, y: window.innerHeight / 2 - 48 }; } }}
+                        use:longpress={{ onLongPress: () => { if (canCompleteReminder(item.id)) popout = { id: item.id, x: window.innerWidth / 2 - 90, y: window.innerHeight / 2 - 48 }; } }}
                         onclick={(e) => openPopout(e, item.id)}>
                   <p class="rem-card-title">{reminderDisplayTitle(item.title, persons)}</p>
                   {#if postitDueLabel(item)}
@@ -294,12 +294,14 @@
     </aside>
   </div>
 
-  <!-- Kontextmenü für zentral gespeicherte Erinnerungen. -->
+  <!-- Zentrale Zettel bearbeiten oder abhaken, HA-Listen nur abhaken. -->
   {#if popout}
     <div class="rem-popout" use:bodyPortal style="left: {popout.x}px; top: {popout.y}px" role="dialog"
          aria-label={m.notes_reminder_menu()}>
-      <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
-              onclick={editSelected}>{m.notes_edit()}</button>
+      {#if hmiReminderId(popout.id)}
+        <button class="rem-popout-btn secondary pressable" type="button" disabled={popoutBusy}
+                onclick={editSelected}>{m.notes_edit()}</button>
+      {/if}
       <button class="rem-popout-btn pressable" type="button" disabled={popoutBusy}
               onclick={confirmComplete}>
         {popoutBusy ? 'Wird abgehakt …' : 'Erledigt ✓'}

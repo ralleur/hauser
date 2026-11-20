@@ -7,6 +7,7 @@
   let draft = $state(loadWeatherSource());
   let busy = $state(false), saved = $state(false), error = $state('');
   const labels = { entityId: () => m.weather_source_entity(), temperature: () => m.weather_source_temperature(),
+    feelsLike: () => m.weather_source_feels_like(), uv: () => m.weather_source_uv(),
     rain: () => m.weather_source_rain(), wind: () => m.weather_source_wind(), humidity: () => m.weather_source_humidity() };
   async function save(event: SubmitEvent) {
     event.preventDefault(); busy = true; error = ''; saved = false;

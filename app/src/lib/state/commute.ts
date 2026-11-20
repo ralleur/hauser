@@ -83,10 +83,12 @@ export function commutePanelWidth(width: number, gap: number): number {
 }
 
 export function commuteMapCoverage(width: number, height: number, { scale, tx, ty }: { scale: number; tx: number; ty: number }, margin: number): CommuteMapBounds {
-  // Round outward so small layout changes can reuse the same map.
+  // Preload a quarter viewport beyond every edge, including the wide space
+  // beside vertical routes. Round outward so layout changes reuse the map.
+  const marginX = Math.max(margin, width / 4), marginY = Math.max(margin, height / 4);
   const step = 256;
-  return [Math.floor((-margin - tx) / scale / step) * step, Math.floor((-margin - ty) / scale / step) * step,
-    Math.ceil((width + margin - tx) / scale / step) * step, Math.ceil((height + margin - ty) / scale / step) * step];
+  return [Math.floor((-marginX - tx) / scale / step) * step, Math.floor((-marginY - ty) / scale / step) * step,
+    Math.ceil((width + marginX - tx) / scale / step) * step, Math.ceil((height + marginY - ty) / scale / step) * step];
 }
 
 export function fitCommuteLayout(line: MapPoint[], area: { x: number; y: number; width: number; height: number }, gap: number, panelWidth: number, clockHeight: number, cardHeight: number) {
@@ -106,17 +108,69 @@ export function fitCommuteLayout(line: MapPoint[], area: { x: number; y: number;
   const stacked = fit(centeredX, y, centeredX, cardY, {
     x, y: y + clockHeight + gap, width, height: Math.max(0, height - clockHeight - cardHeight - gap * 2),
   });
-  if (width < 480) return stacked;
-
   const rowHeight = Math.max(clockHeight, cardHeight);
   const row = fit(x, y + (rowHeight - clockHeight) / 2, x + width - panelWidth, y + (rowHeight - cardHeight) / 2, {
     x, y: y + rowHeight + gap, width, height: Math.max(0, height - rowHeight - gap),
   });
-  if (clockHeight + gap + cardHeight > height) return row;
-
   const clockY = y + (height - clockHeight - cardHeight - gap) / 2;
   const side = fit(x, clockY, x, clockY + clockHeight + gap, { x: x + panelWidth + gap, y, width: width - panelWidth - gap, height });
-  return side.scale >= row.scale ? side : row;
+  let best = width < 480 ? stacked : clockHeight + gap + cardHeight > height ? row : side.scale >= row.scale ? side : row;
+
+  // Fit the route first. Clock and card may use the empty corners alongside a
+  // diagonal route instead of reserving an entire row or column for themselves.
+  type Rect = typeof area;
+  const overlaps = (a: Rect, b: Rect, padding = 0) => a.x < b.x + b.width + padding && a.x + a.width + padding > b.x
+    && a.y < b.y + b.height + padding && a.y + a.height + padding > b.y;
+  const placements = (panelHeight: number, otherHeight: number, rightFirst: boolean) => {
+    const edges = [x, x + width - panelWidth];
+    if (rightFirst) edges.reverse();
+    return [...new Set([y, y + height - panelHeight, y + otherHeight + gap, y + height - panelHeight - otherHeight - gap, y + (height - panelHeight) / 2])]
+      .flatMap(top => [...new Set([...edges, centeredX])].map(left => ({ x: left, y: top, width: panelWidth, height: panelHeight })))
+      .filter(rect => rect.x >= x && rect.y >= y && rect.x + rect.width <= x + width && rect.y + rect.height <= y + height);
+  };
+  const clocks = placements(clockHeight, cardHeight, false), cards = placements(cardHeight, clockHeight, true);
+  function routeClears(rect: Rect, scale: number, tx: number, ty: number) {
+    const box = { x: (rect.x - gap - tx) / scale, y: (rect.y - gap - ty) / scale,
+      width: (rect.width + gap * 2) / scale, height: (rect.height + gap * 2) / scale };
+    for (const point of [line[0], line[line.length - 1]]) {
+      if (overlaps(box, { x: point[0] - 20, y: point[1] - 44, width: 40, height: 56 })) return false;
+    }
+    for (let i = 1; i < line.length; i++) {
+      let start = 0, end = 1;
+      for (let axis = 0; axis < 2; axis++) {
+        const origin = line[i - 1][axis], delta = line[i][axis] - origin;
+        const low = axis === 0 ? box.x : box.y, high = low + (axis === 0 ? box.width : box.height);
+        if (delta === 0) { if (origin < low || origin > high) { end = -1; break; } }
+        else {
+          const a = (low - origin) / delta, b = (high - origin) / delta;
+          start = Math.max(start, Math.min(a, b)); end = Math.min(end, Math.max(a, b));
+        }
+      }
+      if (start <= end) return false;
+    }
+    return true;
+  }
+  function arrange(scale: number) {
+    const mapWidth = (maxX - minX) * scale + gap * 2, mapHeight = (maxY - minY) * scale + gap * 2;
+    for (const horizontal of [.5, 0, 1]) for (const vertical of [.5, 0, 1]) {
+      const tx = x + (width - mapWidth) * horizontal + gap - minX * scale;
+      const ty = y + (height - mapHeight) * vertical + gap - minY * scale;
+      const freeClocks = clocks.filter(rect => routeClears(rect, scale, tx, ty));
+      if (!freeClocks.length) continue;
+      for (const card of cards) {
+        const clock = freeClocks.find(clock => !overlaps(clock, card, gap));
+        if (clock && routeClears(card, scale, tx, ty)) return { clockX: clock.x, clockY: clock.y, cardX: card.x, cardY: card.y, scale, tx, ty };
+      }
+    }
+  }
+  let low = best.scale, high = fit(x, y, x, y, area).scale;
+  const full = arrange(high);
+  if (full) return full;
+  for (let step = 0; step < 7 && high > low; step++) {
+    const scale = (low + high) / 2, layout = arrange(scale);
+    if (layout) { best = layout; low = scale; } else high = scale;
+  }
+  return best;
 }
 
 export function mapPath(points: MapPoint[]): string {

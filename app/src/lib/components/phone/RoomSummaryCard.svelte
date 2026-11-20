@@ -1,5 +1,6 @@
 <script lang="ts">
   import { longpress } from '../../actions/longpress.ts';
+  import type { Snippet } from 'svelte';
   import { fmtTemp } from '../../format.ts';
   import { iconAssetUrlFromId } from '../../state/icon-path.ts';
   import { whenEditable } from '../../state/edit-mode.svelte.ts';
@@ -20,12 +21,14 @@
     heroVariant,
     onopen,
     transitionName,
+    weather,
   }: {
     summary: PhoneRoomSummary;
     active?: boolean;
     heroVariant: PhoneHeroVariant;
     onopen: (summary: PhoneRoomSummary, trigger: HTMLButtonElement) => void;
     transitionName?: string;
+    weather?: Snippet<[string, HeroImageCandidate | null]>;
   } = $props();
 
   /* Doppelpuffer wie auf der grossen Buehne: das neue Bild kommt in die
@@ -61,17 +64,13 @@
     const dimNow = heroVariant === 'dark-off' && lastVariant === 'dark';
     lastVariant = heroVariant;
 
-    void Promise.all([
-      resolvePhoneHero(
+    void import('../hero-image-decoder.ts').then(({ loadDecodedRoomHero }) => (
+      loadDecodedRoomHero(resolvePhoneHero(
         import.meta.env.BASE_URL,
         summary.id,
         heroVariant,
         roomHeroConfig(summary.id),
-      ),
-      import('../room-hero-assets.ts'),
-      import('../hero-image-decoder.ts'),
-    ]).then(([resolution, { loadRoomHero }, { decodeHeroImageOffThread }]) => (
-      loadRoomHero(resolution, decodeHeroImageOffThread, () => request === currentRequest)
+      ), () => request === currentRequest)
     )).then((candidate) => {
       if (!candidate || request !== currentRequest) return;
       clearTimeout(dimmingTimer);
@@ -109,10 +108,14 @@
   <span class="phone-room-morph-image" style:view-transition-name={transitionName} aria-hidden="true">
   <span class="phone-room-hero-layer" class:is-front={front === 'a'} aria-hidden="true"
         style:--phone-room-hero={layerA ? `url("${layerA.url}")` : undefined}
-        style:--phone-room-focus={layerA?.position}></span>
+        style:--phone-room-focus={layerA?.position}>
+    {@render weather?.(summary.id, layerA)}
+  </span>
   <span class="phone-room-hero-layer" class:is-front={front === 'b'} aria-hidden="true"
         style:--phone-room-hero={layerB ? `url("${layerB.url}")` : undefined}
-        style:--phone-room-focus={layerB?.position}></span>
+        style:--phone-room-focus={layerB?.position}>
+    {@render weather?.(summary.id, layerB)}
+  </span>
   </span>
   {#if summary.camera}
     <span class="phone-room-camera" aria-hidden="true"><span class="icon tabler-icon-mask" style={`--icon-url:url("${iconAssetUrlFromId('i-video')}")`}></span></span>

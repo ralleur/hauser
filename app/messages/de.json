@@ -2447,5 +2447,8 @@
   "weather_source_wind": "Windgeschwindigkeit",
   "weather_source_humidity": "Luftfeuchte",
   "weather_source_error": "Entitätskennung prüfen oder Speichern erneut versuchen.",
-  "weather_source_saved": "Gespeichert."
+  "weather_source_saved": "Gespeichert.",
+  "weather_source_feels_like": "Gefühlte Temperatur",
+  "weather_source_uv": "UV-Index",
+  "weather_ui_uv_index": "UV-Index"
 }

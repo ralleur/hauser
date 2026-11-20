@@ -48,6 +48,7 @@ final class TabletShell {
     private long adminUntil,blockedUntil,openVersion;
     private int attempts,footerHeight;
     private String panel="device";
+    private String offlineError;
     private final ContentObserver observer=new ContentObserver(handler){@Override public void onChange(boolean self){refresh();}};
     private final Runnable poll=new Runnable(){public void run(){if(closed)return;refresh();handler.postDelayed(this,2500);}};
     static boolean supported(Activity a){return a.getResources().getConfiguration().smallestScreenWidthDp>=600;}
@@ -63,6 +64,14 @@ final class TabletShell {
     void open(String name){
         panel=Arrays.asList("device","apps","store","settings","notifications").contains(name)?name:"device";
         final long version=++openVersion;
+        if(offlineError!=null){
+            if(!ready)return;
+            FrameLayout.LayoutParams layout=(FrameLayout.LayoutParams)surface.getLayoutParams();layout.bottomMargin=0;surface.setLayoutParams(layout);
+            surface.evaluateJavascript("window.connectionError("+JSONObject.quote(offlineError)+");window.openPanel("+JSONObject.quote(panel)+",true)",ignored->{
+                if(closed||version!=openVersion)return;
+                surface.setVisibility(View.VISIBLE);surface.bringToFront();surface.requestFocus();refresh();surface.evaluateJavascript("window.enterTablet()",null);
+            });return;
+        }
         home.evaluateJavascript("document.documentElement.dataset.tabletPanel='preparing';window.dispatchEvent(new CustomEvent('hauser:tablet-panel',{detail:"+JSONObject.quote(panel)+"}));JSON.stringify({top:document.querySelector('.tab-bar')?.getBoundingClientRect().top??innerHeight,height:innerHeight})",value->{try{
             JSONObject bounds=new JSONObject((String)new JSONTokener(value).nextValue());
             FrameLayout.LayoutParams layout=(FrameLayout.LayoutParams)surface.getLayoutParams();
@@ -81,8 +90,9 @@ final class TabletShell {
     }
     void keyboard(boolean visible){keyboardVisible=visible;FrameLayout.LayoutParams layout=(FrameLayout.LayoutParams)surface.getLayoutParams();layout.bottomMargin=visible?0:footerHeight;surface.setLayoutParams(layout);if(ready)surface.evaluateJavascript("document.body.classList.toggle('keyboard',"+visible+")",null);}
     boolean back(){if(surface.getVisibility()==View.VISIBLE){surface.evaluateJavascript("window.tabletBack?.()",null);return true;}return false;}
-    void hide(){++openVersion;surface.evaluateJavascript("window.resetTablet?.()",null);home.evaluateJavascript("delete document.documentElement.dataset.tabletPanel;window.dispatchEvent(new CustomEvent('hauser:tablet-panel',{detail:''}))",null);((android.view.inputmethod.InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(surface.getWindowToken(),0);surface.clearFocus();surface.setVisibility(View.GONE);home.requestFocus();}
-    void error(String text){open("device");handler.postDelayed(()->{if(!closed)surface.evaluateJavascript("window.connectionError("+JSONObject.quote(text)+")",null);},400);}
+    void hide(){if(offlineError!=null){open("device");return;}++openVersion;surface.evaluateJavascript("window.resetTablet?.()",null);home.evaluateJavascript("delete document.documentElement.dataset.tabletPanel;window.dispatchEvent(new CustomEvent('hauser:tablet-panel',{detail:''}))",null);((android.view.inputmethod.InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(surface.getWindowToken(),0);surface.clearFocus();surface.setVisibility(View.GONE);home.requestFocus();}
+    void error(String text){boolean first=offlineError==null;offlineError=text;if(first||!visible())open(first?"device":panel);}
+    void connected(){if(offlineError==null)return;offlineError=null;surface.evaluateJavascript("window.connectionRestored()",null);hide();}
     boolean visible(){return surface.getVisibility()==View.VISIBLE;}
     void resume(){applyDisplay();refreshApps();refresh();}
     boolean immersive(){return prefs.getBoolean("homeMode",true);}
@@ -93,7 +103,10 @@ final class TabletShell {
         WindowManager.LayoutParams p=activity.getWindow().getAttributes();
         p.screenBrightness=(Settings.System.canWrite(activity)||automatic())?WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE:prefs.getInt("brightness",65)/100f;
         activity.getWindow().setAttributes(p);
-        activity.setRequestedOrientation(prefs.getBoolean("rotationLocked",false)?ActivityInfo.SCREEN_ORIENTATION_LOCKED:ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        // The wall tablet has exactly two orientations. Locking may keep the
+        // current landscape side, but must never preserve a portrait launch.
+        boolean landscape=activity.getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        activity.setRequestedOrientation(prefs.getBoolean("rotationLocked",false)&&landscape?ActivityInfo.SCREEN_ORIENTATION_LOCKED:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
     }
     private int systemInt(String name,int fallback){return Settings.System.getInt(activity.getContentResolver(),name,fallback);}
     private AudioManager audio(){return (AudioManager)activity.getSystemService(Context.AUDIO_SERVICE);}
@@ -226,7 +239,7 @@ final class TabletShell {
         }catch(Exception e){activity.runOnUiThread(()->message(t("Adminzugang konnte nicht geöffnet werden.","Could not open admin access.")));}},"hauser-admin").start();
     }
     public final class Bridge {
-        @JavascriptInterface public void ready(){activity.runOnUiThread(()->{ready=true;lastState="";sentAppsVersion=-1;keyboard(keyboardVisible);surface.evaluateJavascript("window.openPanel("+JSONObject.quote(panel)+",true)",null);refresh();});}
+        @JavascriptInterface public void ready(){activity.runOnUiThread(()->{if(closed)return;ready=true;lastState="";sentAppsVersion=-1;keyboard(keyboardVisible);if(offlineError!=null)open(panel);else surface.evaluateJavascript("window.openPanel("+JSONObject.quote(panel)+",true)",null);refresh();});}
         @JavascriptInterface public void command(String action,String json){
             if(action==null||json==null||json.length()>4096)return;
             activity.runOnUiThread(()->{if(closed)return;try{act(action,new JSONObject(json));}catch(Exception e){message(t("Änderung nicht möglich. Prüfe die Freigabe im Adminbereich.","Could not change this setting. Check its permission in admin settings."));}refresh();});

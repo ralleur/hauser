@@ -2447,5 +2447,8 @@
   "weather_source_wind": "Windsnelheid",
   "weather_source_humidity": "Luchtvochtigheid",
   "weather_source_error": "Controleer de entiteits-ID of probeer opnieuw op te slaan.",
-  "weather_source_saved": "Opgeslagen."
+  "weather_source_saved": "Opgeslagen.",
+  "weather_source_feels_like": "Gevoelstemperatuur",
+  "weather_source_uv": "UV-index",
+  "weather_ui_uv_index": "UV-index"
 }

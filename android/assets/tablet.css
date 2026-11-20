@@ -60,3 +60,11 @@ body[data-panel=apps] .app-grid { grid-template-columns:repeat(auto-fill,minmax(
 .drawer-toolbar { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-3); }
 .drawer-toolbar .search { flex:1; min-width:0; margin:0; }
 .drawer-toolbar .header-store, .drawer-toolbar .close { flex:none; }
+
+/* The launcher remains usable when the server WebView cannot load. */
+#connection-status:empty { display:none; }
+body[data-offline] { background:var(--color-surface-0) url('dark.avif') center/cover; --bar-bottom:var(--tablet-dock-height); }
+body[data-offline]::before { display:none; }
+body[data-offline] #dock { display:flex; }
+body[data-offline] #connection-status { position:absolute; top:var(--space-4); left:var(--space-4); right:var(--space-4); padding:var(--space-3); background:var(--tablet-panel); border:1px solid var(--glass-border); border-radius:var(--radius-xl); }
+body[data-offline] #panels { top:calc(var(--tablet-bar-top) + var(--touch-preferred)); }

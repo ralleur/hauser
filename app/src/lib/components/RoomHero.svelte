@@ -16,13 +16,14 @@
      vor dem Einblenden dekodiert; bei doppeltem Fehler bleibt die letzte gültige
      Ebene beziehungsweise die neutrale Fläche sichtbar. ── */
   import { appState } from '../state/app.svelte.ts';
+  import RoomWindowWeather from './RoomWindowWeather.svelte';
   import type { LightValue } from '../adapter/types.ts';
   import { mergedDevice } from '../state/commands.ts';
   import { roomLightPlacements } from '../state/immersion-light.svelte.ts';
   import { zoneBounds, zoneClipPath } from '../state/device-zone.ts';
   import { placementRotation, placementRy } from '../state/immersion-light.ts';
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
-  import { fadeOffLamps, roomImageFocus, weatherWholeImage } from '../state/room-display-config.svelte.ts';
+  import { fadeOffLamps, roomImageFocus } from '../state/room-display-config.svelte.ts';
   import { inDuskBand } from '../state/dusk.ts';
   import { heroParallax } from '../state/hero-parallax.svelte.ts';
   import { simulation } from '../state/simulation.svelte.ts';
@@ -33,13 +34,11 @@
   } from './room-hero-assets.ts';
   import { decodeHeroImageOffThread } from './hero-image-decoder.ts';
   import { outdoor, refreshWeather } from '../state/weather.svelte.ts';
-  import { heroWeatherLayer, resolvedWeatherCondition } from '../state/hero-weather.ts';
+  import { resolvedWeatherCondition } from '../state/hero-weather.ts';
   import {
-    loadRoomRegionsOnce, regionClipPaths, roomHasOvercast, roomRegions,
+    loadRoomRegionsOnce, roomHasOvercast, roomRegions,
   } from '../state/room-regions.svelte.ts';
   import type { RoomImageRegion } from '../state/room-image-library-client.ts';
-  import { prefersReducedMotion } from '../motion/index.ts';
-  import { settingsValues } from '../state/settings.svelte.ts';
   import type { Component } from 'svelte';
 
   const base = import.meta.env.BASE_URL;
@@ -149,6 +148,8 @@
   // dann tauscht ausschließlich die Opacity-Klasse die Sichtbarkeit.
   let layerA = $state<HeroImageCandidate | null>(null);
   let layerB = $state<HeroImageCandidate | null>(null);
+  let layerARoom = $state<string | null>(null);
+  let layerBRoom = $state<string | null>(null);
   let front = $state<'a' | 'b'>('a');
   let request = 0;
   let requested = '';
@@ -185,6 +186,7 @@
     const initialKey = resolutionKey(initial);
     if (lastShown && lastShown.key === initialKey) {
       layerA = lastShown.candidate;
+      layerARoom = appState.currentRoom;
       requested = initialKey;
       lastVariant = initial.variant;
       lastRoom = appState.currentRoom;
@@ -193,6 +195,7 @@
 
   $effect(() => {
     const resolution = targetHero;
+    const decodedRoom = appState.currentRoom;
     const key = resolutionKey(resolution);
     if (key === requested) return;
     requested = key;
@@ -210,9 +213,11 @@
       if (softNow) softSwapTimer = setTimeout(() => { softSwap = false; }, SOFT_SWAP_RESET_MS);
       if (front === 'a') {
         layerB = candidate;
+        layerBRoom = decodedRoom;
         front = 'b';
       } else {
         layerA = candidate;
+        layerARoom = decodedRoom;
         front = 'a';
       }
     });
@@ -246,33 +251,11 @@
      Die Polygone kommen aus dem Katalog, die Schicht selbst erst bei Bedarf. */
   /* Ein Bild von draußen (Garten, Terrasse) bekommt das Wetter übers ganze
      Bild — ein Ausschnitt ohne Rand statt der Fenster. */
-  const windowClips = $derived(appState.currentRoom && weatherWholeImage(appState.currentRoom)
-    ? ['polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)']
-    : regionClipPaths(roomRegions(appState.currentRoom, 'window')));
-  const weatherLayer = $derived.by(() => {
-    if (!settingsValues.ambientWeather || windowClips.length === 0) return null;
-    const condition = resolvedWeatherCondition(
-      simulation.weather,
-      typeof location === 'undefined' ? '' : location.search,
-      outdoor.condition,
-    );
-    const resolved = heroWeatherLayer(condition, outdoor.windSpeed, prefersReducedMotion());
-    /* Der bloße Schleier hat im Fenster nichts zu suchen — er würde die Scheibe
-       einfärben, nicht das Wetter zeigen. */
-    return resolved && !resolved.still ? resolved : null;
-  });
-  let HeroWeather = $state<Component<{ layer: NonNullable<typeof weatherLayer>; clip?: string | null }> | null>(null);
   /* Die Bibliothek trägt beides: die Fenster und die Frage, ob es eine trübe
      Fassung gibt. Sie wird einmal geholt, unabhängig vom Standby-Schalter. */
   $effect(() => {
     void loadRoomRegionsOnce();
     void refreshWeather();
-  });
-  $effect(() => {
-    if (!weatherLayer || HeroWeather) return;
-    void import('./HeroWeatherLayer.svelte')
-      .then((loaded) => { HeroWeather = loaded.default; })
-      .catch(() => { /* rein dekorativ: ohne Schicht bleibt die Bühne, wie sie ist */ });
   });
 
   /* Erkannte Flächen einblenden (Paket 13): nur auf Wunsch aus dem Simulator,
@@ -289,14 +272,18 @@
   $effect(() => () => clearTimeout(softSwapTimer));
 </script>
 
-<div class="room-hero" class:is-soft-swap={softSwap} aria-hidden="true"
+<div class="room-hero" class:has-hero={front === 'a' ? layerA !== null : layerB !== null} class:is-soft-swap={softSwap} aria-hidden="true"
      style:--hero-parallax={`${heroParallax.offsetPx}px`}>
-  <div class="hero-layer" class:is-front={front === 'a'}
+  <div class="hero-layer" data-image-room={layerARoom} class:is-front={front === 'a'}
        style:background-image={layerA ? `url("${layerA.url}")` : undefined}
-       style:background-position={layerA?.position}></div>
-  <div class="hero-layer" class:is-front={front === 'b'}
+       style:background-position={layerA?.position}>
+    {#if layerA}<RoomWindowWeather roomId={layerARoom} position={layerA.position} />{/if}
+  </div>
+  <div class="hero-layer" data-image-room={layerBRoom} class:is-front={front === 'b'}
        style:background-image={layerB ? `url("${layerB.url}")` : undefined}
-       style:background-position={layerB?.position}></div>
+       style:background-position={layerB?.position}>
+    {#if layerB}<RoomWindowWeather roomId={layerBRoom} position={layerB.position} />{/if}
+  </div>
   {#if counterLayer}
     <div class="hero-layer is-dusk"
          style:opacity={counterOpacity}
@@ -323,15 +310,10 @@
        Rahmen: Er bildet exakt die Fläche nach, die das Raumbild nach dem
        `cover`-Zuschnitt einnimmt. Über der ganzen Bühne gezeichnet, säßen die
        Polygone dort, wo das Bild gerade abgeschnitten ist. -->
-  {#if (RegionOverlay && overlayRegions.length > 0) || (HeroWeather && weatherLayer)}
+  {#if RegionOverlay && overlayRegions.length > 0}
     <div class="hero-image-space"
          style:--hero-focus-x={focus.x}
          style:--hero-focus-y={focus.y}>
-      {#if HeroWeather && weatherLayer}
-        {#each windowClips as clip, index (index)}
-          <HeroWeather layer={weatherLayer} {clip} />
-        {/each}
-      {/if}
       {#if RegionOverlay && overlayRegions.length > 0}
         <RegionOverlay regions={overlayRegions} />
       {/if}

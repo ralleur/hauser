@@ -2447,5 +2447,8 @@
   "weather_source_wind": "Velocidad del viento",
   "weather_source_humidity": "Humedad",
   "weather_source_error": "Comprueba el ID de entidad o vuelve a guardar.",
-  "weather_source_saved": "Guardado."
+  "weather_source_saved": "Guardado.",
+  "weather_source_feels_like": "Sensación térmica",
+  "weather_source_uv": "Índice UV",
+  "weather_ui_uv_index": "Índice UV"
 }

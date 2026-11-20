@@ -36,6 +36,8 @@ public final class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCallback;
     private View customView; private WebChromeClient.CustomViewCallback customCallback;
     private boolean deviceStandby, screenReceiverRegistered;
+    private final Handler reconnectHandler=new Handler(Looper.getMainLooper());
+    private final Runnable retryServer=()->{if(!destroyed&&!onboarding)reconnectTablet();};
     private final BroadcastReceiver screenReceiver=new BroadcastReceiver(){
         @Override public void onReceive(Context context,Intent intent){
             if(!tabletHome())return;
@@ -72,6 +74,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved); getWindow().setDecorFitsSystemWindows(false);
+        if(TabletShell.supported(this))setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         pendingLink=getIntent().getDataString();
         try{pairing=readPairing();}catch(Exception ignored){}
         if(!BuildConfig.PROTOTYPE_SERVER.isEmpty()&&pendingLink==null){base=BuildConfig.PROTOTYPE_SERVER;showServer(base+"/");}
@@ -193,7 +196,7 @@ public final class MainActivity extends Activity {
 
         }catch(Exception e){callback(result("error",t("Kein gültiger Hauser-Kopplungscode. Bitte neu aufnehmen oder manuell eingeben.","Not a valid Hauser pairing code. Try another photo or enter it manually.")));}
     }
-    void reconnectTablet(){if(pairing!=null)connect();else if(web!=null)web.reload();}
+    void reconnectTablet(){reconnectHandler.removeCallbacks(retryServer);if(pairing!=null)connect();else if(web!=null)web.loadUrl(base+"/");}
     private void connect(){
         work.execute(()->{
             try{String token=pairing.getString("token"),lan=pairing.getString("lan"),remote=pairing.optString("remote","");
@@ -214,6 +217,8 @@ public final class MainActivity extends Activity {
     private void showServer(String url){
         onboarding=false;WebView v=newWeb();
         v.setWebViewClient(new WebViewClient(){
+            private boolean failed;
+            public void onPageStarted(WebView view,String url,Bitmap icon){failed=false;}
             public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest r){
                 Uri u=r.getUrl();
                 if(tablet!=null&&"hauser-tablet".equals(u.getScheme())){
@@ -227,14 +232,21 @@ public final class MainActivity extends Activity {
                 // Cleartext is confined to the explicitly selected private origin. HTTPS assets retain normal browser rules.
                 if("http".equals(r.getUrl().getScheme())&&!ServerAddress.same(base,r.getUrl().toString()))return blocked();return null;
             }
-            public void onReceivedSslError(WebView view,SslErrorHandler handler,SslError e){handler.cancel();showError(t("Das Zertifikat ist ungültig. Korrigiere es am Server oder verwende dessen vertrauenswürdige Adresse.","The certificate is invalid. Correct the server certificate or use its trusted address."));}
-            public void onReceivedError(WebView view,WebResourceRequest r,WebResourceError e){if(r.isForMainFrame())showError(t("Hauser ist nicht erreichbar. Bitte Netzwerk und Server prüfen.","Hauser is unreachable. Check the network and server."));}
+            public void onReceivedSslError(WebView view,SslErrorHandler handler,SslError e){failed=true;handler.cancel();showError(t("Das Zertifikat ist ungültig. Korrigiere es am Server oder verwende dessen vertrauenswürdige Adresse.","The certificate is invalid. Correct the server certificate or use its trusted address."));}
+            public void onReceivedError(WebView view,WebResourceRequest r,WebResourceError e){if(r.isForMainFrame()){
+                failed=true;showError(t("Hauser ist nicht erreichbar. Bitte Netzwerk und Server prüfen.","Hauser is unreachable. Check the network and server."));
+                if(tablet!=null){reconnectHandler.removeCallbacks(retryServer);reconnectHandler.postDelayed(retryServer,10000);}
+            }}
             public void onReceivedHttpError(WebView view,WebResourceRequest r,WebResourceResponse response){
-                int code=response.getStatusCode();if(r.isForMainFrame()||((code==401||code==403)&&ServerAddress.same(base,r.getUrl().toString())))
+                int code=response.getStatusCode();if(r.isForMainFrame()||((code==401||code==403)&&ServerAddress.same(base,r.getUrl().toString()))){
+                    failed=true;
                     showError(code==401||code==403?t("Anmeldung abgelaufen oder widerrufen. Bitte erneut koppeln; bei Access zuerst anmelden.","Sign-in expired or revoked. Pair again; with Access, sign in first."):t("Der Server antwortet mit Fehler ","Server error ")+code);
+                }
             }
             public void onPageFinished(WebView view,String url){
-                if(tablet!=null&&ServerAddress.same(base,url))tablet.decorate();
+                if(failed)return;
+                reconnectHandler.removeCallbacks(retryServer);
+                if(tablet!=null&&ServerAddress.same(base,url)){tablet.decorate();tablet.connected();}
                 updateLockscreenVisibility();prepareDeviceStandby();
                 if(getPreferences(0).getBoolean("handle",false)&&ServerAddress.same(base,url))view.evaluateJavascript("(()=>{let s=document.createElement('style');s.textContent='.app[data-shell=panel]>.status-bar{padding-top:8px!important}.app[data-shell=panel]{--bar-top:56px!important}';document.head.append(s)})()",null);
             }
@@ -279,7 +291,7 @@ public final class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)bars();}
     @Override public void onPause(){if(web!=null)web.onPause();CookieManager.getInstance().flush();super.onPause();}
     @Override public void onResume(){super.onResume();if(web!=null)web.onResume();if(tablet!=null)tablet.resume();updateLockscreenVisibility();prepareDeviceStandby();}
-    @Override public void onDestroy(){destroyed=true;if(screenReceiverRegistered)unregisterReceiver(screenReceiver);if(tablet!=null)tablet.close();finishPicker(null);work.shutdownNow();if(web!=null){web.removeJavascriptInterface("HauserSetup");web.destroy();}super.onDestroy();}
+    @Override public void onDestroy(){destroyed=true;reconnectHandler.removeCallbacksAndMessages(null);if(screenReceiverRegistered)unregisterReceiver(screenReceiver);if(tablet!=null)tablet.close();finishPicker(null);work.shutdownNow();if(web!=null){web.removeJavascriptInterface("HauserSetup");web.destroy();}super.onDestroy();}
 
     private static final class ApiFailure extends IOException{final int status;ApiFailure(String message){this(0,message);}ApiFailure(int status,String message){super(message);this.status=status;}}
     private JSONObject request(String origin,String method,String path,JSONObject body,String token,int timeout)throws Exception{

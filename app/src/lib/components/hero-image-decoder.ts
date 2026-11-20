@@ -6,7 +6,12 @@
    (Testumgebung, alter Browser) oder antwortet er nicht, gilt unverändert der
    Hauptthread-Pfad aus `room-hero-assets.ts`. */
 
-import { decodeHeroImage, type HeroImageDecoder } from './room-hero-assets.ts';
+import { decodeHeroImage, loadRoomHero, type HeroImageDecoder, type RoomHeroResolution } from './room-hero-assets.ts';
+
+/** Keep image loading and decoding together behind the card's lazy import. */
+export async function loadDecodedRoomHero(resolution: Promise<RoomHeroResolution>, isCurrent: () => boolean) {
+  return loadRoomHero(await resolution, decodeHeroImageOffThread, isCurrent);
+}
 
 const WORKER_TIMEOUT_MS = 10_000;
 

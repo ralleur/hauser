@@ -2,7 +2,7 @@
 import { apiRequest } from '../api/client.ts';
 
 export const WEATHER_SOURCE_KEY = 'hmi:weather-source:v1';
-export const WEATHER_SOURCE_FIELDS = ['entityId', 'temperature', 'rain', 'wind', 'humidity'] as const;
+export const WEATHER_SOURCE_FIELDS = ['entityId', 'temperature', 'feelsLike', 'rain', 'wind', 'humidity', 'uv'] as const;
 export type WeatherSourceConfig = Partial<Record<typeof WEATHER_SOURCE_FIELDS[number], string>>;
 
 export function loadWeatherSource(): WeatherSourceConfig {

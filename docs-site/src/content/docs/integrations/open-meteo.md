@@ -25,13 +25,19 @@ current conditions and requests the hourly and daily forecasts offered by that
 entity through [Home Assistant's weather action](https://www.home-assistant.io/actions/weather.get_forecasts/).
 Unsupported forecasts stay empty. The weather view names its source.
 
-You can also choose sensors for outdoor temperature, current rain, wind speed
-and humidity. A rain contact reports wet or dry; it does not invent a measured
+You can also choose sensors for outdoor and feels-like temperature, current
+rain, wind speed, humidity and the current UV index. A rain contact reports wet or dry; it does not invent a measured
 rainfall amount. Use a current rain-rate sensor rather than a cumulative rain
 total. Supported values are converted to Celsius, kilometres per hour and
 millimetres. Sensor overrides change current readings; forecasts still come
 from the chosen weather provider. Custom readings refresh every 30 seconds
 while the surface is active.
+
+The weather view labels current UV readings separately from forecast UV
+maxima. Sunrise and sunset use Home Assistant's sun data, with today's times
+calculated locally from the home coordinates when the next event is already
+tomorrow. Values the source does not supply are omitted from the current
+weather cards.
 
 Leave the weather entity empty to keep Open-Meteo as the forecast source.
 Leave a sensor empty to use the provider's value. Both web and native iOS

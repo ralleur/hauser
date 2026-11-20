@@ -37,25 +37,44 @@ const states = [
 const registry = states.map((s) => ({ entity_id: s.entity_id, config_entry_id: s.entity_id.includes('other') ? 'other' : 'work', platform: 'tomtom' }));
 
 describe('Morning commute', () => {
-  it.each<{ route: string; line: MapPoint[]; height: number; above: boolean }>([
-    { route: 'horizontal', line: [[0, 0], [680, 200]], height: 560, above: true },
-    { route: 'vertical', line: [[0, 0], [90, 285]], height: 560, above: false },
-    { route: 'diagonal', line: [[0, 0], [680, 285]], height: 560, above: true },
-    { route: 'diagonal', line: [[0, 0], [680, 285]], height: 440, above: false },
-  ])('fits the $route route around the clock and card with $height px available', ({ line, height, above }) => {
-    const area = { x: 320, y: 80, width: 1000, height };
-    const gap = 24, clockHeight = 140, cardHeight = 190;
+  it.each<{ route: string; line: MapPoint[]; width: number; height: number; cardHeight: number }>([
+    { route: 'horizontal', line: [[0, 0], [680, 0]], width: 1000, height: 560, cardHeight: 190 },
+    { route: 'vertical', line: [[0, 0], [90, 285]], width: 1000, height: 560, cardHeight: 190 },
+    { route: 'diagonal', line: [[0, 0], [680, 285]], width: 1000, height: 560, cardHeight: 190 },
+    { route: 'short landscape', line: [[0, 0], [680, 285]], width: 1000, height: 440, cardHeight: 190 },
+    { route: 'large overlay', line: [[0, 0], [680, 285]], width: 1000, height: 560, cardHeight: 320 },
+    { route: 'phone', line: [[0, 0], [680, 285]], width: 366, height: 600, cardHeight: 190 },
+  ])('keeps the entire $route route and its overlays clear', ({ line, width, height, cardHeight }) => {
+    const area = { x: 320, y: 80, width, height };
+    const gap = 24, clockHeight = 140;
     const panelWidth = commutePanelWidth(area.width, gap);
     const { clockX, clockY, cardX, cardY, scale, tx, ty } = fitCommuteLayout(line, area, gap, panelWidth, clockHeight, cardHeight);
-    expect(cardX > clockX).toBe(above);
-    expect(scale).toBeGreaterThan(0.75);
-    for (const [x, y] of line) {
-      const screenX = tx + x * scale, screenY = ty + y * scale;
-      expect(screenX).toBeGreaterThanOrEqual(above ? area.x : cardX + panelWidth + gap);
-      expect(screenY).toBeGreaterThanOrEqual(above ? Math.max(clockY + clockHeight, cardY + cardHeight) + gap : area.y);
-      expect(screenX).toBeLessThanOrEqual(area.x + area.width);
-      expect(screenY).toBeLessThanOrEqual(area.y + area.height);
+    const panels = [{ x: clockX, y: clockY, height: clockHeight }, { x: cardX, y: cardY, height: cardHeight }];
+    for (const panel of panels) {
+      expect(panel.x).toBeGreaterThanOrEqual(area.x);
+      expect(panel.y).toBeGreaterThanOrEqual(area.y);
+      expect(panel.x + panelWidth).toBeLessThanOrEqual(area.x + width);
+      expect(panel.y + panel.height).toBeLessThanOrEqual(area.y + height);
     }
+    expect(clockX + panelWidth + gap <= cardX || cardX + panelWidth + gap <= clockX
+      || clockY + clockHeight + gap <= cardY || cardY + cardHeight + gap <= clockY).toBe(true);
+    for (let i = 1; i < line.length; i++) for (let step = 0; step <= 100; step++) {
+      const t = step / 100;
+      const screenX = tx + (line[i - 1][0] * (1 - t) + line[i][0] * t) * scale;
+      const screenY = ty + (line[i - 1][1] * (1 - t) + line[i][1] * t) * scale;
+      expect(screenX).toBeGreaterThanOrEqual(area.x);
+      expect(screenY).toBeGreaterThanOrEqual(area.y);
+      expect(screenX).toBeLessThanOrEqual(area.x + width);
+      expect(screenY).toBeLessThanOrEqual(area.y + height);
+      for (const panel of panels) expect(screenX <= panel.x - gap || screenX >= panel.x + panelWidth + gap
+        || screenY <= panel.y - gap || screenY >= panel.y + panel.height + gap).toBe(true);
+    }
+  });
+  it('uses the free corners around a diagonal route to fill the display', () => {
+    const area = { x: 320, y: 80, width: 1000, height: 560 };
+    const layout = fitCommuteLayout([[0, 0], [680, 285]], area, 24, 360, 140, 190);
+    expect(680 * layout.scale).toBeGreaterThan(area.width * 0.85);
+    expect(layout.scale).toBeGreaterThan(1.25);
   });
   it('requests the entire narrow screen and a margin in projected map coordinates', () => {
     const area = { x: 24, y: 92, width: 366, height: 525 };
@@ -68,6 +87,16 @@ describe('Morning commute', () => {
     expect(layout.ty + maxY * layout.scale).toBeGreaterThanOrEqual(944);
     expect(minY).toBeLessThan(-90);
     expect(maxY).toBeGreaterThan(690);
+  });
+  it('preloads a quarter screen around an off-centre vertical route', () => {
+    const width = 1280, height = 960;
+    const area = { x: 294, y: 92, width: 706, height: 628 };
+    const layout = fitCommuteLayout([[500, 427], [510, 280], [500, 143]], area, 24, 340, 170, 204);
+    const [minX, minY, maxX, maxY] = commuteMapCoverage(width, height, layout, 48);
+    expect(minX * layout.scale + layout.tx).toBeLessThanOrEqual(-width / 4);
+    expect(maxX * layout.scale + layout.tx).toBeGreaterThanOrEqual(width * 1.25);
+    expect(minY * layout.scale + layout.ty).toBeLessThanOrEqual(-height / 4);
+    expect(maxY * layout.scale + layout.ty).toBeGreaterThanOrEqual(height * 1.25);
   });
   it('covers the wide Bonn–Wesel viewport with a bounded set of overview tiles', () => {
     const tiles = commuteOverviewTiles([49.6, 1.6, 53, 9.7]);

@@ -3,6 +3,17 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.54.0] - 2026-11-20
+
+- Commute: the route uses available space before shrinking, with clock and travel details placed in free corners. Map coverage extends beyond every edge, including vertical routes.
+- Rooms on tablets: pinch between a room and All rooms. The selected room view is remembered, growing tiles remain visible beyond the grid, and gestures do not send device commands. Android tablets and iPad use landscape orientation.
+- Room weather: rain and snow follow each decoded room picture through crossfades and appear in All rooms with the same window geometry.
+- Weather: optional feels-like temperature and UV sensors, current-day sunrise/sunset, and layouts that omit unavailable measurements. Current UV readings are distinguished from daily forecast maxima in web and native iOS.
+- Simulator: Return to reality stops the timelapse, resets every override and closes the simulator in web and native iOS.
+- Lamps: switched-on Home Assistant lights without a brightness attribute retain a visible glow.
+- Reminders: Home Assistant todo lists can be marked done from web and phone note menus; server errors keep the note open.
+- Android beta.3: the local launcher stays usable during server failures, retries the connection, and restores Hauser when available. The Apps drawer and search remain open during retries.
+
 ## [Unreleased]
 
 ## [0.53.0] - 2026-11-18

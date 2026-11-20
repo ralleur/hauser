@@ -2447,5 +2447,8 @@
   "weather_source_wind": "Wind speed",
   "weather_source_humidity": "Humidity",
   "weather_source_error": "Check the entity ID or try saving again.",
-  "weather_source_saved": "Saved."
+  "weather_source_saved": "Saved.",
+  "weather_source_feels_like": "Feels-like temperature",
+  "weather_source_uv": "UV index",
+  "weather_ui_uv_index": "UV index"
 }

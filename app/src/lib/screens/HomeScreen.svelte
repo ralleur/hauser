@@ -11,6 +11,7 @@
   import { roomHeroConfig } from '../state/room-hero-config.svelte.ts';
   import { longpress } from '../actions/longpress.ts';
   import { swipeleft } from '../actions/swipeleft.ts';
+  import { roomZoom } from '../actions/room-zoom.ts';
   import { fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { prefersReducedMotion, tokenDuration, withViewTransition } from '../motion/index.ts';
@@ -39,6 +40,7 @@
   let viewChanging = $state(false);
   let stageEl: HTMLDivElement | undefined = $state();
   let viewRequest = 0;
+  let homeViewChange: Promise<void> = Promise.resolve();
   const requestedHomeView = $derived(layoutHomeView(layoutManager.preview));
   const roomsView = $derived(renderedHomeView === 'rooms');
   /* Bildsteuerung (Owner 2026-10-19): nur das Raumbild, die Kontrollfläche
@@ -62,7 +64,7 @@
     const next = requestedHomeView;
     const request = ++viewRequest;
     if (next === untrack(() => renderedHomeView)) return;
-    untrack(() => { void changeHomeView(next, request); });
+    untrack(() => { homeViewChange = changeHomeView(next, request); });
   });
 
   async function changeHomeView(next: HomeViewId, request: number): Promise<void> {
@@ -74,11 +76,15 @@
     viewChanging = 'startViewTransition' in document && !prefersReducedMotion();
     await withViewTransition(async () => {
       if (request !== viewRequest) return;
+      stageEl?.querySelector('[data-room-zoom-preview]')?.remove();
       renderedHomeView = next;
       await tick();
-      if (next !== 'rooms' || !viewChanging) return;
+      if (!viewChanging) return;
       // Capture the decoded tile, including its finished image crossfade.
-      const card = stageEl?.querySelector<HTMLElement>('[data-room-id="' + CSS.escape(appState.currentRoom ?? '') + '"]');
+      const card = next === 'rooms'
+        ? stageEl?.querySelector<HTMLElement>('[data-room-id="' + CSS.escape(appState.currentRoom ?? '') + '"]')
+        : stageEl?.querySelector<HTMLElement>(':scope > .room-hero');
+      if (next === 'rooms') card?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
       const deadline = performance.now() + tokenDuration(stageEl ?? null, 'enter') * 2;
       while (card && !card.classList.contains('has-hero') && performance.now() < deadline && request === viewRequest) {
         // Rendering (including animation frames) pauses during snapshot updates.
@@ -86,6 +92,17 @@
       }
     });
     if (request === viewRequest) viewChanging = false;
+  }
+
+  async function zoomRoom(roomId: string | null): Promise<void> {
+    if (roomId) {
+      // Name the chosen source tile before taking the old transition snapshot.
+      selectRoom(layoutManager.applied.slots[0].id, roomId);
+      await tick();
+    }
+    layoutManager.setHomeView(roomId ? layoutManager.lastRoomView : 'rooms');
+    await tick();
+    await homeViewChange;
   }
   /* Wisch nach links auf der Kontrollfläche lässt sie aus dem Bild fliegen —
      die Bühne gehört dann ganz dem Bild bzw. den Kacheln. Im Vollbild holt
@@ -226,8 +243,9 @@
      Konfigurationsmodus (früher das Layout-Menü, Owner 2026-10-19); in der
      Bildsteuerung wechselt er stattdessen den Raum. Die Kontrollfläche behält
      ihre eigene Geste. -->
-<div class="home-stage" class:has-two-slots={layoutManager.preview.slots.length === 2}
+<div class="home-stage" data-home-view={renderedHomeView} class:has-two-slots={layoutManager.preview.slots.length === 2}
      class:is-rooms-view={roomsView} class:is-view-changing={viewChanging} style={layoutStyle} bind:this={stageEl}
+     use:roomZoom={{ enabled: !viewChanging && !layoutManager.open && deviceDetail.mode === 'hidden' && roomEdit.mode === 'hidden' && !ambientState.active, roomsView, onZoom: zoomRoom }}
      use:swipeleft={{ onSwipe: () => (imageView ? stepRoom(1) : openConfig()), move: false, ignore: '.home-panels, .image-edge-pull', threshold: 120, angle: 60 }}
      use:swipeleft={{ onSwipe: () => stepRoom(-1), move: false, direction: 'right', ignore: '.image-edge-pull', threshold: 120, angle: 60, enabled: imageView }}>
   {#if !roomsView}

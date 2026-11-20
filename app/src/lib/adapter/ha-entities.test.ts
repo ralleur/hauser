@@ -85,6 +85,13 @@ describe('haToLight', () => {
   it('aus ohne brightness-Attribut → hält vorherigen Wert (Slider springt nicht auf 0)', () => {
     expect(haToLight({ state: 'off', attributes: {} }, { brightness: 75 })).toEqual<LightValue>({ on: false, brightness: 75 });
   });
+  it('eingeschaltete Lampe ohne Dimmer bekommt sichtbaren Lichtschein, auch nach Aus', () => {
+    const off = haToLight({ state: 'off', attributes: { color_mode: 'onoff' } });
+    expect(off.brightness).toBe(0);
+    expect(haToLight({ state: 'on', attributes: { color_mode: 'onoff' } })).toMatchObject({ on: true, brightness: 100 });
+    expect(haToLight({ state: 'on', attributes: { color_mode: 'onoff' } }, off).brightness).toBe(100);
+    expect(haToLight({ state: 'on', attributes: {} }, { brightness: 45 }).brightness).toBe(45);
+  });
   it('color_temp_kelvin → colorTemp (Kelvin bevorzugt)', () => {
     expect(haToLight({ state: 'on', attributes: { brightness: 255, color_temp_kelvin: 3000, color_mode: 'color_temp' } }))
       .toEqual<LightValue>({ on: true, brightness: 100, colorTemp: 3000, color: null });

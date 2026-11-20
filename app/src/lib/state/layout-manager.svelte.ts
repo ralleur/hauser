@@ -42,14 +42,27 @@ export function imageControlStatus() {
 let applied = $state<LayoutConfig>(loadLayoutConfig());
 let open = $state(false);
 let closing = $state(false);
+const LAST_ROOM_VIEW_KEY = 'hmi:last-room-view';
+type RoomView = Exclude<HomeViewId, 'rooms'>;
+let lastRoomView: RoomView = 'fullscreen';
+try { if (localStorage.getItem(LAST_ROOM_VIEW_KEY) === 'image') lastRoomView = 'image'; } catch { /* memory only */ }
+
+function rememberRoomView(view: HomeViewId): void {
+  if (view === 'rooms') return;
+  lastRoomView = view;
+  try { localStorage.setItem(LAST_ROOM_VIEW_KEY, view); } catch { /* memory only */ }
+}
+rememberRoomView(applied.homeView);
 
 export function rehydrateLayoutManager(): void {
   applied = loadLayoutConfig();
+  rememberRoomView(applied.homeView);
   open = false;
   closing = false;
 }
 
 function commit(next: LayoutConfig): void {
+  rememberRoomView(next.homeView);
   applied = next;
   saveLayoutConfig(applied);
 }
@@ -59,6 +72,7 @@ export const layoutManager = {
   get preview() { return applied; },
   get open() { return open; },
   get closing() { return closing; },
+  get lastRoomView() { return lastRoomView; },
   show() {
     open = true;
     closing = false;

@@ -2448,5 +2448,8 @@
   "weather_source_wind": "Vitesse du vent",
   "weather_source_humidity": "Humidité",
   "weather_source_error": "Vérifiez l’identifiant de l’entité ou réessayez.",
-  "weather_source_saved": "Enregistré."
+  "weather_source_saved": "Enregistré.",
+  "weather_source_feels_like": "Température ressentie",
+  "weather_source_uv": "Indice UV",
+  "weather_ui_uv_index": "Indice UV"
 }

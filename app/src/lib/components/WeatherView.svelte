@@ -41,6 +41,14 @@
     return c === 'sunny' ? m.weather_ui_sunny() : c === 'rainy' ? m.weather_ui_rain() : c === 'snowy' ? m.weather_ui_snow() : c === 'cloudy' ? m.weather_ui_cloudy() : m.weather_ui_weather_unavailable();
   }
   const direction = $derived(details?.windDirection == null ? '' : [m.weather_ui_north(), m.weather_ui_northeast(), m.weather_ui_east(), m.weather_ui_southeast(), m.weather_ui_south(), m.weather_ui_southwest(), m.weather_ui_west(), m.weather_ui_northwest()][Math.round(details.windDirection / 45) % 8]);
+  const metrics = $derived([
+    { icon: 'i-droplet', label: m.weather_ui_rain_chance(), reading: hours[0]?.rainChance, text: value(hours[0]?.rainChance, ' %') },
+    { icon: 'i-weather-windy', label: m.weather_ui_wind(), reading: outdoor.windSpeed, text: `${value(outdoor.windSpeed, ' km/h')} ${direction}` },
+    { icon: 'i-droplet', label: m.weather_ui_humidity(), reading: details?.humidity, text: value(details?.humidity, ' %') },
+    { icon: 'i-weather-sunny', label: details?.uvIsMaximum ? m.weather_ui_uv_maximum() : m.weather_ui_uv_index(), reading: details?.uv, text: value(details?.uv) },
+    { icon: 'i-weather-sunset-up', label: m.weather_ui_sunrise(), reading: outdoor.sunrise, text: time(outdoor.sunrise) },
+    { icon: 'i-weather-sunset-down', label: m.weather_ui_sunset(), reading: outdoor.sunset, text: time(outdoor.sunset) },
+  ].filter(metric => metric.reading != null));
   async function closeWeather(after?: () => void) {
     if (closing) return;
     closing = true;
@@ -85,25 +93,18 @@
         <div class="current-copy"><h2><Icon name="i-map-marker" /> {m.weather_ui_home()}</h2>
           {#if details?.source}<small>{details.source}</small>{/if}
           <div class="weather-temperature"><span>{value(outdoor.temp, '°')}</span><Icon name={weatherConditionIcon(outdoor.condition)} /></div>
-          <h2>{condition(outdoor.condition)}</h2><p>{m.weather_ui_feels_like()} {value(details?.feelsLike, '°')}</p>
+          <h2>{condition(outdoor.condition)}</h2>{#if details?.feelsLike != null}<p>{m.weather_ui_feels_like()} {value(details.feelsLike, '°')}</p>{/if}
         </div>
         <div class="weather-metrics">
-          {#each [
-            ['i-droplet', m.weather_ui_rain_chance(), value(hours[0]?.rainChance, ' %')],
-            ['i-weather-windy', m.weather_ui_wind(), `${value(outdoor.windSpeed, ' km/h')} ${direction}`],
-            ['i-droplet', m.weather_ui_humidity(), value(details?.humidity, ' %')],
-            ['i-weather-sunny', m.weather_ui_uv_maximum(), value(details?.uv)],
-            ['i-weather-sunset-up', m.weather_ui_sunrise(), time(outdoor.sunrise)],
-            ['i-weather-sunset-down', m.weather_ui_sunset(), time(outdoor.sunset)]
-          ] as metric}
-            <div class="weather-metric"><Icon name={metric[0]} /><div><small>{metric[1]}</small><strong>{metric[2]}</strong></div></div>
+          {#each metrics as metric}
+            <div class="weather-metric"><Icon name={metric.icon} /><div><small>{metric.label}</small><strong>{metric.text}</strong></div></div>
           {/each}
         </div>
       </section>
       <section class="weather-card weather-today"><h2>{m.weather_ui_for_today()}</h2>
         {#if wet}<div class="weather-tip"><Icon name="i-weather-rainy" /><div><strong>{m.weather_ui_precipitation_from()} {time(wet.time)}</strong><p>{wet.rain?.toLocaleString(intlLocale(), { maximumFractionDigits: 1 }) ?? '—'} mm · {value(wet.rainChance, ' %')}</p></div></div>{/if}
         {#if walk}<div class="weather-tip"><Icon name="i-weather-sunny" /><div><strong>{m.weather_ui_dry_hours_outdoors()}</strong><p>{time(walk.time)} – {time(walk.time + 7200000)}</p></div></div>{/if}
-        {#if details?.uv != null && details.uv >= 3}<div class="weather-tip"><Icon name="i-weather-sunny" /><div><strong>{m.weather_ui_remember_sun_protection()}</strong><p>{m.weather_ui_uv_index_today_up_to()} {value(details.uv)}</p></div></div>{/if}
+        {#if details?.uv != null && details.uv >= 3}<div class="weather-tip"><Icon name="i-weather-sunny" /><div><strong>{m.weather_ui_remember_sun_protection()}</strong><p>{details.uvIsMaximum ? m.weather_ui_uv_index_today_up_to() : m.weather_ui_uv_index()} {value(details.uv)}</p></div></div>{/if}
         {#if !wet && !walk}<p>{hours.length ? m.weather_ui_check_the_hourly_forecast_for_the_rest_of_the_day() : m.weather_ui_insights_appear_when_the_forecast_is_available()}</p>{/if}
       </section>
     </div>

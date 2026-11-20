@@ -49,6 +49,8 @@ interface OpenMeteoResponse {
     weather_code?: number | null;
     precipitation?: number | null;
     wind_speed_10m?: number | null;
+    sunrise?: string | null;
+    sunset?: string | null;
   };
   hourly?: { temperature_2m?: (number | null)[] };
   /* Ortszeit ohne Versatz („2026-09-24T07:18"), dazu der Versatz des Ortes. */
@@ -77,6 +79,11 @@ function localInstant(value: string | null | undefined, offsetSeconds: number | 
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
   const utc = Date.parse(`${value}:00Z`);
   return Number.isFinite(utc) ? utc - offsetSeconds * 1000 : null;
+}
+
+function sunInstant(value: string | null | undefined): number | null {
+  const instant = typeof value === 'string' ? Date.parse(value) : NaN;
+  return Number.isFinite(instant) ? instant : null;
 }
 
 export function classifyTrend(
@@ -121,8 +128,8 @@ export function parseOutdoor(data: OpenMeteoResponse): OutdoorReading {
     condition: weatherCondition(data.current?.weather_code, data.current?.precipitation),
     windSpeed: typeof data.current?.wind_speed_10m === 'number'
       ? data.current.wind_speed_10m : null,
-    sunrise: localInstant(data.daily?.sunrise?.[0], data.utc_offset_seconds),
-    sunset: localInstant(data.daily?.sunset?.[0], data.utc_offset_seconds),
+    sunrise: sunInstant(data.current?.sunrise) ?? localInstant(data.daily?.sunrise?.[0], data.utc_offset_seconds),
+    sunset: sunInstant(data.current?.sunset) ?? localInstant(data.daily?.sunset?.[0], data.utc_offset_seconds),
   };
 }
 
@@ -138,7 +145,7 @@ export interface ForecastDay {
 export interface WeatherDetails {
   source?: string;
   updatedAt: number; offsetSeconds: number; feelsLike: number | null; humidity: number | null;
-  windDirection: number | null; uv: number | null;
+  windDirection: number | null; uv: number | null; uvIsMaximum: boolean;
   hours: ForecastHour[]; days: ForecastDay[];
 }
 
@@ -148,12 +155,16 @@ export function parseWeatherDetails(value: unknown, now = Date.now()): WeatherDe
   const data = value as Record<string, any>;
   const current = data?.current ?? {}, hourly = data?.hourly ?? {}, daily = data?.daily ?? {};
   const number = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
+  const offset = number(data?.utc_offset_seconds) ?? 0;
+  const today = new Date(now + offset * 1000).toISOString().slice(0, 10);
+  const todayIndex = Array.isArray(daily.time) ? daily.time.indexOf(today) : 0;
+  const currentUv = number(current.uv_index), maximumUv = number(daily.uv_index_max?.[todayIndex]);
   return {
     source: typeof data?.source === 'string' ? data.source : undefined,
     updatedAt: typeof data?.updatedAt === 'string' ? Date.parse(data.updatedAt) : now,
     offsetSeconds: number(data?.utc_offset_seconds) ?? 0,
     feelsLike: number(current.apparent_temperature), humidity: number(current.relative_humidity_2m),
-    windDirection: number(current.wind_direction_10m), uv: number(daily.uv_index_max?.[0]),
+    windDirection: number(current.wind_direction_10m), uv: currentUv ?? maximumUv, uvIsMaximum: currentUv === null && maximumUv !== null,
     hours: (Array.isArray(hourly.time) ? hourly.time : []).flatMap((time: string, i: number) => {
       const instant = localInstant(time, data.utc_offset_seconds);
       return instant === null ? [] : [{ time: instant, temp: number(hourly.temperature_2m?.[i]),

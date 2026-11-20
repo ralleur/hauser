@@ -1,5 +1,7 @@
 <script lang="ts">
   import RoomSummaryCard from './phone/RoomSummaryCard.svelte';
+  import RoomWindowWeather from './RoomWindowWeather.svelte';
+  import type { HeroImageCandidate } from './room-hero-assets.ts';
   import { observeResize } from '../actions/observe-resize.ts';
   import { appState, type Room } from '../state/app.svelte.ts';
   import { mergedClimate, mergedLight, roomOpenings, roomPresence, roomTileTemperature } from '../state/commands.ts';
@@ -65,11 +67,16 @@
   );
 </script>
 
+{#snippet weather(roomId: string, image: HeroImageCandidate | null)}
+  {#if image}<RoomWindowWeather {roomId} position={image.position} />{/if}
+{/snippet}
+
 <section class="home-room-grid" class:is-fitted={rowHeight > 0} aria-label={m.home_room_grid()} bind:this={gridEl}
          style={`--rooms-per-row:${roomsPerRow}${rowHeight > 0 ? `;--room-tile-height:${rowHeight}px` : ''}`}>
   {#each summaries as summary (summary.id)}
     <RoomSummaryCard
       {summary}
+      {weather}
       transitionName={summary.id === appState.currentRoom ? 'home-room' : undefined}
       active={activeIds.includes(summary.id)}
       heroVariant={phoneHeroVariantForRoom(summary, heroVariant)}
