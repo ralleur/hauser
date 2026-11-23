@@ -380,7 +380,7 @@
   "sys_signout": "Abmelden",
   "sys_signout_confirm": "Wirklich abmelden?",
   "sys_jellyfin_signin": "Bei Jellyfin anmelden",
-  "sys_library_demo_hint": "Die Bibliothek läuft gerade im Demo-Modus — Anmeldung erst im Live-Modus möglich.",
+  "sys_library_demo_hint": "Nach erfolgreicher Anmeldung ersetzt deine Jellyfin-Bibliothek die Demo.",
   "sys_signin_local_hint": "Die Anmeldung bleibt lokal im Browser (Token).",
   "sys_signing_in": "Anmelden…",
   "sys_mode": "Modus",

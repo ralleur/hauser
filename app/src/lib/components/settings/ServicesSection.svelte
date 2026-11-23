@@ -65,10 +65,13 @@
 
   async function onJellyfinLogin(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    await jellyfinLogin(jfUser.trim(), jfPassword);
+    await jellyfinLogin(jfUser.trim(), jfPassword, settingsValues.jellyfinUrl);
     jfPassword = '';
     jfSession = jellyfin.hasSession();
-    if (jfSession) jfUser = '';
+    if (jfSession) {
+      jfUser = '';
+      if (!usingLiveLibrary) window.location.reload();
+    }
   }
 
   function jellyfinLogout(): void {
@@ -292,12 +295,12 @@
       <div class="settings-form-grid">
         <input class="settings-input" type="text" placeholder={m.library_username()}
                aria-label="Jellyfin-Benutzername" autocomplete="username" spellcheck="false"
-               bind:value={jfUser} disabled={!usingLiveLibrary || isLoggingIn()} />
+               bind:value={jfUser} disabled={IS_DEMO || isLoggingIn()} />
         <input class="settings-input" type="password" placeholder={m.library_password()}
                aria-label="Jellyfin-Passwort" autocomplete="current-password"
-               bind:value={jfPassword} disabled={!usingLiveLibrary || isLoggingIn()} />
+               bind:value={jfPassword} disabled={IS_DEMO || isLoggingIn()} />
         <button class="secondary-btn pressable" type="submit"
-                disabled={!usingLiveLibrary || isLoggingIn() || !jfUser.trim() || !jfPassword}>
+                disabled={IS_DEMO || isLoggingIn() || !jfUser.trim() || !jfPassword}>
           {isLoggingIn() ? m.sys_signing_in() : m.library_signin()}
         </button>
       </div>

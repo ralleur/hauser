@@ -88,6 +88,11 @@
   document.addEventListener('click',event=>{const tab=event.target.closest('.tab[data-nav]');if(tab&&activePanel){previousTab=tab.dataset.nav;location.href='hauser-tablet://close';}},true);
   window.hauserTabletBadge=count=>{window.hauserTabletUnread=count;const pill=document.querySelector('[data-tablet=notifications]');if(pill){let badge=pill.querySelector('.tablet-unread');if(!badge){badge=document.createElement('span');badge.className='tablet-unread';pill.append(badge);}badge.textContent=count?String(count):'';}window.dispatchEvent(new CustomEvent('hauser:tablet-badge',{detail:count}));};
   window.addEventListener('hauser:tablet-dismiss',()=>{location.href='hauser-tablet://close';});
+  document.addEventListener('hmi:ambient-change',event=>{
+    if(!event.detail?.active)return;
+    window.hauserTabletNotifications?.reset();
+    if(document.documentElement.dataset.tabletPanel)location.href='hauser-tablet://close';
+  });
   window.addEventListener('hauser:notifications',event=>{event.stopImmediatePropagation();location.href='hauser-tablet://open/notifications';},true);
   window.dispatchEvent(new Event('hauser:tablet-ready'));
   window.hauserTabletStatus=s=>{status=s;mount();update();};

@@ -38,7 +38,7 @@
   import Icon from './Icon.svelte';
   import CommuteLayer from './CommuteLayer.svelte';
   import { commute, commuteView, setCommuteView, prepareCommutePreview, refreshCommute } from '../state/commute.svelte.ts';
-  import { inCommuteWindow } from '../state/commute.ts';
+  import { freshCommute, inCommuteWindow } from '../state/commute.ts';
   import { commuteMapTransition } from '../state/commute-motion.ts';
   import { commuteClockMotion } from '../actions/commute-clock-motion.ts';
   import { whenEditable } from '../state/edit-mode.svelte.ts';
@@ -86,6 +86,9 @@
     if (commuteLoading) return;
     commuteError = '';
     if (commuteVisible) { setCommuteView(false); return; }
+    if (freshCommute(commute.route, new Date()) && commute.route.mapStatus === 'ready') {
+      setCommuteView(true); void refreshCommute(); return;
+    }
     commuteLoading = true;
     try {
       await prepareCommutePreview(!inCommuteWindow(commute.config, new Date()));

@@ -752,7 +752,7 @@
   "sys_signout": "Cerrar sesión",
   "sys_signout_confirm": "¿Cerrar sesión de verdad?",
   "sys_jellyfin_signin": "Iniciar sesión en Jellyfin",
-  "sys_library_demo_hint": "La biblioteca está ahora en modo demo; solo se puede iniciar sesión en modo en directo.",
+  "sys_library_demo_hint": "Tras iniciar sesión correctamente, tu biblioteca de Jellyfin sustituye a la demo.",
   "sys_signin_local_hint": "El inicio de sesión se queda en local, en el navegador (token).",
   "sys_signing_in": "Iniciando sesión…",
   "sys_mode": "Modo",

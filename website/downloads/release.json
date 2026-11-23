@@ -1,9 +1,9 @@
 {
-  "name": "1.0.0-beta.3",
-  "code": 3,
+  "name": "1.0.0-beta.4",
+  "code": 4,
   "package": "de.ralleur.hauser",
-  "file": "hauser-android-1.0.0-beta.3.apk",
-  "sha256": "dd9a4b14641b5a5aef48f0801afa91873414bf35dbb370986126805ef588039b",
+  "file": "hauser-android-1.0.0-beta.4.apk",
+  "sha256": "f3f25fe1a7af742b4101bb5c52fca3ad79660c0dc6051325753a0612aa4af540",
   "signerSha256": "837fa7be56d61008902e66ef0865c87306fe9de1e373a591a8f07d65668e15e0",
   "minSdk": 30,
   "targetSdk": 35,

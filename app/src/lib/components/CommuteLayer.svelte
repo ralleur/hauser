@@ -15,7 +15,8 @@
   let routeDrawn = $state(false);
   let composition = $state({ width: 1000, height: 600, panelWidth: 320, cardX: 32, cardY: 320, scale: 1, tx: 0, ty: 0, transform: '' });
   let now = $state(new Date());
-  const visible = $derived(active && freshCommute(commute.route, new Date()) && (mode ?? (preview || inCommuteWindow(commute.config, now))));
+  const prepared = $derived(freshCommute(commute.route, now));
+  const visible = $derived(active && prepared && (mode ?? (preview || inCommuteWindow(commute.config, now))));
   $effect(() => { onvisible(visible); });
   $effect(() => {
     if (visible) return () => coverCommuteMap(null);
@@ -23,33 +24,33 @@
   $effect(() => {
     // Warm the remembered viewport while the normal app is still visible.
     void refreshCommute();
-    if (!active) return;
     now = clockNow();
     const tick = setInterval(() => {
       now = clockNow();
-      if (mode === true || preview || inCommuteWindow(commute.config, now)) void refreshCommute();
+      if (document.visibilityState === 'visible' && commute.config.entryId) void refreshCommute();
     }, 30_000);
     const resume = () => { now = clockNow(); if (document.visibilityState === 'visible') void refreshCommute(); };
     document.addEventListener('visibilitychange', resume);
     return () => { clearInterval(tick); document.removeEventListener('visibilitychange', resume); };
   });
   $effect(() => {
-    if (!visible || commute.route?.mapStatus !== 'loading') return;
+    if (commute.route?.mapStatus !== 'loading') return;
     const poll = setInterval(() => void refreshCommute(), 5_000);
     return () => clearInterval(poll);
   });
   const time = (date: Date) => date.toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' });
   $effect(() => {
     const route = commute.route;
-    if (!visible || !mapEl || !cardEl || !clockHost || !route) return;
+    if (!prepared || !mapEl || !cardEl || !clockHost || !route) return;
+    const showing = visible;
     const card = cardEl, host = clockHost, clock = host.querySelector<HTMLElement>('.ambient-content')!;
-    const surface = mapEl.parentElement!;
+    const surface = mapEl.parentElement!.parentElement!;
     let frame = 0, disposed = false;
     function measure() {
       const bounds = surface.getBoundingClientRect();
       const gap = parseFloat(getComputedStyle(surface).getPropertyValue('--space-5'));
       const control = surface.querySelector('.commute-view-control')?.getBoundingClientRect();
-      const top = control ? control.bottom - bounds.top + gap : gap;
+      const top = control ? control.bottom - bounds.top + gap : gap * 2 + parseFloat(getComputedStyle(surface).getPropertyValue('--touch-min'));
       let left = gap, right = bounds.width - gap, bottom = bounds.height - gap;
       for (const selector of ['.ambient-shopping', '.ambient-postits', '.ambient-week']) {
         const element = surface.querySelector<HTMLElement>(selector);
@@ -62,10 +63,11 @@
       }
       const width = Math.max(gap, right - left), height = Math.max(gap, bottom - top);
       const panelWidth = commutePanelWidth(width, gap);
-      card.style.width = `${panelWidth}px`; host.style.width = `${panelWidth}px`;
+      card.style.width = `${panelWidth}px`;
+      if (showing) host.style.width = `${panelWidth}px`;
       const clockHeight = clock.getBoundingClientRect().height, cardHeight = card.getBoundingClientRect().height;
       const { clockX, clockY, cardX, cardY, scale, tx, ty } = fitCommuteLayout(route!.line, { x: left, y: top, width, height }, gap, panelWidth, clockHeight, cardHeight);
-      onlayout({ x: clockX, y: clockY, width: panelWidth });
+      if (showing) onlayout({ x: clockX, y: clockY, width: panelWidth });
       composition = { width: bounds.width, height: bounds.height, panelWidth, cardX, cardY, scale, tx, ty, transform: `translate(${tx},${ty}) scale(${scale})` };
       coverCommuteMap(commuteMapCoverage(bounds.width, bounds.height, { scale, tx, ty }, gap * 2));
     }
@@ -80,7 +82,7 @@
   });
 </script>
 
-{#if visible && commute.route}
+{#if prepared && commute.route}
   {@const route = commute.route}
   {@const departure = departureFor(commute.config, route.durationMinutes, now)}
   {@const immediate = mode === true}
@@ -88,6 +90,8 @@
   {@const weather = route.reports.find((report) => report.category === 'ice') ?? route.reports.find((report) => report.group === 'weather')}
   {@const home = route.line[0]}
   {@const work = route.line[route.line.length - 1]}
+  {#key visible}
+  <div class="commute-preparation" class:is-buffering={!visible} aria-hidden={!visible} inert={!visible}>
   <svg class="commute-map" transition:commuteMapTransition={{ commute: true }} bind:this={mapEl} viewBox={`0 0 ${composition.width} ${composition.height}`} style:--commute-map-scale={composition.scale} aria-hidden="true">
     <foreignObject width={composition.width} height={composition.height}>
       <CommuteMapBackdrop roads={route.roads} areas={route.areas ?? []} width={composition.width} height={composition.height} scale={composition.scale} tx={composition.tx} ty={composition.ty} colors={settingsValues.ambientMapColors} />
@@ -155,9 +159,13 @@
       {/if}
     </div>
   </section>
+  </div>
+  {/key}
 {/if}
 
 <style>
+  .commute-preparation { display: contents; }
+  .is-buffering { visibility: hidden; pointer-events: none; }
   .commute-map { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
   .commute-map-credit { position: absolute; right: var(--space-3); bottom: var(--space-2); color: var(--color-text-secondary); font-size: var(--text-xs); pointer-events: none; }
   .commute-map path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }

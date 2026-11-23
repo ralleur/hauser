@@ -739,7 +739,7 @@
   "sys_signout": "Wyloguj",
   "sys_signout_confirm": "Na pewno wylogować?",
   "sys_jellyfin_signin": "Zaloguj się do Jellyfin",
-  "sys_library_demo_hint": "Biblioteka działa w trybie demonstracyjnym — logowanie jest możliwe dopiero w trybie live.",
+  "sys_library_demo_hint": "Po pomyślnym zalogowaniu Twoja biblioteka Jellyfin zastąpi wersję demonstracyjną.",
   "sys_signin_local_hint": "Logowanie pozostaje lokalnie w przeglądarce (token).",
   "sys_signing_in": "Logowanie…",
   "sys_mode": "Tryb",

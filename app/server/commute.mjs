@@ -213,6 +213,11 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
     if (south < -85.0511 || north > 85.0511 || west < -180 || east > 180) return { roads: [], areas: [], mapStatus: 'too-large' };
     const key = [south, west, north, east].map((n) => n.toFixed(5)).concat(Object.values(bounds)).join(',');
     if (roadCache.has(key)) return roadCache.get(key).map;
+    const projection = geo.geographicBounds(DEFAULT_MAP_BOUNDS).map((n) => n.toFixed(5)).join(',');
+    for (const entry of roadCache.values()) {
+      if (entry.projection === projection && entry.bounds.minX <= bounds.minX && entry.bounds.minY <= bounds.minY
+        && entry.bounds.maxX >= bounds.maxX && entry.bounds.maxY >= bounds.maxY) return entry.map;
+    }
     if (mapFailures.has(key) && now() - mapFailures.get(key) < 60_000) {
       return { roads: [], areas: [], mapStatus: 'unavailable' };
     }
@@ -282,7 +287,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         }
       })().catch(() => null).then((map) => {
         if (map) {
-          roadCache.set(key, { key, bounds, map });
+          roadCache.set(key, { key, bounds, projection, map });
           if (roadCache.size > 3) roadCache.delete(roadCache.keys().next().value);
           saveMaps();
           mapFailures.delete(key);
@@ -319,7 +324,13 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
     })().finally(() => { inflight = null; });
     return inflight;
   }
-  async function read(bounds = DEFAULT_MAP_BOUNDS) { return withMap(await readRoute(), bounds); }
+  async function preparedMap(status, bounds, wait) {
+    const first = withMap(status, bounds);
+    if (!wait || first.route?.mapStatus !== 'loading') return first;
+    await Promise.all([...roadsFlights.values()]);
+    return withMap(status, bounds);
+  }
+  async function read(bounds = DEFAULT_MAP_BOUNDS, wait = false) { return preparedMap(await readRoute(), bounds, wait); }
   async function preload() {
     const { geometry } = await readRoute();
     if (!geometry) return;
@@ -347,7 +358,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
             return readRoute();
           })().finally(() => { previewFlight = null; });
         }
-        const status = withMap(await previewFlight, mapBounds);
+        const status = await preparedMap(await previewFlight, mapBounds, url.searchParams.get('waitForMap') === '1');
         jsonResponse(res, status.route ? 200 : 503, responseStatus(status), { 'cache-control': 'no-store' }); return;
       }
       if (req.method === 'GET' && path === '/api/admin/commute/places') {
@@ -383,7 +394,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         jsonResponse(res, 200, { config: saved }); return;
       }
       if (req.method === 'GET' && path === '/api/commute') {
-        jsonResponse(res, 200, responseStatus(await read(mapBounds)), { 'cache-control': 'no-store' }); return;
+        jsonResponse(res, 200, responseStatus(await read(mapBounds, url.searchParams.get('waitForMap') === '1')), { 'cache-control': 'no-store' }); return;
       }
       if (req.method === 'GET' && path === '/api/admin/commute') {
         jsonResponse(res, 200, await options(), { 'cache-control': 'no-store' }); return;

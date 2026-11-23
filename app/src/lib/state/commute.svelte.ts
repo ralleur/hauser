@@ -21,7 +21,7 @@ function savedMapBounds(): CommuteMapBounds | null {
   } catch { return null; }
 }
 let mapBounds: CommuteMapBounds | null = savedMapBounds();
-const mapQuery = () => `${mapBounds ? `mapBounds=${mapBounds.join(',')}&` : ''}${mapCache?.mapKey ? `mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
+const mapQuery = () => `waitForMap=1&${mapBounds ? `mapBounds=${mapBounds.join(',')}&` : ''}${mapCache?.mapKey ? `mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
 
 export function coverCommuteMap(bounds: CommuteMapBounds | null): void {
   if (!bounds) return;
@@ -52,7 +52,7 @@ function applyStatus(status: CommuteStatus): void {
   Object.assign(commute, status);
 }
 export async function prepareCommutePreview(forceRefresh = false): Promise<CommuteStatus> {
-  const response = await fetch(`/api/admin/commute/preview?${forceRefresh ? 'refresh=1&' : ''}${mapQuery()}`, { method: 'POST', signal: AbortSignal.timeout(95_000) });
+  const response = await fetch(`/api/admin/commute/preview?${forceRefresh ? 'refresh=1&' : ''}${mapQuery()}`, { method: 'POST', signal: AbortSignal.timeout(195_000) });
   if (!response.ok) throw new Error('COMMUTE_UNAVAILABLE');
   const status = await response.json() as CommuteStatus;
   if (!freshCommute(status.route, new Date())) throw new Error('COMMUTE_UNAVAILABLE');
@@ -63,12 +63,12 @@ export function refreshCommute(): Promise<void> {
   if (flight) return flight;
   flight = (async () => {
     try {
-      const response = await fetch(`/api/commute?${mapQuery()}`, { signal: AbortSignal.timeout(15_000) });
-      if (!response.ok) { commute.route = null; return; }
+      const response = await fetch(`/api/commute?${mapQuery()}`, { signal: AbortSignal.timeout(195_000) });
+      if (!response.ok) return;
       const value = await response.json() as CommuteStatus;
       if (!value.config || !Array.isArray(value.config.days)) return;
       applyStatus(value);
-    } catch { commute.route = null; }
+    } catch { /* Keep the prepared map; freshness still gates its traffic data. */ }
   })().finally(() => { flight = null; });
   return flight;
 }

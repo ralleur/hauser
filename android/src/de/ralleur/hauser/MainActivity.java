@@ -222,7 +222,7 @@ public final class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest r){
                 Uri u=r.getUrl();
                 if(tablet!=null&&"hauser-tablet".equals(u.getScheme())){
-                    if(r.isForMainFrame()&&r.hasGesture()&&ServerAddress.same(base,view.getUrl())){if("close".equals(u.getHost())){tablet.hide();return true;}if(!"open".equals(u.getHost()))return true;if("notifications".equals(u.getLastPathSegment()))tablet.openNotification(u.getQueryParameter("item"));else tablet.open(u.getLastPathSegment());}
+                    if(r.isForMainFrame()&&ServerAddress.same(base,view.getUrl())){if("close".equals(u.getHost())){tablet.hide();return true;}if(!r.hasGesture()||!"open".equals(u.getHost()))return true;if("notifications".equals(u.getLastPathSegment()))tablet.openNotification(u.getQueryParameter("item"));else tablet.open(u.getLastPathSegment());}
                     return true;
                 }
                 if(ServerAddress.same(base,u.toString()))return false;

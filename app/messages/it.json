@@ -739,7 +739,7 @@
   "sys_signout": "Disconnetti",
   "sys_signout_confirm": "Disconnettersi davvero?",
   "sys_jellyfin_signin": "Accedi a Jellyfin",
-  "sys_library_demo_hint": "La libreria è in modalità demo — l’accesso è possibile solo in modalità live.",
+  "sys_library_demo_hint": "Dopo aver effettuato l’accesso, la tua libreria Jellyfin sostituisce la demo.",
   "sys_signin_local_hint": "L’accesso resta locale nel browser (token).",
   "sys_signing_in": "Accesso…",
   "sys_mode": "Modalità",

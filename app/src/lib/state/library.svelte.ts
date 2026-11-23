@@ -15,7 +15,8 @@ import { installFakeLibrary } from './library-seed.ts';
 import { backend } from '../adapter/runtime.svelte.ts';
 import { FakeBackend } from '../adapter/fake-backend.ts';
 import { jellyfin, JellyfinAuthError, JELLYFIN_URL_CONFIGURED, normalizeJellyfinAddress } from '../adapter/jellyfin.ts';
-import { setJellyfinUrl } from './settings.svelte.ts';
+import { setJellyfinUrl, setLibraryMode } from './settings.svelte.ts';
+import { IS_DEMO } from '../demo/recording-mode.ts';
 import { buildLiveLibrary, type LiveShelf } from '../adapter/jellyfin-shelves.ts';
 import { mapSeasons } from '../adapter/jellyfin-map.ts';
 import { createSnapshotStore } from '../data/query-cache.ts';
@@ -191,7 +192,7 @@ export function retryLoad(): void {
 /* ── Login ── */
 
 export async function jellyfinLogin(username: string, password: string, address = ''): Promise<void> {
-  if (!usingLiveLibrary) return;
+  if (IS_DEMO) return;
   const typed = normalizeJellyfinAddress(address);
   if (typed) {
     jellyfin.setBaseUrl(typed);
@@ -202,7 +203,8 @@ export async function jellyfinLogin(username: string, password: string, address 
   live.error = null;
   try {
     await jellyfin.authenticateByName(username, password);
-    await load();
+    if (usingLiveLibrary) await load();
+    else setLibraryMode('live');
   } catch (err) {
     live.error = err instanceof JellyfinAuthError
       ? 'Benutzername oder Passwort falsch'

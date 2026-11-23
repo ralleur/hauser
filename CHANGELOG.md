@@ -3,6 +3,12 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.54.1] - 2026-11-23
+
+- Standby: prepare the complete commute viewport and map drawing before it becomes visible. Switching to a buffered commute view no longer waits for another network request; failed refreshes retain the prepared map.
+- Android tablets: device settings show the actual tablet model, and entering standby closes the device menu across the full screen.
+- Jellyfin: sign in directly beside the server address even when the demo library is selected. A successful sign-in activates the real library automatically; failed sign-ins retain the demo. Native iOS settings also offer direct sign-in.
+
 ## [0.54.0] - 2026-11-20
 
 - Commute: the route uses available space before shrinking, with clock and travel details placed in free corners. Map coverage extends beyond every edge, including vertical routes.

@@ -752,7 +752,7 @@
   "sys_signout": "Uitloggen",
   "sys_signout_confirm": "Echt uitloggen?",
   "sys_jellyfin_signin": "Inloggen bij Jellyfin",
-  "sys_library_demo_hint": "De bibliotheek staat momenteel in demomodus — inloggen is alleen mogelijk in livemodus.",
+  "sys_library_demo_hint": "Na een geslaagde aanmelding vervangt je Jellyfin-bibliotheek de demo.",
   "sys_signin_local_hint": "Het inloggen blijft lokaal in de browser (token).",
   "sys_signing_in": "Inloggen…",
   "sys_mode": "Modus",

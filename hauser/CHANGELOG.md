@@ -9,6 +9,12 @@
 - Reminders: Home Assistant todo lists can be marked done from web and phone note menus; server errors keep the note open.
 - Android beta.3: the local launcher stays usable during server failures, retries the connection, and restores Hauser when available. The Apps drawer and search remain open during retries.
 
+## 0.54.1 - 2026-11-23
+
+- Standby: prepare the complete commute viewport and map drawing before it becomes visible. Switching to a buffered commute view no longer waits for another network request; failed refreshes retain the prepared map.
+- Android tablets: device settings show the actual tablet model, and entering standby closes the device menu across the full screen.
+- Jellyfin: sign in directly beside the server address even when the demo library is selected. A successful sign-in activates the real library automatically; failed sign-ins retain the demo. Native iOS settings also offer direct sign-in.
+
 ## 0.53.0 - 2026-11-18
 
 - Notifications: native iOS completes notification taps on the main thread, fixing the reported crash when opening a leaving-home notification.

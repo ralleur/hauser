@@ -18,6 +18,11 @@
     const target = canvas, mapRoads = roads, mapAreas = areas;
     const ratio = window.devicePixelRatio || 1;
     const key = [width, height, scale, tx, ty, colors, appState.theme, ratio].join(':');
+    if (cached?.roads === mapRoads && cached.areas === mapAreas && cached.key === key) {
+      target.width = cached.canvas.width; target.height = cached.canvas.height;
+      target.getContext('2d')!.drawImage(cached.canvas, 0, 0);
+      return;
+    }
     const frame = requestAnimationFrame(() => {
       target.width = Math.ceil(width * ratio); target.height = Math.ceil(height * ratio);
       const output = target.getContext('2d')!;

@@ -125,7 +125,7 @@ final class TabletShell {
             BluetoothManager bm=(BluetoothManager)activity.getSystemService(Context.BLUETOOTH_SERVICE);BluetoothAdapter bt=bm.getAdapter();
             boolean bluetooth=false;try{bluetooth=bt!=null&&bt.isEnabled();}catch(SecurityException ignored){}
             boolean auto=automatic();
-            s.put("de",Locale.getDefault().getLanguage().equals("de")).put("battery",level<0?-1:Math.round(100f*level/Math.max(1,scale)))
+            s.put("deviceModel",Build.MODEL).put("de",Locale.getDefault().getLanguage().equals("de")).put("battery",level<0?-1:Math.round(100f*level/Math.max(1,scale)))
              .put("charging",battery!=null&&battery.getIntExtra(BatteryManager.EXTRA_PLUGGED,0)!=0)
              .put("brightness",(auto||Settings.System.canWrite(activity))?Math.max(3,Math.min(100,Math.round(systemInt(Settings.System.SCREEN_BRIGHTNESS,166)/255f*100))):prefs.getInt("brightness",65)).put("auto",auto)
              .put("volume",Math.round(100f*audio().getStreamVolume(AudioManager.STREAM_MUSIC)/Math.max(1,audio().getStreamMaxVolume(AudioManager.STREAM_MUSIC))))

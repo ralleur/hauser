@@ -753,7 +753,7 @@
   "sys_signout": "Se déconnecter",
   "sys_signout_confirm": "Vraiment se déconnecter ?",
   "sys_jellyfin_signin": "Se connecter à Jellyfin",
-  "sys_library_demo_hint": "La bibliothèque est en mode démo — la connexion est possible uniquement en mode live.",
+  "sys_library_demo_hint": "Après une connexion réussie, votre bibliothèque Jellyfin remplace la démo.",
   "sys_signin_local_hint": "La connexion reste locale dans le navigateur (jeton).",
   "sys_signing_in": "Connexion…",
   "sys_mode": "Mode",

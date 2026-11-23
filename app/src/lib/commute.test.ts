@@ -265,6 +265,28 @@ describe('Morning commute', () => {
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
+  it('delivers the prepared map without a polling interval and reuses wider coverage', async () => {
+    let finishMap!: (response: Response) => void;
+    const fetchImpl = vi.fn(() => new Promise<Response>((resolve) => { finishMap = resolve; }));
+    const ws = vi.fn(async (type: string) => type === 'config/entity_registry/list' ? registry : type === 'get_states' ? states : raw);
+    const service = createCommuteService({ configStore: { read: () => ({ 'hmi:commute:v1': JSON.stringify(config) }) },
+      resolveCredentials: () => ({}), clientFactory: () => ({ ws, close: vi.fn() }), now: () => now, fetchImpl });
+    const response = { writeHead: vi.fn(), end: vi.fn() };
+    const delivery = service.serve({ method: 'GET', url: '/api/commute?waitForMap=1&mapBounds=-512,-512,1536,1024', headers: {} }, response, new Set());
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+    expect(response.end).not.toHaveBeenCalled();
+    finishMap(Response.json({ elements: [{ type: 'way', tags: { highway: 'primary' },
+      geometry: raw.points.map(([lat, lon]) => ({ lat, lon })),
+    }] }));
+    await delivery;
+    const prepared = JSON.parse(response.end.mock.calls[0][0]).route;
+    expect(prepared.mapStatus).toBe('ready');
+    expect(prepared.roads).toHaveLength(1);
+    const smaller = (await service.read()).route;
+    expect(smaller.mapKey).toBe(prepared.mapKey);
+    expect(smaller.roads).toEqual(prepared.roads);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
   it('loads and clips streets and water using the wider bounds requested by the screen', async () => {
     const bounds = { minX: -512, minY: -512, maxX: 1536, maxY: 1024 };
     const geometry = commuteGeometry(raw);

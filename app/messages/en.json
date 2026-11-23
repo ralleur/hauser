@@ -752,7 +752,7 @@
   "sys_signout": "Sign out",
   "sys_signout_confirm": "Really sign out?",
   "sys_jellyfin_signin": "Sign in to Jellyfin",
-  "sys_library_demo_hint": "The library is currently in demo mode — signing in is only possible in live mode.",
+  "sys_library_demo_hint": "After a successful sign-in, your Jellyfin library replaces the demo.",
   "sys_signin_local_hint": "The sign-in stays local in the browser (token).",
   "sys_signing_in": "Signing in…",
   "sys_mode": "Mode",
