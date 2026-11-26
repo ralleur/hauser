@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it, vi } from 'vitest';
+import Pbf from 'pbf';
 // @ts-expect-error Native Node test without @types/node.
 import { Readable } from 'node:stream';
 // @ts-expect-error Native Node test without @types/node.
@@ -229,9 +230,34 @@ describe('Morning commute', () => {
       expect(route.mapStatus).toBe(result);
       expect(route.roads.length).toBe(result === 'ready' ? 1 : 0);
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(result === 'ready' ? 1 : 2);
+    expect(fetchImpl.mock.calls.filter(([url]) => String(url).includes('overpass'))).toHaveLength(result === 'ready' ? 1 : 2);
     expect(ws.mock.calls.filter(([type]) => type === 'tomtom/route')).toHaveLength(1);
   });
+  it('loads a local route background from vector tiles when both Overpass mirrors fail', async () => {
+    // A synthetic water tile, with no downloaded or household data.
+    const tile = new Pbf();
+    tile.writeMessage(3, (_: null, layer: Pbf) => {
+      layer.writeStringField(1, 'water');
+      layer.writeMessage(2, (_: null, feature: Pbf) => {
+        feature.writeVarintField(3, 3);
+        feature.writePackedVarint(4, [9, 0, 0, 26, 8192, 0, 0, 8192, 8191, 0, 15]);
+      }, null);
+      layer.writeVarintField(5, 4096);
+      layer.writeVarintField(15, 2);
+    }, null);
+    const bytes = tile.finish();
+    const fetchImpl = vi.fn(async (url: string) => url.startsWith('https://tiles.openfreemap.org/')
+      ? new Response(new Uint8Array(bytes)) : new Response(null, { status: 503 }));
+    const ws = vi.fn(async (type: string) => type === 'config/entity_registry/list' ? registry : type === 'get_states' ? states : raw);
+    const service = createCommuteService({ configStore: { read: () => ({ 'hmi:commute:v1': JSON.stringify(config) }) },
+      resolveCredentials: () => ({}), clientFactory: () => ({ ws, close: vi.fn() }), now: () => now, fetchImpl });
+    const { route } = await service.read(undefined, true);
+    expect(route).toMatchObject({ mapStatus: 'ready', mapSource: 'openfreemap', durationMinutes: 37 });
+    expect(route.areas.length).toBeGreaterThan(0);
+    expect(fetchImpl.mock.calls.filter(([url]) => url.includes('overpass'))).toHaveLength(2);
+    expect(fetchImpl.mock.calls.some(([url]) => url.startsWith('https://tiles.openfreemap.org/'))).toBe(true);
+  });
+
   it('preloads a stale route in the background and reuses its map after a server restart', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'hauser-commute-map-'));
     let current = { ...raw, live: { ...raw.live, at: new Date(now - 60 * 60_000).toISOString() } };

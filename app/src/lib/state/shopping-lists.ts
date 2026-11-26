@@ -75,7 +75,7 @@ export async function setItemChecked(
     return;
   }
   try {
-    await runtime.setTodoItemStatus(requireEntity(store), id, checked);
+    await runtime.updateTodoItem(requireEntity(store), id, checked);
   } catch (error) {
     throw new ShoppingListError(error instanceof Error ? error.message : m.shop_item_change_error());
   }

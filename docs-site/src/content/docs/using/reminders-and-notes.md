@@ -20,4 +20,4 @@ The people on the pinboard come from Home Assistant persons. Tap a name to renam
 - **Add a reminder for ...** at the bottom of a person's column. Type, then **Save entry**.
 - A reminder can carry a date and a **Show on the lock screen from** date, so it appears in standby only when it matters.
 - Tap a note to edit it or mark it as done.
-- **Show all reminders as a table** lists everything at once.
+- **Show all reminders as a table** lists open and completed reminders. To remove an individual reminder from its source list, select **Delete** on its row and confirm.

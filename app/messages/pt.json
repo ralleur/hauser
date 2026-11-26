@@ -1594,6 +1594,7 @@
   "rem_edit_save": "Guardar",
   "rem_edit_saving": "A guardar …",
   "rem_edit_save_error": "Não foi possível guardar",
+  "rem_delete_error": "Não foi possível eliminar o lembrete.",
   "energy_split_title": "Repartição do consumo",
   "energy_split_close": "Fechar",
   "sun_rise": "Nascer do sol",

@@ -7,6 +7,7 @@
 
 :root {
   --lamp-glow-day-strength: 0.45;
+  --lamp-glow-min-strength: 0.25;
   --lamp-glow-center-opacity: 0.85;
   --lamp-glow-halo-opacity: 0.4;
   --ambient-map-edge-blur: 2px;

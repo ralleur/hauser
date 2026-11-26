@@ -223,7 +223,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
     }
     if (!roadsFlights.has(key)) {
       const flight = (async () => {
-        if (north - south > 1.2 || east - west > 1.8) {
+        async function overview() {
           // Predrawn vector tiles keep the number of downloads and the level of detail bounded.
           const tiles = commuteOverviewTiles([south, west, north, east]);
           const geometry = await loadCommuteOverview(tiles, geo.project, bounds, fetchImpl);
@@ -237,6 +237,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
           if (roads.length || areas.length) return { roads, areas, mapKey: `overview-v1:${key}`, mapStatus: 'ready', mapSource: 'openfreemap' };
           return;
         }
+        if (north - south > 1.2 || east - west > 1.8) return overview();
         // Coarsen regional routes.
         const regional = north - south > .3 || east - west > .4;
         const types = regional ? 'motorway|trunk|primary|secondary' : 'motorway|trunk|primary|secondary|tertiary|residential';
@@ -244,7 +245,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
         const natural = regional ? 'wood' : 'wood|grassland|scrub';
         const leisure = regional ? 'park' : 'park|garden';
         const bbox = `${south},${west},${north},${east}`;
-        const query = `[out:json][timeout:90];(
+        const query = `[out:json][timeout:75];(
           way(${bbox})["highway"~"^(${types})(_link)?$"];
           wr(${bbox})["natural"="water"];
           wr(${bbox})["waterway"="riverbank"];
@@ -256,7 +257,7 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
           try {
             const response = await fetchImpl(endpoint, { method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Hauser commute (+https://hauserhome.app)' },
-              body: new URLSearchParams({ data: query }), signal: AbortSignal.timeout(95_000) });
+              body: new URLSearchParams({ data: query }), signal: AbortSignal.timeout(80_000) });
             if (!response.ok) continue;
             const reader = response.body.getReader(), chunks = []; let size = 0;
             while (true) { const { done, value } = await reader.read(); if (done) break; size += value.length;
@@ -285,6 +286,8 @@ export function createCommuteService({ configStore, clientFactory, resolveCreden
             if (roads.length || areas.length) return { roads, areas, mapKey: `overscan-v2:${key}`, mapStatus: 'ready' };
           } catch { /* Try the same alternate map source as the home map. */ }
         }
+        // Local routes also need a background when both live Overpass mirrors fail.
+        return overview();
       })().catch(() => null).then((map) => {
         if (map) {
           roadCache.set(key, { key, bounds, projection, map });

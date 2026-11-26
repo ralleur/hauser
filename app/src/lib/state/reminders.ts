@@ -19,6 +19,7 @@ export interface ReminderSource {
 
 export interface Reminder {
   id: string;
+  hasUniqueTodoUid?: boolean;
   title: string;
   /* Fälligkeit: ISO-Zeitpunkt, reines Datum `YYYY-MM-DD` (ganztägig) oder null
      (ohne Termin). HA liefert bei CalDAV-VTODO beides. */

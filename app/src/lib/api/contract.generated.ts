@@ -40,6 +40,7 @@ export const API_ROUTES = {
   reminders: { methods: ['GET', 'POST'], path: '/api/reminders', area: 'family', access: 'origin' },
   reminderComplete: { methods: ['POST'], path: '/api/reminders/:id/complete', area: 'family', access: 'origin' },
   reminderUpdate: { methods: ['PATCH'], path: '/api/reminders/:id', area: 'family', access: 'origin' },
+  reminderDelete: { methods: ['DELETE'], path: '/api/reminders/:id', area: 'family', access: 'origin' },
   shopping: { methods: ['GET'], path: '/api/shopping', area: 'family', access: 'origin' },
   shoppingItems: { methods: ['POST'], path: '/api/shopping/items', area: 'family', access: 'origin' },
   shoppingItemUpdate: { methods: ['PATCH'], path: '/api/shopping/items/:id', area: 'family', access: 'origin' },

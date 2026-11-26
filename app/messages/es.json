@@ -1594,6 +1594,7 @@
   "rem_edit_save": "Guardar",
   "rem_edit_saving": "Guardando …",
   "rem_edit_save_error": "No se pudo guardar",
+  "rem_delete_error": "No se pudo eliminar el recordatorio.",
   "energy_split_title": "Desglose de la carga",
   "energy_split_close": "Cerrar",
   "sun_rise": "Amanecer",

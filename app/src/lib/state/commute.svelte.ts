@@ -21,7 +21,7 @@ function savedMapBounds(): CommuteMapBounds | null {
   } catch { return null; }
 }
 let mapBounds: CommuteMapBounds | null = savedMapBounds();
-const mapQuery = () => `waitForMap=1&${mapBounds ? `mapBounds=${mapBounds.join(',')}&` : ''}${mapCache?.mapKey ? `mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
+const mapQuery = (wait = false) => `${wait ? 'waitForMap=1&' : ''}${mapBounds ? `mapBounds=${mapBounds.join(',')}&` : ''}${mapCache?.mapKey ? `mapKey=${encodeURIComponent(mapCache.mapKey)}` : ''}`;
 
 export function coverCommuteMap(bounds: CommuteMapBounds | null): void {
   if (!bounds) return;
@@ -52,7 +52,7 @@ function applyStatus(status: CommuteStatus): void {
   Object.assign(commute, status);
 }
 export async function prepareCommutePreview(forceRefresh = false): Promise<CommuteStatus> {
-  const response = await fetch(`/api/admin/commute/preview?${forceRefresh ? 'refresh=1&' : ''}${mapQuery()}`, { method: 'POST', signal: AbortSignal.timeout(195_000) });
+  const response = await fetch(`/api/admin/commute/preview?${forceRefresh ? 'refresh=1&' : ''}${mapQuery(true)}`, { method: 'POST', signal: AbortSignal.timeout(195_000) });
   if (!response.ok) throw new Error('COMMUTE_UNAVAILABLE');
   const status = await response.json() as CommuteStatus;
   if (!freshCommute(status.route, new Date())) throw new Error('COMMUTE_UNAVAILABLE');

@@ -186,9 +186,9 @@ export class FakeBackend implements Backend {
   }
 
   /* Listen sind in der Demo veränderlich: die Einkaufsliste schreibt über
-     addTodoItem/setTodoItemStatus in dieselben Einträge. */
+     addTodoItem/updateTodoItem in dieselben Einträge. */
   async getReminders(entityId: string): Promise<Reminder[]> {
-    const items = structuredClone(this.#todoItems(entityId));
+    const items = structuredClone(this.#todoItems(entityId)).map((item) => ({ ...item, hasUniqueTodoUid: true }));
     if (!demoSeeds.todo) return items;
     const titles = new Map(demoSeeds.todo().flatMap(([, items]) => items.map(item => [item.id, item.title] as const)));
     return items.map(item => ({ ...item, title: titles.get(item.id) ?? item.title }));
@@ -200,9 +200,12 @@ export class FakeBackend implements Backend {
     });
   }
 
-  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
-    const item = this.#todoItems(entityId).find((entry) => entry.id === uid);
-    if (item) item.completed = completed;
+  async updateTodoItem(entityId: string, uid: string, completed: boolean | null): Promise<void> {
+    const items = this.#todoItems(entityId);
+    const index = items.findIndex((entry) => entry.id === uid);
+    if (index < 0) return;
+    if (completed === null) items.splice(index, 1);
+    else items[index].completed = completed;
   }
 
   #todoItems(entityId: string): Reminder[] {

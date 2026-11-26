@@ -3,6 +3,12 @@
 All notable user-visible changes to Hauser are documented here. The project uses
 Semantic Versioning for its public release line.
 
+## [0.55.0] - 2026-11-26
+
+- Reminders: permanently delete an individual open or completed note from the reminders table in web and native iOS. Deletion is confirmed and applies to the list where the note is stored.
+- Commute: load the saved route settings independently of background-map downloads, keeping the standby switch available in web and native iOS. Local routes also use vector tiles when both Overpass mirrors fail.
+- Room pictures: switched-on lamps retain a visible glow at very low brightness. On wall panels, tapping free space anywhere in image control can show the hint for getting back to the controls.
+
 ## [0.54.1] - 2026-11-23
 
 - Standby: prepare the complete commute viewport and map drawing before it becomes visible. Switching to a buffered commute view no longer waits for another network request; failed refreshes retain the prepared map.
@@ -19,8 +25,6 @@ Semantic Versioning for its public release line.
 - Lamps: switched-on Home Assistant lights without a brightness attribute retain a visible glow.
 - Reminders: Home Assistant todo lists can be marked done from web and phone note menus; server errors keep the note open.
 - Android beta.3: the local launcher stays usable during server failures, retries the connection, and restores Hauser when available. The Apps drawer and search remain open during retries.
-
-## [Unreleased]
 
 ## [0.53.0] - 2026-11-18
 

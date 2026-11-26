@@ -1,3 +1,9 @@
+## 0.55.0 - 2026-11-26
+
+- Reminders: permanently delete an individual open or completed note from the reminders table.
+- Commute: the standby switch appears while the background map loads. Local routes use vector tiles when both Overpass mirrors fail.
+- Room pictures: very dim lights retain a visible glow, and a tap on free space in image control shows the way back to the controls.
+
 ## 0.54.0 - 2026-11-20
 
 - Commute: the route uses available space before shrinking, with clock and travel details placed in free corners. Map coverage extends beyond every edge, including vertical routes.

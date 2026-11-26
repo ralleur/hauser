@@ -1594,6 +1594,7 @@
   "rem_edit_save": "Save",
   "rem_edit_saving": "Saving …",
   "rem_edit_save_error": "Could not save",
+  "rem_delete_error": "Could not delete the reminder.",
   "energy_split_title": "Load breakdown",
   "energy_split_close": "Close",
   "sun_rise": "Sunrise",

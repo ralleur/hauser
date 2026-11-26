@@ -549,6 +549,15 @@ describe('HMI-Backend-Proxy', () => {
       title: 'Alex - Terrassentür schließen', due: '2026-08-02',
     });
 
+    const reminderUrl = `http://127.0.0.1:${port}/api/reminders/${createdReminder.id}`;
+    const origin = { Origin: 'https://dashboard.example.com' };
+    expect((await fetch(`${reminderUrl}/complete`, { method: 'POST', headers: origin })).status).toBe(200);
+    expect((await fetch(reminderUrl, { method: 'DELETE', headers: { Origin: 'https://evil.invalid' } })).status).toBe(403);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect((await fetch(reminderUrl, { method: 'DELETE', headers: origin })).status).toBe(200);
+    }
+    const remaining = await (await fetch(`http://127.0.0.1:${port}/api/reminders`)).json();
+    expect(remaining.items.map((item: { title: string }) => item.title)).toEqual(['Sam - Schimmelspray benutzen']);
   });
 
   it('beantwortet die abgeloeste Companion-Einkaufsroute mit 410', async () => {

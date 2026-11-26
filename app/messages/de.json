@@ -1594,6 +1594,7 @@
   "rem_edit_save": "Speichern",
   "rem_edit_saving": "Speichert …",
   "rem_edit_save_error": "Fehler beim Speichern",
+  "rem_delete_error": "Erinnerung konnte nicht gelöscht werden.",
   "energy_split_title": "Verbrauchsaufteilung",
   "energy_split_close": "Schließen",
   "sun_rise": "Sonnenaufgang",

@@ -49,6 +49,7 @@ import type { EntityCatalogItem } from '../state/device-config.ts';
 import type { CalendarEvent, CalendarSource } from '../state/calendar.ts';
 import type { Reminder, ReminderSource } from '../state/reminders.ts';
 import { reminderListMessage } from '../state/reminders.ts';
+import type { HaTodoItem } from './ha-reminders.ts';
 import { sharedStorage } from '../state/shared-config.ts';
 import { markResumeStart } from '../state/startup-marks.svelte.ts';
 import { LAUNDRY_ENTITIES as CONFIGURED_LAUNDRY_ENTITIES } from '../config/household-runtime-data.ts';
@@ -400,30 +401,30 @@ export class HaBackend implements Backend {
 
   async getReminders(entityId: string): Promise<Reminder[]> {
     if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
-    const result = await this.#conn.sendMessagePromise<{ items?: HaTodoItem[] }>(
-      reminderListMessage(entityId),
-    );
-    return uniqueReminderIds((result.items ?? []).map((item, index) => reminderFromHa(item, index)));
+    const [result, { parseHaReminders }] = await Promise.all([
+      this.#conn.sendMessagePromise<{ items?: HaTodoItem[] }>(reminderListMessage(entityId)),
+      import('./ha-reminders.ts'),
+    ]);
+    return parseHaReminders(result.items ?? []);
   }
 
   /* ── Einkaufsliste (Schreibrichtung) ──
      Läden sind `todo.*`-Listen (z. B. „Local To-do"). Gelesen wird über
      getReminders, geschrieben über die offiziellen Services; `todo.update_item`
      adressiert den Eintrag über seine `uid`. */
-  async addTodoItem(entityId: string, title: string): Promise<void> {
-    if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
-    await callService(this.#conn, 'todo', 'add_item', { item: title }, { entity_id: entityId });
+  addTodoItem(entityId: string, title: string): Promise<void> {
+    return this.#todoService(entityId, 'add_item', { item: title });
   }
 
-  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
+  updateTodoItem(entityId: string, uid: string, completed: boolean | null): Promise<void> {
+    return completed === null
+      ? this.#todoService(entityId, 'remove_item', { item: uid })
+      : this.#todoService(entityId, 'update_item', { item: haTodoUid(uid), status: completed ? 'completed' : 'needs_action' });
+  }
+
+  async #todoService(entityId: string, service: string, data: { item: string; status?: string }): Promise<void> {
     if (!this.#conn || this.#status !== 'connected') throw new Error('Home Assistant ist nicht verbunden.');
-    await callService(
-      this.#conn,
-      'todo',
-      'update_item',
-      { item: haTodoUid(uid), status: completed ? 'completed' : 'needs_action' },
-      { entity_id: entityId },
-    );
+    await callService(this.#conn, 'todo', service, data, { entity_id: entityId });
   }
 
   /* Nur Core, Betriebssystem und Apps (Paket 3, docs/20): Home Assistant führt
@@ -1023,49 +1024,11 @@ function calendarDateValue(value: HaCalendarEvent['start']): string {
   return value.dateTime ?? value.date ?? '';
 }
 
-interface HaTodoItem {
-  uid?: string;
-  summary?: string;
-  status?: 'needs_action' | 'completed';
-  due?: string; // Datum `YYYY-MM-DD` oder ISO-Zeitpunkt
-  description?: string;
-}
-
-/* Eine Fälligkeit, die kein Datum ist, zählt als keine: Die Zettel formatieren
-   sie sonst mit Intl, und „Invalid time value" nahm die ganze Notizen-Seite mit. */
-function validDue(due: unknown): string | null {
-  const value = typeof due === 'string' ? due.trim() : '';
-  return value && Number.isFinite(Date.parse(value)) ? value : null;
-}
-
-/* Listen schlüsseln ihre Einträge nach der Kennung (Ruhebild, Notizen,
-   Telefon). Zwei Einträge mit derselben uid — eine CalDAV-Liste kann das —
-   ließen die ganze Ebene an each_key_duplicate scheitern. Der zweite bekommt
-   einen Zähler; zurück an Home Assistant geht wieder die echte uid. */
 const DUPLICATE_UID_MARK = '#hauser-';
-
-function uniqueReminderIds(items: Reminder[]): Reminder[] {
-  const seen = new Map<string, number>();
-  return items.map((item) => {
-    const count = seen.get(item.id) ?? 0;
-    seen.set(item.id, count + 1);
-    return count === 0 ? item : { ...item, id: `${item.id}${DUPLICATE_UID_MARK}${count + 1}` };
-  });
-}
 
 function haTodoUid(id: string): string {
   const mark = id.lastIndexOf(DUPLICATE_UID_MARK);
   return mark > 0 ? id.slice(0, mark) : id;
-}
-
-function reminderFromHa(item: HaTodoItem, index: number): Reminder {
-  return {
-    id: item.uid ?? `${item.summary ?? 'reminder'}-${index}`,
-    title: item.summary?.trim() || 'Ohne Titel',
-    due: validDue(item.due),
-    completed: item.status === 'completed',
-    description: item.description?.trim() || null,
-  };
 }
 
 function readToken(): string | null {

@@ -33,7 +33,7 @@ describe('demo content language', () => {
     demoSeeds.todo = demoTodoSeed;
     const backend = new FakeBackend(new Map(), 0, [], demoTodoSeed());
     expect((await backend.getReminders('todo.walmart'))[0].title).toBe('Hafermilch');
-    await backend.setTodoItemStatus('todo.walmart', 'demo-a1', true);
+    await backend.updateTodoItem('todo.walmart', 'demo-a1', true);
     await backend.addTodoItem('todo.walmart', 'Meine eigene Notiz');
     for (const locale of ['en', 'fr', 'de'] as Locale[]) {
       overwriteGetLocale(() => locale);
@@ -54,5 +54,12 @@ describe('demo content language', () => {
     expect(english[1]).toEqual(items[1]);
     overwriteGetLocale(() => 'de');
     expect(translateDemoReminderTitles(english)).toEqual(items);
+  });
+
+  it('keeps a deleted reminder out of subsequent demo reads', async () => {
+    expect(demoResponse('/api/reminders/demo-6', 'DELETE')!.ok).toBe(true);
+    const reminders = await demoResponse('/api/reminders', 'GET')!.json();
+    expect(reminders.items).not.toContainEqual(expect.objectContaining({ id: 'demo-6' }));
+    expect(reminders.items).toContainEqual(expect.objectContaining({ id: 'demo-4' }));
   });
 });

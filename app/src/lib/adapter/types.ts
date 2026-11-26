@@ -145,11 +145,10 @@ export interface Backend {
       als `todo.*`-Entitäten; Discovery + Item-Abruf über `todo/item/list`. */
   listReminderSources?(): Promise<import('../state/reminders.ts').ReminderSource[]>;
   getReminders?(entityId: string): Promise<import('../state/reminders.ts').Reminder[]>;
-  /** Einkaufsliste: jeder Laden ist eine `todo.*`-Liste. Gelesen wird über den
-      Erinnerungs-Seam (`todo/item/list`), geschrieben über die HA-Services
-      `todo.add_item` und `todo.update_item` (adressiert über die `uid`). */
+  /** Einkaufs- und Erinnerungslisten schreiben über die `todo.*`-Dienste. */
   addTodoItem?(entityId: string, title: string): Promise<void>;
-  setTodoItemStatus?(entityId: string, uid: string, completed: boolean): Promise<void>;
+  /** null removes the item from its source list. */
+  updateTodoItem?(entityId: string, uid: string, completed: boolean | null): Promise<void>;
   /** Echte, von Home Assistant gemeldete `update.*`-Entitäten im Zustand on. */
   listSystemUpdates?(): Promise<SystemUpdate[]>;
   /** Benachrichtigungen (B-04B): Persistent Notifications von HA sind die

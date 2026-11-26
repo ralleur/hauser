@@ -67,6 +67,7 @@ export const API_ROUTES = [
   { id: 'reminders', methods: ['GET', 'POST'], path: '/api/reminders', area: 'family', access: 'origin', purpose: 'Zentrale Erinnerungen lesen und anlegen.', response: 'RemindersResponse', cacheable: true },
   { id: 'reminderComplete', methods: ['POST'], path: '/api/reminders/:id/complete', area: 'family', access: 'origin', purpose: 'Erinnerung als erledigt markieren.' },
   { id: 'reminderUpdate', methods: ['PATCH'], path: '/api/reminders/:id', area: 'family', access: 'origin', purpose: 'Erinnerung ändern.' },
+  { id: 'reminderDelete', methods: ['DELETE'], path: '/api/reminders/:id', area: 'family', access: 'origin', purpose: 'Erinnerung löschen.' },
   { id: 'shopping', methods: ['GET'], path: '/api/shopping', area: 'family', access: 'origin', purpose: 'Einkaufsliste lesen.', response: 'ShoppingResponse' },
   { id: 'shoppingItems', methods: ['POST'], path: '/api/shopping/items', area: 'family', access: 'origin', purpose: 'Eintrag anlegen.' },
   { id: 'shoppingItemUpdate', methods: ['PATCH'], path: '/api/shopping/items/:id', area: 'family', access: 'origin', purpose: 'Eintrag ändern oder abhaken.' },

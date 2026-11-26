@@ -22,15 +22,37 @@ describe('Commute view preference', () => {
 });
 
 describe('Commute map background requests', () => {
-  it('requests a map before the first viewport has been measured', async () => {
+  it('loads route settings without waiting for the background map', async () => {
     vi.stubGlobal('localStorage', { getItem: () => null });
-    const fetchImpl = vi.fn(async (_url: string) => Response.json({ config: defaultCommute, route: null }));
+    let finishMap!: () => void;
+    const mapPending = new Promise<void>(resolve => { finishMap = resolve; });
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.includes('waitForMap=1')) await mapPending;
+      return Response.json({ config: { ...defaultCommute, entryId: 'work' }, route: null });
+    });
     vi.stubGlobal('fetch', fetchImpl);
-    const { refreshCommute } = await import('./commute.svelte.ts');
-    await refreshCommute();
+    const { commute, refreshCommute } = await import('./commute.svelte.ts');
+    const refresh = refreshCommute();
+    try {
+      await vi.waitFor(() => expect(commute.config.entryId).toBe('work'), { timeout: 200 });
+    } finally {
+      finishMap();
+      await refresh;
+    }
     const query = new URL(fetchImpl.mock.calls[0][0], 'http://hauser.local').searchParams;
     expect(query.has('mapBounds')).toBe(false);
-    expect(query.get('waitForMap')).toBe('1');
+    expect(query.has('waitForMap')).toBe(false);
+  });
+
+  it('still waits for the map when the user explicitly opens a preview', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => null });
+    const fetchImpl = vi.fn(async (_url: string) => Response.json({ config: defaultCommute,
+      route: { line: [[0, 0], [680, 285]], durationMinutes: 37, updatedAt: new Date().toISOString(),
+        roads: [], areas: [], sections: [], reports: [], mapStatus: 'unavailable' } }));
+    vi.stubGlobal('fetch', fetchImpl);
+    const { prepareCommutePreview } = await import('./commute.svelte.ts');
+    await prepareCommutePreview();
+    expect(fetchImpl.mock.calls[0][0]).toContain('waitForMap=1');
   });
 
   it('preloads the remembered viewport and retains it while the commute is hidden', async () => {

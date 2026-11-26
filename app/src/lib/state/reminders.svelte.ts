@@ -174,7 +174,7 @@ export async function completeReminder(reminderId: string): Promise<void> {
   const id = hmiReminderId(reminderId);
   const ha = haReminderId(reminderId);
   if (id) await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}/complete`, 'POST');
-  else if (ha) await runtime.setTodoItemStatus(ha.entityId, ha.uid, true);
+  else if (ha) await runtime.updateTodoItem(ha.entityId, ha.uid, true);
   else throw new Error('Diese Erinnerung kann hier nicht abgehakt werden.');
   await refreshReminders();
 }
@@ -186,6 +186,28 @@ export async function updateReminder(reminderId: string, title: string, due: str
   const who = personDisplayName(reminderPerson(current.title, reminderPersons.list));
   const fullTitle = `${who} - ${title.trim()}`;
   await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}`, 'PATCH', { title: fullTitle, due });
+  await refreshReminders();
+}
+
+export function canDeleteReminder(reminder: Reminder): boolean {
+  return Boolean(hmiReminderId(reminder.id) || (reminder.hasUniqueTodoUid && haReminderId(reminder.id)));
+}
+
+export async function deleteReminder(reminderId: string): Promise<void> {
+  const reminder = reminders.items.find((item) => item.id === reminderId);
+  if (!reminder || !canDeleteReminder(reminder)) throw new Error(m.rem_delete_error());
+  const id = hmiReminderId(reminderId);
+  if (id) {
+    await hmiDataRequest(`/api/reminders/${encodeURIComponent(id)}`, 'DELETE');
+  } else {
+    const ha = haReminderId(reminderId);
+    if (!ha) return;
+    await runtime.updateTodoItem(ha.entityId, ha.uid, null);
+  }
+  // An older refresh may still contain the deleted row.
+  await refreshPromise;
+  reminders.items = reminders.items.filter((item) => item.id !== reminderId);
+  saveCache();
   await refreshReminders();
 }
 

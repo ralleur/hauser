@@ -231,9 +231,9 @@ export class AdapterRuntime {
     await this.#backend.addTodoItem(entityId, title);
   }
 
-  async setTodoItemStatus(entityId: string, uid: string, completed: boolean): Promise<void> {
-    if (!this.#backend.setTodoItemStatus) throw new Error('Das aktive Backend kennt keine Listen.');
-    await this.#backend.setTodoItemStatus(entityId, uid, completed);
+  async updateTodoItem(entityId: string, uid: string, completed: boolean | null): Promise<void> {
+    if (!this.#backend.updateTodoItem) throw new Error('Das aktive Backend kennt keine Listen.');
+    await this.#backend.updateTodoItem(entityId, uid, completed);
   }
 
   async listSystemUpdates(): Promise<SystemUpdate[]> {

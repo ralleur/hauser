@@ -1594,6 +1594,7 @@
   "rem_edit_save": "Opslaan",
   "rem_edit_saving": "Opslaan …",
   "rem_edit_save_error": "Kon niet worden opgeslagen",
+  "rem_delete_error": "De herinnering kon niet worden verwijderd.",
   "energy_split_title": "Belastingsverdeling",
   "energy_split_close": "Sluiten",
   "sun_rise": "Zonsopgang",

@@ -40,16 +40,16 @@ async function freshReminders({
   connectionStatus = 'connected',
   listReminderSources = vi.fn(async () => [] as ReminderSource[]),
   getReminders = vi.fn(async () => [] as Reminder[]),
-  setTodoItemStatus = vi.fn(async () => {}),
+  updateTodoItem = vi.fn(async () => {}),
 }: {
   connectionStatus?: 'connected' | 'disconnected';
   listReminderSources?: ReturnType<typeof vi.fn>;
   getReminders?: ReturnType<typeof vi.fn>;
-  setTodoItemStatus?: ReturnType<typeof vi.fn>;
+  updateTodoItem?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.resetModules();
   vi.doMock('../adapter/runtime.svelte.ts', () => ({
-    runtime: { connectionStatus, listReminderSources, getReminders, setTodoItemStatus },
+    runtime: { connectionStatus, listReminderSources, getReminders, updateTodoItem },
   }));
   vi.doMock('./hmi-data.ts', () => ({ hmiDataRequest: vi.fn() }));
   vi.doMock('./shared-config.ts', () => ({ sharedStorage: localStorage }));
@@ -78,23 +78,37 @@ async function initAndWait(module: Awaited<ReturnType<typeof freshReminders>>): 
 }
 
 describe('reminder last-known cache', () => {
+  it('deletes a completed HA reminder from its original list by its full UID', async () => {
+    localStorage.setItem('hmi:reminders-selected', JSON.stringify([cachedSource.entityId]));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }));
+    const item = { ...cachedItem, id: 'remote:uid', completed: true, hasUniqueTodoUid: true };
+    const getReminders = vi.fn(async () => [] as Reminder[]).mockResolvedValueOnce([item]);
+    const updateTodoItem = vi.fn(async () => {});
+    const module = await freshReminders({ updateTodoItem, getReminders, listReminderSources: vi.fn(async () => [cachedSource]) });
+    await initAndWait(module);
+    expect(module.canDeleteReminder({ ...item, id: 'todo.familie:ambiguous', hasUniqueTodoUid: false })).toBe(false);
+    await module.deleteReminder('todo.familie:remote:uid');
+    expect(updateTodoItem).toHaveBeenCalledWith('todo.familie', 'remote:uid', null);
+    expect(module.reminders.items).toEqual([]);
+  });
+
   it('completes an overdue HA reminder through its source list and preserves the full UID', async () => {
     localStorage.setItem('hmi:reminders-selected', JSON.stringify([cachedSource.entityId]));
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }));
-    const setTodoItemStatus = vi.fn(async () => {});
+    const updateTodoItem = vi.fn(async () => {});
     const getReminders = vi.fn(async () => [{ ...cachedItem, id: 'remote:uid', completed: true }]);
-    const module = await freshReminders({ setTodoItemStatus, getReminders, listReminderSources: vi.fn(async () => [cachedSource]) });
+    const module = await freshReminders({ updateTodoItem, getReminders, listReminderSources: vi.fn(async () => [cachedSource]) });
     const id = `${cachedSource.entityId}:remote:uid`;
     expect(module.canCompleteReminder(id)).toBe(true);
     expect(module.hmiReminderId(id)).toBeNull();
     await module.completeReminder(id);
-    expect(setTodoItemStatus).toHaveBeenCalledWith('todo.familie', 'remote:uid', true);
+    expect(updateTodoItem).toHaveBeenCalledWith('todo.familie', 'remote:uid', true);
     expect(module.reminders.items).toMatchObject([{ id, completed: true }]);
   });
 
   it('keeps the reminder open and surfaces a rejected HA write', async () => {
-    const setTodoItemStatus = vi.fn().mockRejectedValue(new Error('HA refused'));
-    const module = await freshReminders({ setTodoItemStatus });
+    const updateTodoItem = vi.fn().mockRejectedValue(new Error('HA refused'));
+    const module = await freshReminders({ updateTodoItem });
     module.reminders.items = [cachedItem];
     await expect(module.completeReminder(cachedItem.id)).rejects.toThrow('HA refused');
     expect(module.reminders.items[0].completed).toBe(false);

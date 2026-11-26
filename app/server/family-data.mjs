@@ -118,6 +118,12 @@ export function createFamilyDataStore(
     if (!found) throw new Error('Erinnerung nicht gefunden');
   }
 
+  function deleteReminder(id) {
+    update((data) => {
+      data.reminders = data.reminders.filter((item) => item.id !== id);
+    });
+  }
+
   function shopping() {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     let changed = false;
@@ -186,7 +192,7 @@ export function createFamilyDataStore(
 
   return {
     addReminder, addShoppingItem, addShoppingStore, completeReminder,
-    deleteShoppingStore, reminders, shopping, toggleShoppingItem, updateReminder,
+    deleteReminder, deleteShoppingStore, reminders, shopping, toggleShoppingItem, updateReminder,
   };
 }
 
@@ -205,6 +211,10 @@ export function serveFamilyData(req, res, store) {
       return jsonResponse(res, 200, { ok: true });
     }
     const reminderItem = pathname.match(/^\/api\/reminders\/([0-9a-f-]{36})$/i);
+    if (reminderItem && req.method === 'DELETE') {
+      store.deleteReminder(reminderItem[1]);
+      return jsonResponse(res, 200, { ok: true });
+    }
     if (reminderItem && req.method === 'PATCH') {
       return readSmallJson(req, res, (payload) => {
         try {

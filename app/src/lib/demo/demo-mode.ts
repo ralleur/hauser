@@ -192,6 +192,7 @@ export function demoTodoSeed(): [string, { id: string; title: string; due: null;
    Demo bleibt die Bibliothek leer — der Screen zeigt dann seinen eigenen
    Leerzustand, was ehrlicher ist als vorgetäuschte Wiedergabe. */
 const demoSongs = () => ({ songs: [] });
+const deletedDemoReminders = new Set<string>();
 
 export function demoResponse(path: string, method: string): Response | null {
   if (path === '/api/commute' || path === '/api/admin/commute/preview') return json(recordingCommute());
@@ -288,7 +289,13 @@ export function demoResponse(path: string, method: string): Response | null {
       : json({ ok: true });
   }
   if (path.startsWith('/api/reminders')) {
-    return method === 'GET' ? json(demoReminders()) : json({ ok: true });
+    if (method === 'GET') {
+      const reminders = demoReminders();
+      return json({ ...reminders, items: reminders.items.filter((item) => !deletedDemoReminders.has(item.id)) });
+    }
+    const item = path.match(/^\/api\/reminders\/(demo-\d+)$/);
+    if (method === 'DELETE' && item) deletedDemoReminders.add(item[1]);
+    return json({ ok: true });
   }
   if (path.startsWith('/api/songs')) {
     return method === 'GET' ? json(demoSongs()) : json({ ok: true });

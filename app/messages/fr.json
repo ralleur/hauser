@@ -1595,6 +1595,7 @@
   "rem_edit_save": "Enregistrer",
   "rem_edit_saving": "Enregistrement …",
   "rem_edit_save_error": "Échec de l’enregistrement",
+  "rem_delete_error": "Impossible de supprimer le rappel.",
   "energy_split_title": "Répartition de la consommation",
   "energy_split_close": "Fermer",
   "sun_rise": "Lever du soleil",

@@ -84,7 +84,12 @@ class FakeUpstream {
         });
         return;
       case 'todo/item/list':
-        reply({ type: 'result', success: true, result: { items: [{ uid: '1', summary: 'Milk', status: 'needs_action' }] } });
+        reply({ type: 'result', success: true, result: { items: [
+          { uid: '1', summary: 'Milk', status: 'completed' },
+          { uid: 'same', summary: 'Eggs' },
+          { uid: 'same', summary: 'Apples' },
+          { summary: 'Tea' },
+        ] } });
         return;
       case 'config/entity_registry/update':
         reply({ type: 'result', success: true, result: { entity_entry: { entity_id: message.entity_id, name: message.name } } });
@@ -169,13 +174,20 @@ describe('Backend-Parität über das Gateway', () => {
     expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
   });
 
-  it('liest Erinnerungslisten und Einträge', async () => {
+  it('liest Erinnerungslisten und löscht nur mit der eindeutigen UID des Eintrags', async () => {
     const backend = await connectedBackend();
     expect(await backend.listReminderSources()).toEqual([
       { entityId: 'todo.groceries', name: 'Groceries', color: null },
     ]);
     const reminders = await backend.getReminders('todo.groceries');
-    expect(reminders[0]).toMatchObject({ title: 'Milk' });
+    expect(reminders.map((item) => [item.title, item.hasUniqueTodoUid])).toEqual([
+      ['Milk', true], ['Eggs', false], ['Apples', false], ['Tea', false],
+    ]);
+    await backend.updateTodoItem('todo.groceries', reminders[0].id, null);
+    const call = FakeUpstream.instances[0].received.find((message: any) => message.type === 'call_service');
+    expect(call).toMatchObject({
+      domain: 'todo', service: 'remove_item', service_data: { item: '1' }, target: { entity_id: 'todo.groceries' },
+    });
   });
 
   it('liest verfügbare Systemupdates', async () => {

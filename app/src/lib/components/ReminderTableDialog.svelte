@@ -2,7 +2,8 @@
   import { m } from '../../paraglide/messages.js';
   import { intlLocale } from '../state/locale.svelte.ts';
   import Icon from './Icon.svelte';
-  import { reminders } from '../state/reminders.svelte.ts';
+  import { canDeleteReminder, deleteReminder, reminders } from '../state/reminders.svelte.ts';
+  import { confirmThen, isConfirming } from '../state/settings-actions.svelte.ts';
   import { reminderDisplayTitle, reminderPerson, type Reminder } from '../state/reminders.ts';
   import { postitStyle } from '../state/reminder-persons.ts';
   import {
@@ -20,6 +21,16 @@
 
   const persons = $derived(reminderPersons.list);
   const rows = $derived([...reminders.items].sort((a, b) => timestamp(b.created) - timestamp(a.created)));
+  let deleting = $state(false);
+  let deleteError = $state(false);
+
+  async function remove(id: string): Promise<void> {
+    deleting = true;
+    deleteError = false;
+    try { await deleteReminder(id); }
+    catch { deleteError = true; }
+    finally { deleting = false; }
+  }
 
   function timestamp(value: string | null | undefined): number {
     const parsed = value ? new Date(value).getTime() : NaN;
@@ -63,6 +74,7 @@
       </button>
     </header>
 
+    {#if deleteError}<p class="phone-calendar-status is-error" role="alert">{m.rem_delete_error()}</p>{/if}
     <div class="rem-table-scroll">
       <table class="rem-table">
         <thead>
@@ -72,6 +84,7 @@
             <th scope="col">{m.rem_table_created()}</th>
             <th scope="col">{m.rem_table_closed()}</th>
             <th scope="col">{m.rem_table_due()}</th>
+            <th scope="col"><span class="sr-only">{m.sys_delete()}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -83,9 +96,18 @@
               <td class="num">{formatDateTime(item.created)}</td>
               <td class="num">{closedAt(item)}</td>
               <td class="num">{formatDue(item.due)}</td>
+              <td>
+                {#if canDeleteReminder(item)}
+                  {@const key = `reminder-delete-${item.id}`}
+                  <button class="secondary-btn danger-btn pressable" type="button" disabled={deleting}
+                          onclick={() => confirmThen(key, () => remove(item.id))}>
+                    {isConfirming(key) ? m.sys_delete_confirm() : m.sys_delete()}
+                  </button>
+                {/if}
+              </td>
             </tr>
           {:else}
-            <tr><td class="rem-table-empty" colspan="5">{m.rem_table_empty()}</td></tr>
+            <tr><td class="rem-table-empty" colspan="6">{m.rem_table_empty()}</td></tr>
           {/each}
         </tbody>
       </table>

@@ -1595,6 +1595,7 @@
   "rem_edit_save": "Salva",
   "rem_edit_saving": "Salvataggio …",
   "rem_edit_save_error": "Salvataggio non riuscito",
+  "rem_delete_error": "Impossibile eliminare il promemoria.",
   "energy_split_title": "Ripartizione dei consumi",
   "energy_split_close": "Chiudi",
   "sun_rise": "Alba",
